@@ -56,6 +56,8 @@ column key with \strong{no value}, in an analysis the body does not have
 \code{ard_stats_fisher_test()}, ...).  Each goes on its \strong{variable's block}:
 the row of its level when it has one, else the block's first row as the
 table is sorted.  Nothing is computed; the numbers are the ARD's.
+A later \code{plan_compare()} replaces the earlier one as a whole: the last call
+says every comparison column.
 }
 \examples{
 # Invented statistics: AGE by arm, and a t-test of the two arms (the

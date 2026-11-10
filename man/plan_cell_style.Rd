@@ -24,7 +24,9 @@ plan_cell_style(
 \item{.plan}{A \code{\link[=table_plan]{table_plan()}}.}
 
 \item{cols}{The columns styled, by name (\code{.values} for every value
-column); left out, every column.}
+column); left out, every column.  With \code{cols} and no \code{where}, a
+\code{border} is the header cells' border; for a body column's border write
+\code{where = ~ TRUE} (or a condition).}
 
 \item{header}{\code{TRUE} styles the column header instead of the body; it
 takes \code{bold}, \code{italic}, \code{underline}, \code{align} and \code{border}
@@ -49,8 +51,25 @@ table's columns, \code{NA} leaving the column default alone: \code{bold = ~ is.n
 }
 A formula sees the printed rows only with \code{plan_stub(before = TRUE)}.}
 
-\item{border}{A column's border, an \code{\link[=rtf_border]{rtf_border()}}: on whole columns or
-the header, not with \code{where}.}
+\item{border}{An \code{\link[=rtf_border]{rtf_border()}}. Where it is drawn depends on how the
+cells are chosen:
+\describe{
+\item{\code{cols} and no \code{where}}{the border goes on the columns' \strong{header
+cells} only (\code{\link[=style_cols]{style_cols()}}'s \code{border}).  This call warns about
+that once a session.  For a border on a column's body cells, write
+\code{where = ~ TRUE}, or a condition.}
+\item{\code{where}}{the border goes on the body cells of the rows the
+condition holds for, over \code{cols} or every column.  It is merged
+side by side over the row's own rules, as
+\code{\link[=style_body]{style_body()}}\verb{(border = )} does.}
+\item{a one-sided formula}{gives one border a row: a list of
+\code{\link[=rtf_border]{rtf_border()}} objects, or \code{NULL} for no border, as in \code{border = ~ ifelse(is.na(label), list(rtf_border(bottom = TRUE)), list(NULL))}.
+A single \code{\link[=rtf_border]{rtf_border()}} applies to every row.}
+\item{\code{header = TRUE}}{the header cells.}
+}
+On a page's last row, the table's own last-row rule
+(\code{\link[=plan_style]{plan_style()}}'s \code{border_last_row}) wins side by side over a body
+border given here, as it does over \code{border_group}.}
 
 \item{indent_twips}{The left indent of the cells' text,
 \code{\link[=style_cols]{style_cols()}}'s \code{indent_twips} (not on the header).}
@@ -108,6 +127,20 @@ pages <- table_plan(tbl) |>
   plan_cell_style(header = TRUE, row = 1, italic = TRUE) |>
   plan_apply()
 pages[[1]]$col_header[[1]][[2]]$italic
+
+# A body border: a rule under the "Subjects" row
+pages <- table_plan(tbl) |>
+  plan_cell_style(where = ~ Parameter == "Subjects",
+                  border = rtf_border(bottom = TRUE)) |>
+  plan_apply()
+pages[[1]]$cell_styles[[1]]$border[[2]]
+
+# A rule right of the Parameter column on every body row: where = ~ TRUE
+# (with `cols` alone, the border would go on the header cell)
+pages <- table_plan(tbl) |>
+  plan_cell_style(cols = "Parameter", where = ~ TRUE,
+                  border = rtf_border(right = TRUE)) |>
+  plan_apply()
 }
 \seealso{
 \link{plan_verbs} for every verb; \code{\link[=plan_style]{plan_style()}} for the whole

@@ -65,7 +65,11 @@ Two rules hold for every verb:
    already know the arguments.
 2. **A later layer wins.** A verb can be called more than once. For the same
    key, the last call decides, so a house style is written once and one table
-   changes it by adding a line.
+   changes it by adding a line. It wins argument by argument. An argument that
+   is a named list or vector, such as `plan_columns(widths = c(AGE = 1200, SEX
+   = 900))`, is replaced as a whole: a later `widths = c(AGE = 1500)` leaves
+   `AGE` only. `plan_levels()`, `plan_labels()` and `plan_nest()` are the
+   exception.
 
 A table made with these verbs: the vital signs example under *Pages*.
 

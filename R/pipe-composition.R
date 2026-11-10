@@ -977,7 +977,8 @@ rtf_figures <- function(doc, figures,
 #' same width as the content; title rows default to centred + bold.  A row's
 #' `row_height_twips` is that row's height, over the block's
 #' `row_height_twips`; it applies to the table form
-#' (`rtf_style(title_format = "table")`), as the block's does.
+#' (`rtf_style(title_format = "table")`), as the block's does.  So does a
+#' row's `border`: the text form draws none, ignores one you set, and warns.
 #'
 #' @param doc An rtf_document object.
 #' @param titles A list of length = number of contents, or length 1 (common).
@@ -1096,7 +1097,9 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #'   string lands in whichever slot `align` selects.
 #' @param border `NULL` (default) for **no rule** -- unlike the page footer,
 #'   the footnote draws none unless asked. An [rtf_border()] puts one on the
-#'   first row, e.g. `border = rtf_border(top = TRUE)`.
+#'   first row, e.g. `border = rtf_border(top = TRUE)`.  It is drawn only with
+#'   `rtf_style(footnote_format = "table")` (the default); the text form
+#'   ignores it and warns.
 #' @param font_size_half_points,row_height_twips,markup,align,font Style for
 #'   this block, over the document's [rtf_style()] (its section, then its
 #'   shared level).
