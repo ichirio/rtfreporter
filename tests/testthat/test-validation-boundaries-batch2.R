@@ -585,7 +585,9 @@ test_that("FT-DC288 [FR-DC309 FR-DC310 FR-DC311 FR-DC312 FR-DC320 FR-DC321 FR-DC
     E("table", "row_height_exact NA", list(row_height_exact = NA), "^`rtf_style\\(table\\)\\$row_height_exact` must be TRUE or FALSE"),
     E("table", "header_row_height_twips -1", list(header_row_height_twips = -1), "^`rtf_style\\(table\\)\\$header_row_height_twips` must be"),
     E("titles", "align unknown", list(align = "x"), "^`rtf_style\\(titles\\)\\$align` must be"),
-    E("titles", "border, not its key", list(border = rtf_border(top = TRUE)), "^`rtf_style\\(titles = \\)`: unknown key `border`"),
+    O("titles", "border, a key as rtf_titles(border = ) is", list(border = rtf_border(top = TRUE)),
+      function(st) inherits(st$titles$border, "rtf_border")),
+    E("titles", "border not an rtf_border", list(border = "top"), "^`rtf_style\\(titles\\)\\$border` must be NULL or an rtf_border"),
     E("footnotes", "border a string", list(border = "top"), "^`rtf_style\\(footnotes\\)\\$border` must be NULL or an rtf_border\\(\\) object"),
     E("header", "color a name", list(color = "red"), "^`rtf_style\\(header\\)\\$color` must be NULL or a 6-digit hex colour")
   )

@@ -33,18 +33,21 @@
     # row's own height over the block's (#125).  Its columns are read as a
     # row given bare; the paragraph form has no rows, so it keeps the text.
     if (is.list(r) && !is.null(r$columns)) {
-      bad <- setdiff(names(r), c("columns", "row_height_twips"))
+      bad <- setdiff(names(r), c("columns", "row_height_twips", "border"))
       if (length(bad)) {
         stop(sprintf(paste0("`rtf_footnotes()` row %d: a row given as a list ",
-                            "takes columns = and row_height_twips =; got %s."),
+                            "takes columns =, row_height_twips = and border =; ",
+                            "got %s."),
                      i, paste0("'", bad, "'", collapse = ", ")), call. = FALSE)
       }
       h <- .check_row_height(
         r$row_height_twips,
         sprintf("rtf_footnotes()` row %d's `row_height_twips", i))
+      # the row's own border, over the block's (side by side)
+      b <- .check_hf_row_border(r$border, "rtf_footnotes", i)
       cols <- .footnote_rows(list(r$columns), align, format)[[1L]]
       if (identical(format, "text")) return(cols)
-      return(list(columns = cols, row_height_twips = h))
+      return(list(columns = cols, row_height_twips = h, border = b))
     }
     if (is.list(r)) {
       stop(paste0("A footnote row is a string or a named vector such as ",
@@ -87,7 +90,9 @@
 .footnote_hf <- function(block, style, width_twips, format = "table") {
   list(
     rows        = .footnote_rows(block, style$align %||% "left", format),
-    border      = style$border,          # NULL -> no rule, unlike the footer
+    # NULL -> no rule, unlike the footer; else the whole block's, as a
+    # band's border is (top above the first row, bottom below the last, ...)
+    border      = style$border,
     width_twips = as.integer(width_twips),
     row_height_twips      = style$row_height_twips,
     font_size_half_points = style$font_size_half_points,

@@ -49,9 +49,10 @@ a row, the name of each element chooses its column:
 \item{\code{r}}{right-aligned text}
 }
 e.g. \code{c(l = "Protocol XYZ-001", r = "Page {AUTO_PAGE}")}.  A row may
-also be a list, \code{list(columns = c(l = , c = , r = ), row_height_twips = 400L, color = "#C00000")}, whose \code{row_height_twips} is that row's height
-(over the band's \code{row_height_twips}) and \code{color} its text colour (over
-the band's \code{color}).  Cell text may
+also be a list, \code{list(columns = c(l = , c = , r = ), row_height_twips = 400L, color = "#C00000", border = rtf_border(bottom = TRUE))}, whose
+\code{row_height_twips} is that row's height (over the band's
+\code{row_height_twips}), \code{color} its text colour (over the band's \code{color})
+and \code{border} its own \code{\link[=rtf_border]{rtf_border()}} (see \code{border}).  Cell text may
 contain \strong{page-number tokens} that the renderer substitutes: \code{{AUTO_PAGE}}
 (the current page, updated live by the viewer), \code{{AUTO_TOTAL_PAGES}} (the
 document total), and \code{{PAGE}} / \code{{TOTAL_PAGES}} (static numbers baked in at
@@ -69,10 +70,17 @@ markup's own: \verb{^\{STUDY\}} raises the word STUDY.  To raise a token's
 value, write the token inside the braces, \verb{^\{\{STUDY\}\}}, or after a
 character, \verb{^\{n=\{STUDY\}\}}.}
 
-\item{border}{An \code{\link[=rtf_border]{rtf_border()}} object controlling the border applied to
-all rows of the header/footer table. \code{NULL} = no border (default for
-header). Use \code{rtf_border(top = TRUE)} for a horizontal dividing line (default
-for footer).}
+\item{border}{An \code{\link[=rtf_border]{rtf_border()}} for the band as a whole, read as a table
+zone's is: \code{top} above the first row, \code{bottom} below the last row,
+\code{inside_h} between rows, \code{left} / \code{right} on the outer edges of every
+row, \code{inside_v} between the cells of a row (\code{all} is the four outer
+edges).  The rows are the ones written, after \code{drop_empty_rows}.  A row
+given as a list may carry its own \verb{border =}, merged side by side over
+the band's, so the sides it sets win; it applies to that row's outer
+edges and its \code{inside_v}.  A line both of two rows draw between them is
+drawn once, as the upper row's bottom.  \code{NULL} = no border (default for
+the header); \code{rtf_border(top = TRUE)}, a rule above the band, is the
+footer's default.}
 
 \item{width_twips}{Integer. Table width in twips. \code{NULL} (default) uses the
 full writable width (page width minus margins); so does \code{0}, as

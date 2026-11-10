@@ -11,7 +11,8 @@ rtf_titles(
   row_height_twips = NULL,
   markup = NULL,
   font = NULL,
-  align = NULL
+  align = NULL,
+  border = NULL
 )
 }
 \arguments{
@@ -46,6 +47,14 @@ size, and an explicit height always wins.}
 \item{\code{align}}{sets the block's default row alignment; a per-row
 \code{align} still beats it.}
 }}
+
+\item{border}{\code{NULL} (default) for no rule, or an \code{\link[=rtf_border]{rtf_border()}} for the
+title block as a whole, read as \code{\link[=rtf_footnotes]{rtf_footnotes()}}'s is: \code{top} above
+the first row, \code{bottom} below the last row, \code{inside_h} between rows,
+\code{left} / \code{right} on the outer edges of every row.  A row's own
+\code{border} is merged side by side over it, so the sides the row sets
+win.  It is drawn in the table form
+(\code{rtf_style(title_format = "table")}).}
 }
 \value{
 Modified rtf_document.

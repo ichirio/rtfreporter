@@ -61,7 +61,8 @@ table: \code{font}, \code{font_size_half_points}, \code{row_height_twips},
 the four \verb{cell_padding_*_twips}, \code{cell_valign}, \code{table_align}, \code{markup}.}
 
 \item{titles}{A named list of \code{\link[=rtf_titles]{rtf_titles()}}'s style arguments: \code{font},
-\code{font_size_half_points}, \code{row_height_twips}, \code{markup}, \code{align}.}
+\code{font_size_half_points}, \code{row_height_twips}, \code{markup}, \code{align},
+\code{border}.}
 
 \item{footnotes}{A named list of \code{\link[=rtf_footnotes]{rtf_footnotes()}}'s style arguments:
 \code{font}, \code{font_size_half_points}, \code{row_height_twips}, \code{markup}, \code{align},

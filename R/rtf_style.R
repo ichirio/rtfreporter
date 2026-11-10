@@ -45,7 +45,7 @@
                 "blank_row_height_twips", .STYLE_PAD_KEYS, "cell_valign",
                 "table_align", "markup"),
   titles    = c("font", "font_size_half_points", "row_height_twips", "markup",
-                "align"),
+                "align", "border"),
   footnotes = c("font", "font_size_half_points", "row_height_twips", "markup",
                 "align", "border"),
   header    = c("font", "font_size_half_points", "row_height_twips", "markup",
@@ -120,7 +120,8 @@
 #'   `row_height_exact`, `header_row_height_twips`, `blank_row_height_twips`,
 #'   the four `cell_padding_*_twips`, `cell_valign`, `table_align`, `markup`.
 #' @param titles A named list of [rtf_titles()]'s style arguments: `font`,
-#'   `font_size_half_points`, `row_height_twips`, `markup`, `align`.
+#'   `font_size_half_points`, `row_height_twips`, `markup`, `align`,
+#'   `border`.
 #' @param footnotes A named list of [rtf_footnotes()]'s style arguments:
 #'   `font`, `font_size_half_points`, `row_height_twips`, `markup`, `align`,
 #'   `border`.

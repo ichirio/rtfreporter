@@ -44,8 +44,13 @@ size, and an explicit height always wins.}
 }}
 
 \item{border}{\code{NULL} (default) for \strong{no rule} -- unlike the page footer,
-the footnote draws none unless asked. An \code{\link[=rtf_border]{rtf_border()}} puts one on the
-first row, e.g. \code{border = rtf_border(top = TRUE)}.}
+the footnote draws none unless asked.  An \code{\link[=rtf_border]{rtf_border()}} is the border
+of the block as a whole, read as \code{\link[=rtf_footer]{rtf_footer()}}'s is: \code{top} above the
+first row, \code{bottom} below the last row, \code{inside_h} between rows, \code{left}
+/ \code{right} on the outer edges of every row, \code{inside_v} between the cells
+of a row; e.g. \code{border = rtf_border(top = TRUE)} for a separator rule
+above the block.  A row given as a list may carry its own \verb{border =}
+(\code{list(columns = , border = )}), merged side by side over the block's.}
 }
 \value{
 Modified rtf_document.

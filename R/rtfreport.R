@@ -166,9 +166,10 @@
 #'   }
 #'   e.g. `c(l = "Protocol XYZ-001", r = "Page {AUTO_PAGE}")`.  A row may
 #'   also be a list, `list(columns = c(l = , c = , r = ), row_height_twips =
-#'   400L, color = "#C00000")`, whose `row_height_twips` is that row's height
-#'   (over the band's `row_height_twips`) and `color` its text colour (over
-#'   the band's `color`).  Cell text may
+#'   400L, color = "#C00000", border = rtf_border(bottom = TRUE))`, whose
+#'   `row_height_twips` is that row's height (over the band's
+#'   `row_height_twips`), `color` its text colour (over the band's `color`)
+#'   and `border` its own [rtf_border()] (see `border`).  Cell text may
 #'   contain **page-number tokens** that the renderer substitutes: `{AUTO_PAGE}`
 #'   (the current page, updated live by the viewer), `{AUTO_TOTAL_PAGES}` (the
 #'   document total), and `{PAGE}` / `{TOTAL_PAGES}` (static numbers baked in at
@@ -185,10 +186,17 @@
 #'   markup's own: `^{STUDY}` raises the word STUDY.  To raise a token's
 #'   value, write the token inside the braces, `^{{STUDY}}`, or after a
 #'   character, `^{n={STUDY}}`.
-#' @param border An [rtf_border()] object controlling the border applied to
-#'   all rows of the header/footer table. `NULL` = no border (default for
-#'   header). Use `rtf_border(top = TRUE)` for a horizontal dividing line (default
-#'   for footer).
+#' @param border An [rtf_border()] for the band as a whole, read as a table
+#'   zone's is: `top` above the first row, `bottom` below the last row,
+#'   `inside_h` between rows, `left` / `right` on the outer edges of every
+#'   row, `inside_v` between the cells of a row (`all` is the four outer
+#'   edges).  The rows are the ones written, after `drop_empty_rows`.  A row
+#'   given as a list may carry its own `border =`, merged side by side over
+#'   the band's, so the sides it sets win; it applies to that row's outer
+#'   edges and its `inside_v`.  A line both of two rows draw between them is
+#'   drawn once, as the upper row's bottom.  `NULL` = no border (default for
+#'   the header); `rtf_border(top = TRUE)`, a rule above the band, is the
+#'   footer's default.
 #' @param width_twips Integer. Table width in twips. `NULL` (default) uses the
 #'   full writable width (page width minus margins); so does `0`, as
 #'   `rtftable(table_width_twips = 0)` does, since a band of no width cannot
@@ -305,6 +313,7 @@ rtf_header <- function(rows,
     }
     if (is.list(rows[[i]])) {
       .check_hf_color(rows[[i]]$color, sprintf("%s()` row %d's `color", fn, i))
+      .check_hf_row_border(rows[[i]]$border, fn, i)
     }
     nm <- names(row)
     bad <- setdiff(nm[!is.na(nm) & nzchar(nm)], c("l", "c", "r"))
@@ -317,6 +326,14 @@ rtf_header <- function(rows,
     }
   }
   invisible(rows)
+}
+
+# A band (or footnote) row's own border, given as a list's `border =`: NULL,
+# or an rtf_border, whose sides win over the band's.
+.check_hf_row_border <- function(x, fn, i) {
+  if (is.null(x) || inherits(x, "rtf_border")) return(x)
+  stop(sprintf("`%s()` row %d's `border` must be NULL or an rtf_border() object.",
+               fn, i), call. = FALSE)
 }
 
 # A band's or a row's text colour: NULL, or one "#RRGGBB" (#42).  It used to
