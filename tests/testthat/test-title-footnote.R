@@ -179,3 +179,57 @@ test_that("rtf_titles() and rtf_footnotes() set per-page titles/footnotes", {
   expect_match(txt, "Page Two")
   expect_match(txt, "Footnote of page 2")
 })
+
+# -- A border in the text format (G13) ---------------------------------------
+
+test_that("a title / footnote border in the text format warns once, output unchanged", {
+  df <- data.frame(A = 1L, B = "x", stringsAsFactors = FALSE)
+  mk <- function(titles, ...) {
+    rtf_document() |>
+      rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
+      rtf_tables(list(df, df)) |>
+      rtf_config(style = rtf_style(title_format = "text", footnote_format = "text")) |>
+      rtf_titles(titles, ...)
+  }
+  bd    <- rtf_border(bottom = TRUE)
+  plain <- list(list(list(text = "T1")), list(list(text = "T2")))
+  with  <- list(list(list(text = "T1", border = bd)),
+                list(list(text = "T2", border = bd)))
+  msg <- "drawn only when title_format / footnote_format = \"table\""
+  expect_warning(txt_b <- .render_with(mk(with)), msg, fixed = TRUE)
+  # once for the document, not once per line or per page
+  w <- character(0)
+  withCallingHandlers(.render_with(mk(with)),
+                      warning = function(c) {
+                        w <<- c(w, conditionMessage(c))
+                        invokeRestart("muffleWarning")
+                      })
+  expect_length(w, 1L)
+  expect_no_warning(txt_p <- .render_with(mk(plain)))
+  expect_identical(txt_b, txt_p)
+  # the block's own footnote border is ignored the same way
+  doc <- mk(plain) |> rtf_footnotes(list("fn"), border = rtf_border(top = TRUE))
+  expect_warning(.render_with(doc), msg, fixed = TRUE)
+})
+
+test_that("the default footnote top line in the text format does not warn", {
+  df  <- data.frame(A = 1L, B = "x", stringsAsFactors = FALSE)
+  doc <- rtf_document() |>
+    rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
+    rtf_tables(list(df)) |>
+    rtf_config(style = rtf_style(footnote_format = "text")) |>
+    rtf_footnotes(list("Plain note"))
+  expect_no_warning(txt <- .render_with(doc))
+  expect_match(txt, "Plain note")
+})
+
+test_that("a title border in the table format does not warn and is drawn", {
+  df  <- data.frame(A = 1L, B = "x", stringsAsFactors = FALSE)
+  doc <- rtf_document() |>
+    rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
+    rtf_tables(list(df)) |>
+    rtf_config(style = rtf_style(title_format = "table")) |>
+    rtf_titles(list(list(text = "T1", border = rtf_border(bottom = TRUE))))
+  expect_no_warning(txt <- .render_with(doc))
+  expect_match(txt, "clbrdrb")
+})

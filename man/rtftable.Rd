@@ -199,7 +199,8 @@ style's, else the document's (\code{\link[=rtf_style]{rtf_style()}}), else 0; 0
 writes nothing.}
 
 \item{cell_valign}{Vertical alignment: \code{"bottom"} (default), \code{"top"},
-or \code{"center"}.}
+or \code{"center"}.  It applies to the whole table, as do row height, cell
+padding and font size; none of them is set per row or per cell.}
 
 \item{cell_styles}{\code{NULL} (default), or a list of length \code{nrow(data)}.
 Each element is either \code{NULL} (no per-cell override for that row) or a

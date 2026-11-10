@@ -336,11 +336,11 @@ test_that("FT-PL989 [FR-PL972 FR-PL973]: plan_cell_style(align = , background = 
   expect_identical(w$cell_styles[[1L]]$background, c(NA, NA, "#EEEEEE", NA))
   expect_null(w$cell_styles[[2L]])
   expect_false(identical(w$col_spec[[3L]]$align, "left"))
-  # another alignment stops at plan_apply(); the header takes no background
+  # another alignment stops at plan_apply(); the header takes no indent
   expect_error(vp_pages(table_plan(d) |> plan_cell_style(cols = "X", align = "middle")),
                'must be "left", "center", or "right"', fixed = TRUE)
-  expect_error(plan_cell_style(table_plan(d), header = TRUE, background = "#EEEEEE"),
-               "takes bold, italic, underline, align and border", fixed = TRUE)
+  expect_error(plan_cell_style(table_plan(d), header = TRUE, indent_twips = 100),
+               "takes bold, italic, underline, align, border, color and background", fixed = TRUE)
 })
 
 

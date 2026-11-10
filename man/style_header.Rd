@@ -52,6 +52,7 @@ style_cols(x, ...)
   header_bold = NULL,
   header_italic = NULL,
   header_background = NULL,
+  header_color = NULL,
   ...
 )
 
@@ -140,6 +141,12 @@ selected columns (what the character label rows render with).}
 cells, \code{"#RRGGBB"}. Kept separate from \code{background} so a shaded header
 does not drag the body along with it.}
 
+\item{header_color}{Text colour of the selected columns' \strong{header}
+labels, \code{"#RRGGBB"}: the column-label rows, and a label cell promoted by
+\verb{style_header(border = / underline = )}. Kept separate from \code{color} so
+a coloured header does not colour the body. \code{NULL} (default) leaves the
+labels in the default colour.}
+
 \item{rows}{Body-row selection: \code{NULL} (all rows), integer positions, a
 logical vector over all body rows, a predicate \verb{function(data)}
 returning one logical per row, or a one-sided formula evaluated inside
@@ -193,12 +200,18 @@ of the row's resolved zone border (\code{body} crossed with \code{first_row} /
 \code{last_row}), per side.  So a rule under a summary row is
 \code{style_body(rows = ~ Item == "Total", border = rtf_border(bottom = TRUE))}, and an
 \code{"none"} side erases a zone rule on the selected cells.
-Row height and cell padding are deliberately \emph{not} per-row properties --
-they stay uniform per table / document (see \code{rtf_document(style = rtf_style())}
-and the \verb{rtfreporter.*} options).
+Row height, cell padding, vertical alignment and font size apply to the
+whole table (the body, and the header for its own settings); they are not
+set per row or per cell.  Set them on \code{\link[=rtftable]{rtftable()}}, or for the whole
+document with \code{\link[=rtf_style]{rtf_style()}}.
 }
 
 \section{Header rows and the two row kinds}{
+
+\code{style_header()} does not set row height, cell padding, vertical alignment
+or font size: these apply to the whole table, with
+\code{header_row_height_twips} for the header's own row height (see
+\code{\link[=rtftable]{rtftable()}}).
 
 A column header holds two kinds of rows (see \code{\link[=rtf_col_header]{rtf_col_header()}}): \strong{cell
 rows} (lists of \code{\link[=col_cell]{col_cell()}} spans -- spanning rows, or any row built from
@@ -212,7 +225,8 @@ and current header styling are copied over, so the rendered output is
 unchanged; the promoted row renders through the \code{spanning} border zone,
 which falls back to the \code{header} zone when unset).  The promoted cells
 keep following the columns' header styling: a later \code{style_cols(header_bold = , header_italic = , header_align = )}, or \code{style_header(bold = , italic = , align = )} on another label row, reaches them too, and
-\code{style_cols(header_background = )} fills them, so the order of the verbs
+\code{style_cols(header_background = , header_color = )} fill and colour them,
+so the order of the verbs
 does not matter.
 }
 

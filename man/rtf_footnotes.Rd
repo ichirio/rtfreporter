@@ -50,7 +50,9 @@ first row, \code{bottom} below the last row, \code{inside_h} between rows, \code
 / \code{right} on the outer edges of every row, \code{inside_v} between the cells
 of a row; e.g. \code{border = rtf_border(top = TRUE)} for a separator rule
 above the block.  A row given as a list may carry its own \verb{border =}
-(\code{list(columns = , border = )}), merged side by side over the block's.}
+(\code{list(columns = , border = )}), merged side by side over the block's.  It is drawn only with
+\code{rtf_style(footnote_format = "table")} (the default); the text form
+ignores it and warns.}
 }
 \value{
 Modified rtf_document.

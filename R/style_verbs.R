@@ -257,11 +257,17 @@
 #' `style_body(rows = ~ Item == "Total",
 #' border = rtf_border(bottom = TRUE))`, and an
 #' `"none"` side erases a zone rule on the selected cells.
-#' Row height and cell padding are deliberately *not* per-row properties --
-#' they stay uniform per table / document (see `rtf_document(style = rtf_style())`
-#' and the `rtfreporter.*` options).
+#' Row height, cell padding, vertical alignment and font size apply to the
+#' whole table (the body, and the header for its own settings); they are not
+#' set per row or per cell.  Set them on [rtftable()], or for the whole
+#' document with [rtf_style()].
 #'
 #' @section Header rows and the two row kinds:
+#' `style_header()` does not set row height, cell padding, vertical alignment
+#' or font size: these apply to the whole table, with
+#' `header_row_height_twips` for the header's own row height (see
+#' [rtftable()]).
+#'
 #' A column header holds two kinds of rows (see [rtf_col_header()]): **cell
 #' rows** (lists of [col_cell()] spans -- spanning rows, or any row built from
 #' cells) and one or more **character label rows**.  `style_header()` patches
@@ -276,7 +282,8 @@
 #' keep following the columns' header styling: a later `style_cols(header_bold
 #' = , header_italic = , header_align = )`, or `style_header(bold = , italic =
 #' , align = )` on another label row, reaches them too, and
-#' `style_cols(header_background = )` fills them, so the order of the verbs
+#' `style_cols(header_background = , header_color = )` fill and colour them,
+#' so the order of the verbs
 #' does not matter.
 #'
 #' @param x An [rtftable()], or a list of them (pages from [as_rtftables()]).
@@ -433,6 +440,11 @@ style_header.list <- function(x, ...) {
 #' @param header_background Fill colour for the selected columns' **header**
 #'   cells, `"#RRGGBB"`. Kept separate from `background` so a shaded header
 #'   does not drag the body along with it.
+#' @param header_color Text colour of the selected columns' **header**
+#'   labels, `"#RRGGBB"`: the column-label rows, and a label cell promoted by
+#'   `style_header(border = / underline = )`. Kept separate from `color` so
+#'   a coloured header does not colour the body. `NULL` (default) leaves the
+#'   labels in the default colour.
 #' @export
 style_cols <- function(x, ...) UseMethod("style_cols")
 
@@ -444,7 +456,8 @@ style_cols.rtftable <- function(x, cols = NULL, align = NULL, bold = NULL,
                                 background = NULL, border = NULL,
                                 header_align = NULL, header_bold = NULL,
                                 header_italic = NULL,
-                                header_background = NULL, ...) {
+                                header_background = NULL,
+                                header_color = NULL, ...) {
   .check_own_dots(list(...), style_cols.rtftable, "style_cols")
   cols_idx <- .style_resolve_cols(x, cols, "style_cols")
   if (!is.null(align))        align        <- .style_check_align(align, "style_cols")
@@ -465,6 +478,8 @@ style_cols.rtftable <- function(x, cols = NULL, align = NULL, bold = NULL,
     if (!is.null(background))    spec$background    <- as.character(background)
     if (!is.null(header_background))
       spec$header_background <- as.character(header_background)
+    if (!is.null(header_color))
+      spec$header_color <- as.character(header_color)
     if (!is.null(border))        spec$border        <- .merge_rtf_border(spec$border, border)
     if (!is.null(header_align))  spec$header_align  <- header_align
     if (!is.null(header_bold))   spec$header_bold   <- header_bold
