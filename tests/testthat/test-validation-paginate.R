@@ -508,7 +508,7 @@ test_that("FT-PL928 [FR-PL433 FR-TB137 FR-TB138 FR-IX324]: counted blank rows wi
   }
 })
 
-test_that("FT-PL929 [FR-PL192 FR-TB137]: between_groups puts no blank row after a continuation row", {
+test_that("FT-PL929 [FR-TB137]: between_groups puts no blank row after a continuation row", {
   pg <- as_rtftables(.vp_recs(), split = "group_force", max_rows = 4, group_col = "G",
                      blank_rows = "between_groups", min_group_rows = 0)
   expect_identical(.vp_layb(pg), "r01 r02 r03_ r04 | B+ r05 r06 r07 | B+ r08_ r09 r10 | r11 r12 r13 r14")

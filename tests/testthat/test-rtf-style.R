@@ -298,7 +298,7 @@ test_that("FT-DC239 [FR-DC320 FR-DC321 FR-DC322 FR-DC323]: an unknown key or sec
                "`rtf_config(style = )` must be NULL or an rtf_style() object.", fixed = TRUE)
 })
 
-test_that("FT-DC240 [FR-DC308 FR-DC315]: the example of #804 runs, and each report setting wins over the study's", {
+test_that("FT-DC240 [FR-DC315]: the example of #804 runs, and each report setting wins over the study's", {
   study <- rtf_style(
     font = "Arial", font_size_half_points = 18L,
     cell_padding_left_twips = 40L, cell_padding_right_twips = 40L,

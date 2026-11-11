@@ -24,6 +24,10 @@
 #        test_that("FT-PL<nnn> [FR-PL101 FR-PL102]: table_plan() ...", ...)
 #    * an existing test is mapped in inst/validation/traceability_matrix.csv
 #      (file, test, ft, fr), written by hand.
+#  Each mapping is checked when it is made: inst/validation/traceability_review.csv
+#  (ft, fr, verdict, evidence, fr_covered) records that the test's expectations
+#  assert what the FR states, with the expectation lines as the evidence; the
+#  matrix shows it in its `checked` and `evidence` columns.
 #  The blocks that call a function in scope but check none of its FRs are
 #  listed as candidates (validation/out/candidates.csv): a help to find the
 #  tests to read, never counted as coverage.
@@ -153,10 +157,27 @@ tr$coverage <- vapply(fr$id, function(id) {
   n <- sum(tr$n_ft[match(lv, tr$fr)] > 0L)
   if (n == length(lv)) "covered" else if (n > 0L) "partial" else "none"
 }, "")
+# the check of each mapping (inst/validation/traceability_review.csv): its
+# test's expectations assert what the FR states -- the whole of it ("asserts")
+# or a part, the FR's tests together asserting all of it ("part")
+rv <- utils::read.csv(file.path(vdir, "traceability_review.csv"), colClasses = "character",
+                      na.strings = "", stringsAsFactors = FALSE)
+checked_of <- function(id) {
+  r <- rv[rv$fr == id & rv$ft %in% fts(id), , drop = FALSE]
+  if (!nrow(r) || length(setdiff(fts(id), r$ft))) return("")
+  if (any(r$verdict == "asserts")) "by a test" else "by its tests together"
+}
+evidence_of <- function(id) {
+  r <- rv[rv$fr == id & rv$ft %in% fts(id), , drop = FALSE]
+  paste(sprintf("%s: %s", r$ft, r$evidence), collapse = "\n")
+}
 tm <- data.frame(`FR ID` = tr$fr, parent = tr$parent, `function` = tr$functions, type = tr$kind,
                  requirement = tr$statement, `FT ID(s)` = tr$ft,
                  `test file:line` = vapply(tr$fr, function(id) where_of(fts(id)), ""),
-                 status = tr$coverage, check.names = FALSE, stringsAsFactors = FALSE)
+                 status = tr$coverage,
+                 checked = vapply(tr$fr, checked_of, ""),
+                 evidence = vapply(tr$fr, evidence_of, ""),
+                 check.names = FALSE, stringsAsFactors = FALSE)
 tm <- tm[leaf, , drop = FALSE]
 utils::write.csv(tm, file.path(out, "traceability_matrix.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 writexl::write_xlsx(list(`FR to FT` = tm,
@@ -416,7 +437,7 @@ sm <- c(
   "",
   "On the release each file's name carries the tag (`quality-report-<tag>.pdf`, `traceability_matrix-<tag>.xlsx`, ...); a CI run started by hand keeps them as its artifact `quality-report`.",
   "",
-  "- **traceability_matrix.xlsx**, the Traceability Matrix (FR -> FT). Sheet *FR to FT*: one row a leaf requirement -- its FR ID, parent, function, type, the requirement, the FT IDs that check it and where they are (test file:line), its status (`covered` or `none`). Read it by requirement; a blank FT ID is a deviation (above). Sheet *upper FRs*: each parent requirement and whether every leaf under it is covered. It holds no results: those are test-log.txt. (traceability_matrix.csv, in the artifact, is the first sheet.)",
+  "- **traceability_matrix.xlsx**, the Traceability Matrix (FR -> FT). Sheet *FR to FT*: one row a leaf requirement -- its FR ID, parent, function, type, the requirement, the FT IDs that check it and where they are (test file:line), its status (`covered` or `none`), whether the check of its mappings found the requirement asserted (`checked`: by a test, or by its tests together) and the expectation lines that assert it (`evidence`). Read it by requirement; a blank FT ID is a deviation (above). Sheet *upper FRs*: each parent requirement and whether every leaf under it is covered. It holds no results: those are test-log.txt. (traceability_matrix.csv, in the artifact, is the first sheet.)",
   "- **test-log.txt**: testthat's own output for the mapped tests, run in this job, ending in `[ FAIL n | WARN n | SKIP n | PASS n ]`. The evidence that they pass.",
   "- **ft.csv**: one row a functional test: its FT ID, file, name and the requirements it checks. Read it by test.",
   "- **functions.csv**: one row a function in scope: its leaf requirements by type, how many have a test, its arguments, those a requirement names, those a test gives and those no requirement names. Read it for a function's depth (an aid).",
