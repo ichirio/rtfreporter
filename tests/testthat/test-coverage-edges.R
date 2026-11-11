@@ -619,8 +619,9 @@ test_that("assemble_rtf(toc = ) checks the table before it assembles", {
   gone <- toc; gone$file[1] <- file.path(dir, "gone.rtf")
   expect_error(assemble_rtf(toc = gone, output_file = out),
                "names missing file\\(s\\):")
-  expect_error(assemble_rtf(toc = toc[, c("file", "table")], output_file = out),
+  expect_error(assemble_rtf(toc = toc[, setdiff(names(toc), "file"), drop = FALSE], output_file = out),
                "needs the column `file`")
+  expect_false(file.exists(out))
 
   got <- assemble_rtf(toc = toc, output_file = out)
   expect_identical(got, out)
