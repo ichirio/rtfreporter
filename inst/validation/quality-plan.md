@@ -148,9 +148,12 @@ to it.  The Traceability Matrix shows the check in its `checked` and
 `evidence` columns.
 
 The whole matrix was checked this way on 2026-11-12, mapping by mapping,
-before this rule was written.  Where a leaf's tests did not assert every
-part it states, tests were added (`test-tm-gaps-*.R`); where the package did
-not do what the leaf states, the package was corrected.
+before this rule was written: 1913 active leaves and their 4029 mappings.
+173 mappings whose test asserts none of the leaf were taken out.  482
+leaves had a part no test asserted; 460 tests were added for them
+(`test-tm-gaps-*.R`).  Where the package did not do what a leaf states, the
+package was corrected (three defects); where a leaf's statement was out of
+date, the statement was corrected (four leaves).
 
 ### Functional verification and regression
 

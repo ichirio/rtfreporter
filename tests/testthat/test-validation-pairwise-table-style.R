@@ -286,7 +286,7 @@
   bad
 }
 
-test_that("FT-TB785 [FR-TB545 FR-TB547 FR-TB548 FR-TB552 FR-TB553 FR-TB554 FR-TB555 FR-TB564 FR-TB565 FR-TB566 FR-TB567 FR-TB568 FR-TB570 FR-TB457 FR-TB458 FR-IX338 FR-IX339 FR-TB614 FR-TB615 FR-TB616]: pairwise -- border x header x stub x widths x padding x height x alignment x valign x blank rows", {
+test_that("FT-TB785 [FR-TB545 FR-TB547 FR-TB548 FR-TB552 FR-TB555 FR-TB564 FR-TB565 FR-TB566 FR-TB567 FR-TB568 FR-TB570 FR-TB457 FR-TB458 FR-IX338 FR-IX339 FR-TB614 FR-TB615 FR-TB616]: pairwise -- border x header x stub x widths x padding x height x alignment x valign x blank rows", {
   levels <- list(border = c("tfl", "none", "box", "grid"),
                  header = c("names", "two", "span"), stub = c("col1", "none"),
                  widths = c("default", "rel", "twips", "pct"),
@@ -697,7 +697,7 @@ test_that("FT-TB974 [FR-TB616 FR-TB458 FR-IX341 FR-TB566]: decision table -- the
   bad
 }
 
-test_that("FT-TB975 [FR-IX397 FR-IX330 FR-IX331 FR-IX332 FR-TB408 FR-TB422 FR-TB430 FR-TB363]: pairwise -- the style verbs in any order, on overlapping levels of one column", {
+test_that("FT-TB975 [FR-IX397 FR-IX330 FR-IX331 FR-TB408 FR-TB422 FR-TB430 FR-TB363]: pairwise -- the style verbs in any order, on overlapping levels of one column", {
   levels <- list(zone = c("none", "hdr", "ih", "last"),
                  header = c("none", "align", "label", "border", "bold"),
                  cols = c("none", "align", "border", "bold", "bg", "hbold"),

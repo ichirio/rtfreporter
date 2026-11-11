@@ -1102,7 +1102,8 @@ test_that("FT-AR3047 [FR-AR220]: pull_ard(levels = ) orders by levels, factor, f
                    c(A = 2, B = 4))
   # a plain vector for levels is not read
   expect_identical(names(pull_ard(chr, cols = "TRT", levels = c("A", "B"))), c("B", "A"))
-  # two column keys: the levels of the first key order the joined names
+  # two column keys: levels are matched on the joined names (FR-AR240), so
+  # the levels of the first key alone match none and the order is unchanged
   two <- data.frame(
     group1 = "TRT", group1_level = c("A", "A", "B", "B"),
     group2 = "SEX", group2_level = c("F", "M", "F", "M"), variable = "AGE",
@@ -1110,7 +1111,7 @@ test_that("FT-AR3047 [FR-AR220]: pull_ard(levels = ) orders by levels, factor, f
     stat_label = "N", stat = c(1, 2, 3, 4), stringsAsFactors = FALSE)
   expect_identical(
     pull_ard(two, cols = c("TRT", "SEX"), levels = list(TRT = c("B", "A"))),
-    c(B____F = 3, B____M = 4, A____F = 1, A____M = 2))
+    c(A____F = 1, A____M = 2, B____F = 3, B____M = 4))
   # levels naming the joined names (a crossed header) still order by them
   expect_identical(
     names(pull_ard(two, cols = c("TRT", "SEX"),

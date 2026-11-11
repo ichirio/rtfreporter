@@ -1452,16 +1452,7 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
   # `levels` is a named list, as in widen_ard(); a plain vector is not read
   ord <- if (!is.list(levels)) .ard_key_order(d, cols, key) else {
     lv <- levels[[cols[1L]]] %||% levels[[1L]]
-    nm <- names(out)
-    if (length(cols) > 1L && !any(nm %in% lv)) {
-      # the levels of the first key: order the joined names by their first
-      # part, keeping the default order within it (order() is stable)
-      base <- intersect(.ard_key_order(d, cols, key), nm)
-      first <- vapply(strsplit(base, sep, fixed = TRUE), `[`, "", 1L)
-      base[order(match(first, lv, nomatch = length(lv) + 1L))]
-    } else {
-      c(intersect(lv, nm), setdiff(nm, lv))
-    }
+    c(intersect(lv, names(out)), setdiff(names(out), lv))
   }
   out[intersect(ord, names(out))]
 }

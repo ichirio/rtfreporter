@@ -91,7 +91,7 @@
   }
 }
 
-test_that("FT-FM108 [FR-FM148 FR-FM149 FR-FM151 FR-FM152 FR-FM153 FR-FM154 FR-FM155 FR-FM156 FR-FM157 FR-FM158 FR-FM159 FR-FM160 FR-FM161 FR-FM162 FR-IX404]: fmt_numeric(): mode x cols x small x rounding x na x a rule's own small, pairwise", {
+test_that("FT-FM108 [FR-FM148 FR-FM149 FR-FM151 FR-FM152 FR-FM153 FR-FM154 FR-FM155 FR-FM156 FR-FM157 FR-FM158 FR-FM160 FR-FM161 FR-FM162 FR-IX404]: fmt_numeric(): mode x cols x small x rounding x na x a rule's own small, pairwise", {
   mode <- c("signif", "digits", "by_all", "by_default")
   cand <- expand.grid(mode = mode, cols = c("A", "AB", "pos", "AC"),
                       small = c("signif", "fixed"), rounding = c("NULL", "r", "sas"),

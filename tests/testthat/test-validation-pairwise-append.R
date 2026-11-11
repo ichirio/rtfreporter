@@ -372,7 +372,7 @@
   invisible(NULL)
 }
 
-test_that("FT-PL985 [FR-PL968 FR-PL903 FR-PL904 FR-PL905 FR-PL432 FR-PL433 FR-PL435 FR-PL436 FR-PL437]: pairwise -- plan_append() parts x heading x na x columns x paging x split x blank rows", {
+test_that("FT-PL985 [FR-PL968 FR-PL903 FR-PL904 FR-PL905 FR-PL432 FR-PL433 FR-PL437]: pairwise -- plan_append() parts x heading x na x columns x paging x split x blank rows", {
   dir <- tempfile("pa_a")
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
@@ -433,7 +433,7 @@ test_that("FT-PL985 [FR-PL968 FR-PL903 FR-PL904 FR-PL905 FR-PL432 FR-PL433 FR-PL
   p
 }
 
-test_that("FT-PL986 [FR-PL969 FR-PL905 FR-PL433 FR-PL435 FR-PL436]: decision table -- a page break one row before, on and one row after a part's boundary", {
+test_that("FT-PL986 [FR-PL969 FR-PL905 FR-PL433]: decision table -- a page break one row before, on and one row after a part's boundary", {
   dir <- tempfile("pa_b")
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
