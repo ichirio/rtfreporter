@@ -6,7 +6,7 @@
 # test.  For each function below, one row per claim of its roxygen: the
 # claim (short), the FR that states it, and the test that checks it.  The
 # tests below this table close the gaps the audit found.  A test written
-# before the audit and mapped by hand in inst/validation/test_map.csv is
+# before the audit and mapped by hand in inst/validation/traceability_matrix.csv is
 # named by its FT id.
 #
 # rtftable()

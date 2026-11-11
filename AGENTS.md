@@ -80,7 +80,7 @@ is wrong (open an issue if the design itself is in question).
 
 Every behaviour change needs a requirement in
 `inst/validation/requirements.csv` and a test named with its FT id (or a
-`test_map.csv` row for an existing test), in the same PR, with
+`traceability_matrix.csv` row for an existing test), in the same PR, with
 `validation/trace.R` and the validation tests passing and a
 `deviations.csv` row where a test is not possible; see *Quality assurance*
 in `CONTRIBUTING.md` for the full rule.

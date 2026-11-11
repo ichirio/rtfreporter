@@ -34,7 +34,7 @@ explains the columns of this file and of the UAT cases.}
 (\code{UAT-NNN}) on dummy data, with blank \code{actual}, \code{result}, \code{tester} and
 \code{date} to fill.}
 \item{\code{build_user_matrix.R}}{Writes your Traceability Matrix (URS -> FR
--> UAT): \code{user_traceability.csv}, and \code{user_traceability.xlsx} when
+-> UAT): \code{user_traceability_matrix.csv}, and \code{user_traceability_matrix.xlsx} when
 writexl is installed.}
 \item{\code{validation_summary_report.md}}{The Validation Summary Report you
 fill: environment, UAT results, deviations, conclusion.}

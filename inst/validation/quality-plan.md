@@ -41,11 +41,11 @@ the user's report, and deepest where it is likeliest or hardest to see:
   `behaviour`, `argument`, `data`, `guard`, `interaction` (the last under
   `FR-IX000`, apart from the functions').
 - **Functional Tests (FT)** are testthat blocks mapped to the leaves by the
-  developer making the change: in `inst/validation/test_map.csv`, or by a new
+  developer making the change: in `inst/validation/traceability_matrix.csv`, or by a new
   test's own name (`"FT-PL<nnn> [FR-PL157 FR-PL159]: ..."`).  A test that
   merely calls a function is not coverage.  A parent requirement is covered
   when every leaf under it is.
-- **The Traceability Matrix (FR -> FT)** (`traceability.xlsx`) holds the
+- **The Traceability Matrix (FR -> FT)** (`traceability_matrix.xlsx`) holds the
   mapping only, no results; the results are the tests' log.
 
 ## 4. Acceptance criteria
@@ -83,7 +83,7 @@ maintainers' own; no third-party audit is made.
 
 | When | Plan | Report |
 |---|---|---|
-| The first release under this plan, and each major version | this **Quality Plan** (by hand) | the **Quality Report** (`quality-report-<tag>.pdf`): made by CI at the published release from the records -- the environments' table, the results, the deviations and why accepted, the conclusion, how to read the attachments; attached to the release with the Traceability Matrix (`traceability-<tag>.xlsx`), every environment's sessionInfo and tests' log (`environments-<tag>.txt`), the tests' log of the mapped tests (`test-log-<tag>.txt`) and the tables behind the results (`ft-<tag>.csv`, `functions-<tag>.csv`, `candidates-<tag>.csv`) |
+| The first release under this plan, and each major version | this **Quality Plan** (by hand) | the **Quality Report** (`quality-report-<tag>.pdf`): made by CI at the published release from the records -- the environments' table, the results, the deviations and why accepted, the conclusion, how to read the attachments; attached to the release with the Traceability Matrix (`traceability_matrix-<tag>.xlsx`), every environment's sessionInfo and tests' log (`environments-<tag>.txt`), the tests' log of the mapped tests (`test-log-<tag>.txt`) and the tables behind the results (`ft-<tag>.csv`, `functions-<tag>.csv`, `candidates-<tag>.csv`) |
 | Releases between them | the **Change Request Plan**: the release's GitHub milestone, each issue with its impact, risk and related FRs | the **Change Report**: made from the merged pull requests and issues, the FRs added or changed, the regression evidence (the tests, the byte comparison of the reference outputs), the environments; the deviations' reasons by hand |
 
 What GitHub already records -- issues, pull requests, the CI runs, the

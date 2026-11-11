@@ -22,14 +22,14 @@
 #  making the change, never by the block merely calling the function:
 #    * a new test names its id and FRs at its head:
 #        test_that("FT-PL<nnn> [FR-PL101 FR-PL102]: table_plan() ...", ...)
-#    * an existing test is mapped in inst/validation/test_map.csv
+#    * an existing test is mapped in inst/validation/traceability_matrix.csv
 #      (file, test, ft, fr), written by hand.
 #  The blocks that call a function in scope but check none of its FRs are
 #  listed as candidates (validation/out/candidates.csv): a help to find the
 #  tests to read, never counted as coverage.
 #
 #  Written to validation/out/:
-#    traceability.xlsx / .csv   the Traceability Matrix: one row a leaf FR, its
+#    traceability_matrix.xlsx / traceability_matrix.csv the Traceability Matrix: one row a leaf FR, its
 #                               tests and where (no results); the xlsx's
 #                               second sheet, the upper FRs' status
 #    ft.csv                     one row an FT: its file, test, FRs
@@ -107,7 +107,7 @@ files <- list.files(file.path(root, "tests", "testthat"), "^test-.*[.]R$", full.
 tb <- do.call(rbind, lapply(files, blocks))
 
 # ---- the map: by hand, and the new tests' own names -------------------------------
-map <- utils::read.csv(file.path(vdir, "test_map.csv"), colClasses = "character",
+map <- utils::read.csv(file.path(vdir, "traceability_matrix.csv"), colClasses = "character",
                        stringsAsFactors = FALSE)
 head_re <- "^(FT-[A-Z]{2}[0-9]{3,4}) \\[([^]]*)\\]:"
 named <- tb[grepl(head_re, tb$test), , drop = FALSE]
@@ -119,7 +119,7 @@ if (nrow(named)) {
 }
 gone <- !paste(map$file, map$test, sep = "\r") %in% paste(tb$file, tb$test, sep = "\r")
 if (any(gone)) {
-  stop(sprintf("test_map.csv names %d test(s) not in the tests (renamed?): %s.", sum(gone),
+  stop(sprintf("traceability_matrix.csv names %d test(s) not in the tests (renamed?): %s.", sum(gone),
                paste(utils::head(paste(map$file[gone], map$test[gone], sep = ": "), 3),
                      collapse = "; ")), call. = FALSE)
 }
@@ -158,12 +158,12 @@ tm <- data.frame(`FR ID` = tr$fr, parent = tr$parent, `function` = tr$functions,
                  `test file:line` = vapply(tr$fr, function(id) where_of(fts(id)), ""),
                  status = tr$coverage, check.names = FALSE, stringsAsFactors = FALSE)
 tm <- tm[leaf, , drop = FALSE]
-utils::write.csv(tm, file.path(out, "traceability.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+utils::write.csv(tm, file.path(out, "traceability_matrix.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 writexl::write_xlsx(list(`FR to FT` = tm,
                          `upper FRs` = data.frame(`FR ID` = tr$fr[!leaf], parent = tr$parent[!leaf],
                                                   requirement = tr$statement[!leaf],
                                                   status = tr$coverage[!leaf], check.names = FALSE)),
-                    file.path(out, "traceability.xlsx"))
+                    file.path(out, "traceability_matrix.xlsx"))
 utils::write.csv(map[c("ft", "file", "test", "fr")], file.path(out, "ft.csv"), row.names = FALSE,
                  fileEncoding = "UTF-8")
 
@@ -414,9 +414,9 @@ sm <- c(
   "",
   "## Attachments, and how to read them",
   "",
-  "On the release each file's name carries the tag (`quality-report-<tag>.pdf`, `traceability-<tag>.xlsx`, ...); a CI run started by hand keeps them as its artifact `quality-report`.",
+  "On the release each file's name carries the tag (`quality-report-<tag>.pdf`, `traceability_matrix-<tag>.xlsx`, ...); a CI run started by hand keeps them as its artifact `quality-report`.",
   "",
-  "- **traceability.xlsx**, the Traceability Matrix (FR -> FT). Sheet *FR to FT*: one row a leaf requirement -- its FR ID, parent, function, type, the requirement, the FT IDs that check it and where they are (test file:line), its status (`covered` or `none`). Read it by requirement; a blank FT ID is a deviation (above). Sheet *upper FRs*: each parent requirement and whether every leaf under it is covered. It holds no results: those are test-log.txt. (traceability.csv, in the artifact, is the first sheet.)",
+  "- **traceability_matrix.xlsx**, the Traceability Matrix (FR -> FT). Sheet *FR to FT*: one row a leaf requirement -- its FR ID, parent, function, type, the requirement, the FT IDs that check it and where they are (test file:line), its status (`covered` or `none`). Read it by requirement; a blank FT ID is a deviation (above). Sheet *upper FRs*: each parent requirement and whether every leaf under it is covered. It holds no results: those are test-log.txt. (traceability_matrix.csv, in the artifact, is the first sheet.)",
   "- **test-log.txt**: testthat's own output for the mapped tests, run in this job, ending in `[ FAIL n | WARN n | SKIP n | PASS n ]`. The evidence that they pass.",
   "- **ft.csv**: one row a functional test: its FT ID, file, name and the requirements it checks. Read it by test.",
   "- **functions.csv**: one row a function in scope: its leaf requirements by type, how many have a test, its arguments, those a requirement names, those a test gives and those no requirement names. Read it for a function's depth (an aid).",
