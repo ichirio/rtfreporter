@@ -236,7 +236,8 @@
 #'       `"widths"`, `"titles"`, `"footnotes"`, `"styles"` (explicit
 #'       `tab_style()` borders and text styles; see *What is carried*).}
 #'     \item{rtables / tern}{`"col_header"`, `"alignment"`, `"spanning"`,
-#'       `"titles"`, `"footnotes"`, `"indent"`, `"footnote_marks"`;
+#'       `"titles"`, `"footnotes"`, `"footnote_marks"` (the indentation is
+#'       always written into the labels);
 #'       **rlistings takes the same tokens**, because the two share one
 #'       `MatrixPrintForm` reader.}
 #'     \item{flextable}{`"col_header"`, `"alignment"`, `"spanning"`,
@@ -1201,6 +1202,12 @@ as_rtftables.default <- function(x,
     # Checked once on the whole body, before pagination: a position past its
     # last row reaches no page.  Within the body it is "after row k of each
     # page", so a page shorter than k simply has none.
+    # With no `blank_rows`, the positions an rtf_blank_rows attribute on the
+    # input names (set_blank_rows()) are the ones placed.
+    if (is.null(blank_rows)) {
+      ba <- attr(x, "rtf_blank_rows", exact = TRUE)
+      if (is.numeric(ba) && length(ba)) blank_rows <- as.integer(ba)
+    }
     .check_blank_positions(blank_rows, nrow(body))
 
     # ---- sort body rows -------------------------------------------------

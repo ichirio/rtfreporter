@@ -1452,7 +1452,16 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
   # `levels` is a named list, as in widen_ard(); a plain vector is not read
   ord <- if (!is.list(levels)) .ard_key_order(d, cols, key) else {
     lv <- levels[[cols[1L]]] %||% levels[[1L]]
-    c(intersect(lv, names(out)), setdiff(names(out), lv))
+    nm <- names(out)
+    if (length(cols) > 1L && !any(nm %in% lv)) {
+      # the levels of the first key: order the joined names by their first
+      # part, keeping the default order within it (order() is stable)
+      base <- intersect(.ard_key_order(d, cols, key), nm)
+      first <- vapply(strsplit(base, sep, fixed = TRUE), `[`, "", 1L)
+      base[order(match(first, lv, nomatch = length(lv) + 1L))]
+    } else {
+      c(intersect(lv, nm), setdiff(nm, lv))
+    }
   }
   out[intersect(ord, names(out))]
 }
@@ -2681,6 +2690,9 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     is_f <- vapply(parts, inherits, logical(1), "formula")
     if (any(is_f)) {
       lab_chain <- .ard_chain(parts, one_sided = TRUE)
+      # a plain string in the chain names the source column, so where it
+      # stands the row keeps that column's label, not the string as text
+      lab_chain[!is_f] <- list(list(cond = NULL, env = NULL, tpl = "{.label}"))
       plain <- parts[!is_f]
       label <- if (length(plain)) stats::setNames(
         as.character(unlist(plain)),

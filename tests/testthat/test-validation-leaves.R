@@ -63,6 +63,40 @@ test_that("every active leaf FR has a test or a deviation with its risk", {
                                 "deviations.csv: ", paste(stale, collapse = " ")))
 })
 
+test_that("every mapping of a test to an active FR is checked in traceability_review.csv", {
+  # A mapping is checked when it is made: someone read the FR and the test and
+  # recorded that the test's expectations assert what the FR states -- all of
+  # it ("asserts") or a part of it ("part"), the FR's tests together asserting
+  # all of it (fr_covered = "yes") -- with the expectation lines as evidence.
+  fr <- .leaf_read("requirements.csv")
+  map <- .leaf_read("traceability_matrix.csv")
+  rv <- .leaf_read("traceability_review.csv")
+  tb <- .leaf_test_names()
+  expect_named(rv, c("ft", "fr", "verdict", "evidence", "fr_covered"))
+  named <- grep(.leaf_head, tb$test, value = TRUE)
+  ft <- c(map$ft, sub(paste0(.leaf_head, ".*$"), "\\1", named))
+  frs <- c(map$fr, sub(paste0(.leaf_head, ".*$"), "\\2", named))
+  pairs <- unlist(Map(function(f, r) paste(f, strsplit(r, " ", fixed = TRUE)[[1L]]), ft, frs),
+                  use.names = FALSE)
+  active <- fr$id[fr$status == "active"]
+  pairs <- pairs[sub("^\\S+ ", "", pairs) %in% active]
+  have <- paste(rv$ft, rv$fr)
+  miss <- setdiff(pairs, have)
+  expect(!length(miss), paste0(
+    "Mappings with no check: read the FR and the test, and add a row to ",
+    "inst/validation/traceability_review.csv (the expectation lines that assert it):\n",
+    paste(utils::head(miss, 30), collapse = "\n")))
+  stale <- setdiff(have, pairs)
+  expect(!length(stale), paste0("traceability_review.csv rows for mappings that are gone: ",
+                                paste(utils::head(stale, 30), collapse = " ")))
+  expect(all(rv$verdict %in% c("asserts", "part")),
+         "A verdict is \"asserts\" or \"part\"; a test that asserts none of an FR is not mapped to it.")
+  expect(all(!is.na(rv$evidence) & nzchar(rv$evidence)), "Every check names its evidence.")
+  expect(all(rv$fr_covered %in% "yes"), paste0(
+    "An FR whose tests do not assert all of it together needs a test: ",
+    paste(unique(rv$fr[!rv$fr_covered %in% "yes"]), collapse = " ")))
+})
+
 test_that("a test title that starts with FT- parses as an FT id with its FRs", {
   tb <- .leaf_test_names()
   ft_like <- tb[startsWith(tb$test, "FT-"), , drop = FALSE]

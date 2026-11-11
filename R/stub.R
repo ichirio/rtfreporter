@@ -219,6 +219,12 @@ stub_cols <- function(data, vars, label = NULL, indent = 4L,
       (!is.character(label) || length(label) != 1L || is.na(label))) {
     stop("`label` must be NULL or a single string.", call. = FALSE)
   }
+  # a whole number: 1.5, "2" and TRUE used to be coerced (checked with one
+  # column too, where it has nothing to indent)
+  if (!.is_whole_number(indent, 0)) {
+    stop("`indent` must be a single non-negative integer.", call. = FALSE)
+  }
+  summary_modes <- .resolve_group_summary(group_summary)
   # One column: nothing to fold.  It is the stub as it is, named `label`
   # (layout = "merged"; its place is first, as a folded stub's), every row
   # its own.
@@ -244,12 +250,7 @@ stub_cols <- function(data, vars, label = NULL, indent = 4L,
     attr(out, "rtf_stub_src") <- seq_len(nrow(data))
     return(out)
   }
-  # a whole number: 1.5, "2" and TRUE used to be coerced
-  if (!.is_whole_number(indent, 0)) {
-    stop("`indent` must be a single non-negative integer.", call. = FALSE)
-  }
   indent <- as.integer(indent)
-  summary_modes <- .resolve_group_summary(group_summary)
   empty_mode    <- "empty"  %in% summary_modes
   parent_mode   <- "parent" %in% summary_modes
 

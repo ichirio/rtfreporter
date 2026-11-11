@@ -630,7 +630,8 @@ for the detail — this section deliberately does not copy it.
   *Requirements, tests and regression* (every
   behaviour change needs a requirement in `inst/validation/requirements.csv`
   and a test named with its FT id (or an existing test mapped in
-  `inst/validation/traceability_matrix.csv`), a deviation with its reason in
+  `inst/validation/traceability_matrix.csv`, each mapping checked in
+  `inst/validation/traceability_review.csv`), a deviation with its reason in
   `inst/validation/deviations.csv` where a test is not possible, and
   `validation/trace.R` and the three `test-validation*.R` tests passing; see
   *Quality assurance* in `CONTRIBUTING.md`), the *Checklist* (tests, roxygen + committed

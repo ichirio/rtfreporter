@@ -46,7 +46,8 @@ the user's report, and deepest where it is likeliest or hardest to see:
   merely calls a function is not coverage.  A parent requirement is covered
   when every leaf under it is.
 - **The Traceability Matrix (FR -> FT)** (`traceability_matrix.xlsx`) holds the
-  mapping only, no results; the results are the tests' log.
+  mapping and the check of each mapping (`traceability_review.csv`,
+  section 3a), no results; the results are the tests' log.
 
 ## 3a. Test design, and why it shows the requirements are met
 
@@ -134,12 +135,35 @@ What the repository enforces by machine: a leaf has a test or a deviation
 argument is named by a leaf (`test-validation-coverage.R`); and the tests
 pass on every CI job before a change is merged (section 7).
 
-What it does not do: no tool or checklist checks that a mapped test really
-asserts what its leaf states.  The only review of that is the maintainer's
-review of the pull request (section 7).  This is a gap in the plan.  The
-risk is a leaf with a test that is too weak for it.  The help audits (which
-name the test for each claim) and `candidates-<tag>.csv` (which points at
-tests nobody mapped) reduce it.  They do not remove it.
+Each mapping is checked when it is made.  Whoever maps a test to a leaf
+reads the leaf and the test, and records in
+`inst/validation/traceability_review.csv` that the test's expectations
+assert what the leaf states: all of it (`asserts`), or a part of it
+(`part`) when the leaf's tests together assert all of it
+(`fr_covered = yes`).  The record quotes the expectation lines as the
+evidence.  `test-validation-leaves.R` fails when a mapping has no such row,
+when a row is for a mapping that is gone, and when a leaf's tests together
+do not assert all of it.  A test that asserts none of a leaf is not mapped
+to it.  The Traceability Matrix shows the check in its `checked` and
+`evidence` columns.
+
+The whole matrix was checked this way on 2026-11-12, mapping by mapping,
+before this rule was written.  Where a leaf's tests did not assert every
+part it states, tests were added (`test-tm-gaps-*.R`); where the package did
+not do what the leaf states, the package was corrected.
+
+### Functional verification and regression
+
+The requirements are verified functionally by the tests mapped to them:
+each asserts, for its leaf, the value returned, the error or warning, or the
+RTF written -- the control words and text the leaf's statement implies
+(alignment such as `\qc`, borders such as `\clbrdrb`, widths such as
+`\cellx`, fonts, page setup, the text).  Comparing an output with a stored
+reference RTF is not functional verification: it shows that the output has
+not changed, not that it is right.  The reference RTFs are regression
+tests, for a new version of this package and for a port of it to another
+language, and they are made from outputs that the functional tests have
+verified.
 
 ### How the expected result is known (the oracle)
 
@@ -161,12 +185,20 @@ test.  The tests use these sources:
   hand in the shape `cards` writes, from fictional counts
   (`test-validation-ar.R`), and a 1 x 1 PNG written by hand for the figure
   scenario.
-- **Reference RTF files** for the end-to-end scenarios.  The package itself
-  writes them, when a scenario is made or deliberately changed.  They show
-  that the output has not changed.  They do not show that the first output
-  was right.  That was read when the reference was made, and the repository
-  keeps no record of the reading.  This is a gap.  The references show
-  stability; the other sources show correctness.
+- **Reference RTF files** for the end-to-end scenarios, as a regression
+  oracle only (above).  The package itself writes them, when a scenario is
+  made or deliberately changed.  They show that the output has not changed.
+  That the stored output was right is a reading: each reference is read
+  against the code that made it, control word by control word (page setup,
+  fonts, the cells' `\cellx` widths worked from the widths asked, borders,
+  alignment, the text and the values the data gives), and the reading is
+  recorded in `inst/validation/reference_review.csv` with the file's md5, a
+  verdict, what was checked and, for a wrong one, its issue.  What only a
+  person can judge -- how Word lays the page out -- is marked
+  `pending-human` until a person has looked.  `test-validation-references.R`
+  fails when a reference is new or written again and its reading is not
+  recorded.  The references show stability; the other sources show
+  correctness.
 
 ### Why line coverage is an aid only
 
@@ -223,10 +255,11 @@ on every one of them.
 
 ### Residual risk, and how a deviation is accepted
 
-What is left after the above: a leaf whose test is too weak (see *What
-counts as a test of a leaf*); behaviour the FRs do not state because the
-help does not; a reference RTF that was wrong from the start; and the
-environments that are not tested.
+What is left after the above: a check of a mapping that was wrong (it is
+recorded with its evidence, so it can be read again); behaviour the FRs do
+not state because the help does not; a reading of a reference RTF that
+missed something, which affects regression only; and the environments that
+are not tested.
 
 A requirement the tests cannot check is a deviation: one row of
 `inst/validation/deviations.csv` with the FRs (`ids`), the `item`, the
