@@ -212,8 +212,8 @@ What is not tested, and the risk accepted:
 - **Another RTF reader.**  The tests compare the RTF text.  They do not open
   it in a word processor.
 
-These risks are accepted by the maintainers.  Each is a limit of what the
-tests run on, and the Quality Report names them again for the release.
+This plan accepts these risks.  Each is a limit of what the tests run on,
+and the Quality Report names them again for each release.
 
 The Quality Report's sections on the test environments and on the supported
 environments (the report is made at a release) list each environment
