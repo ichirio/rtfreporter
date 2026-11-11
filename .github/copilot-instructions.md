@@ -31,7 +31,7 @@ without being asked:
   inside `f(...)`), or `test-validation-coverage.R` fails.
 - Give each leaf FR a test.  A new test names its id and FRs in its title,
   `test_that("FT-PL049 [FR-PL122]: ...")`; only an existing test is mapped
-  by a row in `inst/validation/test_map.csv` (file, test, ft, fr).  Never
+  by a row in `inst/validation/traceability_matrix.csv` (file, test, ft, fr).  Never
   both: an FT id given twice fails.
 - Where a test is not possible, add a row with the risk and the reason to
   `inst/validation/deviations.csv`.

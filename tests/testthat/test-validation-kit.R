@@ -29,14 +29,14 @@ test_that("rtfreporter_validation_kit() refuses a folder with files unless overw
   expect_error(rtfreporter_validation_kit(d, overwrite = NA), "TRUE or FALSE")
 })
 
-test_that("requirements.csv and test_map.csv are strict CSV, every row whole", {
+test_that("requirements.csv and traceability_matrix.csv are strict CSV, every row whole", {
   # what any CSV reader takes them as (RFC 4180): a field quoted or not,
   # a quote inside a quoted field doubled -- a backslash does not escape
   # it, which R's reader forgives and Python's does not; every record as
   # many fields as the header; a status and a version where they belong
   field <- "(\"(?:[^\"]|\"\")*+\"|[^,\"]*+)"
   record <- paste0("^", field, "(?:,", field, ")*+$")
-  for (f in c("requirements.csv", "test_map.csv")) {
+  for (f in c("requirements.csv", "traceability_matrix.csv")) {
     path <- system.file("validation", f, package = "rtfreporter")
     lines <- readLines(path, encoding = "UTF-8", warn = FALSE)
     bad <- which(!grepl(record, lines, perl = TRUE))

@@ -3,7 +3,7 @@
 # plan_paginate_rows(), plan_paginate_group(), plan_paginate_cols(),
 # plan_row_group(), plan_listing(), plan_titles() / plan_footnotes(),
 # plan_after().  Where an existing test already checks a leaf it is mapped in
-# inst/validation/test_map.csv; these are the leaves none did.
+# inst/validation/traceability_matrix.csv; these are the leaves none did.
 
 # A finished (wide) table: three groups of two rows, two value columns.
 vp_wide <- function() {

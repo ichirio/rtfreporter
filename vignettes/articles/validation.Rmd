@@ -31,7 +31,7 @@ At each release, CI writes the **Quality Report**: the results on every
 environment (six in CI -- Linux, macOS and Windows, several R versions --
 and two runs on the maintainers' PC), the deviations, the conclusion and how
 to read each attachment. It is attached to the GitHub release with its
-evidence: the Traceability Matrix (`traceability-<tag>.xlsx`), every
+evidence: the Traceability Matrix (`traceability_matrix-<tag>.xlsx`), every
 environment's sessionInfo and test log (`environments-<tag>.txt`), the
 mapped tests' log and the tables behind the results. Only the report of a
 published release can conclude *validation-ready*; a report made any other
@@ -95,7 +95,7 @@ The FR ids join your records to the package's.
 
 ```
 your need          the package's requirement      the package's tests
-UR-008  ----------> FR-PL161 decimal alignment ----> FT (in traceability.xlsx)
+UR-008  ----------> FR-PL161 decimal alignment ----> FT (in traceability_matrix.xlsx)
    |
    +--> UAT-011  your check in your environment
 ```

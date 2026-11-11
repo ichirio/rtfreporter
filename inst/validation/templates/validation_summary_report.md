@@ -77,5 +77,5 @@ The system may be released for production use from `<date>`.
 - `urs.csv`, `uat_cases.csv` (with results), `user_traceability.xlsx`
 - Installation and test logs, sessionInfo
 - rtfreporter `<x.y.z>` Quality Report and its attachments (from the GitHub
-  release: `quality-report-<tag>.pdf`, `traceability-<tag>.xlsx`,
+  release: `quality-report-<tag>.pdf`, `traceability_matrix-<tag>.xlsx`,
   `environments-<tag>.txt`)
