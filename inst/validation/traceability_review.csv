@@ -1429,6 +1429,7 @@
 "FT-FM087","FR-FM196","asserts","expect_error(fmt_count_pct(1, 0.5, rounding = ""x""), .rounding_msg, fixed = TRUE) | expect_error(fmt_count_pct(1, 0.5, pct_unit = ""x""), ""should be one of"")","yes"
 "FT-FM105","FR-FM196","asserts","E(""pct_unit"", ""another case"", ""Percent"", ma, more = list(count = 1, pct = 50)), | E(""pct_unit"", ""NA"", NA, mn, more = list(count = 1, pct = 50)), | E(""pct_unit"", ""a number"", 1, mn, more = list(count = 1, pct = 50)), | E(""rounding"", ""unkno...","yes"
 "FT-FM046","FR-FM200","part","expect_identical(nchar(out[matching_idx]), rep(10L, length(matching_idx)))","yes"
+"FT-FM110","FR-FM200","part","expect_identical(got[1L], want) | expect_false(grepl(""16.0"", got[1L], fixed = TRUE)) | expect_identical(nchar(got[1L]), nchar(got[3L])) | expect_match(got[4L], ""(6.25%)"", fixed = TRUE)","yes"
 "FT-FM3008","FR-FM200","part","as_rtftables(align_count_pct=TRUE) cells "" 5 (5.0)"","" 14 (50.0)"","" 30 (100)""","yes"
 "FT-FM039","FR-FM201","asserts","expect_true(all(nchar(out) == nchar(out[1L]))) | expect_true(all(endsWith(out, ""%)""))) | expect_true(any(grepl(""8 (28.6%)"", out, fixed = TRUE)))","yes"
 "FT-FM046","FR-FM202","part","expect_identical(nchar(out[matching_idx]), rep(10L, length(matching_idx)))","yes"
