@@ -29,7 +29,7 @@
 #  tests to read, never counted as coverage.
 #
 #  Written to validation/out/:
-#    traceability_matrix.xlsx / traceability.csv the Traceability Matrix: one row a leaf FR, its
+#    traceability_matrix.xlsx / traceability_matrix.csv the Traceability Matrix: one row a leaf FR, its
 #                               tests and where (no results); the xlsx's
 #                               second sheet, the upper FRs' status
 #    ft.csv                     one row an FT: its file, test, FRs
@@ -158,7 +158,7 @@ tm <- data.frame(`FR ID` = tr$fr, parent = tr$parent, `function` = tr$functions,
                  `test file:line` = vapply(tr$fr, function(id) where_of(fts(id)), ""),
                  status = tr$coverage, check.names = FALSE, stringsAsFactors = FALSE)
 tm <- tm[leaf, , drop = FALSE]
-utils::write.csv(tm, file.path(out, "traceability.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+utils::write.csv(tm, file.path(out, "traceability_matrix.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 writexl::write_xlsx(list(`FR to FT` = tm,
                          `upper FRs` = data.frame(`FR ID` = tr$fr[!leaf], parent = tr$parent[!leaf],
                                                   requirement = tr$statement[!leaf],

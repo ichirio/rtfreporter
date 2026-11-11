@@ -8,9 +8,9 @@
 #    requirements.csv  rtfreporter's Functional Requirements (optional: when
 #                      present, each FR's statement and status are added)
 #  Writes, to the same folder:
-#    user_traceability.csv    one row a (UR, FR) pair: the UAT cases that
+#    user_traceability_matrix.csv    one row a (UR, FR) pair: the UAT cases that
 #                             check both, and their results
-#    user_traceability.xlsx   that table, and one row a UR (its FRs, its UAT
+#    user_traceability_matrix.xlsx   that table, and one row a UR (its FRs, its UAT
 #                             cases, whether every case passed)
 #  Needs writexl for the xlsx (the csv is written without it).
 #
@@ -84,15 +84,15 @@ by_ur$status <- vapply(urs$id, function(u) {
   else "fail or deviation"
 }, "")
 
-utils::write.csv(m, file.path(kit_dir, "user_traceability.csv"), row.names = FALSE,
+utils::write.csv(m, file.path(kit_dir, "user_traceability_matrix.csv"), row.names = FALSE,
                  na = "", fileEncoding = "UTF-8")
-out <- file.path(kit_dir, "user_traceability.csv")
+out <- file.path(kit_dir, "user_traceability_matrix.csv")
 if (requireNamespace("writexl", quietly = TRUE)) {
   writexl::write_xlsx(list(urs_fr_uat = m, by_requirement = by_ur),
-                      file.path(kit_dir, "user_traceability.xlsx"))
-  out <- c(out, file.path(kit_dir, "user_traceability.xlsx"))
+                      file.path(kit_dir, "user_traceability_matrix.xlsx"))
+  out <- c(out, file.path(kit_dir, "user_traceability_matrix.xlsx"))
 } else {
-  message("writexl is not installed: only user_traceability.csv was written.")
+  message("writexl is not installed: only user_traceability_matrix.csv was written.")
 }
 message("Written: ", paste(out, collapse = ", "))
 if (!is.null(fr) && any(m$fr_status != "active")) {

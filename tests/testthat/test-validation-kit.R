@@ -93,9 +93,9 @@ test_that("build_user_matrix.R writes the URS -> FR -> UAT matrix from the copie
   e <- new.env()
   e$kit_dir <- d
   suppressMessages(sys.source(file.path(d, "build_user_matrix.R"), envir = e))
-  expect_true(file.exists(file.path(d, "user_traceability.csv")))
-  expect_true(file.exists(file.path(d, "user_traceability.xlsx")))
-  m <- utils::read.csv(file.path(d, "user_traceability.csv"), colClasses = "character",
+  expect_true(file.exists(file.path(d, "user_traceability_matrix.csv")))
+  expect_true(file.exists(file.path(d, "user_traceability_matrix.xlsx")))
+  m <- utils::read.csv(file.path(d, "user_traceability_matrix.csv"), colClasses = "character",
                        na.strings = "", stringsAsFactors = FALSE)
   urs <- utils::read.csv(file.path(d, "urs.csv"), colClasses = "character",
                          stringsAsFactors = FALSE)

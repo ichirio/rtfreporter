@@ -136,7 +136,7 @@ A high-risk deviation with no workaround blocks acceptance.
 | This plan | `validation_plan.md` |
 | User Requirement Specification | `urs.csv` (columns explained in `urs.md`) |
 | UAT cases and their results | `uat_cases.csv` / `uat_cases.xlsx` |
-| Traceability Matrix (URS -> FR -> UAT) | `user_traceability.xlsx` (from `build_user_matrix.R`) |
+| Traceability Matrix (URS -> FR -> UAT) | `user_traceability_matrix.xlsx` (from `build_user_matrix.R`) |
 | Validation Summary Report | `validation_summary_report.md` |
 | Supplier evidence | the package's Quality Plan and Functional Requirements, and the release's Quality Report and its attachments |
 

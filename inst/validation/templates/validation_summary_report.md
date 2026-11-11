@@ -54,7 +54,7 @@
 | URs with no case | `<0>` |
 
 The full results are in `uat_cases.csv`; the Traceability Matrix (URS -> FR
--> UAT) is `user_traceability.xlsx`, version `<date>`.
+-> UAT) is `user_traceability_matrix.xlsx`, version `<date>`.
 
 ## 6. Deviations
 
@@ -74,7 +74,7 @@ The system may be released for production use from `<date>`.
 ## 8. Attachments
 
 - Validation Plan `<VP-RTF-001>`
-- `urs.csv`, `uat_cases.csv` (with results), `user_traceability.xlsx`
+- `urs.csv`, `uat_cases.csv` (with results), `user_traceability_matrix.xlsx`
 - Installation and test logs, sessionInfo
 - rtfreporter `<x.y.z>` Quality Report and its attachments (from the GitHub
   release: `quality-report-<tag>.pdf`, `traceability_matrix-<tag>.xlsx`,
