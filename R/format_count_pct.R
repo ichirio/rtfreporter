@@ -207,6 +207,19 @@ fmt_count_pct <- function(count, pct,
       pct_sign <- nzchar(g[4L])
       out[i] <- fmt_count_pct(n, pct, pct_unit = "percent",
                               nbsp = nbsp, pct_sign = pct_sign)
+      # A percent written with other than one decimal ("16", "16.25") keeps
+      # its own digits, padded to the width fmt_count_pct() gave it: the
+      # alignment never adds precision the source did not have ("16" is not
+      # "16.0") nor takes it away.
+      src <- g[3L]
+      if (!grepl("^\\d+\\.\\d$", src)) {
+        inner <- regmatches(out[i], regexec("\\(([^)%]*)", out[i]))[[1L]][2L]
+        if (!is.na(inner)) {
+          w <- nchar(inner)
+          txt <- if (nchar(src) < w) paste0(strrep(nbsp, w - nchar(src)), src) else src
+          out[i] <- sub(paste0("(", inner), paste0("(", txt), out[i], fixed = TRUE)
+        }
+      }
     } else if (nzchar(na) &&
                (is.na(x[i]) || identical(trimws(x[i]), na))) {
       out[i] <- if (pad_na) {
