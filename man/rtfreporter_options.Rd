@@ -26,6 +26,16 @@ with: \code{"auto"} (factory), \code{"ragg"} or \code{"png"}.  The default follo
 \code{grDevices::png()} otherwise; \code{"png"} pins the base device.  Files
 given as paths are embedded as they are, whatever it says.}
 }
+
+One is about the table of contents of \code{\link[=assemble_rtf]{assemble_rtf()}}:
+\describe{
+\item{\code{rtfreporter.toc_style}}{The size and boldness of its text, the
+default of \code{assemble_rtf(toc_style = )}: a list with the keys \code{title},
+\code{heading} and \code{entry} (each \code{list(size = <points>, bold = TRUE/FALSE)})
+and \code{gap} (\code{list(size = )}, the blank line below the title), merged over
+the built-in values key by key (factory \code{NULL}: title 14 pt bold,
+heading 11 pt bold, entry 10 pt, gap 9 pt).}
+}
 }
 \examples{
 rtfreporter_options()

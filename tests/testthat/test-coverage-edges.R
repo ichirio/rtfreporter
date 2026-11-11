@@ -620,7 +620,7 @@ test_that("assemble_rtf(toc = ) checks the table before it assembles", {
   expect_error(assemble_rtf(toc = gone, output_file = out),
                "names missing file\\(s\\):")
   expect_error(assemble_rtf(toc = toc[, c("file", "table")], output_file = out),
-               "needs the columns `file` and `label`")
+               "needs the column `file`")
 
   got <- assemble_rtf(toc = toc, output_file = out)
   expect_identical(got, out)
