@@ -659,6 +659,9 @@
 .toc_title_rtf <- function(toc_title) {
   toc_title <- unname(toc_title)
   .run_ctx$tokens <- .user_tokens()
+  # {PROGRAM}: the session's options(rtfreporter.program) first, as for a
+  # page; else found when the token needs it
+  .run_ctx$program <- .resolve_program()
   on.exit({
     .run_ctx$program <- NULL
     .run_ctx$program_done <- NULL

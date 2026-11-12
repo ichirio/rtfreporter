@@ -156,7 +156,7 @@
 #  read_meta      | FALSE / NULL          |                    | no header from the label         | FR-TB118
 #  read_meta      | token                 | "labels"           | the label                        | FR-TB119
 #  read_meta      | with an adapter token | c("labels", "spanning") | the label (the other ignored) | FR-TB119
-#  read_meta      | unknown token / length 0 | "bogus" / character(0) | no label                 | FR-TB119
+#  read_meta      | unknown token / length 0 | "bogus" / character(0) | error "Unknown data.frame `read_meta` token" / no label | FR-TB120
 #  read_meta      | NA / a number / length 2 / a token NA | | error "`read_meta` must be FALSE/TRUE or a character vector of tokens" | FR-TB120
 #  header_sep     | valid (default)       | "____"             | two header rows                  | FR-TB162
 #  header_sep     | NULL / length 0       |                    | one header row                   | FR-TB162
@@ -649,7 +649,7 @@ test_that("FT-TB776 [FR-IX355 FR-TB118 FR-TB119 FR-TB120 FR-TB145 FR-TB146 FR-TB
     O("read_meta", "NULL", NULL, nolab, more = list(x = lab)),
     O("read_meta", "token", "labels", hdr("Value label"), more = list(x = lab)),
     O("read_meta", "with an adapter token", c("labels", "spanning"), hdr("Value label"), more = list(x = lab)),
-    O("read_meta", "unknown token", "bogus", nolab, more = list(x = lab)),
+    E("read_meta", "unknown token", "bogus", "^Unknown data.frame `read_meta` token", more = list(x = lab)),
     O("read_meta", "length 0", character(0), nolab, more = list(x = lab)),
     E("read_meta", "NA", NA, rm, more = list(x = lab)),
     E("read_meta", "a number", 1, rm, more = list(x = lab)),

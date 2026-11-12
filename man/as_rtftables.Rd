@@ -90,9 +90,11 @@ always written into the labels);
 \item{data.frame / tibble}{The single token \code{"labels"}: a column's
 \code{label} attribute (the haven / labelled / xportr convention) is
 used as its header label (columns without one keep their name).
-Unknown tokens are \emph{ignored} for data.frames -- a \code{list()} mixing
-table objects and data.frames shares one \code{read_meta}, so adapter
-tokens must not error on the data.frame elements.}
+Tokens that only another source reads are \emph{skipped} for data.frames
+(and every other source skips the data.frame's \code{"labels"}) -- a
+\code{list()} mixing table objects and data.frames shares one
+\code{read_meta}, so a token must not error on the elements that do not
+read it.  A token that no source reads (a typo) is an error.}
 }}
 
 \item{max_rows}{A positive whole number, or \code{NULL}; anything else is an
