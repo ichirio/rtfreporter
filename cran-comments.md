@@ -3,13 +3,17 @@
 0 errors | 0 warnings | 1 note
 
 * This is a new submission.
+* The maintainer is the person named as `cre` in DESCRIPTION.
 
 ## Test environments
 
-* local: Windows 11, R 4.4.2
-* GitHub Actions: ubuntu-latest (devel, release, oldrel-1), macos-latest
-  (release), windows-latest (release)
-* win-builder: R-devel (to be run before submission)
+* local: Windows 11, R 4.4.2 and R 4.6.1
+* GitHub Actions: ubuntu-latest (devel, release, oldrel-1, 4.2),
+  macos-latest (release), windows-latest (release)
+* win-builder: R-devel, R-release, R-oldrelease
+* R-hub: linux, macos-arm64, windows, and one sanitizer run
+
+(Results: to be filled from the release test run before submission.)
 
 ## Notes for the reviewers
 

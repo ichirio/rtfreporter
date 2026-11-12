@@ -75,32 +75,29 @@ home:
       devnotes:
         title: Dev stage
         text: |
-          v0.8.2 released (current stable); pre-1.0, the API may still change
-          before v1.0.0.  Development continues at `0.8.2.9000` — the standard
-          R scheme, where the three-component part names the last release.
+          v0.9.0 released (current stable).  Development continues at
+          `0.9.0.9000` — the standard R scheme, where the three-component
+          part names the last release.
 
           Roadmap:
 
-          **Next release** (in development on `main`):
+          **In 0.9.0**:
 
           - Tables from an ARD, end to end: every `as_rtftables()` setting
-            has a plan verb, plus a Total column, nested rows, BY pages and
-            a column header written row by row, with `(N=xx)` read from the
-            same ARD.
-          - The tables a study report has: a test or a difference as a
-            column (`plan_compare()`), several statistics in one column
-            (`plan_stat_groups()`), subgroups one under another
-            (`normalize_ard(stack = )`), rows kept by a rule
-            (`plan_filter()`), sorting by a parent's count (`-n@SOC`) and a
-            section per arm with its N (`heading =`).
-          - A folder for an AI assistant (`rtfreporter_ai_manual()`): the
-            manual, example programs and your ARD's shape.
-          - A cleaner API: one name per thing,
-            `rtf_section(header = , footer = )`, table formats in the plan
-            or the style rather than in `rtf_tables()`, and the old border
-            functions on their way out.
-          - Smaller improvements to headers/footers, figures and gtsummary
-            reading.
+            has a plan verb, plus a Total column, nested rows, BY pages, a
+            column header written row by row with `(N=xx)` from the same
+            ARD, tests or differences as columns, statistics grouped in one
+            column, stacked subgroups and rows kept by a rule.
+          - Joined files: a table of contents whose title, text sizes and
+            hanging indent can be set, labels read from the titles, and
+            page numbers at the right margin.
+          - Footnotes that follow the width and placement of their table or
+            figure.
+          - One style object for every part of a document (`rtf_style()`),
+            and one name per thing; the functions 0.8.x deprecated are
+            gone.
+          - A folder for an AI assistant (`rtfreporter_ai_manual()`), and
+            articles on validation and on developing with AI agents.
 
           **Later**:
 
