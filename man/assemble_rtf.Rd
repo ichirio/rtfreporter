@@ -85,9 +85,14 @@ each \code{list(size = <points>, bold = TRUE/FALSE)}, and \code{gap}
 the built-in values key by key, so \code{list(entry = list(size = 9))} changes
 the entries' size only.  Built in: title 14 pt bold, heading 11 pt bold,
 entry 10 pt, gap 9 pt.  A size is a positive number of points, whole or
-half (\code{10.5}).  Default \code{getOption("rtfreporter.toc_style")}.  The font is
+half (\code{10.5}).  \code{entry} also takes \code{hanging}: \code{FALSE} (default) writes each
+entry's wrapped lines at the indent of its first line; \code{TRUE} hangs them
+720 twips (half an inch) further in, and a positive whole number is that
+many twips (\code{list(entry = list(hanging = 360))}).  Headings are not
+affected.  Default \code{getOption("rtfreporter.toc_style")}.  The font is
 the document's (that of the first input file).  Another key, a size that
-is not a positive number or a \code{bold} that is not \code{TRUE} / \code{FALSE} is an
+is not a positive number, a \code{bold} that is not \code{TRUE} / \code{FALSE} or a
+\code{hanging} that is not \code{TRUE} / \code{FALSE} / a positive whole number is an
 error.}
 }
 \value{

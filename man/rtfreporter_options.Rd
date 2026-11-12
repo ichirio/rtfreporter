@@ -34,7 +34,9 @@ default of \code{assemble_rtf(toc_style = )}: a list with the keys \code{title},
 \code{heading} and \code{entry} (each \code{list(size = <points>, bold = TRUE/FALSE)})
 and \code{gap} (\code{list(size = )}, the blank line below the title), merged over
 the built-in values key by key (factory \code{NULL}: title 14 pt bold,
-heading 11 pt bold, entry 10 pt, gap 9 pt).}
+heading 11 pt bold, entry 10 pt, gap 9 pt).  \code{entry} also takes
+\code{hanging} (\code{FALSE}, \code{TRUE} for 720 twips, or a positive whole number of
+twips): a hanging indent for an entry's wrapped lines.}
 }
 }
 \examples{

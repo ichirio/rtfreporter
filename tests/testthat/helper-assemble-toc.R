@@ -175,3 +175,18 @@
                toc_page_numbering = "roman")
   out
 }
+
+# the long-label case with a hanging indent on the entries (toc_style
+# entry = list(hanging = TRUE))
+.tt_case_hanging <- function(dir) {
+  f <- .tt_inputs(dir, c(t_14_1_1 = "Table 14.1.1 Demographics",
+                         t_14_3_2 = "Table 14.3.2 Adverse Events",
+                         t_14_3_3 = "Table 14.3.3 Laboratory"))
+  toc <- data.frame(file = f, label = c("Table 14.1.1 Demographics",
+                                        .tt_long_label(),
+                                        .tt_long_label()),
+                    level = c(2L, 2L, 3L))
+  out <- file.path(dir, "assembled.rtf")
+  assemble_rtf(f, out, toc = toc, toc_style = list(entry = list(hanging = TRUE)))
+  out
+}
