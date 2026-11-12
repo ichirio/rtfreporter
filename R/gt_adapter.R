@@ -532,6 +532,41 @@
 }
 
 
+# A member of a row-split gt_group (gt_split(row_every_n =), or one pulled
+# with grp_pull()) keeps the ORIGINAL table's row numbers in
+# `_stub_df$rownum_i` and in the row slots built on them, while its `_data`
+# holds only its own rows.  extract_body() reads `_data` by those numbers and
+# gives NA for page 2 onward (#1005).  The numbers are renumbered to 1..n, in
+# the member's own order, in `_stub_df`, `_formats`, `_styles` and
+# `_footnotes`.  Works on the copy; a table already numbered 1..n is returned
+# as it is.
+.gt_renumber_rows <- function(gt_obj) {
+  sd <- gt_obj[["_stub_df"]]
+  if (is.null(sd) || !"rownum_i" %in% names(sd)) return(gt_obj)
+  old <- sd$rownum_i
+  if (anyNA(old) || identical(as.integer(old), seq_along(old))) return(gt_obj)
+  remap <- function(x) match(x, old)
+  sd$rownum_i <- seq_along(old)
+  gt_obj[["_stub_df"]] <- sd
+  fm <- gt_obj[["_formats"]]
+  for (i in seq_along(fm)) {
+    r <- fm[[i]][["rows"]]
+    if (is.numeric(r)) fm[[i]][["rows"]] <- as.integer(stats::na.omit(remap(r)))
+  }
+  gt_obj[["_formats"]] <- fm
+  for (slot in c("_styles", "_footnotes")) {
+    tb <- gt_obj[[slot]]
+    if (is.data.frame(tb) && "rownum" %in% names(tb) && nrow(tb)) {
+      was <- tb$rownum
+      tb$rownum <- remap(was)
+      # a row of another page (numbered, but not in this member) is dropped
+      gt_obj[[slot]] <- tb[is.na(was) | !is.na(tb$rownum), , drop = FALSE]
+    }
+  }
+  gt_obj
+}
+
+
 # ── Central mapping: gt_tbl + tokens -> rtftable kwargs ───────────────────
 
 # Returns list(data, col_header, col_spec, column_widths_twips / col_rel_width,
@@ -539,6 +574,7 @@
 .gt_to_rtftable_kwargs <- function(gt_obj, tokens = .GT_META_TOKENS) {
   if (!.is_gt_tbl(gt_obj)) stop("`gt_obj` must be a gt_tbl.", call. = FALSE)
   .need_pkg("gt", "Reading from a gt_tbl")
+  gt_obj <- .gt_renumber_rows(gt_obj)
 
   # ---- clean rendered body (visible columns only) ----------------------
   eb        <- .gt_extract_body_safe(gt_obj)
