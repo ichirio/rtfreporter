@@ -190,7 +190,7 @@
 #'   Column widths               \tab yes (px/pct) \tab -- \tab -- \tab -- \cr
 #'   Title + subtitle            \tab yes \tab yes \tab yes (caption) \tab yes (caption) \cr
 #'   Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab yes (`add_footnote()` rows) \cr
-#'   In-cell footnote marks      \tab yes (superscript) \tab yes (superscript) \tab as text \tab -- \cr
+#'   In-cell footnote marks      \tab yes (superscript, labels and footnote lines too) \tab yes (superscript) \tab as text \tab -- \cr
 #'   Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab group rows, no indent \tab as typed, no indent \cr
 #'   `tab_style()` cell styles   \tab yes (see below) \tab -- \tab -- \tab -- \cr
 #' }
@@ -251,7 +251,11 @@
 #'   The tokens:
 #'   \describe{
 #'     \item{gt / gtsummary}{`"col_header"`, `"alignment"`, `"spanning"`,
-#'       `"widths"`, `"titles"`, `"footnotes"`, `"styles"` (explicit
+#'       `"widths"`, `"titles"`, `"footnotes"`, `"footnote_marks"` (the
+#'       footnote marks gt prints on the column labels and spanning headers,
+#'       as `^{N}` after the label, and each footnote line starting with its
+#'       mark, `^{N}` then the note, in gt's order; the marks in the body
+#'       cells are always written), `"styles"` (explicit
 #'       `tab_style()` borders and text styles; see *What is carried*).}
 #'     \item{rtables / tern}{`"col_header"`, `"alignment"`, `"spanning"`,
 #'       `"titles"`, `"footnotes"`, `"footnote_marks"` (the indentation is

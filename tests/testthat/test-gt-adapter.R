@@ -292,3 +292,93 @@ test_that("gt row groups are heading rows, their rows indented under them (#650)
   plain <- as_rtftable(gt::gt(ae[c("PT", "Placebo")]))
   expect_identical(plain$data$PT, ae$PT)
 })
+
+# ── footnote marks on the labels and the footnote lines (#1020) ──────────────
+
+# The RTF of `x` (gt / gtsummary) through as_rtftables() + generate_rtfreport().
+.t71_rtf <- function(x, ...) {
+  d <- tempfile("t71_")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  f <- file.path(d, "t71.rtf")
+  generate_rtfreport(rtf_tables(rtf_document(), as_rtftables(x, ...)), f,
+                     overwrite = TRUE)
+  readLines(f, warn = FALSE)
+}
+
+test_that("FT-TB7101 [FR-TB577]: gt's footnote marks on a column label, a spanner and a body cell, and the footnote lines starting with their marks in gt's order", {
+  skip_if_not_installed("gt")
+  df <- data.frame(subj = sprintf("S%02d", 1:4), age = c(34, 45, 40, 51),
+                   sex = c("F", "M", "F", "M"), stringsAsFactors = FALSE)
+  g <- gt::gt(df) |>
+    gt::tab_spanner("Demo", columns = c(age, sex)) |>
+    gt::tab_footnote("Imputed.", locations = gt::cells_body(columns = age, rows = 2)) |>
+    gt::tab_footnote("Age at consent.", locations = gt::cells_column_labels(age)) |>
+    gt::tab_footnote("Spanner note.", locations = gt::cells_column_spanners("Demo")) |>
+    gt::tab_footnote("General note.")
+  p <- as_rtftables(g)[[1L]]
+  # gt numbers spanner (1), label (2), body (3); the note without a place
+  # comes first, unmarked, as gt prints it
+  expect_identical(p$col_header[[1L]][[2L]]$label, "Demo^{1}")
+  expect_identical(p$col_header[[2L]], c("subj", "age^{2}", "sex"))
+  expect_identical(p$data$age[2L], "^{3}\u00a045")
+  expect_identical(attr(p, "rtf_footnotes"),
+                   c("General note.", "^{1} Spanner note.",
+                     "^{2} Age at consent.", "^{3} Imputed."))
+  rtf <- .t71_rtf(g)
+  expect_true(any(grepl("Demo{\\super 1}\\cell", rtf, fixed = TRUE)))
+  expect_true(any(grepl("age{\\super 2}\\cell", rtf, fixed = TRUE)))
+  expect_true(any(grepl("{\\super 3}\\u160?45\\cell", rtf, fixed = TRUE)))
+  notes <- grep("note\\.|consent\\.|Imputed\\.", rtf, value = TRUE)
+  expect_identical(sub("^.*\\\\ri0 (.*)\\\\cell\\\\row$", "\\1", notes),
+                   c("General note.", "{\\super 1} Spanner note.",
+                     "{\\super 2} Age at consent.", "{\\super 3} Imputed."))
+  # two notes on one label: the marks joined, as gt prints "a,b"
+  g2 <- gt::gt(df) |>
+    gt::tab_options(footnotes.marks = "letters") |>
+    gt::tab_footnote("A", locations = gt::cells_column_labels(c(age, sex))) |>
+    gt::tab_footnote("B", locations = gt::cells_column_labels(age))
+  p2 <- as_rtftables(g2)[[1L]]
+  expect_identical(p2$col_header, list(c("subj", "age^{a,b}", "sex^{a}")))
+  expect_identical(attr(p2, "rtf_footnotes"), c("^{a} A", "^{b} B"))
+})
+
+test_that("FT-TB7102 [FR-TB577]: a gtsummary tbl_summary(by = ) header carries its footnote mark after N = n, and the note line starts with it", {
+  skip_if_not_installed("gt")
+  skip_if_not_installed("gtsummary")
+  ts <- gtsummary::tbl_summary(gtsummary::trial[c("trt", "age", "grade")],
+                               by = "trt")
+  p <- as_rtftables(ts)[[1L]]
+  expect_identical(p$col_header,
+                   list(c("Characteristic", "Drug A  \nN = 98^{1}", "Drug B  \nN = 102^{1}")))
+  expect_identical(attr(p, "rtf_footnotes"), "^{1} Median (Q1, Q3); n (%)")
+  rtf <- .t71_rtf(ts)
+  expect_true(any(grepl("Drug A  \\line N = 98{\\super 1}\\cell", rtf, fixed = TRUE)))
+  expect_true(any(grepl("{\\super 1} Median (Q1, Q3); n (%)\\cell", rtf, fixed = TRUE)))
+})
+
+test_that("FT-TB7103 [FR-TB577 FR-TB118]: read_meta without \"footnote_marks\" writes neither the label marks nor the line marks", {
+  skip_if_not_installed("gt")
+  df <- data.frame(subj = sprintf("S%02d", 1:4), age = c(34, 45, 40, 51),
+                   stringsAsFactors = FALSE)
+  g <- gt::gt(df) |>
+    gt::tab_spanner("Demo", columns = age) |>
+    gt::tab_footnote("Imputed.", locations = gt::cells_body(columns = age, rows = 2)) |>
+    gt::tab_footnote("Age at consent.", locations = gt::cells_column_labels(age)) |>
+    gt::tab_footnote("Spanner note.", locations = gt::cells_column_spanners("Demo"))
+  p <- as_rtftables(g, read_meta = c("col_header", "spanning", "footnotes"))[[1L]]
+  expect_identical(p$col_header[[1L]][[2L]]$label, "Demo")
+  expect_identical(p$col_header[[2L]], c("subj", "age"))
+  expect_identical(attr(p, "rtf_footnotes"),
+                   c("Imputed.", "Age at consent.", "Spanner note."))
+  rtf <- .t71_rtf(g, read_meta = c("col_header", "spanning", "footnotes"))
+  expect_false(any(grepl("Demo{\\super", rtf, fixed = TRUE)))
+  expect_false(any(grepl("age{\\super", rtf, fixed = TRUE)))
+  expect_false(any(grepl("\\{\\\\super [0-9]\\} (Imputed|Age at|Spanner)", rtf)))
+  # the token alone, with the labels and the notes read
+  q <- as_rtftables(g, read_meta = c("col_header", "spanning", "footnotes",
+                                     "footnote_marks"))[[1L]]
+  expect_identical(q$col_header[[2L]], c("subj", "age^{2}"))
+  expect_identical(attr(q, "rtf_footnotes"),
+                   c("^{1} Spanner note.", "^{2} Age at consent.", "^{3} Imputed."))
+})
