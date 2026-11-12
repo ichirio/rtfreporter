@@ -420,8 +420,11 @@
   if (is.character(f) && length(f) == 1L && nzchar(f)) f else NULL
 }
 
+# interactive() is a primitive, which a test cannot mock; this binding it can
+.is_interactive <- function() interactive()
+
 .program_from_rstudio <- function() {
-  if (!interactive() || !requireNamespace("rstudioapi", quietly = TRUE)) {
+  if (!.is_interactive() || !requireNamespace("rstudioapi", quietly = TRUE)) {
     return(NULL)
   }
   ok <- tryCatch(rstudioapi::isAvailable(), error = function(e) FALSE)
