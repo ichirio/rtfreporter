@@ -1715,7 +1715,7 @@ test_that("FT-DC3036 [FR-DC278]: with no program said, the script Rscript runs, 
   skip_if_not_installed("rstudioapi")
   local({
     local_mocked_bindings(commandArgs = function(...) "Rterm", .package = "base")
-    local_mocked_bindings(interactive = function() TRUE, .package = "base")
+    local_mocked_bindings(.is_interactive = function() TRUE)
     path <- "C:/work/t_edit.R"
     local_mocked_bindings(isAvailable = function(...) TRUE,
                           getSourceEditorContext = function(...) list(path = path),
