@@ -611,7 +611,10 @@ test_that("FT-AS3021 [FR-AS250]: a contents entry keeps the text of markup (H_{2
 # A PNG of known pixel size and resolution (res in dpi), drawn by the png device.
 .g2_png <- function(dir, name = "p.png", w = 400, h = 300, res = 100) {
   f <- file.path(dir, name)
-  grDevices::png(f, width = w, height = h, res = res)
+  # the cairo device writes res = as the file's density; macOS's default
+  # (quartz) writes 72 dpi whatever res is
+  type <- if (isTRUE(unname(capabilities("cairo")))) "cairo" else getOption("bitmapType")
+  grDevices::png(f, width = w, height = h, res = res, type = type)
   .g2_pl()
   grDevices::dev.off()
   f
