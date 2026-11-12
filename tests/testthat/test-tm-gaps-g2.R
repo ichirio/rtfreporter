@@ -79,6 +79,15 @@ test_that("FT-AS3001 [FR-AS102]: input_files are joined in the order given, and 
   expect_lt(which(l2 == "BODY-A"), which(l2 == "BODY-B"))
   expect_true(any(grepl("{\\fldrslt First A}}", l2, fixed = TRUE)))
   expect_true(any(grepl("{\\fldrslt Second B}}", l2, fixed = TRUE)))
+
+  # a table as a data.frame names the files too, in its row order
+  out3 <- file.path(d, "out3.rtf")
+  assemble_rtf(output_file = out3,
+               toc = data.frame(file = c(f2, f1), label = c("Second B", "First A"),
+                                stringsAsFactors = FALSE))
+  l3 <- .g2_lines(out3)
+  expect_lt(which(l3 == "BODY-B"), which(l3 == "BODY-A"))
+  expect_true(any(grepl("{\\fldrslt Second B}}", l3, fixed = TRUE)))
 })
 
 test_that("FT-AS3002 [FR-AS106]: assemble_rtf() with a cover and a first file without \\sectd stops", {
@@ -89,6 +98,10 @@ test_that("FT-AS3002 [FR-AS106]: assemble_rtf() with a cover and a first file wi
   g <- .g2_fake(file.path(d, "g.rtf"), "G")
   expect_error(
     assemble_rtf(c(bad, g), file.path(d, "out.rtf"), cover = list(title = "T")),
+    "File 1 has no \\sectd; cannot insert cover / TOC.", fixed = TRUE)
+  # a table of contents alone stops the same way
+  expect_error(
+    assemble_rtf(c(bad, g), file.path(d, "out.rtf"), toc = c("A", "B")),
     "File 1 has no \\sectd; cannot insert cover / TOC.", fixed = TRUE)
 })
 
@@ -198,6 +211,28 @@ test_that("FT-AS3007 [FR-AS115]: a toc table prints a heading above an entry whe
   # HA right above Label 1 only; HB right above Label 4
   expect_identical(h[1], e[1] - 1L)
   expect_identical(h[2], e[4] - 1L)
+
+  # no label (NA) takes the file's title; level 1, 3 and NA (2) give no indent, 1200 and
+  # 600 twips; order = 3, 1, 2 takes row 2, then row 3, then row 1
+  g <- vapply(1:3, function(i) {
+    .g2_demo(file.path(d, sprintf("g%d.rtf", i)), sprintf("Table %d T%d", i, i))
+  }, character(1L))
+  tb2 <- data.frame(file = g, label = c(NA, "Own two", NA), level = c(1L, 3L, NA),
+                    order = c(3L, 1L, 2L), stringsAsFactors = FALSE)
+  out2 <- file.path(d, "out2.rtf")
+  assemble_rtf(toc = tb2, output_file = out2)
+  l2 <- .g2_lines(out2)
+  e2 <- grep("HYPERLINK", l2, fixed = TRUE)
+  expect_length(e2, 3L)
+  expect_true(startsWith(l2[e2[1]], "{\\pard\\li1200\\fs20\\tqr\\tldot\\tx14400 "))
+  expect_true(startsWith(l2[e2[2]], "{\\pard\\li600\\fs20\\tqr\\tldot\\tx14400 "))
+  expect_true(startsWith(l2[e2[3]], "{\\pard\\fs20\\tqr\\tldot\\tx14400 "))
+  expect_true(grepl("{\\fldrslt Own two}}", l2[e2[1]], fixed = TRUE))
+  expect_true(grepl("{\\fldrslt Table 3 T3}}", l2[e2[2]], fixed = TRUE))
+  expect_true(grepl("{\\fldrslt Table 1 T1}}", l2[e2[3]], fixed = TRUE))
+  # the files follow the same order
+  bm <- sub("^.*bkmkstart ([A-Za-z0-9_]+)\\}.*$", "\\1", grep("bkmkstart", l2, value = TRUE))
+  expect_identical(bm, c("tfl_g2", "tfl_g3", "tfl_g1"))
 })
 
 test_that("FT-AS3008 [FR-AS117]: an .xlsx toc without readxl stops with its message, and an existing .xlsx is read as the table", {
@@ -215,6 +250,16 @@ test_that("FT-AS3008 [FR-AS117]: an .xlsx toc without readxl stops with its mess
   expect_true(any(grepl("{\\fldrslt Xlsx one}}", l, fixed = TRUE)))
   expect_true(any(grepl("{\\fldrslt Xlsx two}}", l, fixed = TRUE)))
   expect_lt(which(l == "BODY-A"), which(l == "BODY-B"))
+
+  # the same table as a .csv path
+  csv <- file.path(d, "spec.csv")
+  utils::write.csv(data.frame(file = c(f2, f1), label = c("Csv one", "Csv two")),
+                   csv, row.names = FALSE)
+  outc <- file.path(d, "outc.rtf")
+  assemble_rtf(output_file = outc, toc = csv)
+  lc <- .g2_lines(outc)
+  expect_true(any(grepl("{\\fldrslt Csv one}}", lc, fixed = TRUE)))
+  expect_lt(which(lc == "BODY-B"), which(lc == "BODY-A"))
 
   local({
     local_mocked_bindings(requireNamespace = function(...) FALSE, .package = "base")
@@ -242,6 +287,9 @@ test_that("FT-AS3009 [FR-AS125]: each HYPERLINK target is the bookmark written a
   # and the PAGEREF of each entry points at the same bookmark
   pr <- regmatches(txt, gregexpr("PAGEREF [A-Za-z0-9_]+", txt))[[1]]
   expect_identical(sub("^PAGEREF ", "", pr), links)
+  # the cached page numbers: the contents on page 1, then one page for each file
+  cached <- regmatches(txt, gregexpr("PAGEREF [^}]*\\}\\{\\\\fldrslt [0-9]+", txt))[[1]]
+  expect_identical(sub("^.*fldrslt ", "", cached), c("2", "3"))
 })
 
 test_that("FT-AS3010 [FR-AS127]: toc_title is the centred bold title of the contents page", {
@@ -254,6 +302,13 @@ test_that("FT-AS3010 [FR-AS127]: toc_title is the centred bold title of the cont
   expect_true("{\\pard\\qc\\b\\fs28 My List\\par}" %in% .g2_lines(out))
   assemble_rtf(c(f1, f2), out, toc = c("L1", "L2"), overwrite = TRUE)
   expect_true("{\\pard\\qc\\b\\fs28 Table of Contents\\par}" %in% .g2_lines(out))
+  # named l or r (FR-AS256) it is aligned left or right
+  assemble_rtf(c(f1, f2), out, toc = c("L1", "L2"), toc_title = c(l = "My List"),
+               overwrite = TRUE)
+  expect_true("{\\pard\\ql\\b\\fs28 My List\\par}" %in% .g2_lines(out))
+  assemble_rtf(c(f1, f2), out, toc = c("L1", "L2"), toc_title = c(r = "My List"),
+               overwrite = TRUE)
+  expect_true("{\\pard\\qr\\b\\fs28 My List\\par}" %in% .g2_lines(out))
 })
 
 test_that("FT-AS3011 [FR-AS133]: bookmark names are prefix + file name without .rtf, other characters an underscore, cut to 32, bk_ before a name not starting with a letter", {
@@ -304,6 +359,8 @@ test_that("FT-AS3012 [FR-AS135]: each section starts, after its header / footer 
     expect_true(any(grepl("^\\{\\\\footer", seg[seq_len(bm)])))
     expect_true(any(grepl("^\\\\sbkpage", seg[seq_len(bm)])))
   }
+  # white (colour 2 of the table) and 1 twip high: the paragraph cannot be seen
+  expect_true(any(startsWith(l, "{\\colortbl;\\red0\\green0\\blue0;\\red255\\green255\\blue255;")))
 })
 
 test_that("FT-AS3013 [FR-AS140]: inputs without page tokens are unchanged apart from the cover / TOC; with a cover alone every NUMPAGES cache is the pages plus one", {
@@ -327,6 +384,21 @@ test_that("FT-AS3013 [FR-AS140]: inputs without page tokens are unchanged apart 
   expect_gte(length(caches), 2L)
   # two one-page inputs plus the cover page
   expect_true(all(grepl("fldrslt 3$", caches)))
+
+  # a table of contents alone adds one page, a cover and a table of contents two, and
+  # neither adds none; the field instruction is as the input wrote it
+  cache_of <- function(...) {
+    o <- file.path(d, "o.rtf")
+    assemble_rtf(c(f1, f2), o, overwrite = TRUE, ...)
+    t <- .g2_txt(o)
+    list(n = length(gregexpr("NUMPAGES}{\\fldrslt ", t, fixed = TRUE)[[1]]),
+         v = unique(sub("^.*fldrslt ", "", regmatches(
+           t, gregexpr("NUMPAGES\\}\\{\\\\fldrslt [0-9]+", t))[[1]])))
+  }
+  expect_identical(cache_of()$v, "2")
+  expect_identical(cache_of(toc = "auto")$v, "3")
+  expect_identical(cache_of(toc = "auto", cover = list(title = "T"))$v, "4")
+  expect_identical(cache_of(toc = "auto")$n, cache_of()$n)
 })
 
 # ---- assemble_folder --------------------------------------------------------
@@ -349,6 +421,22 @@ test_that("FT-AS3014 [FR-AS149]: the table assemble_folder() returns has heading
   sp <- assemble_folder(d)
   expect_identical(sp$heading, c(NA_character_, NA_character_))
   expect_identical(sp$level, c(2L, 2L))
+
+  # the other columns: the number of the "Table N" line (of the running header, else of
+  # the title block) is table, NA when there is none; the label is "Table N  <title>",
+  # or the title alone, or the file name without .rtf; pages is the page count
+  .g2_hdr_file(file.path(d, "h.rtf"), c("Table 14.1.1", "Demographics"))
+  .g2_demo(file.path(d, "c_plain.rtf"), NULL)
+  sp <- assemble_folder(d)
+  expect_identical(names(sp), c("order", "file", "table", "heading", "label", "level", "pages"))
+  # by table number (1, 2, 14.1.1), then the file without one
+  expect_identical(basename(sp$file), c("a.rtf", "b.rtf", "h.rtf", "c_plain.rtf"))
+  expect_identical(sp$table, c("1", "2", "14.1.1", NA))
+  expect_identical(sp$label, c("Table 1  A", "Table 2  B", "Table 14.1.1  Demographics",
+                               "c_plain"))
+  expect_identical(sp$heading, rep(NA_character_, 4L))
+  expect_identical(sp$level, rep(2L, 4L))
+  expect_identical(sp$pages[c(1, 2, 4)], rep(1L, 3L))
 })
 
 test_that("FT-AS3015 [FR-AS150]: the title is the longest centred header cell that is not the Table N line or a <...> subtitle, decoded (signed / unsigned, surrogate pairs, no-break space), or the rest of the Table N line", {
@@ -387,6 +475,16 @@ test_that("FT-AS3016 [FR-AS153]: no spec_file writes no file; a spec_file is wri
   expect_identical(got$level, sp$level)
   expect_identical(got$pages, sp$pages)
   expect_identical(as.character(got$table), sp$table)
+
+  # an .xlsx path is saved the same way (it needs writexl and readxl here)
+  skip_if_not_installed("writexl")
+  skip_if_not_installed("readxl")
+  xl <- file.path(w, "spec.xlsx")
+  expect_error(assemble_folder(d, out, spec_file = xl), "already exists")
+  expect_true(file.exists(xl))
+  gx <- as.data.frame(readxl::read_xlsx(xl))
+  expect_identical(gx$file, sp$file)
+  expect_identical(gx$label, sp$label)
 })
 
 test_that("FT-AS3017 [FR-AS154]: an .xlsx spec_file without writexl stops with its message", {
@@ -402,6 +500,10 @@ test_that("FT-AS3017 [FR-AS154]: an .xlsx spec_file without writexl stops with i
       fixed = TRUE)
   })
   expect_false(file.exists(file.path(d, "x.xlsx")))
+  # any other extension stops, and writes nothing
+  expect_error(assemble_folder(d, spec_file = file.path(d, "toc.txt")),
+               "`spec_file` must end in .xlsx or .csv.", fixed = TRUE)
+  expect_false(file.exists(file.path(d, "toc.txt")))
 })
 
 test_that("FT-AS3018 [FR-AS157]: assemble_folder() defaults to the title Table of Contents, a dot leader, decimal page numbering and overwrite = FALSE", {
@@ -417,6 +519,17 @@ test_that("FT-AS3018 [FR-AS157]: assemble_folder() defaults to the title Table o
   expect_true(any(grepl("\\tqr\\tldot\\tx14400", l, fixed = TRUE)))
   expect_true("\\sectd\\sbkpage\\lndscpsxn\\pgnrestart\\pgndec" %in% l)
   expect_error(assemble_folder(d, out), "already exists")
+
+  # the arguments are those of assemble_rtf(): a given value is used
+  out2 <- file.path(w, "out2.rtf")
+  assemble_folder(d, out2, toc_title = "Contents", toc_leader = "none",
+                  toc_page_numbering = "roman")
+  l2 <- .g2_lines(out2)
+  expect_true("{\\pard\\qc\\b\\fs28 Contents\\par}" %in% l2)
+  expect_false(any(grepl("\\tldot", l2, fixed = TRUE)))
+  expect_true("\\sectd\\sbkpage\\lndscpsxn\\pgnrestart\\pgnlcrm" %in% l2)
+  # overwrite = TRUE replaces the file
+  expect_no_error(assemble_folder(d, out, overwrite = TRUE))
 })
 
 test_that("FT-AS3019 [FR-AS158]: assemble_folder() passes bookmark_prefix and book_page to assemble_rtf()", {
@@ -440,6 +553,10 @@ test_that("FT-AS3019 [FR-AS158]: assemble_folder() passes bookmark_prefix and bo
   expect_false(grepl(rtfreporter:::.load_rtf_commands()$fields$book_page_slot, txt,
                      fixed = TRUE))
   expect_identical(lengths(regmatches(txt, gregexpr("Book \\\\chpgn", txt))), 2L)
+  # and cover
+  out2 <- file.path(w, "out2.rtf")
+  assemble_folder(d, out2, cover = list(title = "CVR"))
+  expect_true("{\\pard\\qc\\b\\fs44 CVR\\par}" %in% .g2_lines(out2))
 })
 
 test_that("FT-AS3020 [FR-AS159]: a table from assemble_folder(), edited, gives the new label, the new indent, no dropped file and the new order", {
@@ -454,6 +571,7 @@ test_that("FT-AS3020 [FR-AS159]: a table from assemble_folder(), edited, gives t
   ed$label[1] <- "Edited first"                # a label changed
   ed$level[1] <- 3L                            # a level changed
   ed$order <- c(2L, 1L)                        # reordered: Gamma first
+  ed$heading <- c("Group A", "Group A")        # a heading set (printed once)
   w <- .g2_dir()
   out <- file.path(w, "out.rtf")
   assemble_rtf(toc = ed, output_file = out)
@@ -465,6 +583,7 @@ test_that("FT-AS3020 [FR-AS159]: a table from assemble_folder(), edited, gives t
   expect_true(startsWith(ent[2], "{\\pard\\li1200\\fs20"))
   expect_true(grepl("{\\fldrslt Edited first}}", ent[2], fixed = TRUE))
   txt <- paste(l, collapse = "\n")
+  expect_identical(sum(l == "{\\pard\\b\\fs22 Group A\\par}"), 1L)
   expect_false(grepl("Beta", txt, fixed = TRUE))
   expect_lt(regexpr("Gamma", sub(".*Table of Contents", "", txt)) [1],
             regexpr("Alpha", sub(".*Table of Contents", "", txt))[1])
@@ -535,6 +654,22 @@ test_that("FT-AS3023 [FR-AS180]: a single path, a single drawing function, a plo
   expect_length(b2, 1L)
   expect_s3_class(b2[[1]]$content, "rtfplot")
   expect_identical(c(b2[[1]]$content$img_width, b2[[1]]$content$img_height), c(100L, 50L))
+  # an rtfplot is one figure, kept as it is; a list is one figure for each element
+  rp <- rtfplot(f)
+  b3 <- .g2_blocks(rtf_figures(rtf_document(), rp))
+  expect_length(b3, 1L)
+  expect_identical(b3[[1]]$content, rp)
+  b4 <- .g2_blocks(rtf_figures(rtf_document(), list(f, .g2_pl, rp),
+                               render_width = 2, render_height = 1, render_dpi = 50))
+  expect_length(b4, 3L)
+  # a ggplot2 plot is one figure, not a list of its parts
+  skip_if_not_installed("ggplot2")
+  g <- ggplot2::ggplot(data.frame(x = 1:3, y = 1:3), ggplot2::aes(x, y)) +
+    ggplot2::geom_point()
+  b5 <- .g2_blocks(rtf_figures(rtf_document(), g,
+                               render_width = 2, render_height = 1, render_dpi = 50))
+  expect_length(b5, 1L)
+  expect_s3_class(b5[[1]]$content, "rtfplot")
 })
 
 test_that("FT-AS3024 [FR-AS181]: a PNG path, a JPEG path, a patchwork, a lattice object, a gtable and a recorded base plot are each one figure", {
@@ -561,7 +696,8 @@ test_that("FT-AS3024 [FR-AS181]: a PNG path, a JPEG path, a patchwork, a lattice
   rec <- grDevices::recordPlot()
   grDevices::dev.off()
   figs <- list(png = png_f, jpeg = jpg, patchwork = pw, lattice = lat, gtable = gt,
-               recorded = rec)
+               recorded = rec, ggplot = g, grob = grid::rectGrob(), `function` = .g2_pl,
+               rtfplot = rtfplot(png_f))
   for (nm in names(figs)) {
     b <- .g2_blocks(rtf_figures(rtf_document(), figs[[nm]],
                                 render_width = 2, render_height = 1, render_dpi = 50))
@@ -572,7 +708,7 @@ test_that("FT-AS3024 [FR-AS181]: a PNG path, a JPEG path, a patchwork, a lattice
   # and all together in a list: one block each, in order
   b <- .g2_blocks(rtf_figures(rtf_document(), unname(figs),
                               render_width = 2, render_height = 1, render_dpi = 50))
-  expect_length(b, 6L)
+  expect_length(b, 10L)
   expect_identical(b[[1]]$content$path, png_f)
   expect_identical(b[[2]]$content$path, jpg)
 })
@@ -597,6 +733,11 @@ test_that("FT-AS3025 [FR-AS185]: width_twips and height_twips set the display si
   rp <- rtfplot(f, width_twips = 1440L, height_twips = 720L)
   txt <- rtf_of(rp, width_twips = 2880, height_twips = 1440)
   expect_true(grepl("\\picwgoal1440\\pichgoal720", txt, fixed = TRUE))
+  # no fit to the page: a 10 x 1 in file (1000 x 100 px at 100 dpi) is 14400 x 1440 twips,
+  # wider than the 9360 twips of the text area
+  wide <- .g2_png(d, "wide.png", 1000, 100, res = 100)
+  txt <- rtf_of(wide)
+  expect_true(grepl("\\picwgoal14400\\pichgoal1440", txt, fixed = TRUE))
 })
 
 test_that("FT-AS3026 [FR-AS186]: rtf_figures(align) is center, left or right; another value stops as rtfplot() does", {
@@ -696,6 +837,8 @@ test_that("FT-AS3030 [FR-AS194]: png_device = NULL takes the option rtfreporter.
   expect_false(identical(by_png, by_ragg))
   # the argument over the option
   expect_identical(draw(png_device = "png"), by_png)
+  options(rtfreporter.png_device = "png")
+  expect_identical(draw(png_device = "ragg"), by_ragg)
   # "auto" takes ragg when it is installed
   expect_identical(draw(png_device = "auto"), by_ragg)
 })
@@ -749,6 +892,16 @@ test_that("FT-AS3032 [FR-AS197]: rtfplot() reads an upper-case .PNG's pixel size
   expect_identical(rj$img_type, "jpeg")
   expect_identical(c(rj$img_width, rj$img_height), c(200L, 100L))
   expect_equal(c(rj$dpi_x, rj$dpi_y), c(118 * 2.54, 120 * 2.54))
+
+  # units 1: dots per inch as they are, in a file with the extension .jpeg
+  raw[14] <- as.raw(1L)
+  raw[15:16] <- as.raw(c(0x00, 0x60))            # 96
+  raw[17:18] <- as.raw(c(0x00, 0x48))            # 72
+  jpg3 <- file.path(d, "r.jpeg")
+  writeBin(raw, jpg3)
+  r3 <- rtfplot(jpg3)
+  expect_identical(r3$img_type, "jpeg")
+  expect_equal(c(r3$dpi_x, r3$dpi_y), c(96, 72))
 })
 
 test_that("FT-AS3033 [FR-AS198]: a ggplot, a lattice object, a patchwork and a gtable are each drawn into an image of render_width x render_height", {
@@ -764,6 +917,12 @@ test_that("FT-AS3033 [FR-AS198]: a ggplot, a lattice object, a patchwork and a g
     patchwork = patchwork::wrap_plots(g, g),
     gtable = gtable::gtable_col("g", list(grid::rectGrob()), grid::unit(1, "null"), grid::unit(1, "null"))
   )
+  # a grob (grid.draw()), a recorded base plot (replayed) and a function (called)
+  grDevices::png(tempfile(fileext = ".png"))
+  .g2_pl()
+  rec <- grDevices::recordPlot()
+  grDevices::dev.off()
+  objs <- c(objs, list(grob = grid::rectGrob(), recorded = rec, `function` = .g2_pl))
   for (nm in names(objs)) {
     rp <- rtfplot(objs[[nm]], render_width = 2, render_height = 1, render_dpi = 100)
     info <- paste("object:", nm)
@@ -786,6 +945,11 @@ test_that("FT-AS3034 [FR-AS203]: a plot object without sizes is drawn 6.5 x 4.5 
   rp2 <- rtfplot(.g2_pl, width_twips = 4680L, height_twips = 3240L)
   txt2 <- .render_to_string(rtf_figures(rtf_document(), rp2))
   expect_true(grepl("\\picwgoal4680\\pichgoal3240", txt2, fixed = TRUE))
+  # render_width x render_height inches: 3 x 2 in at 300 dpi is 900 x 600 px, shown 4320 x 2880
+  rp3 <- rtfplot(.g2_pl, render_width = 3, render_height = 2)
+  expect_identical(c(rp3$img_width, rp3$img_height), c(900L, 600L))
+  txt3 <- .render_to_string(rtf_figures(rtf_document(), rp3))
+  expect_true(grepl("\\picwgoal4320\\pichgoal2880", txt3, fixed = TRUE))
 })
 
 test_that("FT-AS3035 [FR-AS207]: an option png_device that is not auto, ragg or png stops with the message naming the option", {
@@ -795,6 +959,20 @@ test_that("FT-AS3035 [FR-AS207]: an option png_device that is not auto, ragg or 
     rtfplot(.g2_pl),
     "`png_device` (option `rtfreporter.png_device`) must be \"auto\", \"ragg\" or \"png\".",
     fixed = TRUE)
+  # the same for the argument
+  options(old)
+  expect_error(
+    rtfplot(.g2_pl, png_device = "svg"),
+    "`png_device` (option `rtfreporter.png_device`) must be \"auto\", \"ragg\" or \"png\".",
+    fixed = TRUE)
+  # "ragg" without the ragg package
+  local({
+    local_mocked_bindings(requireNamespace = function(...) FALSE, .package = "base")
+    expect_error(
+      rtfplot(.g2_pl, png_device = "ragg"),
+      "`png_device = \"ragg\"` needs the ragg package: install.packages(\"ragg\"), or use \"png\".",
+      fixed = TRUE)
+  })
 })
 
 test_that("FT-AS3036 [FR-AS210]: a figure that is a character vector of other than one element, NA, NULL or another atomic vector stops with the messages", {
@@ -974,6 +1152,12 @@ test_that("FT-AS3045 [FR-AS232]: the validation kit not installed, or a file tha
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   kit <- file.path(d, "kit")
+  # a folder that is not empty
+  writeLines("x", file.path(d, "occupied.txt"))
+  expect_error(rtfreporter_validation_kit(d),
+               sprintf(paste0("rtfreporter_validation_kit(): '%s' is not empty; give an empty ",
+                              "or new folder, or overwrite = TRUE."), d),
+               fixed = TRUE)
   local({
     # (the source-loaded package has its own system.file(); an installed one uses base's)
     env <- environment()
