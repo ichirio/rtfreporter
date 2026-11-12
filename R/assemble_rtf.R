@@ -509,15 +509,14 @@
   if (!length(toc_entries)) return(integer(0))
   room <- 0.9 * (12240 - 2 * 1296)
   line <- function(hp) 1.15 * hp * 10               # half-points -> twips
-  char <- .char_width_in("courier_new", 10) * 1440  # a 10 pt character, twips
   used <- title_lines * line(.toc_hp(style$title)) + line(.toc_hp(style$gap))
   page <- 1L
   out  <- integer(length(toc_entries))
   for (i in seq_along(toc_entries)) {
     e  <- toc_entries[[i]]
     hp <- .toc_hp(if (identical(e$type, "heading")) style$heading else style$entry)
-    width <- 14400 - .toc_indent_for_level(e$level) - 720
-    n  <- max(1, ceiling(nchar(e$label %||% "") * char * hp / 20 / width))
+    hang <- if (identical(e$type, "heading")) 0L else .toc_hanging(style$entry)
+    n  <- .toc_label_lines(e$label, e$level, hp, hang)
     h  <- n * line(hp)
     if (used + h > room && used > 0) {
       page <- page + 1L
@@ -534,6 +533,22 @@
   out
 }
 
+# The lines a label takes at `hp` half-points: it wraps at Courier New's width
+# beside its level's indent and its page number; the lines after the first
+# have `hang` twips less width (a hanging indent).
+.toc_label_lines <- function(label, level, hp, hang = 0L) {
+  char  <- .char_width_in("courier_new", 10) * 1440  # a 10 pt character, twips
+  width <- 14400 - .toc_indent_for_level(level) - 720
+  len   <- nchar(label %||% "")
+  n <- max(1, ceiling(len * char * hp / 20 / width))
+  if (hang > 0L && n > 1) {
+    first <- floor(width * 20 / (char * hp))
+    rest  <- max(1, floor((width - hang) * 20 / (char * hp)))
+    n <- max(n, 1 + ceiling(max(0, len - first) / rest))
+  }
+  n
+}
+
 # -- The TOC's text styles (assemble_rtf(toc_style = )) ----------------------
 
 # Today's sizes: the title 14 pt bold, a heading 11 pt bold, an entry 10 pt,
@@ -541,12 +556,19 @@
 .TOC_STYLE_DEFAULT <- list(
   title   = list(size = 14, bold = TRUE),
   heading = list(size = 11, bold = TRUE),
-  entry   = list(size = 10, bold = FALSE),
+  entry   = list(size = 10, bold = FALSE, hanging = FALSE),
   gap     = list(size = 9)
 )
 
 # A style item's size in half-points (the `\fs` unit)
 .toc_hp <- function(item) as.integer(round(item$size * 2))
+
+# An entry's hanging indent in twips: 0 when off (FALSE), 720 for TRUE, else
+# the number of twips given.
+.toc_hanging <- function(item) {
+  h <- item$hanging
+  if (isTRUE(h)) 720L else if (is.numeric(h)) as.integer(h) else 0L
+}
 
 # `toc_style` (NULL, or a list of list(size = , bold = ) by title / heading /
 # entry / gap) merged over the defaults, key by key; anything else an error.
@@ -573,10 +595,21 @@
       stop(w, " must be a list with ", paste(fields, collapse = " and "),
            ", e.g. list(size = 12).", call. = FALSE)
     }
+    if (!is.null(v$hanging)) {
+      hg <- v$hanging
+      ok <- (is.logical(hg) && length(hg) == 1L && !is.na(hg)) ||
+        (is.numeric(hg) && length(hg) == 1L && is.finite(hg) && hg > 0 &&
+           hg == round(hg))
+      if (!ok) {
+        stop(sprintf("`%s$%s$hanging`", where, k), " must be TRUE, FALSE or a ",
+             "positive whole number of twips (720 is TRUE).", call. = FALSE)
+      }
+      out[[k]]$hanging <- if (is.numeric(hg)) as.integer(hg) else hg
+    }
     badf <- setdiff(names(v), fields)
     if (length(badf)) {
       stop(w, " has unknown key(s) ", paste0("'", badf, "'", collapse = ", "),
-           "; it takes ", paste(fields, collapse = " and "), ".", call. = FALSE)
+           "; it takes ", paste(fields, collapse = ", "), ".", call. = FALSE)
     }
     if (!is.null(v$size)) {
       s <- v$size
@@ -675,6 +708,8 @@
     e          <- toc_entries[[k]]
     indent     <- .toc_indent_for_level(e$level)
     indent_cmd <- if (indent > 0L) sprintf("\\li%d", indent) else ""
+    hang <- if (e$type == "heading") 0L else .toc_hanging(style$entry)
+    if (hang > 0L) indent_cmd <- sprintf("\\li%d\\fi-%d", indent + hang, hang)
     # (the first entry of each later TOC page starts that page)
     if (k > 1L && on_page[k] > on_page[k - 1L]) indent_cmd <- paste0("\\pagebb", indent_cmd)
 
@@ -857,9 +892,14 @@
 #'   the built-in values key by key, so `list(entry = list(size = 9))` changes
 #'   the entries' size only.  Built in: title 14 pt bold, heading 11 pt bold,
 #'   entry 10 pt, gap 9 pt.  A size is a positive number of points, whole or
-#'   half (`10.5`).  Default `getOption("rtfreporter.toc_style")`.  The font is
+#'   half (`10.5`).  `entry` also takes `hanging`: `FALSE` (default) writes each
+#'   entry's wrapped lines at the indent of its first line; `TRUE` hangs them
+#'   720 twips (half an inch) further in, and a positive whole number is that
+#'   many twips (`list(entry = list(hanging = 360))`).  Headings are not
+#'   affected.  Default `getOption("rtfreporter.toc_style")`.  The font is
 #'   the document's (that of the first input file).  Another key, a size that
-#'   is not a positive number or a `bold` that is not `TRUE` / `FALSE` is an
+#'   is not a positive number, a `bold` that is not `TRUE` / `FALSE` or a
+#'   `hanging` that is not `TRUE` / `FALSE` / a positive whole number is an
 #'   error.
 #'
 #' @return Invisibly returns `output_file`.

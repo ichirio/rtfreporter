@@ -620,3 +620,135 @@ test_that("FT-AS4044 [FR-AS266]: the cover and TOC deliverable is rebuilt byte f
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   expect_identical(.tt_bytes(.tt_case_coverroman(d)), .tt_bytes(fx))
 })
+
+# -- the hanging indent of an entry (toc_style entry = list(hanging = )) ----------
+
+# three levels, a heading, one entry per level
+.tt_hang_toc <- function(f) {
+  data.frame(file = f, heading = c("Efficacy", NA, NA), label = c("One", "Two", "Three"),
+             level = c(1L, 2L, 3L))
+}
+
+test_that("FT-AS4045 [FR-AS269]: by default an entry paragraph carries no \\fi (no hanging indent) and the defaults are written as before", {
+  d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
+  f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B", t_14_3_1 = "C"))
+  x <- .tt_asm(f, toc = .tt_hang_toc(f))
+  e <- .tt_entries(x)
+  expect_length(e, 3L)
+  expect_false(any(grepl("\\\\fi[0-9-]", e)))
+  expect_match(e[2L], "^\\{\\\\pard\\\\li600\\\\fs20\\\\tqr")
+  # the explicit default is the same bytes
+  y <- .tt_asm(f, toc = .tt_hang_toc(f), toc_style = list(entry = list(hanging = FALSE)))
+  expect_identical(y, x)
+  d2 <- .tt_dir(); on.exit(unlink(d2, recursive = TRUE), add = TRUE)
+  expect_identical(.tt_bytes(.tt_case_baseline(d2)),
+                   .tt_bytes(test_path("fixtures", "toc-baseline-defaults.rtf")))
+})
+
+test_that("FT-AS4046 [FR-AS269]: hanging = TRUE writes \\li<indent + 720>\\fi-720 on the entry paragraph of every level, and no heading changes", {
+  d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
+  f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B", t_14_3_1 = "C"))
+  toc <- .tt_hang_toc(f)
+  x0 <- .tt_asm(f, toc = toc)
+  x  <- .tt_asm(f, toc = toc, toc_style = list(entry = list(hanging = TRUE)))
+  e <- .tt_entries(x)
+  expect_length(e, 3L)
+  expect_match(e[1L], "^\\{\\\\pard\\\\li720\\\\fi-720\\\\fs20\\\\tqr\\\\tldot\\\\tx14400 ")
+  expect_match(e[2L], "^\\{\\\\pard\\\\li1320\\\\fi-720\\\\fs20\\\\tqr\\\\tldot\\\\tx14400 ")
+  expect_match(e[3L], "^\\{\\\\pard\\\\li1920\\\\fi-720\\\\fs20\\\\tqr\\\\tldot\\\\tx14400 ")
+  # headings (and the title) are as they were
+  noent <- function(l) .tt_paras(l)[!grepl("PAGEREF", .tt_paras(l))]
+  expect_identical(noent(x), noent(x0))
+  expect_length(grep("\\\\b\\\\fs22 Efficacy", noent(x)), 1L)
+  expect_false(any(grepl("\\\\fi[0-9-]", noent(x))))
+})
+
+test_that("FT-AS4047 [FR-AS269]: hanging = 360 writes \\li<indent + 360>\\fi-360", {
+  d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
+  f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B", t_14_3_1 = "C"))
+  x <- .tt_asm(f, toc = .tt_hang_toc(f), toc_style = list(entry = list(hanging = 360)))
+  e <- .tt_entries(x)
+  expect_match(e[1L], "^\\{\\\\pard\\\\li360\\\\fi-360\\\\fs20\\\\tqr")
+  expect_match(e[2L], "^\\{\\\\pard\\\\li960\\\\fi-360\\\\fs20\\\\tqr")
+  expect_match(e[3L], "^\\{\\\\pard\\\\li1560\\\\fi-360\\\\fs20\\\\tqr")
+})
+
+test_that("FT-AS4048 [FR-AS269 FR-AS260]: the option rtfreporter.toc_style sets the hanging indent, and the argument wins over it", {
+  d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B", t_14_3_1 = "C"))
+  old <- options(rtfreporter.toc_style = list(entry = list(hanging = 360)))
+  on.exit(options(old), add = TRUE)
+  e <- .tt_entries(.tt_asm(f, toc = .tt_hang_toc(f)))
+  expect_match(e[2L], "^\\{\\\\pard\\\\li960\\\\fi-360\\\\fs20\\\\tqr")
+  e <- .tt_entries(.tt_asm(f, toc = .tt_hang_toc(f),
+                           toc_style = list(entry = list(hanging = TRUE))))
+  expect_match(e[2L], "^\\{\\\\pard\\\\li1320\\\\fi-720\\\\fs20\\\\tqr")
+  e <- .tt_entries(.tt_asm(f, toc = .tt_hang_toc(f),
+                           toc_style = list(entry = list(hanging = FALSE))))
+  expect_false(any(grepl("\\\\fi[0-9-]", e)))
+})
+
+test_that("FT-AS4049 [FR-AS269 FR-AS261]: a hanging that is not TRUE, FALSE or one positive whole number of twips, or is under another key, stops with a message naming it", {
+  d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B"))
+  out <- file.path(d, "assembled.rtf")
+  bad <- function(h) assemble_rtf(f, out, toc = "auto", toc_style = list(entry = list(hanging = h)))
+  msg <- "`toc_style\\$entry\\$hanging` must be TRUE, FALSE or a positive whole number of twips"
+  expect_error(bad("yes"), msg)
+  expect_error(bad(-1), msg)
+  expect_error(bad(0), msg)
+  expect_error(bad(1.5), msg)
+  expect_error(bad(c(1, 2)), msg)
+  expect_error(bad(NA), msg)
+  expect_error(bad(NA_real_), msg)
+  expect_error(bad(c(TRUE, FALSE)), msg)
+  expect_error(assemble_rtf(f, out, toc = "auto", toc_style = list(heading = list(hanging = TRUE))),
+               "`toc_style\\$heading` has unknown key\\(s\\) 'hanging'; it takes size, bold")
+  expect_error(assemble_rtf(f, out, toc = "auto", toc_style = list(title = list(hanging = 360))),
+               "`toc_style\\$title` has unknown key\\(s\\) 'hanging'")
+  expect_error(assemble_rtf(f, out, toc = "auto", toc_style = list(gap = list(hanging = TRUE))),
+               "`toc_style\\$gap` has unknown key\\(s\\) 'hanging'")
+  old <- options(rtfreporter.toc_style = list(entry = list(hanging = "yes")))
+  on.exit(options(old), add = TRUE)
+  expect_error(assemble_rtf(f, out, toc = "auto"), msg)
+})
+
+test_that("FT-AS4050 [FR-AS269 FR-AS265]: with a hanging indent a wrapped label counts at least as many lines in the height estimate, and one more when the narrower lines wrap again", {
+  lines <- rtfreporter:::.toc_label_lines
+  # a label just over one line (level 2, 10 pt = 20 half-points) takes two,
+  # and its second line, 720 twips narrower, still holds the rest
+  expect_equal(lines(strrep("x", 150), 2L, 20L, 0L), 2)
+  expect_equal(lines(strrep("x", 150), 2L, 20L, 720L), 2)
+  # a label that fills two lines without the hanging indent wraps a third time
+  full <- strrep("x", 215)
+  expect_equal(lines(full, 2L, 20L, 0L), 2)
+  expect_equal(lines(full, 2L, 20L, 720L), 3)
+  # never fewer, whatever the length; a one-line label stays one line
+  for (n in c(1, 50, 109, 110, 200, 215, 246, 400, 1000)) {
+    for (lv in 1:3) {
+      expect_gte(lines(strrep("x", n), lv, 20L, 720L), lines(strrep("x", n), lv, 20L, 0L))
+    }
+  }
+  expect_equal(lines("x", 2L, 20L, 720L), 1)
+  # the pages: a page holds 35 one-line entries; with 33 before it, two lines
+  # fit and three do not
+  one  <- list(type = "entry", label = "x", level = 2L)
+  long <- list(type = "entry", label = full, level = 2L)
+  on  <- rtfreporter:::.toc_style(list(entry = list(hanging = TRUE)))
+  off <- rtfreporter:::.toc_style(NULL)
+  pages <- function(st) {
+    max(rtfreporter:::.toc_entry_pages(c(rep(list(one), 33L), list(long)), 1L, st))
+  }
+  expect_identical(pages(off), 1L)
+  expect_identical(pages(on), 2L)
+})
+
+test_that("FT-AS4051 [FR-AS269]: the long-label TOC with a hanging indent is rebuilt byte for byte (fixtures/toc-hanging.rtf)", {
+  fx <- test_path("fixtures", "toc-hanging.rtf")
+  d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
+  out <- .tt_case_hanging(d)
+  expect_identical(.tt_bytes(out), .tt_bytes(fx))
+  e <- .tt_entries(readLines(out, warn = FALSE))
+  expect_match(e[2L], "^\\{\\\\pard\\\\li1320\\\\fi-720\\\\fs20")
+  expect_match(e[3L], "^\\{\\\\pard\\\\li1920\\\\fi-720\\\\fs20")
+})

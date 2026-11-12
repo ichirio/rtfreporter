@@ -121,7 +121,9 @@
 #'     `heading` and `entry` (each `list(size = <points>, bold = TRUE/FALSE)`)
 #'     and `gap` (`list(size = )`, the blank line below the title), merged over
 #'     the built-in values key by key (factory `NULL`: title 14 pt bold,
-#'     heading 11 pt bold, entry 10 pt, gap 9 pt).}
+#'     heading 11 pt bold, entry 10 pt, gap 9 pt).  `entry` also takes
+#'     `hanging` (`FALSE`, `TRUE` for 720 twips, or a positive whole number of
+#'     twips): a hanging indent for an entry's wrapped lines.}
 #' }
 #'
 #' @return A named list of resolved default values.
