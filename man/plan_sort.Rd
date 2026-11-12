@@ -4,7 +4,7 @@
 \alias{plan_sort}
 \title{Put the rows in order}
 \usage{
-plan_sort(.plan, ..., stat = NULL, keep = TRUE)
+plan_sort(.plan, ..., stat = NULL, keep = NULL)
 }
 \arguments{
 \item{.plan}{A \code{\link[=table_plan]{table_plan()}}.}
@@ -36,9 +36,11 @@ separate blocks together, \code{FALSE} moves only what an order declares.}
 \item{stat}{The statistic totalled into \code{.sort_stat} for a frequency
 order (\code{widen_ard(sort_stat = )}), one name, e.g. \code{stat = "n"}.}
 
-\item{keep}{\code{TRUE} (default) or \code{FALSE}; \code{FALSE} also hides the sort keys that are columns: a sort
+\item{keep}{\code{TRUE} or \code{FALSE}; \code{FALSE} also hides the sort keys that are columns: a sort
 carrier needed and not wanted.  Names that are not columns (a
-statistic, \code{".depth"}) are ignored rather than refused.}
+statistic, \code{".depth"}) are ignored rather than refused.  Left out
+(\code{NULL}): \code{TRUE}, or what an earlier \code{plan_sort()} said -- a later call
+that leaves it out keeps it.}
 }
 \value{
 The plan, with one more layer.

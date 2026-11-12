@@ -355,7 +355,9 @@ listing_split_after <- function(text, sep) {
 #'       the suppression happens per page, after the split, so a record
 #'       continued across a page break still shows its subject.}
 #'     \item{Wrapped cells}{A cell that already wraps onto several lines is
-#'       padded as usual: there is no one value to repeat.}
+#'       padded as usual, but a record whose lines equal the previous
+#'       record's are blanked all the same: a repeat is blanked whether or
+#'       not the value wraps.}
 #'   }
 #' @param name Output column name.  `NULL` (default) uses the first entry of
 #'   `vars`; [listing_spec()] makes the set unique if two columns collide.
@@ -1064,11 +1066,12 @@ build_listing <- function(data, spec) {
   # see (#366).  The resolved spec travels on the body, so as_rtftables() and
   # a second build never have to derive it again.
   lines <- vector("list", k)
+  whole <- vector("list", k)    # each cell's whole value, before it is wrapped
   for (j in seq_len(k)) {
     cl   <- spec$cols[[j]]
     sepj <- if (is.null(cl$sep)) spec$sep else cl$sep
     lay  <- if (is.null(cl$layout)) spec$layout else cl$layout
-    .listing_combine(data, cl, sepj)     # checks the variables exist
+    whole[[j]] <- .listing_combine(data, cl, sepj)   # checks the variables exist
     parts <- .listing_cell_parts(data, cl)
     spec$cols[[j]]$label <- .listing_resolve_label(data, cl, sepj, lay,
                                                    wrap_fn = spec$wrap)
@@ -1098,7 +1101,8 @@ build_listing <- function(data, spec) {
     # has a constant run to suppress -- and, because it suppresses per page,
     # after the split, the value reappears at the top of the next page.  Only
     # a single-line value is carried: a cell that already wraps has no one
-    # value to repeat, and printing it in full is never wrong.  It is carried
+    # value to repeat (a repeat of it is blanked by the record, in
+    # .collapse_repeats_chunk()).  It is carried
     # into the record's blank row too (#742): a blank row left "" would break
     # the run between two records of the same value, and none would be
     # blanked.  A page never parts a record from its blank row, so the
@@ -1138,6 +1142,10 @@ build_listing <- function(data, spec) {
   body <- as.data.frame(out, stringsAsFactors = FALSE, check.names = FALSE)
   rownames(body) <- NULL
   attr(body, "rtf_listing") <- spec
+  # The value of each printed column by record id, unwrapped: what a page cut
+  # on a column (`page_by`) keys a record on, not the pieces of its wrap.
+  names(whole) <- vapply(spec$cols, function(cl) cl$name, character(1L))
+  attr(body, "rtf_listing_values") <- whole
   body
 }
 

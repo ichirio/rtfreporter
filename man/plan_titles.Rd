@@ -4,7 +4,7 @@
 \alias{plan_titles}
 \title{Put a block of titles above the table}
 \usage{
-plan_titles(.plan, ..., pages = NULL)
+plan_titles(.plan, ..., pages = NULL, border = NULL)
 }
 \arguments{
 \item{.plan}{A \code{\link[=table_plan]{table_plan()}}.}
@@ -15,6 +15,14 @@ line, or a character vector of them.}
 \item{pages}{A list with one block per page, when the pages do not share
 one.  Give \code{...} or \code{pages}, never both: a three-row title on a
 three-page table cannot be told apart from three one-row titles.}
+
+\item{border}{\code{NULL} (default) for none, or an \code{\link[=rtf_border]{rtf_border()}} for the
+title block as a whole on every page of this table, read as
+\code{\link[=rtf_titles]{rtf_titles()}}\verb{(border = )} is: \code{top} above the first row, \code{bottom}
+below the last row, \code{inside_h} between rows, \code{left} / \code{right} on every
+row.  It is this table's own, so it wins over the document's
+\code{\link[=rtf_titles]{rtf_titles()}}\verb{(border = )} and \code{\link[=rtf_style]{rtf_style()}}\code{(titles = list(border = ))}.  It is drawn with \code{rtf_style(title_format = "table")}; the text
+form ignores it, with a warning.}
 }
 \value{
 The plan, with one more layer.

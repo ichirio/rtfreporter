@@ -45,7 +45,7 @@
                 "blank_row_height_twips", .STYLE_PAD_KEYS, "cell_valign",
                 "table_align", "markup"),
   titles    = c("font", "font_size_half_points", "row_height_twips", "markup",
-                "align"),
+                "align", "border"),
   footnotes = c("font", "font_size_half_points", "row_height_twips", "markup",
                 "align", "border"),
   header    = c("font", "font_size_half_points", "row_height_twips", "markup",
@@ -89,6 +89,10 @@
 #' ([as_rtftables()]) before the style reaches it, so a section's row height
 #' does not change where the pages break.
 #'
+#' Row height, cell padding, vertical alignment and font size apply to the
+#' whole table (the body, and the header for its own settings); they are not
+#' set per row or per cell.
+#'
 #' Several `rtf_style()` objects given through [rtf_config()] merge key by
 #' key, the later winning.  `rtf_style()` replaces [rtf_default_format()],
 #' which is deprecated: a `default_format` still given maps onto the shared
@@ -110,7 +114,8 @@
 #' @param title_format,footnote_format How the title / footnote block is
 #'   written: `"text"` (plain paragraphs) or `"table"` (a single-column
 #'   table).  The defaults are `"text"` for the title and `"table"` for the
-#'   footnote.
+#'   footnote.  A `border` on a title or footnote needs the `"table"` form;
+#'   the `"text"` form ignores it and warns.
 #' @param title_width,footnote_width The width of the title / footnote
 #'   block: `"content"` (the table's), `"page"` (the writable width), a
 #'   fraction in `(0, 1]` of the writable width, or twips (a whole number
@@ -120,7 +125,8 @@
 #'   `row_height_exact`, `header_row_height_twips`, `blank_row_height_twips`,
 #'   the four `cell_padding_*_twips`, `cell_valign`, `table_align`, `markup`.
 #' @param titles A named list of [rtf_titles()]'s style arguments: `font`,
-#'   `font_size_half_points`, `row_height_twips`, `markup`, `align`.
+#'   `font_size_half_points`, `row_height_twips`, `markup`, `align`,
+#'   `border`.
 #' @param footnotes A named list of [rtf_footnotes()]'s style arguments:
 #'   `font`, `font_size_half_points`, `row_height_twips`, `markup`, `align`,
 #'   `border`.

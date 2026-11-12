@@ -79,7 +79,8 @@ The tokens:
 \code{"widths"}, \code{"titles"}, \code{"footnotes"}, \code{"styles"} (explicit
 \code{tab_style()} borders and text styles; see \emph{What is carried}).}
 \item{rtables / tern}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
-\code{"titles"}, \code{"footnotes"}, \code{"indent"}, \code{"footnote_marks"};
+\code{"titles"}, \code{"footnotes"}, \code{"footnote_marks"} (the indentation is
+always written into the labels);
 \strong{rlistings takes the same tokens}, because the two share one
 \code{MatrixPrintForm} reader.}
 \item{flextable}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
@@ -600,7 +601,8 @@ other arguments say (\code{max_rows}, \code{split}): the page a table shares wit
 the content before it, \code{\link[=rtf_tables]{rtf_tables()}}\code{(page_break = FALSE)}.  Under
 \code{"group_safe"} / \code{"group_force"} a group the cut falls inside goes on
 with its continuation row on the next page, counted in its \code{max_rows},
-as a cut by \code{max_rows} does.  \code{NULL}
+as a cut by \code{max_rows} does.  A \strong{listing} record is not cut: the first
+page ends before the record the row count falls in.  \code{NULL}
 (the default): the first page as the others.  Not with \code{page_by},
 \code{split = "by_value"} or a custom \code{split}.}
 }

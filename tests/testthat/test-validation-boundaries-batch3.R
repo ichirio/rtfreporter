@@ -385,7 +385,7 @@
 }
 .eb3_read <- function(f) paste(readLines(f, warn = FALSE), collapse = "\n")
 
-test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS110 FR-AS112 FR-AS114 FR-AS115 FR-AS116 FR-AS117 FR-AS118 FR-AS119 FR-AS124 FR-AS127 FR-AS128 FR-AS129 FR-AS131 FR-AS133 FR-AS134 FR-AS138 FR-AS139 FR-AS238 FR-AS244 FR-AS245 FR-AS246]: assemble_rtf(): equivalence classes and boundaries of its arguments", {
+test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS110 FR-AS112 FR-AS114 FR-AS115 FR-AS116 FR-AS118 FR-AS119 FR-AS124 FR-AS127 FR-AS128 FR-AS129 FR-AS131 FR-AS133 FR-AS134 FR-AS139 FR-AS238 FR-AS244 FR-AS245 FR-AS246]: assemble_rtf(): equivalence classes and boundaries of its arguments", {
   C <- .eb3_case
   E <- .eb3_err
   f <- .eb3_files()
@@ -585,7 +585,7 @@ test_that("FT-AS141 [FR-AS129 FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS
                       AETERM = c("Headache", "Nausea and vomiting", NA),
                       stringsAsFactors = FALSE)
 
-test_that("FT-LS154 [FR-LS115 FR-LS143 FR-LS144 FR-LS145 FR-LS146 FR-LS151 FR-LS152 FR-LS153 FR-LS154 FR-LS155 FR-LS156 FR-LS158 FR-LS159 FR-LS160 FR-LS161 FR-LS162 FR-LS163 FR-LS164 FR-LS165 FR-LS251]: listing_col(): equivalence classes and boundaries of its arguments", {
+test_that("FT-LS154 [FR-LS115 FR-LS143 FR-LS144 FR-LS145 FR-LS146 FR-LS151 FR-LS152 FR-LS153 FR-LS154 FR-LS158 FR-LS159 FR-LS160 FR-LS161 FR-LS162 FR-LS163 FR-LS164 FR-LS165 FR-LS251]: listing_col(): equivalence classes and boundaries of its arguments", {
   C <- .eb3_case
   E <- .eb3_err
   O <- .eb3_obj
@@ -787,7 +787,7 @@ test_that("FT-LS156 [FR-LS101 FR-LS102 FR-LS109 FR-LS112 FR-LS113 FR-LS114]: bui
   })
 })
 
-test_that("FT-LS157 [FR-LS205 FR-LS206 FR-LS212 FR-LS213 FR-LS214 FR-LS216 FR-LS217 FR-LS218 FR-LS219 FR-LS220 FR-LS224 FR-LS225 FR-LS226 FR-LS227 FR-LS228 FR-LS229 FR-LS230 FR-LS232 FR-LS252]: fit_listing_widths(): equivalence classes and boundaries of its arguments", {
+test_that("FT-LS157 [FR-LS205 FR-LS206 FR-LS212 FR-LS214 FR-LS216 FR-LS217 FR-LS219 FR-LS224 FR-LS225 FR-LS226 FR-LS227 FR-LS228 FR-LS229 FR-LS230 FR-LS232 FR-LS252]: fit_listing_widths(): equivalence classes and boundaries of its arguments", {
   E <- .eb3_err
   O <- .eb3_obj
   spec <- listing_spec(list(listing_col(c("USUBJID", "AGE")), listing_col("AETERM")))
@@ -919,7 +919,7 @@ test_that("FT-LS158 [FR-LS170 FR-LS172 FR-LS174 FR-LS175 FR-LS176 FR-LS177 FR-LS
   .eb3_run(cases, function(args, obj) do.call(listing_wrap, args))
 })
 
-test_that("FT-LS159 [FR-LS233 FR-LS234 FR-LS235 FR-LS236 FR-LS238 FR-LS239]: collapse_repeats(): equivalence classes and boundaries of its arguments", {
+test_that("FT-LS159 [FR-LS233 FR-LS235 FR-LS236 FR-LS238 FR-LS239]: collapse_repeats(): equivalence classes and boundaries of its arguments", {
   E <- .eb3_err
   O <- .eb3_obj
   tb <- rtftable(data.frame(A = c("x", "x", "y"), B = c("1", "1", "2")))
@@ -1009,7 +1009,7 @@ test_that("FT-AR107 [FR-AR119 FR-AR121 FR-AR126]: normalize_ard(): equivalence c
   })
 })
 
-test_that("FT-AR108 [FR-AR156 FR-AR157 FR-AR158 FR-AR180 FR-AR183 FR-AR197 FR-AR209 FR-AR247 FR-AR250 FR-AR253]: widen_ard(): equivalence classes and boundaries of na, label and stat_groups", {
+test_that("FT-AR108 [FR-AR156 FR-AR157 FR-AR158 FR-AR180 FR-AR197 FR-AR209 FR-AR247 FR-AR250 FR-AR253]: widen_ard(): equivalence classes and boundaries of na, label and stat_groups", {
   E <- .eb3_err
   O <- .eb3_obj
   d <- normalize_ard(.eb3_ard)
@@ -1060,7 +1060,7 @@ test_that("FT-AR108 [FR-AR156 FR-AR157 FR-AR158 FR-AR180 FR-AR183 FR-AR197 FR-AR
   })
 })
 
-test_that("FT-AR109 [FR-AR213 FR-AR215 FR-AR216 FR-AR218 FR-AR219 FR-AR220 FR-AR221 FR-AR224 FR-AR225 FR-AR239 FR-AR251]: pull_ard(): equivalence classes and boundaries of its arguments", {
+test_that("FT-AR109 [FR-AR213 FR-AR216 FR-AR218 FR-AR219 FR-AR220 FR-AR221 FR-AR224 FR-AR225 FR-AR239 FR-AR251]: pull_ard(): equivalence classes and boundaries of its arguments", {
   E <- .eb3_err
   O <- .eb3_obj
   is <- function(v) function(x) identical(x, v)
@@ -1388,7 +1388,7 @@ test_that("FT-PL973 [FR-PL265 FR-PL275 FR-PL276]: plan_total(): equivalence clas
     E("label", "length 2", c("a", "b"), lb),
     E("label", "a number", 1, lb),
     E("label", "length 0", character(0), lb),
-    E("label", "NULL", NULL, lb),
+    O("label", "NULL (left out: the default)", NULL, hd("Placebo", "Active", "Total")),
     O("position", "first", "first", hd("Total", "Placebo", "Active")),
     O("position", "prefix", "f", hd("Total", "Placebo", "Active")),
     E("position", "another case", "First", "^'arg' should be one of"),
@@ -1429,7 +1429,7 @@ test_that("FT-PL974 [FR-PL310 FR-PL311 FR-PL960]: plan_sort(): equivalence class
   .eb3_run(cases, function(args, obj) .eb3_pages(plan_sort, args))
 })
 
-test_that("FT-PL975 [FR-PL142 FR-PL143 FR-PL144 FR-PL145 FR-PL146 FR-PL150 FR-PL151 FR-PL152 FR-PL960]: plan_filter(): equivalence classes and boundaries of any, parents and by", {
+test_that("FT-PL975 [FR-PL142 FR-PL143 FR-PL150 FR-PL151 FR-PL152 FR-PL960]: plan_filter(): equivalence classes and boundaries of any, parents and by", {
   E <- .eb3_err
   O <- .eb3_obj
   an <- "^plan_filter\\(any = \\) is TRUE"
@@ -1456,7 +1456,7 @@ test_that("FT-PL975 [FR-PL142 FR-PL143 FR-PL144 FR-PL145 FR-PL146 FR-PL150 FR-PL
   })
 })
 
-test_that("FT-PL976 [FR-PL157 FR-PL158 FR-PL159 FR-PL160 FR-PL166 FR-PL167 FR-PL176 FR-PL179]: plan_columns(): equivalence classes and boundaries of widths, auto_width and sep", {
+test_that("FT-PL976 [FR-PL157 FR-PL158 FR-PL159 FR-PL160 FR-PL176 FR-PL179]: plan_columns(): equivalence classes and boundaries of widths, auto_width and sep", {
   E <- .eb3_err
   O <- .eb3_obj
   aw <- "^`auto_width` must be TRUE or FALSE"
@@ -1507,7 +1507,7 @@ test_that("FT-PL977 [FR-PL945]: plan_append(): equivalence classes and boundarie
   })
 })
 
-test_that("FT-PL978 [FR-PL387 FR-PL388 FR-PL392]: plan_col_header(): equivalence classes and boundaries of span, header_sep and col_header_align", {
+test_that("FT-PL978 [FR-PL392]: plan_col_header(): equivalence classes and boundaries of span, header_sep and col_header_align", {
   E <- .eb3_err
   O <- .eb3_obj
   ln <- list(lines = list(c(group = "", label = "", .values = "Treatment")))
@@ -1538,7 +1538,7 @@ test_that("FT-PL978 [FR-PL387 FR-PL388 FR-PL392]: plan_col_header(): equivalence
   .eb3_run(cases, function(args, obj) .eb3_pages(plan_col_header, args))
 })
 
-test_that("FT-PL979 [FR-PL256 FR-PL262]: plan_levels(): equivalence classes and boundaries of .drop_empty", {
+test_that("FT-PL979 [FR-PL262]: plan_levels(): equivalence classes and boundaries of .drop_empty", {
   E <- .eb3_err
   O <- .eb3_obj
   de <- "^plan_levels\\(.drop_empty = \\) takes variable names"

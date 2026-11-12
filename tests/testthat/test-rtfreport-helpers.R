@@ -170,3 +170,12 @@ test_that(".rtfreport_validate() rejects a page with an unsupported content type
   expect_error(rtfreporter:::.rtfreport_validate(r),
                "rtftable.*rtfplot")
 })
+
+test_that(".rtfreport_validate() rejects a segment whose content is not an rtftable or rtfplot", {
+  r <- rtfreporter:::.new_rtfreport()
+  r <- rtfreporter:::.rtfreport_add_section(r)
+  r <- rtfreporter:::.rtfreport_add_page(r, content = rtftable(data.frame(A = 1)))
+  r$pages[[1L]]$segments <- list(list(content = data.frame(A = 1)))
+  expect_error(rtfreporter:::.rtfreport_validate(r),
+               "Page 1: each content must be rtftable or rtfplot")
+})

@@ -21,10 +21,13 @@
 #             the named ones.
 #    attrs    bold, italic, underline, align, color, background,
 #             indent_twips and border.  The header takes bold, italic,
-#             underline, align and border (color, background, indent_twips
-#             stop, FR-PL416); `where` takes all but border (FR-PL417); whole
-#             columns take all; a formula carries a value of an attribute
-#             that is a value (not a border).
+#             underline, align, border, color and background (the columns'
+#             header_color / header_background; indent_twips stops,
+#             FR-PL416); `where` takes all, a border going on the body
+#             cells of the rows chosen (FR-PL417); whole columns take all,
+#             a border going on the header cells (FR-PL409); a formula
+#             carries a value of an attribute that is a value (a formula
+#             border is FR-PL980, tested in test-plan-cell-border.R).
 #    later    value styles run in the order written, a formula style is
 #             last-wins per attribute (FR-PL407): a later call on the same
 #             place that names an attribute gives the final value of it, and
@@ -35,18 +38,18 @@
 #  keeps it: col_spec for whole columns, the header cell of col_header, and
 #  cell_styles by row for a condition or a formula.
 #
-#  (A) FT-PL993, decision table, place x attribute (4 x 8 = 32 cells; a
-#  formula has no border, so 4 x 8 less 1): "ok" (the value is on the page, at
+#  (A) FT-PL993, decision table, place x attribute (4 x 8 = 32 cells; the
+#  formula border is tested elsewhere, so 4 x 8 less 1): "ok" (the value is on the page, at
 #  the places the rule names and nowhere else), or the error of the rule.
 #
 #  (B) FT-PL994, pairwise.  Factors and levels:
 #    place    cols, header, where, formula, formula list
 #    cols     left out, "A", c("A", "B")  (the list names them: not left out)
 #    attrs    bold | align | bold, italic, underline | color, background |
-#             align, indent_twips  (the header takes the first three only)
+#             align, indent_twips  (the header takes all but the last)
 #    later    none | a second call on the same place with align "center"
-#  Of 5 x 3 x 5 x 2 = 150 rows, the invalid ones (the header with colour,
-#  background or indent: 12; a formula list with no columns: 10) leave 128; .allpairs()
+#  Of 5 x 3 x 5 x 2 = 150 rows, the invalid ones (the header with an indent:
+#  6; a formula list with no columns: 10) leave 134; .allpairs()
 #  picks the rows covering every pair of levels.  Oracle: the rules above; the
 #  page's styles must differ from a plan with no cell style at exactly the
 #  places the rule names.
@@ -131,8 +134,9 @@
 
 test_that("FT-PL993 [FR-PL404 FR-PL408 FR-PL409 FR-PL410 FR-PL416 FR-PL417 FR-PL972 FR-PL973 FR-IX408]: plan_cell_style(): which attributes each place takes, the decision table", {
   d <- .cs_tbl()
-  hdr_msg <- "plan_cell_style(header = TRUE) takes bold, italic, underline, align and border."
-  where_msg <- "a border is set on whole columns."
+  hdr_msg <- "plan_cell_style(header = TRUE) takes bold, italic, underline, align, border, color and background."
+  # a border on whole columns warns once a session (FR-PL409); not this test's
+  local_deprecated("warn:plan_cell_style_cols_border")
   base <- .cs_snapshot(.cs_pg(table_plan(d) |> plan_style()))
   bord <- rtf_border(bottom = TRUE)
   places <- c("cols", "header", "where", "formula")
@@ -150,10 +154,15 @@ test_that("FT-PL993 [FR-PL404 FR-PL408 FR-PL409 FR-PL410 FR-PL416 FR-PL417 FR-PL
     if (pl != "formula") args$cols <- "A"
     if (pl == "header") args$header <- TRUE
     if (pl == "where") args$where <- ~ lab == "n"
-    if (pl == "header" && a %in% c("color", "background", "indent_twips")) {
+    if (pl == "header" && a == "indent_twips") {
       expect_error(do.call(plan_cell_style, args), hdr_msg, fixed = TRUE, info = label)
     } else if (pl == "where" && a == "border") {
-      expect_error(do.call(plan_cell_style, args), where_msg, fixed = TRUE, info = label)
+      # a condition: the body cell of column A on the rows chosen, nothing else
+      pg <- .cs_pg(do.call(plan_cell_style, args))
+      expect_false(is.null(pg$cell_styles[[1L]]$border[[2L]]), info = label)
+      expect_null(pg$cell_styles[[1L]]$border[[3L]], info = label)
+      expect_null(pg$cell_styles[[2L]]$border, info = label)
+      expect_null(pg$col_spec[[2L]]$border, info = label)
     } else {
       pg <- .cs_pg(do.call(plan_cell_style, args))
       if (a == "border") {
@@ -180,9 +189,9 @@ test_that("FT-PL994 [FR-PL404 FR-PL405 FR-PL407 FR-PL408 FR-PL409 FR-PL410 FR-PL
   cand <- expand.grid(place = c("cols", "header", "where", "formula", "flist"),
                       cols = c("all", "A", "AB"), attrs = names(attr_sets),
                       later = c("none", "align"), stringsAsFactors = FALSE)
-  cand <- cand[!(cand$place == "header" & cand$attrs %in% c("cb", "ai")) &
+  cand <- cand[!(cand$place == "header" & cand$attrs == "ai") &
                  !(cand$place == "flist" & cand$cols == "all"), ]
-  expect_identical(nrow(cand), 128L)
+  expect_identical(nrow(cand), 134L)
   ap <- .allpairs(cand)
   expect_setequal(ap$covered, ap$need)
   expect_lt(nrow(ap$rows), 40L)

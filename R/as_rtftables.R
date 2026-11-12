@@ -236,7 +236,8 @@
 #'       `"widths"`, `"titles"`, `"footnotes"`, `"styles"` (explicit
 #'       `tab_style()` borders and text styles; see *What is carried*).}
 #'     \item{rtables / tern}{`"col_header"`, `"alignment"`, `"spanning"`,
-#'       `"titles"`, `"footnotes"`, `"indent"`, `"footnote_marks"`;
+#'       `"titles"`, `"footnotes"`, `"footnote_marks"` (the indentation is
+#'       always written into the labels);
 #'       **rlistings takes the same tokens**, because the two share one
 #'       `MatrixPrintForm` reader.}
 #'     \item{flextable}{`"col_header"`, `"alignment"`, `"spanning"`,
@@ -566,7 +567,8 @@
 #'   the content before it, [rtf_tables()]`(page_break = FALSE)`.  Under
 #'   `"group_safe"` / `"group_force"` a group the cut falls inside goes on
 #'   with its continuation row on the next page, counted in its `max_rows`,
-#'   as a cut by `max_rows` does.  `NULL`
+#'   as a cut by `max_rows` does.  A **listing** record is not cut: the first
+#'   page ends before the record the row count falls in.  `NULL`
 #'   (the default): the first page as the others.  Not with `page_by`,
 #'   `split = "by_value"` or a custom `split`.
 #' @param collapse_repeats Columns in which to blank **consecutive repeated
@@ -1172,6 +1174,17 @@ as_rtftables.default <- function(x,
       user_args$cell_styles <- NULL
     }
     if (!is.null(stub_spec_obj)) {
+      # The stub is folded over the whole body, then cut into pages.  Say
+      # where the `page_by` key changes, so every page opens with its own
+      # heading rows (stub_cols() reads this and nothing else does).
+      if (!is.null(page_by_arg) && nrow(body)) {
+        pbi <- .resolve_page_by(page_by_arg, body)
+        if (length(pbi)) {
+          attr(body, "rtf_stub_break") <- do.call(paste, c(lapply(pbi, function(j) {
+            .fill_page_by_gaps(as.character(body[[j]]))
+          }), list(sep = "\r")))
+        }
+      }
       st          <- .apply_stub_vars(body, kw, cell_styles, stub_spec_obj)
       body        <- st$body
       kw          <- st$kw
@@ -1189,6 +1202,12 @@ as_rtftables.default <- function(x,
     # Checked once on the whole body, before pagination: a position past its
     # last row reaches no page.  Within the body it is "after row k of each
     # page", so a page shorter than k simply has none.
+    # With no `blank_rows`, the positions an rtf_blank_rows attribute on the
+    # input names (set_blank_rows()) are the ones placed.
+    if (is.null(blank_rows)) {
+      ba <- attr(x, "rtf_blank_rows", exact = TRUE)
+      if (is.numeric(ba) && length(ba)) blank_rows <- as.integer(ba)
+    }
     .check_blank_positions(blank_rows, nrow(body))
 
     # ---- sort body rows -------------------------------------------------
@@ -1257,8 +1276,18 @@ as_rtftables.default <- function(x,
       user_args$table_width_twips <- as.integer(table_width_twips)
     }
 
+    # ---- border_group: the rule under each row group's last row ----------
+    # Found on the whole (sorted, stubbed) body, BEFORE it is cut into pages,
+    # so a group that a page break splits has its rule under its real last
+    # row, not at the break.  Written per page below, onto the rows' own
+    # `cell_styles$border`, the path style_body(border = ) takes.
+    grp_last <- .group_last_rows(
+      body, style$border_group,
+      has_groups = group_by_given || !is.null(group_col_arg),
+      group_col = group_col_arg, group_by = group_by, page_by = page_by_arg)
+
     # ---- paginate (tracking original rows so per-cell styles can be sliced)
-    have_styles <- !is.null(cell_styles)
+    have_styles <- !is.null(cell_styles) || any(grp_last)
     sidx_col    <- ".__rtf_sidx__"
     if (have_styles) body[[sidx_col]] <- seq_len(nrow(body))
 
@@ -1286,8 +1315,14 @@ as_rtftables.default <- function(x,
         oidx <- pg[[sidx_col]]
         pg[[sidx_col]] <- NULL
         cs_slice <- lapply(oidx, function(r) {
-          if (is.na(r)) NULL else cell_styles[[as.integer(r)]]
+          if (is.na(r) || is.null(cell_styles)) NULL
+          else cell_styles[[as.integer(r)]]
         })
+        if (any(grp_last)) {
+          cs_slice <- .add_group_borders(
+            cs_slice, oidx, grp_last, style$border_group, ncol(pg),
+            last_wins = !is.null(.last_row_border(border, style)))
+        }
         if (all(vapply(cs_slice, is.null, logical(1L)))) cs_slice <- NULL
       }
 
@@ -1568,4 +1603,76 @@ combine_sections <- function(...) {
     out <- c(out, g)
   }
   out
+}
+
+
+# ---- border_group (plan_style(border_group = )) -------------------------------
+
+# The rule of the table's end, which rtftable() writes on every page's last
+# row: `style$border_last_row`, or the same zone of an rtf_table_border given
+# as `border`.  It wins over `border_group` on that row.
+.last_row_border <- function(border, style) {
+  style$border_last_row %||%
+    if (inherits(border, "rtf_table_border")) border$last_row
+}
+
+# Which rows of `body` are the last row of a row group -- where `border_group`
+# goes.  The table's final row is the last row of the last group, so it is
+# one; `border_last_row` winning on it is decided per page, in
+# .add_group_borders().  Groups are the ones as_rtftables() finds with
+# `group_col` / `group_by` (plan_row_group()), read the way the pagination
+# reads them; `has_groups = FALSE` (nothing said how to group), a single
+# group, and `border_group = NULL` all give all FALSE, so such a table is not
+# touched.  With `page_by`, groups are found inside each page-key partition.
+.group_last_rows <- function(body, border_group, has_groups, group_col,
+                             group_by, page_by = NULL) {
+  n   <- nrow(body)
+  out <- rep(FALSE, n)
+  if (is.null(border_group) || !isTRUE(has_groups) || n < 2L) return(out)
+  gidx <- tryCatch(.resolve_group_col(group_col, body),
+                   error = function(e) NULL)
+  parts <- if (is.null(page_by)) {
+    list(seq_len(n))
+  } else {
+    lapply(.page_by_runs(body, .resolve_page_by(page_by, body)),
+           function(p) p$rows)
+  }
+  for (rows in parts) {
+    if (length(rows) < 2L) next
+    sub <- body[rows, , drop = FALSE]
+    rownames(sub) <- NULL
+    id  <- tryCatch(.compute_group_info(sub, gidx, group_by)$id,
+                    error = function(e) NULL)
+    if (is.null(id)) next
+    if (length(unique(id[!is.na(id)])) < 2L) next
+    nxt <- c(id[-1L], NA_integer_)
+    # a row ends its group when the next row is another group, or when it is
+    # the last row of the partition
+    ends <- !is.na(id) & (is.na(nxt) | id != nxt)
+    out[rows[ends]] <- TRUE
+  }
+  out
+}
+
+# Put `border_group` on the rows of one page that end a group.  `oidx` is the
+# page's rows as positions in the whole body (NA for a row the page adds, such
+# as a continuation label).  The group's rule is the base and a cell's own
+# `cell_styles$border` goes over it.  On the page's last row `border_last_row`
+# wins, when there is one: the group rule is not written there.
+.add_group_borders <- function(cs, oidx, grp_last, border_group, ncols,
+                               last_wins = FALSE) {
+  for (k in seq_along(oidx)) {
+    r <- oidx[k]
+    if (is.na(r) || !isTRUE(grp_last[r])) next
+    if (last_wins && k == length(oidx)) next
+    row <- cs[[k]]
+    if (is.null(row)) row <- list()
+    cur <- row$border
+    row$border <- lapply(seq_len(ncols), function(j) {
+      .merge_rtf_border(border_group,
+                        if (is.list(cur) && j <= length(cur)) cur[[j]])
+    })
+    cs[k] <- list(row)
+  }
+  cs
 }

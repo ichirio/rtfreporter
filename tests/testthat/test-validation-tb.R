@@ -139,7 +139,7 @@ test_that("FT-TB685 [FR-TB441 FR-TB468 FR-TB470]: style_zone() and .rtf_table_bo
                "`inside_h` must be NULL or an rtf_border_line object.", fixed = TRUE)
 })
 
-test_that("FT-TB686 [FR-TB485 FR-TB488 FR-TB505 FR-TB508]: the border shorthand .rtf_border_tfl() stops with rtf_border_line()'s message on a bad style or width", {
+test_that("FT-TB686 [FR-TB505]: the border shorthand .rtf_border_tfl() stops with rtf_border_line()'s message on a bad style or width", {
   f <- rtfreporter:::.rtf_border_tfl
   expect_error(f(style = "nope"), "should be one of")
   expect_error(f(width = 0), "`width` must be a positive integer (twips).",

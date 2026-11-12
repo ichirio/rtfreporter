@@ -39,10 +39,13 @@ default), \code{"relational"} (\code{>=}/\code{<=} to the symbols), \code{"all"}
 See \code{\link[=rtftable]{rtftable()}}.}
 
 \item{title_format}{How the page \strong{title} renders: \code{"text"} (default, plain
-centred paragraphs) or \code{"table"} (a content-width single-column table).}
+centred paragraphs) or \code{"table"} (a content-width single-column table).
+A \code{border} on a title is drawn only in the \code{"table"} form; in the
+\code{"text"} form it is ignored, with a warning.}
 
 \item{footnote_format}{How the \strong{footnote} renders: \code{"table"} (default,
-content-width table with the separator rule) or \code{"text"} (plain paragraphs).}
+content-width table with the separator rule) or \code{"text"} (plain paragraphs,
+which draw no \code{border}: one you set is ignored, with a warning).}
 
 \item{title_width, footnote_width}{Width of the title / footnote block:
 \code{"content"} (the default -- follow the table body), \code{"page"} (the writable

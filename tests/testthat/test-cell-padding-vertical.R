@@ -178,8 +178,8 @@ test_that("FT-DC230 [FR-DC305 FR-DC306]: a footnote row given as list(columns = 
   expect_error(.fn_err(list(columns = "F2", row_height_twips = -1)),
                "`rtf_footnotes()` row 2's `row_height_twips` must be a single non-negative integer (twips) or NULL.",
                fixed = TRUE)
-  expect_error(.fn_err(list(columns = "F2", bold = TRUE)),
-               "`rtf_footnotes()` row 2: a row given as a list takes columns = and row_height_twips =; got 'bold'.",
+  expect_error(.fn_err(list(columns = "F2", colour = "red")),
+               "`rtf_footnotes()` row 2: a row given as a list takes columns =, row_height_twips =, border =, bold =, italic = and underline =; got 'colour'.",
                fixed = TRUE)
   # a list without columns is the old styled row, still refused
   expect_error(.fn_err(list(text = "F2")), "Per-row styling lists are no longer supported",

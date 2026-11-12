@@ -247,7 +247,7 @@
   bad
 }
 
-test_that("FT-TB779 [FR-TB121 FR-TB137 FR-TB138 FR-TB150 FR-TB596 FR-PL433 FR-PL434 FR-IX262 FR-TB608 FR-TB609 FR-TB610 FR-TB611]: pairwise -- split x max_rows x stub x cell_format x first_rows x page_by x blank_rows", {
+test_that("FT-TB779 [FR-TB121 FR-TB137 FR-TB150 FR-PL433 FR-IX262 FR-TB608 FR-TB609 FR-TB610 FR-TB611]: pairwise -- split x max_rows x stub x cell_format x first_rows x page_by x blank_rows", {
   cand <- expand.grid(split = c("none", "group_safe", "group_force", "by_value"),
                       max_rows = c("none", "3", "5"), stub = c("no", "yes"),
                       cell_format = c("no", "yes"), first_rows = c("no", "end", "inside"),
@@ -362,6 +362,12 @@ test_that("FT-TB782 [FR-TB596 FR-TB611]: decision table -- by_value with a stub 
   # the counted separators after records 1 and 2 are among the first rows
   if (!is.na(fr) && count && cs$blank_rows == "yes") fr <- fr + if (cs$first_rows == "end") 1L else 2L
   if (!is.na(fr)) args$first_rows <- fr
+  # first_rows does not cut a record (FR-IX414): a cut on the first line of a
+  # record of several rows leaves that record to the next page, so the first page is the
+  # records before it
+  fr_page <- if (identical(cs$first_rows, "inside") && rec_rows[3L] > 1L) {
+    sum(rec_rows[1:2]) + as.integer(count && cs$blank_rows == "yes")
+  } else fr
   if (cs$blank_rows == "yes") args$blank_rows <- "between_groups"
   pages <- do.call(as_rtftables, args)
   bad <- character(0)
@@ -425,7 +431,7 @@ test_that("FT-TB782 [FR-TB596 FR-TB611]: decision table -- by_value with a stub 
     top_empty <- !nzchar(r$subj[1L]) && !nzchar(r$seq[1L]) && !nzchar(r$term[1L])
     as.integer(count && 0L %in% pages[[i]]$blank_rows && !top_empty)
   }, 0L)
-  if (!is.na(fr) && body_n[1L] != fr) bad <- c(bad, "first_rows")
+  if (!is.na(fr) && body_n[1L] != fr_page) bad <- c(bad, "first_rows")
   if (!is.na(mr)) {
     if (any((if (!is.na(fr)) n[-1L] else n) > mr)) bad <- c(bad, "budget")
   } else if (length(pages) != 1L + !is.na(fr)) {
@@ -488,7 +494,7 @@ test_that("FT-TB782 [FR-TB596 FR-TB611]: decision table -- by_value with a stub 
   bad
 }
 
-test_that("FT-TB783 [FR-LS110 FR-LS156 FR-PL952 FR-TB150 FR-TB576 FR-TB610 FR-TB612 FR-TB613]: pairwise -- listing x split x max_rows x first_rows x count_blank_rows x blank_rows x blank_row x blank_row_first x wrap x collapse_repeats", {
+test_that("FT-TB783 [FR-LS156 FR-PL952 FR-TB150 FR-TB610 FR-TB612 FR-TB613]: pairwise -- listing x split x max_rows x first_rows x count_blank_rows x blank_rows x blank_row x blank_row_first x wrap x collapse_repeats", {
   cand <- expand.grid(split = c("default", "group_force"), max_rows = c("none", "4", "7"),
                       first_rows = c("none", "end", "inside"), count = c("no", "yes"),
                       blank_rows = c("no", "yes"), blank_row = c("no", "yes"),

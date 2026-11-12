@@ -55,20 +55,22 @@
 #  direct call's, and each given setting is the page's (the rule above).
 #
 #  (B) FT-PL991, decision table, the rules against the zones, in one call and
-#  across calls:
+#  across calls.  `border` with a zone is the preset with the zone merged onto
+#  it side by side: the oracle is the direct as_rtftables(border = ) piped to
+#  style_zone() with that zone.
 #    calls                          | rules said                       | result
-#    one                            | border x each of the 5 zones (15)| error
-#    two: border, then a zone       | each of the 15 pairs             | error at the 2nd call
-#    two: a zone, then border       | each of the 15 pairs             | error at the 2nd call
+#    one                            | border x each of the 5 zones (15)| preset + zone
+#    two: border, then a zone       | each of the 15 pairs             | preset + zone
+#    two: a zone, then border       | each of the 15 pairs             | preset + zone
+#    three: zone, other, border     | each of the 15 pairs             | preset + zone
 #    two: a zone, then another zone | the zones only                   | ok, both kept
 #    two: border, then border       | border twice                     | ok, the later wins
 #    two: border, then other fields | no zone                          | ok
 #    one                            | border alone, one zone, five     | ok
 #
 #  (C) FT-PL992, decision table, the limits just inside and just outside.
-#  Across calls the rule is the same as in one call (the help: "Say the rules
-#  one way"); it used to hold for one call only, and the zones won across calls
-#  in either order.
+#  Until G5 (GAPS.md) `border` with a zone stopped ("Say it one way"); the
+#  calls that stopped are the ones that now give the preset with the zone.
 # ---------------------------------------------------------------------------
 
 .ps_df <- function() {
@@ -118,11 +120,18 @@
   sty <- args[intersect(names(args), c(zone_names, look_names))]
   rest <- args[setdiff(names(args), names(sty))]
   if (length(sty)) rest$style <- do.call(rtf_table_style, sty)
+  # border = "tfl" (or no border, the default "tfl") with a look-only style:
+  # the plan keeps the preset's rules (FR-PL990),
+  # which the direct call says with the preset as an object
+  if (length(sty) && (identical(rest$border, "tfl") ||
+                      (is.null(rest$border) && !any(names(sty) %in% zone_names)))) {
+    rest$border <- rtfreporter:::.normalize_table_border("tfl")
+  }
   out <- suppressMessages(do.call(as_rtftables, c(list(d, read_meta = FALSE), rest)))
   if (inherits(out, "rtftable")) list(out) else out
 }
 
-test_that("FT-PL990 [FR-PL422 FR-PL423 FR-PL424 FR-PL425 FR-PL426 FR-PL427 FR-IX407]: plan_style(): rules x look x width x heights x padding x font x placement x other settings, pairwise", {
+test_that("FT-PL990 [FR-PL422 FR-PL423 FR-PL424 FR-PL425 FR-PL426 FR-PL427 FR-IX407 FR-PL990]: plan_style(): rules x look x width x heights x padding x font x placement x other settings, pairwise", {
   cand <- expand.grid(lapply(.ps_levels, names), stringsAsFactors = FALSE)
   expect_identical(nrow(cand), 61440L)
   ap <- .allpairs(cand)
@@ -156,17 +165,56 @@ test_that("FT-PL990 [FR-PL422 FR-PL423 FR-PL424 FR-PL425 FR-PL426 FR-PL427 FR-IX
   }
 })
 
+# the direct call: the preset, then style_zone() with the zones
+.ps_merged <- function(d, border, zone_args, ...) {
+  pages <- .ps_direct(d, list(border = border, ...))
+  names(zone_args) <- sub("^border_", "", names(zone_args))
+  do.call(style_zone, c(list(pages), zone_args))
+}
+
+# the RTF text of a list of pages
+.ps_rtf <- function(pages) {
+  dir <- tempfile("ps-")
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+  f <- file.path(dir, "t.rtf")
+  generate_rtfreport(rtf_document() |> rtf_tables(pages), f)
+  readLines(f, warn = FALSE)
+}
+
 test_that("FT-PL991 [FR-PL424 FR-PL428 FR-PL429 FR-IX407]: plan_style(): border against the border_* zones in one call and across calls, the decision table", {
   zones <- c("border_header", "border_spanning", "border_body", "border_first_row",
              "border_last_row")
-  msg <- "`border` is the whole table's rules and `border_*`"
   d <- .ps_df()
   borders <- list(tfl = "tfl", none = "none", box = rtf_border(all = TRUE))
-  for (b in names(borders)) for (z in zones) {
-    args <- list(table_plan(d), border = borders[[b]])
-    args[[z]] <- .ps_zone()
-    expect_error(do.call(plan_style, args), msg, fixed = TRUE, info = paste(b, z))
+  # the same pages as style_zone() makes, and the same RTF
+  same <- function(got, want, b, info) {
+    expect_equal(got, want, info = info)
+    expect_identical(.ps_rtf(got), .ps_rtf(want), info = info)
   }
+  for (b in names(borders)) for (z in zones) {
+    zone_args <- stats::setNames(list(.ps_zone()), z)
+    want <- suppressWarnings(.ps_merged(d, borders[[b]], zone_args))
+    one <- do.call(plan_style, c(list(table_plan(d), border = borders[[b]]), zone_args))
+    same(suppressWarnings(.ps_pages(one)), want, b, paste(b, z, "one call"))
+    # across calls: the same table, in either order
+    first_border <- plan_style(table_plan(d), border = borders[[b]])
+    same(suppressWarnings(.ps_pages(do.call(plan_style, c(list(first_border), zone_args)))),
+         want, b, paste(b, z, "border, then zone"))
+    first_zone <- do.call(plan_style, c(list(table_plan(d)), zone_args))
+    same(suppressWarnings(.ps_pages(plan_style(first_zone, border = borders[[b]]))),
+         want, b, paste(b, z, "zone, then border"))
+    mid <- plan_style(first_zone, font = "Arial")
+    same(suppressWarnings(.ps_pages(plan_style(mid, border = borders[[b]]))),
+         suppressWarnings(.ps_merged(d, borders[[b]], zone_args, font = "Arial")),
+         b, paste(b, z, "zone, other, border"))
+  }
+  # the merge is side by side: the preset's header rules stay, a side the
+  # zone leaves NULL keeps the preset's
+  tz <- .ps_pages(plan_style(table_plan(d), border = "tfl",
+                             border_header = rtf_border(bottom = "double")))[[1L]]$border
+  expect_identical(tz$header$bottom$style, "double")
+  expect_false(is.null(tz$header$top))
   # border alone, one zone alone, all five zones: ok, and the zones are one style
   expect_s3_class(.ps_pages(plan_style(table_plan(d), border = "tfl"))[[1L]], "rtftable")
   for (z in zones) {
@@ -178,20 +226,6 @@ test_that("FT-PL991 [FR-PL424 FR-PL428 FR-PL429 FR-IX407]: plan_style(): border 
   got <- .ps_pages(do.call(plan_style, c(list(table_plan(d)), all5)))
   expect_equal(got, .ps_direct(d, all5))
 
-  # across calls: the same error, at the call that says the second way
-  for (b in names(borders)) for (z in zones) {
-    zone_args <- stats::setNames(list(.ps_zone()), z)
-    first_border <- plan_style(table_plan(d), border = borders[[b]])
-    expect_error(do.call(plan_style, c(list(first_border), zone_args)), msg,
-                 fixed = TRUE, info = paste(b, z, "border, then zone"))
-    first_zone <- do.call(plan_style, c(list(table_plan(d)), zone_args))
-    expect_error(plan_style(first_zone, border = borders[[b]]), msg,
-                 fixed = TRUE, info = paste(b, z, "zone, then border"))
-    # with other settings between, the first call's rules still count
-    mid <- plan_style(first_zone, font = "Arial")
-    expect_error(plan_style(mid, border = borders[[b]]), msg, fixed = TRUE,
-                 info = paste(b, z, "zone, other, border"))
-  }
   # zones in two calls, border twice, border then other fields: ok
   two <- plan_style(plan_style(table_plan(d), border_header = .ps_zone()),
                     border_last_row = .ps_zone())

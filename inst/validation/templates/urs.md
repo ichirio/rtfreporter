@@ -39,8 +39,8 @@ before you build the matrix.
 ## The Traceability Matrix (URS -> FR -> UAT)
 
 `build_user_matrix.R` reads `urs.csv`, `uat_cases.csv` and
-`requirements.csv` and writes `user_traceability.csv` and
-`user_traceability.xlsx` into the kit folder. The csv, and the xlsx's sheet
+`requirements.csv` and writes `user_traceability_matrix.csv` and
+`user_traceability_matrix.xlsx` into the kit folder. The csv, and the xlsx's sheet
 `urs_fr_uat`, have one row per (UR, FR) pair: the UAT cases that name both,
 and their results (`not run` until filled). The xlsx's sheet
 `by_requirement` has one row per UR with its status: `pass` (every case

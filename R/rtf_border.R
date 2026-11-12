@@ -445,9 +445,10 @@ print.rtf_border <- function(x, ...) {
                               last_row  = NULL,
                               outer     = NULL,
                               inside_h  = NULL,
-                              inside_v  = NULL) {
+                              inside_v  = NULL,
+                              group     = NULL) {
   zones <- list(header = header, spanning = spanning, body = body,
-                first_row = first_row, last_row = last_row)
+                first_row = first_row, last_row = last_row, group = group)
   for (nm in names(zones)) {
     v <- zones[[nm]]
     if (!is.null(v) && !inherits(v, "rtf_border")) {
@@ -460,10 +461,18 @@ print.rtf_border <- function(x, ...) {
   }
   .check_border_side(inside_h, "inside_h")
   .check_border_side(inside_v, "inside_v")
-  structure(
+  # `group` is the sixth zone, the rule under the last row of each row
+  # group.  The renderer does not draw it (it is not a row KIND of this
+  # table): as_rtftables() turns it into per-cell borders.  It is carried
+  # only when given, so a table without one is the object it always was.
+  grp <- zones$group
+  zones$group <- NULL
+  out <- structure(
     c(zones, list(outer = outer, inside_h = inside_h, inside_v = inside_v)),
     class = "rtf_table_border"
   )
+  if (!is.null(grp)) out$group <- grp
+  out
 }
 
 # -- Whole-table shortcuts -> the five zones ------------------------------------

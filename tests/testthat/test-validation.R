@@ -37,7 +37,7 @@ test_that("every plan verb is in a requirement", {
 
 test_that("the map of the tests: unique FT ids, each to known requirements", {
   fr <- .val_read("requirements.csv")
-  map <- .val_read("test_map.csv")
+  map <- .val_read("traceability_matrix.csv")
   expect_named(map, c("file", "test", "ft", "fr"))
   expect_false(anyDuplicated(map$ft) > 0L)
   expect_true(all(grepl("^FT-[A-Z]{2}[0-9]{3,4}$", map$ft)))

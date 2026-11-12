@@ -190,9 +190,15 @@ figure the height that is left on the page:
 
 ```{r b-doc}
 library(ggplot2)
-km_plot <- ggsurvfit::survfit2(survival::Surv(AVAL, 1 - CNSR) ~ TRTA, data = adtte) |>
-  ggsurvfit::ggsurvfit(linewidth = 0.6) +
-  ggsurvfit::add_censor_mark(size = 1.5) +
+# the curves from `fit` above: a step from (0, 1) per arm, a + at each censoring
+arm <- sub("^TRTA=", "", names(fit$strata))
+km_df <- rbind(data.frame(time = 0, surv = 1, arm = arm, n.censor = 0),
+               data.frame(time = fit$time, surv = fit$surv,
+                          arm = rep(arm, fit$strata), n.censor = fit$n.censor))
+km_plot <- ggplot(km_df, aes(time, surv, colour = arm)) +
+  geom_step(linewidth = 0.6) +
+  geom_point(data = km_df[km_df$n.censor > 0, ], shape = 3, size = 1.5) +
+  scale_y_continuous(limits = c(0, 1)) +
   scale_x_continuous(breaks = days) +
   labs(x = "Days since first dose", y = "Probability of no dermatologic event") +
   theme_bw(base_size = 9) +

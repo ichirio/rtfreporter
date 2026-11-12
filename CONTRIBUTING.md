@@ -574,7 +574,7 @@ releases -- is not written again; this section says only what it does not.
   (`"FT-PL<nnn> [FR-PL157 FR-PL159]: plan_columns(widths = ) ..."`, three or four
   digits, the
   next unused FT number in its area);
-  an existing one is mapped by hand in `inst/validation/test_map.csv`.  An
+  an existing one is mapped by hand in `inst/validation/traceability_matrix.csv`.  An
   FR no test checks is a deviation until a test is added.
   `validation/trace.R` lists the blocks that call a function in scope but
   are not mapped (candidates to read); it never counts them.
@@ -582,9 +582,15 @@ releases -- is not written again; this section says only what it does not.
   contributor or an AI agent alike:
   - add or change the FRs in `inst/validation/requirements.csv`;
   - give every new or changed leaf FR a test.  Name the FT id and FRs at the
-    head of a new test; add a row to `inst/validation/test_map.csv` (file,
+    head of a new test; add a row to `inst/validation/traceability_matrix.csv` (file,
     test, ft, fr) only for an existing test, never for both: an FT id given
     twice fails;
+  - check every new mapping: read the FR and the test, and add a row to
+    `inst/validation/traceability_review.csv` (`ft`, `fr`, `verdict`
+    `asserts` or `part`, `evidence` the expectation lines that assert it,
+    `fr_covered` `yes` when the FR's tests together assert all it states).
+    A test that asserts none of an FR is not mapped to it, and a mapping
+    with no row fails `test-validation-leaves.R`;
   - name every new argument in a leaf FR of its function, as `arg =` or
     bare inside `f(...)`; the plain word in prose does not count, and an
     argument without such an FR fails `test-validation-coverage.R`;
@@ -613,7 +619,7 @@ releases -- is not written again; this section says only what it does not.
   script run by hand) into the Quality Report: one table of
   every environment, the results, the deviations and why they are
   accepted, the conclusion, how to read the attachments.  The PDF, the
-  Traceability Matrix (`traceability.xlsx`), every environment's
+  Traceability Matrix (`traceability_matrix.xlsx`), every environment's
   sessionInfo and log (`environments.txt`), the mapped tests' log
   (`test-log.txt`) and the tables behind the results (`ft.csv`,
   `functions.csv`, `candidates.csv`) are attached to the release, each name

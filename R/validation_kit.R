@@ -17,7 +17,7 @@
 #'     (`UAT-NNN`) on dummy data, with blank `actual`, `result`, `tester` and
 #'     `date` to fill.}
 #'   \item{`build_user_matrix.R`}{Writes your Traceability Matrix (URS -> FR
-#'     -> UAT): `user_traceability.csv`, and `user_traceability.xlsx` when
+#'     -> UAT): `user_traceability_matrix.csv`, and `user_traceability_matrix.xlsx` when
 #'     writexl is installed.}
 #'   \item{`validation_summary_report.md`}{The Validation Summary Report you
 #'     fill: environment, UAT results, deviations, conclusion.}

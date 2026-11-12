@@ -187,3 +187,42 @@ test_that("natural order: a long run of digits sorts by its number, with no warn
                            "t_020261106093000.rtf", "t_20261106093001.rtf",
                            "t_123456789012345678901.rtf"))
 })
+
+# ── coverage gaps: label markup, an .xlsx spec ─────────────────────────────
+
+test_that("a title's markup group keeps its text in the contents label", {
+  d <- tempfile("asm"); dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  mk <- function(f, ttl) {
+    doc <- rtf_document() |>
+      rtf_tables(data.frame(A = 1:2)) |>
+      rtf_titles(list(c("Table 14.1.1", ttl)))
+    generate_rtfreport(doc, file.path(d, f), overwrite = TRUE)
+  }
+  mk("a.rtf", "Water H_{2}O study")
+  mk("b.rtf", "Plain study")
+  # the RTF holds the subscript group ...
+  expect_true(any(grepl("H{\\sub 2}O", readLines(file.path(d, "a.rtf"), warn = FALSE),
+                        fixed = TRUE)))
+  # ... and the label has its text without the group
+  sp <- assemble_folder(d)
+  expect_true("Table 14.1.1  Water H2O study" %in% sp$label)
+  expect_true("Table 14.1.1  Plain study" %in% sp$label)
+})
+
+test_that("an .xlsx spec file is written by assemble_folder() and read back by assemble_rtf()", {
+  skip_if_not_installed("writexl")
+  skip_if_not_installed("readxl")
+  d <- .demo_dir()
+  xl <- tempfile(fileext = ".xlsx")
+  out <- tempfile(fileext = ".rtf")
+  on.exit(unlink(c(d, xl, out), recursive = TRUE), add = TRUE)
+  sp <- assemble_folder(d, spec_file = xl)
+  expect_true(file.exists(xl))
+  expect_identical(nrow(readxl::read_xlsx(xl)), nrow(sp))
+  assemble_rtf(toc = xl, output_file = out)
+  expect_true(file.exists(out))
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl("Demographics", txt, fixed = TRUE))
+  expect_true(grepl("Adverse Events", txt, fixed = TRUE))
+})

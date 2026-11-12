@@ -128,3 +128,16 @@ test_that("FT-TB694 [FR-TB543 FR-TB393]: an East Asian wide character is two n's
   # without the slot, one n each
   expect_equal(w("\u65e5\u672c", "Arial"), 2 * w("n", "Arial"))
 })
+
+test_that("auto_col_widths() keeps every column at the minimum when rounding would leave the last one under it", {
+  df <- data.frame(a = strrep("x", 3), b = strrep("x", 8), c = strrep("x", 12),
+                   d = strrep("x", 8), stringsAsFactors = FALSE)
+  args <- list(df, col_header = rep("", 4L), font = "Courier New",
+               min_col_width_twips = 300L, col_padding_twips = 0L)
+  natural <- do.call(auto_col_widths, args)
+  expect_identical(natural, c(325L, 866L, 1300L, 866L))
+  w <- do.call(auto_col_widths, c(args, list(table_width_twips = 1349L)))
+  expect_identical(sum(w), 1349L)
+  expect_true(all(w >= 300L))
+  expect_identical(w, c(300L, 300L, 449L, 300L))
+})

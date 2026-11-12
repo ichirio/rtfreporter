@@ -136,7 +136,7 @@ jobs:
           path: |
             validation/out/quality-report.pdf
             validation/out/quality-report.md
-            validation/out/traceability.xlsx
+            validation/out/traceability_matrix.xlsx
             validation/out/*.csv
             validation/out/*.txt
 
@@ -149,7 +149,7 @@ jobs:
           cd validation/out
           # the report and every attachment its reading guide names
           files=""
-          for f in quality-report.pdf traceability.xlsx environments.txt test-log.txt \
+          for f in quality-report.pdf traceability_matrix.xlsx environments.txt test-log.txt \
                    ft.csv functions.csv candidates.csv; do
             cp "$f" "${f%.*}-$tag.${f##*.}"
             files="$files ${f%.*}-$tag.${f##*.}"

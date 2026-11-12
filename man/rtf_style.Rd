@@ -48,7 +48,8 @@ now the shared colour reaches the page header and footer only.}
 \item{title_format, footnote_format}{How the title / footnote block is
 written: \code{"text"} (plain paragraphs) or \code{"table"} (a single-column
 table).  The defaults are \code{"text"} for the title and \code{"table"} for the
-footnote.}
+footnote.  A \code{border} on a title or footnote needs the \code{"table"} form;
+the \code{"text"} form ignores it and warns.}
 
 \item{title_width, footnote_width}{The width of the title / footnote
 block: \code{"content"} (the table's), \code{"page"} (the writable width), a
@@ -61,7 +62,8 @@ table: \code{font}, \code{font_size_half_points}, \code{row_height_twips},
 the four \verb{cell_padding_*_twips}, \code{cell_valign}, \code{table_align}, \code{markup}.}
 
 \item{titles}{A named list of \code{\link[=rtf_titles]{rtf_titles()}}'s style arguments: \code{font},
-\code{font_size_half_points}, \code{row_height_twips}, \code{markup}, \code{align}.}
+\code{font_size_half_points}, \code{row_height_twips}, \code{markup}, \code{align},
+\code{border}.}
 
 \item{footnotes}{A named list of \code{\link[=rtf_footnotes]{rtf_footnotes()}}'s style arguments:
 \code{font}, \code{font_size_half_points}, \code{row_height_twips}, \code{markup}, \code{align},
@@ -104,6 +106,10 @@ element that sets its own size and no height takes no height from the
 style, its height following its size.  A table is cut into pages
 (\code{\link[=as_rtftables]{as_rtftables()}}) before the style reaches it, so a section's row height
 does not change where the pages break.
+
+Row height, cell padding, vertical alignment and font size apply to the
+whole table (the body, and the header for its own settings); they are not
+set per row or per cell.
 
 Several \code{rtf_style()} objects given through \code{\link[=rtf_config]{rtf_config()}} merge key by
 key, the later winning.  \code{rtf_style()} replaces \code{\link[=rtf_default_format]{rtf_default_format()}},
