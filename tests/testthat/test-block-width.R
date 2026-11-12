@@ -1,9 +1,5 @@
 # Tests for the per-element width vocabulary (#291).
 
-# rtf_default_format() / default_format = are deprecated (#804): these tests
-# check what they still do, not the warning (test-rtf-style.R does).
-silence_deprecation("rtf_default_format")
-
 W <- rtfreporter:::.default_writable_twips()
 
 .tbl <- function() {
@@ -15,7 +11,7 @@ W <- rtfreporter:::.default_writable_twips()
 # The \cellx values of the row carrying `text`, and whether it has a top rule.
 .block <- function(fmt = NULL, text = "Footnote line 1") {
   doc <- rtf_document(page = rtf_page(orientation = "landscape"),
-                      default_format = fmt %||% rtf_default_format()) |>
+                      style = fmt %||% rtf_style()) |>
     rtf_tables(.tbl()) |>
     rtf_titles(list("A title")) |>
     rtf_footnotes(list(c("Footnote line 1", "line 2")))
@@ -62,48 +58,50 @@ test_that("the default is unchanged -- the footnote follows the content", {
 })
 
 test_that("footnote_width = 'page' widens the block", {
-  b <- .block(rtf_default_format(footnote_width = "page"))
+  b <- .block(rtf_style(footnote_width = "page"))
   expect_equal(b$cellx, W)
   expect_false(b$rule)        # no rule by default since #296
 })
 
 test_that("a fraction and an absolute value both work", {
-  expect_equal(.block(rtf_default_format(footnote_width = 0.5))$cellx,
+  expect_equal(.block(rtf_style(footnote_width = 0.5))$cellx,
                as.integer(round(W * 0.5)))
-  expect_equal(.block(rtf_default_format(footnote_width = 8000L))$cellx, 8000L)
+  expect_equal(.block(rtf_style(footnote_width = 8000L))$cellx, 8000L)
 })
 
 test_that("footnote_width = 'content' is the default spelled out", {
-  expect_equal(.block(rtf_default_format(footnote_width = "content"))$cellx,
+  expect_equal(.block(rtf_style(footnote_width = "content"))$cellx,
                .block()$cellx)
 })
 
 test_that("the title block takes the same vocabulary", {
   # the title renders as a table only under title_format = "table"
-  b <- .block(rtf_default_format(title_format = "table", title_width = "page"),
+  b <- .block(rtf_style(title_format = "table", title_width = "page"),
               text = "A title")
   expect_equal(b$cellx, W)
-  b2 <- .block(rtf_default_format(title_format = "table"), text = "A title")
+  b2 <- .block(rtf_style(title_format = "table"), text = "A title")
   expect_equal(b2$cellx, rtfreporter:::.content_width_twips(.tbl(), W))
 })
 
-test_that("rtf_default_format() validates the widths", {
-  expect_error(rtf_default_format(footnote_width = "wide"), "content")
-  expect_error(rtf_default_format(title_width = -1), "content")
+test_that("rtf_style() validates the widths", {
+  expect_error(rtf_style(footnote_width = "wide"), "content")
+  expect_error(rtf_style(title_width = -1), "content")
 })
 
-test_that("rtf_default_format() carries the fields", {
-  fmt <- rtf_default_format(title_width = "page", footnote_width = 0.6)
+test_that("rtf_style() carries the fields", {
+  fmt <- rtf_style(title_width = "page", footnote_width = 0.6)
   expect_equal(fmt$title_width, "page")
   expect_equal(fmt$footnote_width, 0.6)
-  expect_null(rtf_default_format()$title_width)
-  expect_null(rtf_default_format()$footnote_width)
+  expect_null(rtf_style()$title_width)
+  expect_null(rtf_style()$footnote_width)
 })
 
 test_that("the rtfreporter.* options are honoured", {
   op <- options(rtfreporter.footnote_width = "page")
   on.exit(options(op), add = TRUE)
-  expect_equal(rtf_default_format()$footnote_width, "page")
+  # rtf_style() holds the key only when given; the option is read at render time
+  expect_null(rtf_style()$footnote_width)
+  expect_equal(.block()$cellx, W)
 })
 
 # ──────── the header / footer band ─────────────────────────────────────────
@@ -147,7 +145,7 @@ test_that("rtf_footer() takes the same argument", {
 test_that("output is byte-identical when no width is given", {
   render <- function(fmt) {
     doc <- rtf_document(page = rtf_page(orientation = "landscape"),
-                        default_format = fmt) |>
+                        style = fmt) |>
       rtf_tables(.tbl()) |>
       rtf_titles(list("A title")) |>
       rtf_footnotes(list(c("Footnote line 1", "line 2")))
@@ -155,7 +153,7 @@ test_that("output is byte-identical when no width is given", {
     generate_rtfreport(doc, f, overwrite = TRUE)
     readLines(f, warn = FALSE)
   }
-  expect_identical(render(rtf_default_format()),
-                   render(rtf_default_format(title_width = "content",
+  expect_identical(render(rtf_style()),
+                   render(rtf_style(title_width = "content",
                                              footnote_width = "content")))
 })

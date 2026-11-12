@@ -1,9 +1,5 @@
 # The footnote block now uses the page footer's mechanism (#296).
 
-# rtf_default_format() / default_format = are deprecated (#804): these tests
-# check what they still do, not the warning (test-rtf-style.R does).
-silence_deprecation("rtf_default_format")
-
 .df  <- function() data.frame(a = c("x", "y"), b = c("1", "2"),
                               stringsAsFactors = FALSE)
 .tbl <- function() rtftable(.df(), border = "tfl",
@@ -11,7 +7,7 @@ silence_deprecation("rtf_default_format")
 
 .run <- function(..., fmt = NULL) {
   d <- rtf_document(page = rtf_page(orientation = "landscape"),
-                    default_format = fmt %||% rtf_default_format()) |>
+                    style = fmt %||% rtf_style()) |>
     rtf_tables(.tbl()) |>
     rtf_footnotes(...)
   f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
@@ -108,7 +104,7 @@ test_that("a paragraph separates the footnote from the body table", {
 
 test_that("the block keeps its own width", {
   l <- .run(list(c("FN one")),
-            fmt = rtf_default_format(footnote_width = "page"))
+            fmt = rtf_style(footnote_width = "page"))
   expect_equal(.cellx(l), "cellx13680")
   l2 <- .run(list(c("FN one")))
   expect_equal(.cellx(l2), "cellx2700")       # the content width
@@ -143,7 +139,7 @@ test_that("markup can be switched off for the block alone", {
 
 test_that("plain strings still work under footnote_format = 'text'", {
   l <- .run(list(c("FN one")),
-            fmt = rtf_default_format(footnote_format = "text"))
+            fmt = rtf_style(footnote_format = "text"))
   expect_true(any(grepl("\\\\pard", .rows(l))))
   expect_false(any(grepl("\\\\cellx", .rows(l))))
 })
@@ -151,7 +147,7 @@ test_that("plain strings still work under footnote_format = 'text'", {
 test_that("an l / c / r row under the text form is a clear error", {
   expect_error(
     .run(list(list(c(l = "a", r = "b"))),
-         fmt = rtf_default_format(footnote_format = "text")),
+         fmt = rtf_style(footnote_format = "text")),
     "table form")
 })
 

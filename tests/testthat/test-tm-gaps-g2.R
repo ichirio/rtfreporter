@@ -1984,11 +1984,6 @@ test_that("FT-DC3046 [FR-DC354]: a band or block width above 1 that is not a who
     expect_error(rtf_style(footnote_width = w), paste("`rtf_style(footnote_width)`", msg),
                  fixed = TRUE)
   }
-  suppressWarnings({
-    expect_error(rtf_default_format(title_width = 1.5), paste("`title_width`", msg), fixed = TRUE)
-    expect_error(rtf_default_format(footnote_width = Inf), paste("`footnote_width`", msg),
-                 fixed = TRUE)
-  })
   # whole twips and fractions are accepted
   expect_no_error(rtf_header(list(c(l = "a")), width = 5000))
   expect_s3_class(rtf_style(title_width = 0.5), "rtf_style")

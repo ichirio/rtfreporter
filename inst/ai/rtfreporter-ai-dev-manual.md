@@ -277,9 +277,9 @@ values. The single source of truth is `.rtfreporter_factory_defaults()` in
 `R/defaults.R`. Resolution order: explicit argument → option → factory
 default. Do not add a second defaults mechanism.
 
-**Deprecation.** `.deprecated_exports` in `R/rtf_border.R` lists what is on
-the way out; `.deprecate_once()` warns once per session. Deprecate in a minor,
-remove only in a major.
+**Deprecation.** `.deprecate_once()` (in `R/rtf_border.R`) warns once per
+session. Deprecate in a minor, remove only in a major.  (Nothing is deprecated
+in 0.9.0: it removed the lot, #788 and #975.)
 
 ---
 

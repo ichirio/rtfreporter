@@ -25,8 +25,7 @@
   fns <- lapply(strsplit(act$functions, ";", fixed = TRUE), trimws)
   leaf <- !act$id %in% act$parent
   ns <- asNamespace("rtfreporter")
-  exports <- setdiff(sort(getNamespaceExports(ns)),
-                     get(".deprecated_exports", envir = ns))
+  exports <- sort(getNamespaceExports(ns))
   gaps <- list()
   for (f in exports) {
     obj <- get(f, envir = ns)

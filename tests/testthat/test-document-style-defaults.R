@@ -1,11 +1,7 @@
 ## tests/testthat/test-document-style-defaults.R
 ##
 ## Document-wide style defaults (row height, cell padding) resolved through
-## option / default_format, overridable per module (issue #124).
-
-# rtf_default_format() / default_format = are deprecated (#804): these tests
-# check what they still do, not the warning (test-rtf-style.R does).
-silence_deprecation("rtf_default_format")
+## option / rtf_style(), overridable per module (issue #124).
 
 library(testthat)
 
@@ -73,11 +69,11 @@ test_that("rtfreporter.cell_padding_left_twips sets every element's left padding
 })
 
 
-# -- document-wide via default_format (per document) -------------------------
+# -- document-wide via rtf_style() (per document) -------------------------
 
-test_that("rtf_config(default_format=) sets the document-wide defaults", {
+test_that("rtf_config(style=) sets the document-wide defaults", {
   d <- .full_doc() |>
-    rtf_config(default_format = list(row_height_twips = 350L,
+    rtf_config(style = rtf_style(row_height_twips = 350L,
                                      cell_padding_left_twips = 90L))
   s <- .render_text(d)
   expect_identical(.heights(s), "trrh350")

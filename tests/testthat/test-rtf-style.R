@@ -211,40 +211,6 @@ test_that("FT-DC237 [FR-DC318]: several rtf_style() objects through rtf_config()
   expect_identical(rtf_config(doc, style = NULL)$document$style, st)
 })
 
-test_that("FT-DC238 [FR-DC319]: default_format still works, maps onto the shared level beneath rtf_style(), and warns once a session", {
-  dep <- rtfreporter:::.deprecation_state
-  was <- isTRUE(dep[["rtf_default_format"]])
-  on.exit(assign("rtf_default_format", was, envir = dep), add = TRUE)
-  msg <- "`rtf_default_format()` is deprecated: use rtf_style(); it will be removed in 0.9."
-  for (call in list(function() rtf_default_format(),
-                    function() rtf_document(default_format = list(font_size_half_points = 20L)),
-                    function() rtf_config(rtf_document(), default_format = list(markup = "all")))) {
-    if (exists("rtf_default_format", envir = dep)) rm("rtf_default_format", envir = dep)
-    expect_warning(call(), msg, fixed = TRUE)
-    expect_no_warning(call())
-  }
-  # mapped: its keys are the shared level's
-  expect_identical(rtfreporter:::.style_from_default_format(
-                     rtf_default_format(font_size_half_points = 20L, row_height_twips = 300L)),
-                   rtf_style(font_size_half_points = 20L, row_height_twips = 300L,
-                             markup = "script", title_format = "text",
-                             footnote_format = "table"))
-  # an explicit style wins over it; what the style leaves out it still sets
-  doc <- rtf_document(default_format = list(font_size_half_points = 20L,
-                                            row_height_twips = 300L),
-                      style = rtf_style(font_size_half_points = 22L)) |>
-    rtf_tables(rtftable(.sty_df()))
-  txt <- .render_to_string(doc)
-  expect_true(grepl("\\fs22", txt, fixed = TRUE))
-  expect_false(grepl("\\fs20", txt, fixed = TRUE))
-  expect_true(grepl("\\trrh300", .sty_rows(txt, "a1\\cell"), fixed = TRUE))
-  # ... in whatever order the two are given
-  doc2 <- rtf_document(style = rtf_style(font_size_half_points = 22L)) |>
-    rtf_config(default_format = list(font_size_half_points = 20L)) |>
-    rtf_tables(rtftable(.sty_df()))
-  expect_identical(.sty_report(doc2)$document$default_format$font_size_half_points, 22L)
-})
-
 test_that("FT-DC239 [FR-DC320 FR-DC321 FR-DC322 FR-DC323]: an unknown key or section, a bad value, a style that is not one", {
   expect_error(rtf_style(header = list(colour = "#000000")),
                "`rtf_style(header = )`: unknown key `colour`.  The keys of `header` are font,",

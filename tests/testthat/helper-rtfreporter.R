@@ -28,11 +28,3 @@ local_deprecated <- function(...) {
   for (k in c(...)) assign(k, TRUE, envir = st)
   invisible()
 }
-
-# The same for deprecated functions (their keys: the function's name), whose
-# own tests run until 0.9.0 removes them
-silence_deprecation <- function(keys) {
-  st <- rtfreporter:::.deprecation_state
-  for (k in keys) assign(k, TRUE, envir = st)
-  invisible()
-}

@@ -2573,9 +2573,9 @@
     report <- .rtfreport_add_page(report, segments = p$segments)
   }
 
-  # The document's style (#804): its rtf_style() over its deprecated
-  # default_format -- the shared level as the document defaults, each section
-  # into its modules where they left a key unset (R/rtf_style.R).
+  # The document's style (#804): its rtf_style() -- the shared level as the
+  # document defaults, each section into its modules where they left a key
+  # unset (R/rtf_style.R).
   .apply_style_to_report(report, pipe_doc$document)
 }
 
