@@ -882,7 +882,9 @@ test_that("FT-AS5806 [FR-AS255]: toc_title fills the session's tokens (braces of
   f <- c(.tt_input(d, "t_14_1_1.rtf", "Table 14.1.1 {STUDY} Demographics", tokens = list(STUDY = "DOC-7")),
          .tt_input(d, "t_14_2_1.rtf", "Table 14.2.1 B"))
   old <- options(rtfreporter.tokens = list(STUDY_ID = "XYZ-101", ODD = "a{b}c"),
-                 rtfreporter.render_time = as.POSIXct("2026-11-12 09:30:00", tz = "UTC"))
+                 rtfreporter.render_time = as.POSIXct("2026-11-12 09:30:00", tz = "UTC"),
+                 # R CMD check runs the tests with no program to detect: name one
+                 rtfreporter.program = "work/tfl/t_toc.R")
   on.exit(options(old), add = TRUE)
   title <- function(t) .tt_paras(.tt_asm(f, toc = "auto", toc_title = t))[1L]
   # the session's tokens, a value written as it is (its braces escaped)
@@ -893,6 +895,8 @@ test_that("FT-AS5806 [FR-AS255]: toc_title fills the session's tokens (braces of
   prog <- suppressMessages(title("On {DATETIME:%Y-%m-%d} by {PROGRAM}"))
   expect_match(prog, "^\\{\\\\pard\\\\qc\\\\b\\\\fs28 On 2026-11-12 by [^{}]+\\\\par\\}$")
   expect_false(grepl("PROGRAM", prog, fixed = TRUE))
+  # the session's options(rtfreporter.program) is the one named
+  expect_match(prog, "t_toc.R", fixed = TRUE)
   expect_match(title("Page {AUTO_PAGE}"), "Page \\\\chpgn \\\\par\\}$")
   # a token that is none of them stays as text, without a warning or an error
   x <- expect_no_warning(.tt_asm(f, toc = "auto", toc_title = "Contents {NO_SUCH_TOKEN}"))
