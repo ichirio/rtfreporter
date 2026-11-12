@@ -1,10 +1,6 @@
 # Pipe Composition API — document creation, configuration, content addition,
 # section definition, deprecated formatters, print method, full workflow.
 
-# rtf_default_format() / default_format = are deprecated (#804): these tests
-# check what they still do, not the warning (test-rtf-style.R does).
-silence_deprecation("rtf_default_format")
-
 
 test_that("rtf_document() returns the expected S3 structure with defaults", {
   doc <- rtf_document()
@@ -38,13 +34,13 @@ test_that("rtf_config() merges page per key, keeping unspecified keys (#108)", {
   expect_identical(doc2$document$page$margin_left_in, 0.75)
 })
 
-test_that("rtf_config() merges default_format per key (#108)", {
+test_that("rtf_config() merges style per key (#108)", {
   doc  <- rtf_config(rtf_document(),
-                     default_format = list(font_size_half_points = 18L,
-                                           extra = "keep"))
-  doc2 <- rtf_config(doc, default_format = list(font_size_half_points = 24L))
-  expect_identical(doc2$document$default_format$font_size_half_points, 24L)
-  expect_identical(doc2$document$default_format$extra, "keep")
+                     style = rtf_style(font_size_half_points = 18L,
+                                       row_height_twips = 300L))
+  doc2 <- rtf_config(doc, style = rtf_style(font_size_half_points = 24L))
+  expect_identical(doc2$document$style$font_size_half_points, 24L)
+  expect_identical(doc2$document$style$row_height_twips, 300L)
 })
 
 test_that("rtf_config() leaves content and sections intact (#108)", {

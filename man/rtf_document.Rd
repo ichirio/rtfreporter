@@ -8,7 +8,6 @@ rtf_document(
   font_table = NULL,
   color_table = NULL,
   page = NULL,
-  default_format = NULL,
   watermark = NULL,
   program = NULL,
   tokens = NULL,
@@ -39,11 +38,6 @@ its help lists every key with its default), a named list with the same
 keys, or \code{NULL} (default) to use the option / factory defaults (landscape
 Letter, 0.75" top/bottom and 0.75" left/right margins). An omitted key falls
 back to the corresponding \verb{rtfreporter.*} option (see \code{\link[=rtfreporter_options]{rtfreporter_options()}}).}
-
-\item{default_format}{\strong{Deprecated}: use \code{style = rtf_style()}.  An
-\code{\link[=rtf_default_format]{rtf_default_format()}} object or a named list of its keys still works:
-it maps onto the shared level of \code{\link[=rtf_style]{rtf_style()}}, beneath any \code{style}
-given, and warns once a session.}
 
 \item{watermark}{A diagonal word drawn behind the page body on every page:
 an \code{\link[=rtf_watermark]{rtf_watermark()}} object, a bare string (\code{watermark = "DRAFT"} uses the
@@ -109,7 +103,7 @@ program.  \code{NULL} (default): none, and \code{generate_rtfreport()} needs
 \value{
 An \code{rtf_document} S3 object: a list with \code{document} (the
 settings given here: \code{font_table}, \code{font_lang}, \code{color_table}, \code{page},
-\code{default_format}, \code{style}, \code{watermark}, \code{program}, \code{program_fallback},
+\code{style}, \code{watermark}, \code{program}, \code{program_fallback},
 \code{tokens} and \code{file}),
 \code{contents} (filled by \code{\link[=rtf_tables]{rtf_tables()}} / \code{\link[=rtf_figures]{rtf_figures()}}: one block per
 content, each with its own title and footnote; \code{\link[=rtf_layout]{rtf_layout()}} shows how

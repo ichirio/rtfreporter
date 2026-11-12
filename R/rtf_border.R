@@ -21,15 +21,8 @@
 # Deprecation warnings fire once per session: a table-building loop would
 # otherwise repeat the same paragraph for every table.  The environment is
 # package-local, so the state dies with the session.
-# Exported functions that are deprecated and scheduled for removal.  Each
-# still works and warns once per session.
-#
-# Removing them in a MINOR is legal only because `MAJOR 0` means the package is
-# not formally released (see "Pre-1.0 is different" in CONTRIBUTING.md).  From
-# v1.0.0 the same removal would require a major.
-# 0.9.0 removed the 0.5.0 - 0.8.x ones (#594, #788).  rtf_default_format()
-# gave way to rtf_style() (#804), and goes in 0.9.
-.deprecated_exports <- c("rtf_default_format")
+# 0.9.0 removed the deprecated exports (0.5.0 - 0.8.x, #594, #788, and
+# rtf_default_format(), #804, #975): none is deprecated now.
 
 .deprecation_state <- new.env(parent = emptyenv())
 

@@ -67,9 +67,8 @@ test_that("the manual's API list is exactly the package's exports", {
 test_that("the manual never puts a deprecated or removed function in copyable code", {
   lines <- .manual_lines()
   code  <- .manual_code(lines)
-  # deprecated now, and the ones 0.9.0 removed (#788)
-  dep   <- c(rtfreporter:::.deprecated_exports,
-             "toc_heading", "toc_entry", "assemble_files", "assemble_spec",
+  # the ones 0.9.0 removed (#788, #975)
+  dep   <- c("rtf_default_format", "toc_heading", "toc_entry", "assemble_files", "assemble_spec",
              "assemble_toc", "assemble_from_spec", "fmt_count_paren_bare",
              "add_col_header_row", "col_header_from_names", "realign_count_pct",
              "format_count_pct", "paginate", "rtf_border_side", "rtf_border_with",
@@ -83,21 +82,9 @@ test_that("the manual never puts a deprecated or removed function in copyable co
                  paste(hits, collapse = ", ")))
 })
 
-test_that("the manual documents every deprecated export as deprecated", {
-  lines <- .manual_lines()
-  dep <- rtfreporter:::.deprecated_exports
-  from <- grep("^\\*\\*Deprecated", lines)
-  # none since 0.9.0 (#788): then the manual has no such table either
-  if (!length(dep)) {
-    expect_length(from, 0L)
-    return(invisible())
-  }
-  expect_length(from, 1L)
-  block <- lines[seq(from, min(from + 40L, length(lines)))]
-  for (f in dep) {
-    expect_true(any(grepl(f, block, fixed = TRUE)),
-                info = paste(f, "is deprecated but not in the manual's table"))
-  }
+test_that("the manual has no table of deprecated functions", {
+  # none since 0.9.0 (#788, #975): everything deprecated was removed
+  expect_length(grep("^\\*\\*Deprecated", .manual_lines()), 0L)
 })
 
 test_that("every idiom the manual teaches runs", {

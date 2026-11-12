@@ -1,9 +1,5 @@
 # Multi-entry font table and per-element font family (#293 / #44).
 
-# rtf_default_format() / default_format = are deprecated (#804): these tests
-# check what they still do, not the warning (test-rtf-style.R does).
-silence_deprecation("rtf_default_format")
-
 .df  <- function() data.frame(a = c("x", "y"), b = c("1", "2"),
                               stringsAsFactors = FALSE)
 .run <- function(doc) {
@@ -72,7 +68,7 @@ test_that("a table font is declared and selected", {
 
 test_that("several elements each get their own index", {
   l <- .run(
-    rtf_document(default_format = rtf_default_format(title_format = "table")) |>
+    rtf_document(style = rtf_style(title_format = "table")) |>
       rtf_section(page = 1, secinfo = list(header = rtf_header(
         rows = list(c(l = "MYHDR")), font = "Times New Roman"))) |>
       rtf_tables(rtftable(.df(), border = "tfl", font = "Arial")) |>

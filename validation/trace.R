@@ -200,8 +200,6 @@ utils::write.csv(cand, file.path(out, "candidates.csv"), row.names = FALSE, file
 fn_rows <- lapply(scope, function(f) {
   mine <- leaf & vapply(fr_fns, function(x) f %in% x, NA)
   formals_ <- setdiff(names(formals(get(f, envir = ns))), c(".plan", "..."))
-  # (a deprecated export is left out of the argument count, as in the coverage test)
-  if (f %in% get(".deprecated_exports", envir = ns)) formals_ <- character()
   named_in_fr <- formals_[vapply(formals_, function(a) {
     ns$.fr_names_arg(f, a, fr$statement[mine])
   }, NA)]

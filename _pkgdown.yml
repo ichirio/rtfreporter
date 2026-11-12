@@ -387,8 +387,7 @@ reference:
       **Acts on:** the `rtf_document` object.
       `rtf_page()` and `rtf_style()` are the only settings that are
       document-only -- everything else in this reference acts on a table
-      (`rtf_style()` gathers every module's look in one object;
-      `rtf_default_format()` is deprecated in its favour).
+      (`rtf_style()` gathers every module's look in one object).
       `rtf_config()` edits an already-composed document; `rtf_document()`
       starts a new one.  `rtf_text_tokens()` lists every `{TOKEN}` a header,
       footer, title or footnote can carry (`{PAGE}`, `{PROGRAM}`,
@@ -398,7 +397,6 @@ reference:
       - rtf_config
       - rtf_page
       - rtf_style
-      - rtf_default_format
       - rtf_watermark
       - generate_rtfreport
       - rtf_text_tokens
