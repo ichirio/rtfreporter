@@ -237,6 +237,19 @@ res <- data.frame(file = d$file, test = d$test,
                   result = ifelse(d$error | d$failed > 0, "fail", ifelse(d$skipped, "skip", "pass")),
                   stringsAsFactors = FALSE)
 res <- res[!duplicated(paste(res$file, res$test)), , drop = FALSE]
+# each skip with its reason: the skip condition's message, as testthat's
+# "Skipped tests" section of the log groups them
+skip_rows <- lapply(lst$get_results(), function(x) {
+  sk <- Filter(function(e) inherits(e, "expectation_skip"), x$results)
+  if (!length(sk)) return(NULL)
+  data.frame(file = x$file, test = x$test,
+             reason = vapply(sk, function(e) trimws(sub("^Reason:\\s*", "", strsplit(conditionMessage(e), "\n")[[1L]][1L])), ""),
+             stringsAsFactors = FALSE)
+})
+skips <- do.call(rbind, skip_rows)
+if (is.null(skips)) skips <- data.frame(file = character(), test = character(), reason = character())
+skips$where <- tb$line[match(paste(skips$file, skips$test), paste(tb$file, tb$test))]
+skips$where <- sprintf("%s:%s", skips$file, skips$where)
 result <- res$result[match(paste(map$file, map$test), paste(res$file, res$test))]
 result[is.na(result)] <- "not run"
 fr_ok <- vapply(fr$id[leaf], function(id) {
@@ -338,6 +351,175 @@ dev_lines <- if (!nrow(dev) && !length(unassessed)) "None: every leaf requiremen
                                   paste(unassessed, collapse = ", ")))
 n_guard <- sum(tl$kind == "guard")
 n_ix <- sum(tl$kind == "interaction")
+cell <- function(x) gsub("\\s+", " ", gsub("|", "/", x, fixed = TRUE))
+
+# ---- the results by area (the FR id's area: requirements.csv) ---------------------------
+# `checked` is the review of the mappings (traceability_review.csv): "by a test" when a
+# test's expectations assert the whole requirement, "by its tests together" when each
+# asserts a part and together all of it, blank when not reviewed
+tl$area <- fr$area[leaf]
+tl$ok <- fr_ok
+tl$review <- tm$checked
+area_row <- function(x, label) {
+  sprintf("| %s | %d | %d | %d | %d | %d | %d |", label, nrow(x), sum(x$n_ft > 0), sum(x$ok),
+          sum(x$review == "by a test"), sum(x$review == "by its tests together"),
+          sum(x$n_ft > 0 & !nzchar(x$review)))
+}
+area_lines <- c(
+  "| Area | Leaf requirements | With a test | Tests pass | Review: asserts | Review: part only | Not reviewed |",
+  "|---|---|---|---|---|---|---|",
+  vapply(sort(unique(tl$area)), function(a) area_row(tl[tl$area == a, , drop = FALSE], a), ""),
+  gsub("^[|] (.*?) [|]", "| **\\1** |", area_row(tl, "Total"), perl = TRUE))
+
+# ---- the skips, with the reason (the mapped tests' run) ---------------------------------
+skip_lines <- if (!nrow(skips)) "No test of the mapped tests' run was skipped." else {
+  rs <- table(skips$reason)
+  rs <- names(rs)[order(-as.integer(rs), names(rs))]
+  c("| Reason | Skips | Where (test file:line) |", "|---|---|---|",
+    vapply(rs, function(r) {
+      w <- skips$where[skips$reason == r]
+      sprintf("| %s | %d | %s |", cell(r), length(w), cell(paste(unique(w), collapse = ", ")))
+    }, ""))
+}
+
+# ---- the supported environments, and which tested one stands for each range ------------
+# The mapping (supported -> stands for it -> why) and the risks accepted are the
+# Quality Plan's section "The environment strategy", read here at run time; the rule
+# that finds an environment of this run for a row of that table is below.
+desc_f <- read.dcf(file.path(root, "DESCRIPTION"), fields = c("Depends", "Imports", "Suggests"))
+dep_list <- function(x) {
+  x <- trimws(strsplit(ifelse(is.na(x), "", x), ",")[[1L]])
+  x[nzchar(x)]
+}
+r_min <- sub("^R \\(>= ([0-9.]+)\\)$", "\\1", grep("^R \\(", dep_list(desc_f[, "Depends"]), value = TRUE))
+imports <- dep_list(desc_f[, "Imports"])
+base_pkgs <- rownames(utils::installed.packages(priority = "base"))
+sug <- dep_list(desc_f[, "Suggests"])
+sug_pkg <- sub("\\s*[(].*$", "", sug)
+sug_min <- ifelse(grepl("[(]>=", sug), sub("^.*[(]>=\\s*([^)]+)[)].*$", "\\1", sug), "")
+plan <- readLines(file.path(vdir, "quality-plan.md"), encoding = "UTF-8", warn = FALSE)
+i0 <- grep("^### The environment strategy", plan)
+i1 <- grep("^##", plan)
+i1 <- if (length(i0)) min(c(i1[i1 > i0], length(plan) + 1L)) - 1L else 0L
+strategy <- if (length(i0)) plan[i0:i1] else character()
+rows <- strsplit(sub("^[|] *", "", sub(" *[|]$", "", grep("^[|]", strategy, value = TRUE))), " *[|] *")
+rows <- Filter(function(x) length(x) == 3L && !grepl("^-+$", x[1L]) && x[1L] != "Supported", rows)
+# the risks accepted: the list that follows "What is not tested"
+j0 <- grep("^What is not tested", strategy)
+risk_items <- character()
+if (length(j0)) {
+  for (ln in strategy[-seq_len(j0)]) {
+    if (grepl("^- ", ln)) risk_items <- c(risk_items, sub("^- ", "", ln))
+    else if (grepl("^  +\\S", ln) && length(risk_items)) {
+      risk_items[length(risk_items)] <- paste(risk_items[length(risk_items)], trimws(ln))
+    } else if (nzchar(trimws(ln)) && length(risk_items)) break
+  }
+}
+# the versions of every suggested package, by environment (packages.csv of each record)
+env_dirs <- c(list.dirs(file.path(root, "validation", "env-out"), recursive = FALSE),
+              list.dirs(file.path(root, "validation", "env-local"), recursive = FALSE))
+env_dirs <- env_dirs[file.exists(file.path(env_dirs, "env.csv"))]
+pk <- do.call(rbind, lapply(env_dirs, function(d) {
+  p <- file.path(d, "packages.csv")
+  if (!file.exists(p)) return(NULL)
+  x <- utils::read.csv(p, colClasses = "character", na.strings = c("NA", ""), stringsAsFactors = FALSE)
+  x$environment <- utils::read.csv(file.path(d, "env.csv"), colClasses = "character")$environment
+  x
+}))
+# which environment of this run stands for a row of the plan's table
+env_for <- function(supported) {
+  if (is.null(envs)) return(list(list(label = NULL, idx = integer())))
+  devel <- grepl("Under development|devel", envs$r)
+  rv <- suppressWarnings(numeric_version(ifelse(grepl("^R version [0-9]", envs$r),
+                                         sub("^R version ([0-9]+[.][0-9]+).*$", "\\1", envs$r), NA)))
+  is_min <- !devel & !is.na(rv) & rv == numeric_version(r_min[1L])[1L, 1:2]
+  os_is <- function(re) which(grepl(re, envs$os))
+  if (grepl("^The lowest R", supported)) {
+    list(list(label = NULL, idx = which(is_min)))
+  } else if (grepl("in use now", supported)) {
+    list(list(label = NULL, idx = which(!devel & !is_min)))
+  } else if (grepl("^The next R", supported)) {
+    list(list(label = NULL, idx = which(devel)))
+  } else if (grepl("^Windows, macOS and Linux", supported)) {
+    list(list(label = "Windows", idx = os_is("^Windows")), list(label = "macOS", idx = os_is("^macOS")),
+         list(label = "Linux", idx = os_is("Ubuntu|Debian|Linux|Fedora")))
+  } else list(list(label = NULL, idx = NA_integer_))
+}
+sup_gaps <- character()
+sup_rows <- if (!is.null(envs)) unlist(lapply(rows, function(x) {
+  lapply(env_for(x[1L]), function(m) {
+    what <- if (is.null(m$label)) x[1L] else sprintf("%s: %s", x[1L], m$label)
+    if (anyNA(m$idx)) {
+      sup_gaps <<- c(sup_gaps, what)
+      return(sprintf("| %s | %s | (no rule in validation/trace.R for this row of the plan) | **not checked** | %s |",
+                     cell(what), cell(x[2L]), cell(x[3L])))
+    }
+    bad <- m$idx[m$idx %in% which(!env_pass(envs) | envs$environment %in% env_stale)]
+    verdict <- if (!length(m$idx)) {
+      sup_gaps <<- c(sup_gaps, what)
+      "**no environment gathered**"
+    } else if (length(bad)) {
+      sup_gaps <<- c(sup_gaps, what)
+      sprintf("**failing: %s**", paste(envs$environment[bad], collapse = "; "))
+    } else sprintf("pass (%d)", length(m$idx))
+    sprintf("| %s | %s | %s | %s | %s |", cell(what), cell(x[2L]),
+            if (length(m$idx)) cell(paste(envs$environment[m$idx], collapse = "; ")) else "--",
+            verdict, cell(x[3L]))
+  })
+}), use.names = FALSE)
+sup_head <- c("| Supported | Stands for it (Quality Plan) | In this run | Result | Why that is enough (Quality Plan) |",
+              "|---|---|---|---|---|")
+min_run <- function(p) {
+  x <- pk[pk$package == p & !is.na(pk$version), , drop = FALSE]
+  if (!nrow(x)) return(c(low = "--", high = "--"))
+  v <- numeric_version(x$version)
+  c(low = as.character(min(v)), high = as.character(max(v)))
+}
+# the environments where a package was not installed (or its record does not list it)
+absent_in <- function(p) {
+  have <- pk$environment[pk$package == p & !is.na(pk$version)]
+  setdiff(unique(pk$environment), have)
+}
+sug_show <- if (is.null(pk)) integer() else
+  which(nzchar(sug_min) | vapply(sug_pkg, function(p) length(absent_in(p)) > 0L, NA))
+sug_lines <- if (is.null(pk)) "No environment's list of package versions was gathered in this run." else c(
+  "| Suggested package | Minimum (DESCRIPTION) | Lowest used | Highest used | Not installed in |",
+  "|---|---|---|---|---|",
+  vapply(sug_show, function(k) {
+    m <- min_run(sug_pkg[k])
+    gone <- absent_in(sug_pkg[k])
+    sprintf("| %s | %s | %s | %s | %s |", sug_pkg[k], if (nzchar(sug_min[k])) sug_min[k] else "--",
+            m[["low"]], m[["high"]], if (length(gone)) cell(paste(gone, collapse = "; ")) else "")
+  }, ""))
+at_min <- if (is.null(pk)) NA_integer_ else sum(vapply(seq_along(sug_pkg), function(k) {
+  m <- min_run(sug_pkg[k])
+  nzchar(sug_min[k]) && m[["low"]] != "--" && numeric_version(m[["low"]]) <= numeric_version(sug_min[k])
+}, NA))
+sup_lines <- c(
+  sprintf("What the package says it supports, read from DESCRIPTION: R (>= %s); %s; %d suggested packages, %d with a minimum version.",
+          r_min[1L],
+          if (all(imports %in% base_pkgs)) {
+            sprintf("imports only packages that ship with R (%s)", paste(imports, collapse = ", "))
+          } else sprintf("imports %s", paste(imports, collapse = ", ")),
+          length(sug), sum(nzchar(sug_min))),
+  "The operating systems are Windows, macOS and Linux (the Quality Plan, section 5).",
+  "",
+  "For each supported range, the environment of this run that stands for it, as the Quality Plan's *environment strategy* says, and its result:",
+  "",
+  if (is.null(envs)) "No environment's record was gathered in this run." else c(sup_head, unlist(sup_rows)),
+  if (length(sup_gaps)) c("", sprintf("**Not every supported range has a passing environment standing for it: %s.**",
+                                       paste(sup_gaps, collapse = "; "))) else
+    if (!is.null(envs)) c("", "Every supported range has at least one passing environment standing for it."),
+  "",
+  "The suggested packages, as the environments ran them (those with a minimum version, and those not installed in some environment):",
+  "",
+  sug_lines,
+  if (!is.na(at_min)) c("", sprintf("%d of the %d suggested packages with a minimum version were run at that minimum in at least one environment; for the others the tests ran only with a newer version (the risk below).",
+                                    at_min, sum(nzchar(sug_min)))),
+  "",
+  "What is not tested, and the risk accepted (the Quality Plan, the *environment strategy*):",
+  "",
+  if (length(risk_items)) paste("-", risk_items) else "(the list was not found in inst/validation/quality-plan.md)")
 sm <- c(
   sprintf("# rtfreporter %s: Quality Report", utils::packageVersion("rtfreporter")),
   "",
@@ -370,12 +552,28 @@ sm <- c(
                                                      tr$coverage[!leaf][tr$coverage[!leaf] != "covered"]),
                                              collapse = "; "))),
   "",
+  "## Results by area",
+  "",
+  "The leaf requirements by the area of their FR id; *Review* is the check of each mapping (traceability_review.csv): **asserts**, a test's expectations assert the whole requirement; **part only**, each test asserts a part and together all of it.",
+  "",
+  area_lines,
+  "",
+  "## Skipped tests, with the reason",
+  "",
+  sprintf("The mapped tests' run (test-log.txt): %d skipped, by the reason the test gives. The skip count of each other environment is in its table row; its reasons are in environments.txt.", nrow(skips)),
+  "",
+  skip_lines,
+  "",
   "## Environments",
   "",
   sprintf("The same tests, on every environment of the Quality Plan (section 5: %d in CI, %d local), each record of rtfreporter %s; gathered here: %d in CI, %d local.",
           expected_env[["ci"]], expected_env[["local"]], this_version, n_env[["ci"]], n_env[["local"]]),
   "",
   env_lines,
+  "",
+  "## Supported environments, and the tested ones that stand for them",
+  "",
+  sup_lines,
   "",
   "## Deviations",
   "",
