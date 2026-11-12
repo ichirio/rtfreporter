@@ -1727,3 +1727,24 @@ test_that("a hierarchy's label with a Total column: a term's text is on all its 
                    plain[plain$label %in% pt, cells])
   expect_false(anyNA(x[x$label %in% "Loose stools", "Placebo____Any"]))
 })
+
+test_that("FT-AR5901 [FR-AR220]: pull_ard(levels = ) puts the values the levels do not name in the order widen_ard() does (#992)", {
+  tri <- data.frame(group1 = "TRT", group1_level = c("B", "A", "C"), variable = "AGE",
+                    variable_level = NA_character_, context = "continuous",
+                    stat_name = "N", stat_label = "N", stat = c(4, 2, 7),
+                    stringsAsFactors = FALSE)
+  # "C" first (named), then B and A as first seen -- not A, B as sorted
+  got <- pull_ard(tri, cols = "TRT", levels = list(TRT = "C"))
+  expect_identical(names(got), c("C", "B", "A"))
+  expect_identical(unname(got), c(7, 4, 2))
+  wide <- widen_ard(normalize_ard(tri), cols = "TRT", cells = "{N:.0f}",
+                    levels = list(TRT = "C"), notes = FALSE)
+  expect_identical(names(got), setdiff(names(wide), "label"))
+  # with no levels, first seen, as before
+  expect_identical(names(pull_ard(tri, cols = "TRT")), c("B", "A", "C"))
+  # a factor key keeps its own levels for the rest
+  trf <- tri
+  trf$group1_level <- factor(trf$group1_level, levels = c("A", "C", "B"))
+  expect_identical(names(pull_ard(trf, cols = "TRT", levels = list(TRT = "B"))),
+                   c("B", "A", "C"))
+})
