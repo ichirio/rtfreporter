@@ -234,6 +234,8 @@ navbar:
         # ── Validation ──────────────────────────────────────────────────
         - text: -------
         - text: "Validation"
+        - text: "How rtfreporter is validated"
+          href: articles/validation-approach.html
         - text: "Validating rtfreporter in your environment"
           href: articles/validation.html
         # ── Specification / internals (advanced) ────────────────────────
@@ -751,6 +753,7 @@ articles:
       company edits to validate it in its own environment.
     navbar: ~
     contents:
+      - articles/validation-approach
       - articles/validation
 
   - title: For contributors
@@ -779,6 +782,7 @@ articles:
       - articles/extending-adapters-ja
       - articles/several-contents-ja
       - articles/plan-append-ja
+      - articles/validation-approach-ja
 
   # Deep-dive S3 / OOP references. Deliberately kept OUT of the navbar
   # Articles menu -- pkgdown requires every built article to appear in the
