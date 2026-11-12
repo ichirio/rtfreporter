@@ -720,7 +720,7 @@ test_that("FT-AS4050 [FR-AS269 FR-AS265]: with a hanging indent a wrapped label 
   expect_equal(lines(strrep("x", 150), 2L, 20L, 0L), 2)
   expect_equal(lines(strrep("x", 150), 2L, 20L, 720L), 2)
   # a label that fills two lines without the hanging indent wraps a third time
-  full <- strrep("x", 215)
+  full <- strrep("x", 210)
   expect_equal(lines(full, 2L, 20L, 0L), 2)
   expect_equal(lines(full, 2L, 20L, 720L), 3)
   # never fewer, whatever the length; a one-line label stays one line
