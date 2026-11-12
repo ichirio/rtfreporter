@@ -1,0 +1,236 @@
+---
+title: "How rtfreporter is validated"
+description: >
+  The package's validation approach in plain words, and a map of the
+  documents that carry it: from the Quality Plan to the Quality Report, and
+  the company side you build with the validation kit.
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+<p align="right">
+  <a class="btn btn-outline-secondary btn-sm" href="validation-approach-ja.html">In Japanese</a>
+</p>
+
+This article is for the QA or statistical-programming lead who has to decide
+whether the package can be used in a regulated setting. It says how
+rtfreporter's own quality is assured, which documents carry the evidence,
+and what is left for your company to do. The steps for your side are in
+[Validating rtfreporter in your environment](validation.html).
+
+The rules are in one document, the **Quality Plan**
+(`inst/validation/quality-plan.md`). This article explains it. If the two
+differ, the Quality Plan is right.
+
+## The approach
+
+### Risk-based
+
+Not every combination of every argument can be tested, and not every one
+needs to be. The package states its requirements where a wrong result would
+reach your report. It states them most deeply where a mistake is likeliest
+or hardest to see.
+
+### What is required
+
+The requirements are written from what the package says about itself: its
+exported functions, the help of each, and the checks in the code. They are
+the **Functional Requirements (FR)**. Each function has FRs of five kinds.
+
+| Kind | What it states |
+|---|---|
+| `behaviour` | What the function does. |
+| `argument` | What each meaningful value of an argument does. |
+| `data` | A shape of data the function handles: no rows, one row, `NA`, factor levels, one or many groups, long or non-ASCII text. |
+| `guard` | A misuse the package stops, and the error or warning it gives. An unintended use must stop. It must not produce a wrong file. |
+| `interaction` | A risky combination: a precedence or an override, an argument that changes the meaning of another, a combination that once had a bug. |
+
+Only the risky combinations are required. Pairwise combinations of all
+arguments are not.
+
+Tests check that the list is complete. A test fails when an exported
+function has an argument that no FR names. It fails when the package reads
+an option that no FR names. It fails when an FR has neither a test nor a
+deviation. These checks do not show that the help is complete. An FR is only
+as good as the reading that wrote it.
+
+### Why passing the tests shows the requirements are met
+
+Each test is mapped to the FRs it checks. A test counts for an FR only when
+it asserts what the FR states: the value returned, the RTF written, or the
+error given. A test that only calls a function does not count.
+
+The tests use these designs.
+
+- **Equivalence classes and boundaries** for arguments and data. One FR
+  stands for a class of values that the function treats alike. A value at the
+  edge of a rule gets its own FR.
+- **Regression cases** for misuse and for past bugs. A fixed bug gets an FR
+  and a test that names the issue.
+- **Interaction FRs** for the few combinations that are a risk.
+- **End-to-end scenarios** that run a whole program, from data to an RTF
+  file. The test compares the file line by line with a reference RTF. The
+  programs use fictional data and nothing that varies between runs.
+
+Each mapping is checked by a person when it is made. The person reads the FR
+and the test, and records that the test asserts the FR. The record quotes
+the expectation lines as evidence (`traceability_review.csv`). A test fails
+when a mapping has no such record.
+
+### The expected result
+
+A test needs an expected result that does not come from the code under test.
+The tests take it from these sources:
+
+- a rule in the help, worked out in the test's header;
+- a calculation by hand, such as the pages of ten rows, or a column's width
+  from the glyph widths of the font;
+- the same table made by a direct call, which a plan must match;
+- input built by hand, so that the result is known by construction.
+
+The reference RTF files are different. The package wrote them. They show
+that the output has not changed. They do not show that it was right. So a
+person reads each reference, control word by control word (page setup,
+fonts, cell widths, borders, alignment, the text), and records the reading
+(`reference_review.csv`). What only a person can judge, such as how Word lays
+out the page, stays marked `pending-human` until someone has looked. The
+references show stability. The other sources show correctness.
+
+### Coverage is an aid
+
+Line coverage shows which lines no test runs. It cannot show that a test
+checks what a line does. It cannot see a requirement that has no code. So it
+helps to find untested code, and it never counts for an FR. The Quality
+Report states the figure of the release.
+
+### Environments: tested, and supported
+
+The package runs the tests and R CMD check on six CI environments: Ubuntu
+with R devel, release, oldrel-1 and 4.2, macOS with release R, and Windows
+with release R. Before a release, the maintainers also run the tests on
+their PC with two R versions. The lowest R is the one `DESCRIPTION` names,
+so a newer R feature fails there. R devel shows a change in R that will
+break the package.
+
+The Quality Plan names what is not tested, and accepts the risk:
+
+- a system without the suggested packages (most jobs install them);
+- the oldest versions of the suggested packages that `DESCRIPTION` allows;
+- other operating system versions, other architectures and other locales;
+- another RTF reader. The tests compare RTF text. They do not open it in a
+  word processor.
+
+### What the package's evidence covers, and what you do
+
+The package's evidence shows that each function does what its requirements
+say, in the environments above. It does not show that the package is fit for
+your reports, in your environment, with your standards. That is your
+validation. You state your requirements, link each to the FRs it relies on,
+run acceptance tests on dummy data in your environment, and sign off. You
+use the package's records as supplier evidence. You do not repeat them. The
+steps are in [Validating rtfreporter in your
+environment](validation.html).
+
+## The document system
+
+### The map
+
+The package's documents form a chain. Each one points to the next by ids.
+
+```
+Quality Plan                      the rules; written by hand
+   |
+Functional Requirements           requirements.csv        FR-PL101, ...
+   |
+Traceability Matrix  (FR -> FT)   traceability_matrix.csv
+   |                              + traceability_review.csv   (the check of each mapping)
+Tests and their log               testthat blocks, FT-PL001, ...
+   |
+Reference outputs                 fixtures/validation/*.rtf
+   |                              + reference_review.csv      (the reading of each file)
+Deviations                        deviations.csv          (an FR with no test)
+   |
+Quality Report  (each release)    quality-report-<tag>.pdf + attachments
+```
+
+Between major releases, the Change Request Plan and the Change Report take
+the place of the Plan and the Report.
+
+### The package's documents, one line each
+
+| Document | What it is |
+|---|---|
+| Quality Plan | How quality is assured, and what the Quality Report must show. |
+| Functional Requirements | `requirements.csv`: every FR, with its kind and the functions it applies to. |
+| Traceability Matrix (FR -> FT) | `traceability_matrix.csv`: the tests mapped to each FR. It holds no results. |
+| Mapping reviews | `traceability_review.csv`: for each mapping, whether the test asserts the FR, with the evidence. |
+| Tests and their log | The testthat tests, and the log of a run. The results are in the log. |
+| Reference outputs | The RTF files that the end-to-end tests compare against. |
+| Reference reviews | `reference_review.csv`: for each reference RTF, its md5, the verdict, what was checked. |
+| Deviations | `deviations.csv`: an FR the tests cannot check, with its risk, the reason it is accepted and the action planned. |
+| Quality Report | The conclusion for a release: the environments and their results, the deviations, how to read the attachments. |
+| Change Request Plan | The release's GitHub milestone: each issue with its impact, risk and related FRs. |
+| Change Report | The merged pull requests and issues, the FRs added or changed, the regression evidence and the environments. |
+
+The Quality Report concludes *validation-ready* when four things hold. Every
+FR with tests passes them. Every FR without a test is a deviation with its
+risk and reason. The tests pass on every environment. The changes were made
+under the roles of the Quality Plan. Only the CI run of a published release
+can conclude *validation-ready*. A run on a PC, or a CI run started by hand,
+writes the same report marked DRAFT.
+
+### The company's documents
+
+You make these from the validation kit, `rtfreporter_validation_kit()`.
+
+| Document | What it is |
+|---|---|
+| Validation Plan | `validation_plan.md`: scope, intended use, roles, approach, acceptance criteria. |
+| User Requirement Specification (URS) | `urs.csv`: your requirements (`UR-NNN`), each linked to FR ids. |
+| UAT cases | `uat_cases.csv`, `uat_cases.xlsx`: your acceptance tests (`UAT-NNN`) on dummy data, with columns for the result. |
+| User Traceability Matrix (URS -> FR -> UAT) | Written by `build_user_matrix.R`. |
+| Validation Summary Report | `validation_summary_report.md`: the environment, the results, the deviations, your conclusion. |
+
+The FR ids join the two sides.
+
+```
+your need     the package's requirement        the package's test
+UR-008  ----> FR-PL161  ----------------------> FT
+  |
+  +-------->  UAT-011  (your check, in your environment)
+```
+
+## Where each document lives, and when it is made
+
+| Document | Where | When |
+|---|---|---|
+| Quality Plan | `inst/validation/quality-plan.md` in the package; also in the kit | By hand: for the first release under it, and for each major version. |
+| Functional Requirements | `inst/validation/requirements.csv`; also in the kit | By hand, with each change that adds or changes an FR. |
+| Traceability Matrix | `inst/validation/traceability_matrix.csv`; at a release, `traceability_matrix-<tag>.xlsx` | The CSV is kept with each change. CI writes the workbook at the release. |
+| Mapping reviews | `inst/validation/traceability_review.csv` | By hand, when a test is mapped. |
+| Reference reviews | `inst/validation/reference_review.csv` | By hand, when a reference is new or written again. |
+| Deviations | `inst/validation/deviations.csv` | By hand. A row is removed when a test is added. |
+| Tests | `tests/testthat/` in the repository | With each change. |
+| Local environment records | `validation/env-local/` in the repository | The maintainers run them before a release. |
+| Quality Report | `quality-report-<tag>.pdf`, attached to the GitHub release | CI makes it at a published release. |
+| Attachments | The same release: `traceability_matrix-<tag>.xlsx`, `environments-<tag>.txt` (every environment's sessionInfo and test log), `test-log-<tag>.txt`, `ft-<tag>.csv`, `functions-<tag>.csv`, `candidates-<tag>.csv` | CI makes them with the report. |
+| Change Request Plan | The release's GitHub milestone | Between major releases. |
+| Change Report | The release, between major releases | Made from the merged pull requests and issues; the reasons for deviations by hand. |
+| Company documents | The folder you copy with `rtfreporter_validation_kit()` | You make them for each version you validate. |
+
+The package folder `inst/validation/` is installed with the package. The
+`validation/` folder of the repository holds the scripts that make the
+report, and the local records.
+
+The attachments help you read the report. `functions-<tag>.csv` has one row
+per exported function: its FRs by kind, how many have a test, and the
+arguments that no FR names. `candidates-<tag>.csv` lists tests that call a
+function but map to no FR. They decide nothing, and they never count as
+coverage.
+
+## Where to go next
+
+To validate the package for your own use, follow [Validating rtfreporter in
+your environment](validation.html). It starts with copying the kit.
