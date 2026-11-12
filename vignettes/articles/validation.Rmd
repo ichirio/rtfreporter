@@ -40,6 +40,8 @@ way is marked DRAFT. The rules behind it are the package's **Quality Plan**
 
 You use these as supplier evidence. You do not repeat them.
 
+How the approach works, and a map of all the documents, are in [How rtfreporter is validated](validation-approach.html).
+
 ## What you do
 
 1. **Copy the kit** into a folder of your own.
