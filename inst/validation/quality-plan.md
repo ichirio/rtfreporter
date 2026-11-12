@@ -243,13 +243,15 @@ minimum, the minimum is raised.
 What is not tested, and the risk accepted:
 
 - **A suggested package absent.**  Only the two R 4.2 jobs run with
-  `force-suggests` false, and they leave out `devEMF` (and the R 4.2 job of
-  the matrix also `tern`) where it cannot be installed on that R.  The other
+  `force-suggests` false, and they leave out `tern` and `devEMF`, which
+  cannot be installed on that R.  The other
   jobs have the suggested packages installed.  A test that needs one is
   skipped when it is absent (`skip_if_not_installed()`).  The risk is a
   failure on a system without one that no job shows.
 - **Versions between the minimum and the latest** of a suggested package,
-  and a mix of them other than the two tested.
+  and a mix of them other than the two tested.  `tern`'s minimum is not
+  tested either: the job *dependency minimums* runs on R 4.2, where `tern`
+  cannot be installed.
 - **Other versions of an operating system**, other architectures, and other
   locales than those of the CI images and the maintainers' PC.
 - **Another RTF reader.**  The tests compare the RTF text.  They do not open

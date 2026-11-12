@@ -116,8 +116,9 @@ jobs:
           use-public-rspm: true
 
       # pak refs from DESCRIPTION's Suggests: `pkg@<minimum>` where it names a
-      # minimum, `any::pkg` where it does not; devEMF (no minimum) cannot be
-      # installed on R 4.2 and is left out, as in the R 4.2 job above
+      # minimum, `any::pkg` where it does not.  tern and devEMF cannot be
+      # installed on R 4.2 (what they need wants a newer R), so they are left
+      # out, as in the R 4.2 job above
       - name: The minimum versions, from DESCRIPTION
         id: pins
         shell: Rscript {0}
@@ -128,7 +129,7 @@ jobs:
           pkg <- sub("\\s*[(].*$", "", s)
           min <- ifelse(grepl("[(]>=", s), sub("^.*[(]>=\\s*([^)]+)[)].*$", "\\1", s), NA)
           refs <- ifelse(is.na(min), paste0("any::", pkg), paste0(pkg, "@", min))
-          refs <- c(refs, "devEMF=?ignore-before-r=4.3.0")
+          refs <- refs[!pkg %in% c("tern", "devEMF")]
           cat(paste(refs, collapse = "\n"), "\n")
           cat(sprintf("refs=%s\n", paste(refs, collapse = " ")),
               file = Sys.getenv("GITHUB_OUTPUT"), append = TRUE)
