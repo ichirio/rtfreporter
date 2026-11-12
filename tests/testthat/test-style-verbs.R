@@ -434,3 +434,33 @@ test_that("plan_cell_style(header = TRUE) styles the header a plan prints from i
   x <- paste(readLines(f, warn = FALSE), collapse = "")
   expect_true(grepl("\\b Parameter\\b0", x, fixed = TRUE))
 })
+
+test_that("FT-TB6301 [FR-TB405]: a style colour that is not one 6-digit hex string is refused, and a hex one reaches the colour table (#999)", {
+  tb <- rtftable(data.frame(Item = c("Age", "Sex"), A = c("1", "2"),
+                            stringsAsFactors = FALSE))
+  msg <- function(verb, arg) {
+    sprintf("`%s(%s = )` must be NULL or a 6-digit hex colour such as \"#7F7F7F\".",
+            verb, arg)
+  }
+  for (bad in list("notacolour", "#12345", c("#000000", "#FFFFFF"), NA_character_, 1)) {
+    for (arg in c("color", "background")) {
+      a <- stats::setNames(list(bad), arg)
+      expect_error(do.call(style_body, c(list(tb, rows = 2), a)),
+                   msg("style_body", arg), fixed = TRUE)
+    }
+    for (arg in c("color", "background", "header_background", "header_color")) {
+      a <- stats::setNames(list(bad), arg)
+      expect_error(do.call(style_cols, c(list(tb, cols = 2), a)),
+                   msg("style_cols", arg), fixed = TRUE)
+    }
+  }
+  # a hex colour still works and is in the colour table, with no NA entry
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
+  doc <- rtf_document() |> rtf_tables(list(style_body(tb, rows = 2, background = "#d9d9d9")))
+  generate_rtfreport(doc, f, overwrite = TRUE)
+  txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  ct <- regmatches(txt, regexpr("\\{\\\\colortbl[^}]*\\}", txt))
+  expect_match(ct, "\\red217\\green217\\blue217;", fixed = TRUE)
+  expect_false(grepl("NA", ct, fixed = TRUE))
+})

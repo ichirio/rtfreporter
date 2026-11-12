@@ -135,6 +135,18 @@
   v
 }
 
+# A text or fill colour: one "#RRGGBB", as every other colour argument takes.
+# A colour name or a short hex string used to reach the colour table as
+# \redNA... (#999).
+.style_check_color <- function(v, arg, verb) {
+  if (!is.character(v) || length(v) != 1L || is.na(v) ||
+      !grepl("^#[0-9A-Fa-f]{6}$", v)) {
+    stop(sprintf(paste0("`%s(%s = )` must be NULL or a 6-digit hex colour ",
+                        "such as \"#7F7F7F\"."), verb, arg), call. = FALSE)
+  }
+  v
+}
+
 # Promote a character labels row to the equivalent list of single-column
 # cells, copying each column's current header styling (header_align /
 # header_bold / header_italic) onto the cell so the rendered output stays the
@@ -467,6 +479,10 @@ style_cols.rtftable <- function(x, cols = NULL, align = NULL, bold = NULL,
     v <- get(arg)
     if (!is.null(v)) assign(arg, .style_check_flag(v, arg, "style_cols"))
   }
+  for (arg in c("color", "background", "header_background", "header_color")) {
+    v <- get(arg)
+    if (!is.null(v)) assign(arg, .style_check_color(v, arg, "style_cols"))
+  }
   for (j in cols_idx) {
     spec <- x$col_spec[[j]]
     if (!is.null(align))         spec$align         <- align
@@ -524,6 +540,10 @@ style_body.rtftable <- function(x, rows = NULL, cols = NULL, bold = NULL,
   for (arg in c("bold", "italic", "underline")) {
     v <- get(arg)
     if (!is.null(v)) assign(arg, .style_check_flag(v, arg, "style_body"))
+  }
+  for (arg in c("color", "background")) {
+    v <- get(arg)
+    if (!is.null(v)) assign(arg, .style_check_color(v, arg, "style_body"))
   }
   if (!is.null(align))  align  <- .style_check_align(align, "style_body")
   if (!is.null(border)) border <- .style_check_border(border, "style_body")
