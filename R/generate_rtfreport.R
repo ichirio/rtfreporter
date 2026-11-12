@@ -2218,7 +2218,7 @@
         bold      = if (is.null(r$bold)) def_bold else isTRUE(r$bold),
         italic    = isTRUE(r$italic),
         underline = isTRUE(r$underline),
-        color     = r$color,
+        color     = .check_hf_color(r$color, "color"),
         border    = r$border
       )
       if (!is.null(rec$border) && !inherits(rec$border, "rtf_border")) {
