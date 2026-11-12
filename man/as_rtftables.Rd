@@ -79,7 +79,8 @@ The tokens:
 \code{"widths"}, \code{"titles"}, \code{"footnotes"}, \code{"styles"} (explicit
 \code{tab_style()} borders and text styles; see \emph{What is carried}).}
 \item{rtables / tern}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
-\code{"titles"}, \code{"footnotes"}, \code{"indent"}, \code{"footnote_marks"};
+\code{"titles"}, \code{"footnotes"}, \code{"footnote_marks"} (the indentation is
+always written into the labels);
 \strong{rlistings takes the same tokens}, because the two share one
 \code{MatrixPrintForm} reader.}
 \item{flextable}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},

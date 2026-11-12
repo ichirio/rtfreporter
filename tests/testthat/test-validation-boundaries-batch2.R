@@ -374,7 +374,7 @@ test_that("FT-DC284 [FR-DC186 FR-DC187 FR-DC188 FR-DC189 FR-DC192 FR-DC193 FR-DC
   })
 })
 
-test_that("FT-DC285 [FR-DC203 FR-DC204 FR-DC205 FR-DC206 FR-DC207 FR-DC210 FR-DC212 FR-DC213 FR-DC214 FR-DC215 FR-DC216 FR-DC217 FR-DC218 FR-DC219 FR-TB600]: rtf_footnotes(): equivalence classes and boundaries of its arguments", {
+test_that("FT-DC285 [FR-DC203 FR-DC204 FR-DC205 FR-DC206 FR-DC207 FR-DC213 FR-DC214 FR-DC215 FR-DC216 FR-DC217 FR-DC218 FR-DC219 FR-TB600]: rtf_footnotes(): equivalence classes and boundaries of its arguments", {
   C <- .eb2_case
   E <- .eb2_err
   O <- .eb2_obj
@@ -512,19 +512,19 @@ test_that("FT-DC285 [FR-DC203 FR-DC204 FR-DC205 FR-DC206 FR-DC207 FR-DC210 FR-DC
   }
 }
 
-test_that("FT-DC286 [FR-DC295 FR-DC297 FR-DC300 FR-DC302 FR-DC325 FR-DC326 FR-DC327 FR-DC328 FR-DC329 FR-DC331 FR-DC341 FR-DC342 FR-DC343 FR-DC354 FR-TB600]: rtf_header(): equivalence classes and boundaries of its arguments", {
+test_that("FT-DC286 [FR-DC295 FR-DC297 FR-DC300 FR-DC302 FR-DC325 FR-DC326 FR-DC327 FR-DC328 FR-DC331 FR-DC341 FR-DC342 FR-DC343 FR-DC354 FR-TB600]: rtf_header(): equivalence classes and boundaries of its arguments", {
   .eb2_run(.eb2_band_cases("rtf_header"), .eb2_band_run(rtf_header, "header"))
   # No rule by default.
   expect_null(rtf_header(c(l = "A"))$border)
 })
 
-test_that("FT-DC287 [FR-DC295 FR-DC297 FR-DC300 FR-DC302 FR-DC325 FR-DC326 FR-DC327 FR-DC328 FR-DC329 FR-DC331 FR-DC341 FR-DC342 FR-DC343 FR-DC354 FR-TB600]: rtf_footer(): equivalence classes and boundaries of its arguments", {
+test_that("FT-DC287 [FR-DC295 FR-DC297 FR-DC300 FR-DC302 FR-DC325 FR-DC326 FR-DC327 FR-DC328 FR-DC331 FR-DC341 FR-DC342 FR-DC343 FR-DC354 FR-TB600]: rtf_footer(): equivalence classes and boundaries of its arguments", {
   .eb2_run(.eb2_band_cases("rtf_footer"), .eb2_band_run(rtf_footer, "footer"))
   # A top rule by default.
   expect_true(inherits(rtf_footer(c(l = "A"))$border, "rtf_border"))
 })
 
-test_that("FT-DC288 [FR-DC309 FR-DC310 FR-DC311 FR-DC312 FR-DC320 FR-DC321 FR-DC322 FR-DC324 FR-DC354]: rtf_style(): equivalence classes and boundaries of its arguments", {
+test_that("FT-DC288 [FR-DC309 FR-DC310 FR-DC311 FR-DC320 FR-DC321 FR-DC322 FR-DC324 FR-DC354]: rtf_style(): equivalence classes and boundaries of its arguments", {
   C <- .eb2_case
   E <- .eb2_err
   O <- .eb2_obj
@@ -831,7 +831,7 @@ test_that("FT-PL968 [FR-PL462 FR-PL464 FR-PL467 FR-PL470 FR-PL471 FR-TB284 FR-TB
   })
 })
 
-test_that("FT-PL969 [FR-PL240 FR-PL241 FR-PL243 FR-PL244 FR-PL246 FR-PL248 FR-PL249]: plan_digits(): equivalence classes and boundaries of its arguments", {
+test_that("FT-PL969 [FR-PL240 FR-PL241 FR-PL243 FR-PL246 FR-PL248 FR-PL249]: plan_digits(): equivalence classes and boundaries of its arguments", {
   vals <- function(v) function(t) identical(t$Placebo, v)
   O <- .eb2_obj
   E <- .eb2_err
@@ -883,7 +883,7 @@ test_that("FT-PL970 [FR-PL183 FR-PL187 FR-PL193 FR-PL194 FR-PL196 FR-PL934 FR-TB
   })
 })
 
-test_that("FT-PL971 [FR-PL362 FR-PL363 FR-PL364 FR-PL913 FR-PL958 FR-TB198 FR-TB204 FR-TB605]: plan_stub(): equivalence classes and boundaries of its arguments", {
+test_that("FT-PL971 [FR-PL362 FR-PL363 FR-PL913 FR-PL958 FR-TB198 FR-TB204 FR-TB605]: plan_stub(): equivalence classes and boundaries of its arguments", {
   O <- .eb2_obj
   E <- .eb2_err
   ind <- function(n) function(p) {
@@ -931,7 +931,7 @@ test_that("FT-PL971 [FR-PL362 FR-PL363 FR-PL364 FR-PL913 FR-PL958 FR-TB198 FR-TB
 #  The fixes for #850 - #853: what the batch left out.
 # ---------------------------------------------------------------------------
 
-test_that("FT-TB777 [FR-TB606 FR-TB128 FR-TB203 FR-TB284]: a column position is a whole number in 1..ncol; TRUE, a fraction or a factor stops", {
+test_that("FT-TB777 [FR-TB606 FR-TB203]: a column position is a whole number in 1..ncol; TRUE, a fraction or a factor stops", {
   h <- data.frame(SOC = c("Gastro", "Gastro", "Nerv"),
                   PT  = c("Nausea", "Vomit", "Headache"),
                   N   = c("1", "2", "3"))
@@ -994,7 +994,7 @@ test_that("FT-DC289 [FR-DC356 FR-DC343]: rtf_header() / rtf_footer(width_twips =
   }
 })
 
-test_that("FT-PL972 [FR-PL959 FR-PL240 FR-PL241 FR-PL244]: plan_digits() takes whole decimals (0 or more) or \"<n>s\", and stops on anything else naming the key", {
+test_that("FT-PL972 [FR-PL959 FR-PL240 FR-PL241]: plan_digits() takes whole decimals (0 or more) or \"<n>s\", and stops on anything else naming the key", {
   st <- data.frame(ARM = rep(c("Placebo", "Active"), each = 3),
                    variable = rep(c("AGE", "SEX", "SEX"), 2),
                    .label = rep(c(NA, "F", "M"), 2),
@@ -1027,7 +1027,7 @@ test_that("FT-PL972 [FR-PL959 FR-PL240 FR-PL241 FR-PL244]: plan_digits() takes w
   expect_s3_class(plan_digits(p, rounding = "sas"), "table_plan")
 })
 
-test_that("FT-TB778 [FR-TB607 FR-PL187 FR-TB598]: a blank_rows position past the last row, below -1 or not whole stops, in rtftable(), as_rtftables() and plan_blanks()", {
+test_that("FT-TB778 [FR-TB607 FR-PL187]: a blank_rows position past the last row, below -1 or not whole stops, in rtftable(), as_rtftables() and plan_blanks()", {
   grp <- data.frame(G = c("Age", "  Mean", "  SD", "Sex", "  F", "  M"),
                     V = c("40", "41", "3", "x", "5", "6"))
   oor <- function(p) sprintf(paste0("^`blank_rows` position %s out of range: the table has 6 rows ",

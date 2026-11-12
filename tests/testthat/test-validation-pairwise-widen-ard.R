@@ -266,7 +266,7 @@ test_that("FT-AR112 [FR-AR170 FR-AR175 FR-AR179 FR-AR252 FR-IX409]: widen_ard():
   expect_identical(got$.sort_stat, unname(tot))
 })
 
-test_that("FT-AR113 [FR-AR253 FR-IX409]: widen_ard(): records of different values in one cell warn, naming the key, the cell and the values; the first is kept", {
+test_that("FT-AR113 [FR-AR253]: widen_ard(): records of different values in one cell warn, naming the key, the cell and the values; the first is kept", {
   x <- .wa_ard(.wa_long2(), TRUE)
   run <- function(x, ...) as.data.frame(widen_ard(x, cols = "TRT", cells = "{n}", ...))
   # SITE is left over: Drug A / F is 3 (S1) and 5 (S2); five cells in all

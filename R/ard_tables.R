@@ -2681,6 +2681,9 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     is_f <- vapply(parts, inherits, logical(1), "formula")
     if (any(is_f)) {
       lab_chain <- .ard_chain(parts, one_sided = TRUE)
+      # a plain string in the chain names the source column, so where it
+      # stands the row keeps that column's label, not the string as text
+      lab_chain[!is_f] <- list(list(cond = NULL, env = NULL, tpl = "{.label}"))
       plain <- parts[!is_f]
       label <- if (length(plain)) stats::setNames(
         as.character(unlist(plain)),

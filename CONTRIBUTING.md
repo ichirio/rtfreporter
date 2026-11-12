@@ -585,6 +585,12 @@ releases -- is not written again; this section says only what it does not.
     head of a new test; add a row to `inst/validation/traceability_matrix.csv` (file,
     test, ft, fr) only for an existing test, never for both: an FT id given
     twice fails;
+  - check every new mapping: read the FR and the test, and add a row to
+    `inst/validation/traceability_review.csv` (`ft`, `fr`, `verdict`
+    `asserts` or `part`, `evidence` the expectation lines that assert it,
+    `fr_covered` `yes` when the FR's tests together assert all it states).
+    A test that asserts none of an FR is not mapped to it, and a mapping
+    with no row fails `test-validation-leaves.R`;
   - name every new argument in a leaf FR of its function, as `arg =` or
     bare inside `f(...)`; the plain word in prose does not count, and an
     argument without such an FR fails `test-validation-coverage.R`;

@@ -247,7 +247,7 @@
   bad
 }
 
-test_that("FT-TB779 [FR-TB121 FR-TB137 FR-TB138 FR-TB150 FR-TB596 FR-PL433 FR-PL434 FR-IX262 FR-TB608 FR-TB609 FR-TB610 FR-TB611]: pairwise -- split x max_rows x stub x cell_format x first_rows x page_by x blank_rows", {
+test_that("FT-TB779 [FR-TB121 FR-TB137 FR-TB150 FR-PL433 FR-IX262 FR-TB608 FR-TB609 FR-TB610 FR-TB611]: pairwise -- split x max_rows x stub x cell_format x first_rows x page_by x blank_rows", {
   cand <- expand.grid(split = c("none", "group_safe", "group_force", "by_value"),
                       max_rows = c("none", "3", "5"), stub = c("no", "yes"),
                       cell_format = c("no", "yes"), first_rows = c("no", "end", "inside"),
@@ -494,7 +494,7 @@ test_that("FT-TB782 [FR-TB596 FR-TB611]: decision table -- by_value with a stub 
   bad
 }
 
-test_that("FT-TB783 [FR-LS110 FR-LS156 FR-PL952 FR-TB150 FR-TB576 FR-TB610 FR-TB612 FR-TB613]: pairwise -- listing x split x max_rows x first_rows x count_blank_rows x blank_rows x blank_row x blank_row_first x wrap x collapse_repeats", {
+test_that("FT-TB783 [FR-LS156 FR-PL952 FR-TB150 FR-TB610 FR-TB612 FR-TB613]: pairwise -- listing x split x max_rows x first_rows x count_blank_rows x blank_rows x blank_row x blank_row_first x wrap x collapse_repeats", {
   cand <- expand.grid(split = c("default", "group_force"), max_rows = c("none", "4", "7"),
                       first_rows = c("none", "end", "inside"), count = c("no", "yes"),
                       blank_rows = c("no", "yes"), blank_row = c("no", "yes"),

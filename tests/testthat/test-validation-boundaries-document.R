@@ -401,7 +401,7 @@ test_that("FT-DC282 [FR-DC151 FR-DC152 FR-DC153 FR-DC154 FR-DC155 FR-DC156 FR-DC
   })
 })
 
-test_that("FT-TB773 [FR-TB547 FR-TB548 FR-TB549 FR-TB550 FR-TB551 FR-TB552 FR-TB555 FR-TB556 FR-TB557 FR-TB558 FR-TB561 FR-TB562 FR-TB564 FR-TB566 FR-TB567 FR-TB607 FR-TB568 FR-TB569 FR-TB571 FR-TB572 FR-TB592 FR-TB593 FR-TB594]: rtftable(): equivalence classes and boundaries of its arguments", {
+test_that("FT-TB773 [FR-TB548 FR-TB549 FR-TB550 FR-TB551 FR-TB552 FR-TB555 FR-TB557 FR-TB558 FR-TB561 FR-TB562 FR-TB564 FR-TB567 FR-TB607 FR-TB568 FR-TB569 FR-TB571 FR-TB572 FR-TB592 FR-TB593 FR-TB594]: rtftable(): equivalence classes and boundaries of its arguments", {
   C <- .eb_case
   E <- function(arg, cls, val, pat) C(arg, cls, val, paste0("error:", pat))
   rh  <- "^`row_height_twips` must be a single non-negative integer"
@@ -516,7 +516,7 @@ test_that("FT-TB773 [FR-TB547 FR-TB548 FR-TB549 FR-TB550 FR-TB551 FR-TB552 FR-TB
   })
 })
 
-test_that("FT-TB774 [FR-TB114 FR-TB117 FR-TB124 FR-TB126 FR-TB127 FR-TB128 FR-TB131 FR-TB133 FR-TB135 FR-TB137 FR-TB141 FR-TB147 FR-TB149 FR-TB152 FR-TB153 FR-TB154 FR-TB595 FR-TB596 FR-TB597 FR-TB598 FR-TB599]: as_rtftables(): equivalence classes and boundaries of its arguments", {
+test_that("FT-TB774 [FR-TB114 FR-TB117 FR-TB124 FR-TB126 FR-TB127 FR-TB128 FR-TB131 FR-TB135 FR-TB137 FR-TB141 FR-TB147 FR-TB149 FR-TB153 FR-TB154 FR-TB595 FR-TB596 FR-TB597 FR-TB598 FR-TB599]: as_rtftables(): equivalence classes and boundaries of its arguments", {
   C <- .eb_case
   E <- function(arg, cls, val, pat, more = list()) {
     C(arg, cls, val, paste0("error:", pat), more = more)
