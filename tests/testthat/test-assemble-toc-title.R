@@ -339,7 +339,7 @@ test_that("FT-AS4026 [FR-AS260]: toc_style sets the size and boldness of the tit
   expect_identical(p[1L], "{\\pard\\qc\\fs32 Table of Contents\\par}")
   expect_identical(p[2L], "{\\pard\\fs12\\par}")
   expect_identical(p[3L], "{\\pard\\fs24 H\\par}")
-  expect_match(p[4L], "^\\{\\\\pard\\\\li600\\\\b\\\\fs18\\\\tqr\\\\tldot\\\\tx14400 ")
+  expect_match(p[4L], "^\\{\\\\pard\\\\li600\\\\b\\\\fs18\\\\tqr\\\\tldot\\\\tx14112 ")
   # half points
   y <- .tt_asm(f, toc = "auto", toc_style = list(entry = list(size = 10.5)))
   expect_match(.tt_entries(y)[1L], "^\\{\\\\pard\\\\fs21\\\\tqr")
@@ -483,7 +483,7 @@ test_that("FT-AS4035 [FR-AS264 FR-AS125]: page numbers crossing 9 -> 10 and 99 -
   e <- .tt_entries(x)
   expect_length(e, 6L)
   # the paragraph's tab stop and leader are the same on every entry
-  expect_true(all(grepl("^\\{\\\\pard\\\\fs20\\\\tqr\\\\tldot\\\\tx14400 \\{\\\\field", e)))
+  expect_true(all(grepl("^\\{\\\\pard\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 \\{\\\\field", e)))
   expect_true(all(grepl("\\\\tab\\{\\\\field\\{\\\\\\*\\\\fldinst PAGEREF tfl_t_14_[0-9]_[0-9] \\\\\\\\h\\}\\{\\\\fldrslt [0-9]+\\}\\}\\\\par\\}$", e)))
   # each PAGEREF names its own file's bookmark, and the bookmark is there
   bm <- sub(".*PAGEREF ([^ ]+) .*", "\\1", e)
@@ -496,7 +496,7 @@ test_that("FT-AS4036 [FR-AS264]: the same page numbers with the leader off: the 
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B"), pages = c(9L, 90L))
   e <- .tt_entries(.tt_asm(f, toc = "auto", toc_leader = "none"))
-  expect_true(all(grepl("^\\{\\\\pard\\\\fs20\\\\tqr\\\\tx14400 ", e)))
+  expect_true(all(grepl("^\\{\\\\pard\\\\fs20\\\\tqr\\\\tx14112 ", e)))
   expect_false(any(grepl("tldot", e)))
 })
 
@@ -508,10 +508,10 @@ test_that("FT-AS4037 [FR-AS265]: a label too long for a line stays in its one pa
   expect_length(e, 3L)
   lab <- .tt_long_label()
   expect_true(nchar(lab) > 2 * 114)   # more than two lines of Courier New at 10 pt
-  expect_match(e[2L], paste0("^\\{\\\\pard\\\\li600\\\\fs20\\\\tqr\\\\tldot\\\\tx14400 .*",
+  expect_match(e[2L], paste0("^\\{\\\\pard\\\\li600\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 .*",
                              "fldrslt ", substr(lab, 1, 20)), fixed = FALSE)
   expect_true(grepl(lab, e[2L], fixed = TRUE))
-  expect_match(e[3L], "^\\{\\\\pard\\\\li1200\\\\fs20\\\\tqr\\\\tldot\\\\tx14400 ")
+  expect_match(e[3L], "^\\{\\\\pard\\\\li1200\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
   # one paragraph each: the hanging indent is the indent of the level (no \fi)
   expect_false(any(grepl("\\\\fi[0-9-]", e)))
   expect_identical(sum(grepl("\\\\par\\}$", e)), 3L)
@@ -653,9 +653,9 @@ test_that("FT-AS4046 [FR-AS269]: hanging = TRUE writes \\li<indent + 720>\\fi-72
   x  <- .tt_asm(f, toc = toc, toc_style = list(entry = list(hanging = TRUE)))
   e <- .tt_entries(x)
   expect_length(e, 3L)
-  expect_match(e[1L], "^\\{\\\\pard\\\\li720\\\\fi-720\\\\fs20\\\\tqr\\\\tldot\\\\tx14400 ")
-  expect_match(e[2L], "^\\{\\\\pard\\\\li1320\\\\fi-720\\\\fs20\\\\tqr\\\\tldot\\\\tx14400 ")
-  expect_match(e[3L], "^\\{\\\\pard\\\\li1920\\\\fi-720\\\\fs20\\\\tqr\\\\tldot\\\\tx14400 ")
+  expect_match(e[1L], "^\\{\\\\pard\\\\li720\\\\fi-720\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(e[2L], "^\\{\\\\pard\\\\li1320\\\\fi-720\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(e[3L], "^\\{\\\\pard\\\\li1920\\\\fi-720\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
   # headings (and the title) are as they were
   noent <- function(l) .tt_paras(l)[!grepl("PAGEREF", .tt_paras(l))]
   expect_identical(noent(x), noent(x0))
@@ -720,7 +720,7 @@ test_that("FT-AS4050 [FR-AS269 FR-AS265]: with a hanging indent a wrapped label 
   expect_equal(lines(strrep("x", 150), 2L, 20L, 0L), 2)
   expect_equal(lines(strrep("x", 150), 2L, 20L, 720L), 2)
   # a label that fills two lines without the hanging indent wraps a third time
-  full <- strrep("x", 215)
+  full <- strrep("x", 210)
   expect_equal(lines(full, 2L, 20L, 0L), 2)
   expect_equal(lines(full, 2L, 20L, 720L), 3)
   # never fewer, whatever the length; a one-line label stays one line
