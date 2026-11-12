@@ -433,7 +433,8 @@ env_for <- function(supported) {
   rv <- suppressWarnings(numeric_version(ifelse(grepl("^R version [0-9]", envs$r),
                                          sub("^R version ([0-9]+[.][0-9]+).*$", "\\1", envs$r), NA)))
   is_min <- !devel & !is.na(rv) & rv == numeric_version(r_min[1L])[1L, 1:2]
-  # the CI job that installs each suggested package at DESCRIPTION's minimum
+  # the CI job that installs each suggested package at DESCRIPTION's minimum,
+  # "ubuntu-latest (R 4.4, dependency minimums)"
   deps_min <- grepl("dependency minimums", envs$environment, fixed = TRUE)
   os_is <- function(re) which(grepl(re, envs$os))
   if (grepl("^The lowest R", supported)) {
@@ -443,7 +444,7 @@ env_for <- function(supported) {
   } else if (grepl("^The latest versions", supported)) {
     list(list(label = NULL, idx = which(!deps_min)))
   } else if (grepl("in use now", supported)) {
-    list(list(label = NULL, idx = which(!devel & !is_min)))
+    list(list(label = NULL, idx = which(!devel & !is_min & !deps_min)))
   } else if (grepl("^The next R", supported)) {
     list(list(label = NULL, idx = which(devel)))
   } else if (grepl("^Windows, macOS and Linux", supported)) {

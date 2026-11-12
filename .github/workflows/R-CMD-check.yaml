@@ -91,15 +91,17 @@ jobs:
           name: env-${{ matrix.config.os }}-${{ matrix.config.r }}
           path: validation/env-out/
 
-  # The dependency minimums: the oldest R tested, with every suggested package
-  # that DESCRIPTION gives a minimum installed at exactly that version (the
-  # others at the newest version this R allows).  The matrix above tests the
-  # newest versions; this job tests the lowest ones the package says it works
-  # with.  Why each minimum: inst/validation/dependency-minimums.md.
+  # The dependency minimums: every suggested package that DESCRIPTION gives a
+  # minimum installed at exactly that version (the others at the newest
+  # version this R allows).  The matrix above tests the newest versions; this
+  # job tests the lowest ones the package says it works with.  It runs on
+  # R 4.4, not on R's minimum (4.2, the matrix's R 4.2 job): tern's
+  # dependencies cannot be installed on R 4.2.  Why each minimum:
+  # inst/validation/dependency-minimums.md.
   minimums:
     runs-on: ubuntu-latest
 
-    name: ubuntu-latest (R 4.2, dependency minimums)
+    name: ubuntu-latest (R 4.4, dependency minimums)
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
@@ -112,13 +114,11 @@ jobs:
 
       - uses: r-lib/actions/setup-r@v2
         with:
-          r-version: '4.2'
+          r-version: '4.4'
           use-public-rspm: true
 
       # pak refs from DESCRIPTION's Suggests: `pkg@<minimum>` where it names a
-      # minimum, `any::pkg` where it does not.  tern and devEMF cannot be
-      # installed on R 4.2 (what they need wants a newer R), so they are left
-      # out, as in the R 4.2 job above
+      # minimum, `any::pkg` where it does not
       - name: The minimum versions, from DESCRIPTION
         id: pins
         shell: Rscript {0}
@@ -129,7 +129,6 @@ jobs:
           pkg <- sub("\\s*[(].*$", "", s)
           min <- ifelse(grepl("[(]>=", s), sub("^.*[(]>=\\s*([^)]+)[)].*$", "\\1", s), NA)
           refs <- ifelse(is.na(min), paste0("any::", pkg), paste0(pkg, "@", min))
-          refs <- refs[!pkg %in% c("tern", "devEMF")]
           cat(paste(refs, collapse = "\n"), "\n")
           cat(sprintf("refs=%s\n", paste(refs, collapse = " ")),
               file = Sys.getenv("GITHUB_OUTPUT"), append = TRUE)
@@ -154,7 +153,7 @@ jobs:
       - uses: r-lib/actions/check-r-package@v2
         id: check
         env:
-          _R_CHECK_FORCE_SUGGESTS_: 'false'
+          _R_CHECK_FORCE_SUGGESTS_: 'true'
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
@@ -164,12 +163,12 @@ jobs:
         if: always() && (github.event_name == 'release' || github.event_name == 'workflow_dispatch')
         shell: bash
         run: |
-          Rscript validation/env.R "ubuntu-latest (R 4.2, dependency minimums)" ci "${{ steps.check.outcome }}" check
+          Rscript validation/env.R "ubuntu-latest (R 4.4, dependency minimums)" ci "${{ steps.check.outcome }}" check
 
       - uses: actions/upload-artifact@v4
         if: always() && (github.event_name == 'release' || github.event_name == 'workflow_dispatch')
         with:
-          name: env-ubuntu-latest-4.2-minimums
+          name: env-ubuntu-latest-4.4-minimums
           path: validation/env-out/
 
   # The Quality Report: every environment, the Traceability Matrix, the

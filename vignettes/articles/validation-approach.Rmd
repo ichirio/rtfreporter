@@ -109,7 +109,7 @@ Report states the figure of the release.
 
 The package runs the tests and R CMD check on seven CI environments: Ubuntu
 with R devel, release, oldrel-1 and 4.2, macOS with release R, Windows
-with release R, and Ubuntu with R 4.2 and the suggested packages at their
+with release R, and Ubuntu with R 4.4 and the suggested packages at their
 minimum versions. Before a release, the maintainers also run the tests on
 their PC with two R versions. The lowest R is the one `DESCRIPTION` names,
 so a newer R feature fails there. R devel shows a change in R that will

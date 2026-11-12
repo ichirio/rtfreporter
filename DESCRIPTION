@@ -52,7 +52,6 @@ Suggests:
     cards (>= 0.7.0),
     forcats,
     labelled,
-    random.cdisc.data,
     pharmaverseadam,
     writexl,
     readxl (>= 1.0.0),

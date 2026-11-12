@@ -92,7 +92,7 @@ rtfreporter 自身の品質をどう保証しているか、どの文書が証�
 
 パッケージは、CI の 7 環境でテストと R CMD check を動かします。
 Ubuntu の R devel、release、oldrel-1、4.2、macOS の release、Windows の release、
-それに、Suggests のパッケージを最小バージョンで入れた Ubuntu の R 4.2 です。
+それに、Suggests のパッケージを最小バージョンで入れた Ubuntu の R 4.4 です。
 リリースの前に、メンテナーが自分の PC で 2 つの R のバージョンでもテストを動かします。
 最も古い R は `DESCRIPTION` に書いたものなので、新しい R の機能を使うと、そこで失敗します。
 R devel は、パッケージを壊す R の変更を先に見せます。
