@@ -614,6 +614,8 @@ test_that("FT-AS3021 [FR-AS250]: a contents entry keeps the text of markup (H_{2
   grDevices::png(f, width = w, height = h, res = res)
   .g2_pl()
   grDevices::dev.off()
+  # the density asked for, on every system (helper-png-dpi.R)
+  .png_set_dpi(f, res)
   f
 }
 
