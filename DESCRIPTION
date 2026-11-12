@@ -55,7 +55,7 @@ Suggests:
     random.cdisc.data,
     pharmaverseadam,
     writexl,
-    readxl,
+    readxl (>= 1.0.0),
     flextable (>= 0.9.5),
     huxtable (>= 5.0.0),
     rstudioapi (>= 0.11),

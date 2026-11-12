@@ -107,17 +107,24 @@ Report states the figure of the release.
 
 ### Environments: tested, and supported
 
-The package runs the tests and R CMD check on six CI environments: Ubuntu
-with R devel, release, oldrel-1 and 4.2, macOS with release R, and Windows
-with release R. Before a release, the maintainers also run the tests on
+The package runs the tests and R CMD check on seven CI environments: Ubuntu
+with R devel, release, oldrel-1 and 4.2, macOS with release R, Windows
+with release R, and Ubuntu with R 4.2 and the suggested packages at their
+minimum versions. Before a release, the maintainers also run the tests on
 their PC with two R versions. The lowest R is the one `DESCRIPTION` names,
 so a newer R feature fails there. R devel shows a change in R that will
 break the package.
 
+The suggested packages are tested at two points: at the minimum version
+`DESCRIPTION` names for each, in that one CI job, and at the latest
+versions, in the other jobs and on the maintainers' PC. Each minimum is the
+first version with what the package uses, and
+`inst/validation/dependency-minimums.md` says why.
+
 The Quality Plan names what is not tested, and accepts the risk:
 
 - a system without the suggested packages (most jobs install them);
-- the oldest versions of the suggested packages that `DESCRIPTION` allows;
+- versions of the suggested packages between the minimum and the latest;
 - other operating system versions, other architectures and other locales;
 - another RTF reader. The tests compare RTF text. A person opens the
   reference files in Word, and no other reader is checked.

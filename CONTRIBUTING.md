@@ -439,7 +439,7 @@ maintainer approves them.
 
 | Workflow | File | What it does |
 |----------|------|--------------|
-| **R-CMD-check** | `R-CMD-check.yaml` | `R CMD check` on a matrix of OS / R versions (the standard `r-lib/actions` recipe).  Must be 0 errors / 0 warnings. |
+| **R-CMD-check** | `R-CMD-check.yaml` | `R CMD check` on a matrix of OS / R versions (the standard `r-lib/actions` recipe), and one more job on R 4.2 with each suggested package at the minimum version `DESCRIPTION` names (`inst/validation/dependency-minimums.md` says why each is what it is).  Must be 0 errors / 0 warnings. |
 | **test-coverage** | `test-coverage.yaml` | Runs the testthat suite under `covr` and uploads coverage to Codecov. |
 | **pkgdown** | `pkgdown.yaml` | Builds the documentation site and (on `main` / on a published release) deploys it to the `gh-pages` branch. |
 | **version-guard** | `version-guard.yaml` | Fails a PR that raises the **MINOR or MAJOR** position of `DESCRIPTION` `Version:` unless the PR carries the `release` label (see *Versioning & releases*). A PATCH bump or no change always passes. |
@@ -720,6 +720,12 @@ contributors, CRAN and the tooling all read our numbers the same way.
 - Within one major version, **no minor or patch release breaks user code.**
 - Deprecation lifecycle: *deprecate in a minor* (function still works + warns)
   → *remove only in the next major*.
+- **A new version of a dependency** (an import, a suggested package, or R):
+  when rtfreporter can follow it and still work with the versions it
+  supported before, that is a **minor** release; when it cannot, and the new
+  version must be required (a minimum in `DESCRIPTION` is raised), that is a
+  **major** release.  The minimums and their reasons are in
+  `inst/validation/dependency-minimums.md` (the Quality Plan, section 6).
 - **Except while `MAJOR` is 0** — see below.
 
 ### Pre-1.0 is different
