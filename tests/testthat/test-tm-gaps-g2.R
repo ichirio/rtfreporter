@@ -985,7 +985,7 @@ test_that("FT-AS3036 [FR-AS210]: a figure that is a character vector of other th
   expect_error(rtfplot(NULL), "A figure is one file path, or one plot object; got NULL.",
                fixed = TRUE)
   expect_error(rtfplot(1:3),
-               "A figure is one file path, or one plot object; got a integer vector.",
+               "A figure is one file path, or one plot object; got an integer vector.",
                fixed = TRUE)
   expect_error(rtfplot(c(1.5, 2)),
                "A figure is one file path, or one plot object; got a numeric vector.",
