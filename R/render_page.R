@@ -105,7 +105,8 @@
         doc_pad_l = ctx$doc_pad_l, doc_pad_r = ctx$doc_pad_r,
         doc_markup = ctx$doc_markup,
         font_index_map = ctx$font_index_map,
-        doc_pad_t = ctx$doc_pad_t, doc_pad_b = ctx$doc_pad_b)
+        doc_pad_t = ctx$doc_pad_t, doc_pad_b = ctx$doc_pad_b,
+        table_align = content_align)
       # An INDEPENDENT table: RTF merges consecutive \trowd runs that no
       # paragraph separates, so without the gap the footnote would still be
       # the body table wearing different \cellx values -- and could not carry
