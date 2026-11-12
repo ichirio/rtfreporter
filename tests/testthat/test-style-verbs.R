@@ -434,3 +434,55 @@ test_that("plan_cell_style(header = TRUE) styles the header a plan prints from i
   x <- paste(readLines(f, warn = FALSE), collapse = "")
   expect_true(grepl("\\b Parameter\\b0", x, fixed = TRUE))
 })
+
+test_that("FT-TB6301 [FR-TB405]: an unknown background colour warns and is not drawn; an unknown text colour is refused (#999)", {
+  tb <- rtftable(data.frame(Item = c("Age", "Sex"), A = c("1", "2"),
+                            stringsAsFactors = FALSE))
+  rtf_of <- function(t) {
+    f <- tempfile(fileext = ".rtf")
+    on.exit(unlink(f), add = TRUE)
+    generate_rtfreport(rtf_document() |> rtf_tables(list(t)), f, overwrite = TRUE)
+    paste(readLines(f, warn = FALSE), collapse = "\n")
+  }
+  ctab <- function(txt) regmatches(txt, regexpr("\\{\\\\colortbl[^}]*\\}", txt))
+  plain <- rtf_of(tb)
+  # a background that is not one "#RRGGBB": a warning naming it, and nothing
+  # drawn -- the file is the plain table's, colour table and cells alike
+  for (bad in list("notacolour", "#12345", c("#000000", "#FFFFFF"), 1)) {
+    expect_warning(t1 <- style_body(tb, rows = 2, background = bad),
+                   "`style_body(background = )`:", fixed = TRUE)
+    expect_identical(rtf_of(t1), plain)
+    expect_warning(t2 <- style_cols(tb, cols = 2, background = bad),
+                   "`style_cols(background = )`:", fixed = TRUE)
+    expect_identical(rtf_of(t2), plain)
+    expect_warning(t3 <- style_cols(tb, cols = 2, header_background = bad),
+                   "`style_cols(header_background = )`:", fixed = TRUE)
+    expect_identical(rtf_of(t3), plain)
+  }
+  expect_warning(style_body(tb, rows = 2, background = "notacolour"),
+                 paste0("`style_body(background = )`: \"notacolour\" is not a 6-digit ",
+                        "hex colour such as \"#7F7F7F\", so it is not drawn."),
+                 fixed = TRUE)
+  # NA and "" are not drawn, without a warning, as before
+  for (none in list(NA_character_, "")) {
+    expect_no_warning(t4 <- style_body(tb, rows = 2, background = none))
+    expect_identical(rtf_of(t4), plain)
+  }
+  # a hex background is drawn and in the colour table, with no NA entry
+  ct <- ctab(rtf_of(style_body(tb, rows = 2, background = "#d9d9d9")))
+  expect_match(ct, "\\red217\\green217\\blue217;", fixed = TRUE)
+  expect_false(grepl("NA", ct, fixed = TRUE))
+  # a text colour that is not one "#RRGGBB" still stops
+  msg <- function(verb, arg) {
+    sprintf("`%s(%s = )` must be NULL or a 6-digit hex colour such as \"#7F7F7F\".",
+            verb, arg)
+  }
+  for (bad in list("notacolour", "#12345", NA_character_)) {
+    expect_error(style_body(tb, rows = 2, color = bad), msg("style_body", "color"),
+                 fixed = TRUE)
+    expect_error(style_cols(tb, cols = 2, color = bad), msg("style_cols", "color"),
+                 fixed = TRUE)
+    expect_error(style_cols(tb, cols = 2, header_color = bad),
+                 msg("style_cols", "header_color"), fixed = TRUE)
+  }
+})

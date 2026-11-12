@@ -135,6 +135,34 @@
   v
 }
 
+# A fill colour (background): an unknown one is not drawn and warns (the
+# user's decision for FR-TB405, #999); NULL, NA and "" are not drawn, silently,
+# as before.  Returns NULL when nothing is to be drawn.
+.style_fill_color <- function(v, arg, verb) {
+  if (length(v) == 1L && (is.na(v) || identical(v, ""))) return(v)
+  if (!is.character(v) || length(v) != 1L || !grepl("^#[0-9A-Fa-f]{6}$", v)) {
+    shown <- if (is.character(v) && length(v) == 1L) sprintf("\"%s\"", v) else
+      "this value"
+    warning(sprintf(paste0("`%s(%s = )`: %s is not a 6-digit hex colour such ",
+                           "as \"#7F7F7F\", so it is not drawn."),
+                    verb, arg, shown), call. = FALSE)
+    return(NULL)
+  }
+  v
+}
+
+# A text colour: one "#RRGGBB", as every other colour argument takes.
+# A colour name or a short hex string used to reach the colour table as
+# \redNA... (#999).
+.style_check_color <- function(v, arg, verb) {
+  if (!is.character(v) || length(v) != 1L || is.na(v) ||
+      !grepl("^#[0-9A-Fa-f]{6}$", v)) {
+    stop(sprintf(paste0("`%s(%s = )` must be NULL or a 6-digit hex colour ",
+                        "such as \"#7F7F7F\"."), verb, arg), call. = FALSE)
+  }
+  v
+}
+
 # Promote a character labels row to the equivalent list of single-column
 # cells, copying each column's current header styling (header_align /
 # header_bold / header_italic) onto the cell so the rendered output stays the
@@ -467,6 +495,14 @@ style_cols.rtftable <- function(x, cols = NULL, align = NULL, bold = NULL,
     v <- get(arg)
     if (!is.null(v)) assign(arg, .style_check_flag(v, arg, "style_cols"))
   }
+  for (arg in c("color", "header_color")) {
+    v <- get(arg)
+    if (!is.null(v)) assign(arg, .style_check_color(v, arg, "style_cols"))
+  }
+  for (arg in c("background", "header_background")) {
+    v <- get(arg)
+    if (!is.null(v)) assign(arg, .style_fill_color(v, arg, "style_cols"))
+  }
   for (j in cols_idx) {
     spec <- x$col_spec[[j]]
     if (!is.null(align))         spec$align         <- align
@@ -524,6 +560,10 @@ style_body.rtftable <- function(x, rows = NULL, cols = NULL, bold = NULL,
   for (arg in c("bold", "italic", "underline")) {
     v <- get(arg)
     if (!is.null(v)) assign(arg, .style_check_flag(v, arg, "style_body"))
+  }
+  if (!is.null(color)) color <- .style_check_color(color, "color", "style_body")
+  if (!is.null(background)) {
+    background <- .style_fill_color(background, "background", "style_body")
   }
   if (!is.null(align))  align  <- .style_check_align(align, "style_body")
   if (!is.null(border)) border <- .style_check_border(border, "style_body")
