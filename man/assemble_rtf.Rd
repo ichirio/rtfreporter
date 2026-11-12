@@ -14,7 +14,8 @@ assemble_rtf(
   toc_leader = c("dot", "none"),
   toc_page_numbering = c("none", "roman", "decimal"),
   bookmark_prefix = "tfl_",
-  book_page = NULL
+  book_page = NULL,
+  toc_style = getOption("rtfreporter.toc_style")
 )
 }
 \arguments{
@@ -33,12 +34,19 @@ for a cover page.  \code{NULL} (default) = no cover page.}
 
 \item{toc}{Table-of-Contents specification.  \code{NULL} (default) =
 no TOC, no bookmarks; \code{"auto"} = auto-extract titles; a
-character vector = one label per input file; a table (columns \code{file},
-\code{label}, \code{heading}, \code{level}) or the path of one (\code{.xlsx} / \code{.csv}) =
-multi-level layout.  See \strong{Table of Contents} above.}
+character vector = one label per input file; a table (column \code{file},
+and optionally \code{label}, \code{heading}, \code{level}) or the path of one (\code{.xlsx} /
+\code{.csv}) = multi-level layout.  See \strong{Table of Contents} above.}
 
-\item{toc_title}{Centred bold title rendered on the TOC page, a single
-string (\code{""} = an empty title line).  Default \code{"Table of Contents"}.}
+\item{toc_title}{Bold title rendered on the TOC page, a single
+string (\code{""} = an empty title line).  Named \code{l}, \code{c} or \code{r} as a header
+cell is, it is aligned left, centre or right (\code{c(l = "Contents")});
+unnamed it is centred.  \code{"\\n"} is a line break in the
+title, and the tokens of \code{\link[=rtf_text_tokens]{rtf_text_tokens()}} that need no page are filled
+as in a title: the session's own tokens
+(\code{options(rtfreporter.tokens = )}), \code{{DATETIME}}, \code{{PROGRAM}}.  A token
+that is none of them stays as text.  The same goes for the text of a
+\code{heading} of a table \code{toc}.  Default \code{"Table of Contents"}.}
 
 \item{toc_leader}{\code{"dot"} (default) draws a dotted leader between
 each TOC entry and its page number; \code{"none"} leaves whitespace.}
@@ -69,6 +77,18 @@ count, which is what the deliverable could not know on its own.}
 slot sits in one band shared by every page of a section, so a
 single substitution cannot give each page its own number.}
 }}
+
+\item{toc_style}{The size and boldness of the TOC's text: \code{NULL} (the
+built-in sizes) or a list with the keys \code{title}, \code{heading} and \code{entry},
+each \code{list(size = <points>, bold = TRUE/FALSE)}, and \code{gap}
+(\code{list(size = )}: the blank line below the title).  A list is merged over
+the built-in values key by key, so \code{list(entry = list(size = 9))} changes
+the entries' size only.  Built in: title 14 pt bold, heading 11 pt bold,
+entry 10 pt, gap 9 pt.  A size is a positive number of points, whole or
+half (\code{10.5}).  Default \code{getOption("rtfreporter.toc_style")}.  The font is
+the document's (that of the first input file).  Another key, a size that
+is not a positive number or a \code{bold} that is not \code{TRUE} / \code{FALSE} is an
+error.}
 }
 \value{
 Invisibly returns \code{output_file}.
@@ -127,10 +147,12 @@ left out, and markup keeps its text without its formatting.}
 \item{a character vector of TOC labels}{one per input file -- same as
 \code{"auto"} but with explicit labels.}
 \item{a table (\code{data.frame})}{one row per file, in order, for
-multi-level (chapter / table) layouts: \code{file} (the path), \code{label} (the
-entry text), and optionally \code{heading} (a heading printed above the
-row's entry whenever it changes; \code{NA} = none), \code{level} (the entry's
-indent, a whole number from 1 to 3, default 2) and \code{order}.  \code{\link[=assemble_folder]{assemble_folder()}} makes one from a
+multi-level (chapter / table) layouts: \code{file} (the path), and
+optionally \code{label} (the entry text; a row with no \code{label}, or an \code{NA}
+one, takes its file's title, read as \code{"auto"} reads it), \code{heading} (a
+heading printed above the row's entry whenever it changes; \code{NA} =
+none), \code{level} (the entry's indent, a whole number from 1 to 3,
+default 2) and \code{order}.  \code{\link[=assemble_folder]{assemble_folder()}} makes one from a
 folder, ready to edit.  \code{input_files} can then be left out: the
 table's \code{file} column is used.}
 \item{the path of such a table}{an \code{.xlsx} or \code{.csv} file, e.g. the one

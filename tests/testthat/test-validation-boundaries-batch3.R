@@ -48,8 +48,9 @@
 #  toc (table)    | level 1 (min) / 3 (max) | 1 / 3            | written; level 3 indented 1200   | FR-AS116 FR-AS238
 #  toc (table)    | level 0 / 4 / 2.5 / -1 / Inf |             | error "`level` must be a whole number from 1 to 3" | FR-AS238
 #  toc (table)    | level NA              | NA                 | the default, 2 (indent 600)      | FR-AS115
-#  toc (table)    | an NA label           | c(NA, "y")         | error "`label` must be a single string, not NA" | FR-AS246
-#  toc (table)    | no label column / 0 rows / a missing file |  | error (FR-AS118 / FR-AS102 / FR-AS119) | FR-AS102 FR-AS118 FR-AS119
+#  toc (table)    | an NA label           | c(NA, "y")         | the file's title as its label    | FR-AS258
+#  toc (table)    | no label column       |                    | the titles as labels             | FR-AS258
+#  toc (table)    | no file column / 0 rows / a missing file |  | error (FR-AS118 / FR-AS102 / FR-AS119) | FR-AS102 FR-AS118 FR-AS119
 #  toc (path)     | a .csv that is not there / a .txt |        | error "`toc` file not found" / "must end in .xlsx or .csv" | FR-AS117 FR-AS246
 #  toc_title      | valid / "" / non-ASCII / long |            | written                          | FR-AS127
 #  toc_title      | NA / length 2 / length 0 / a number / NULL | | error "`toc_title` must be a single string" | FR-AS244
@@ -385,7 +386,7 @@
 }
 .eb3_read <- function(f) paste(readLines(f, warn = FALSE), collapse = "\n")
 
-test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS110 FR-AS112 FR-AS114 FR-AS115 FR-AS116 FR-AS118 FR-AS119 FR-AS124 FR-AS127 FR-AS128 FR-AS129 FR-AS131 FR-AS133 FR-AS134 FR-AS139 FR-AS238 FR-AS244 FR-AS245 FR-AS246]: assemble_rtf(): equivalence classes and boundaries of its arguments", {
+test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS110 FR-AS112 FR-AS114 FR-AS115 FR-AS116 FR-AS118 FR-AS119 FR-AS124 FR-AS127 FR-AS128 FR-AS129 FR-AS131 FR-AS133 FR-AS134 FR-AS139 FR-AS238 FR-AS244 FR-AS245 FR-AS246 FR-AS258]: assemble_rtf(): equivalence classes and boundaries of its arguments", {
   C <- .eb3_case
   E <- .eb3_err
   f <- .eb3_files()
@@ -461,10 +462,12 @@ test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS
     E("toc", "table, level 2.5", tab(level = 2.5), lvl),
     E("toc", "table, level -1", tab(level = -1), lvl),
     E("toc", "table, level Inf", tab(level = Inf), lvl),
-    E("toc", "table, an NA label", data.frame(file = f, label = c(NA, "y")),
-      "^A TOC entry's `label` must be a single string, not NA"),
-    E("toc", "table without label", data.frame(file = f),
-      "^A table of contents needs the columns `file` and `label`"),
+    C("toc", "table, an NA label (read from the file's title)", data.frame(file = f, label = c(NA, "y")),
+      "ok:fldrslt Table 14\\.1\\.1"),
+    C("toc", "table without label (read from the titles)", data.frame(file = f),
+      "ok:fldrslt Table 14\\.2\\.1"),
+    E("toc", "table without file", data.frame(label = c("a", "b")),
+      "^A table of contents needs the column `file`"),
     E("toc", "table of 0 rows", data.frame(file = character(), label = character()), two),
     E("toc", "table naming a missing file", data.frame(file = c(a, "zz.rtf"), label = c("x", "y")),
       "^The table of contents names missing file"),

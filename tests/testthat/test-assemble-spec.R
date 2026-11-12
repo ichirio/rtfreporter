@@ -132,9 +132,13 @@ test_that("assemble_folder() without an output file gives the table of contents"
   txt3 <- paste(readLines(out3, warn = FALSE), collapse = "")
   expect_lt(regexpr("SAFETY", txt3), regexpr("DEMOGRAPHICS", txt3))
 
-  expect_error(assemble_rtf(toc = data.frame(file = spec$file),
+  # (a table needs the column `file`; without `label` the titles label the rows)
+  expect_error(assemble_rtf(toc = data.frame(label = spec$label),
                             output_file = tempfile(fileext = ".rtf")),
-               "needs the columns `file` and `label`")
+               "needs the column `file`")
+  out4 <- tempfile(fileext = ".rtf")
+  assemble_rtf(toc = data.frame(file = spec$file), output_file = out4)
+  expect_true(file.exists(out4))
 })
 
 test_that("FT-AS130 [FR-AS151 FR-AS148 FR-AS149]: assemble_folder() orders numbered files by number, then the others by file name, the same in every locale (#827)", {
