@@ -61,7 +61,10 @@ Suggests:
     rstudioapi,
     dplyr,
     cardx,
-    broom (>= 1.0.8)
+    broom (>= 1.0.8),
+    gtable,
+    lattice,
+    patchwork
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
