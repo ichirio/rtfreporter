@@ -333,7 +333,7 @@ test_that("FT-TB3011 [FR-TB120]: an unknown read_meta token and a wrong type sto
   g <- gt::gt(data.frame(a = "x", stringsAsFactors = FALSE))
   expect_error(
     as_rtftables(g, read_meta = "bogus"),
-    "Unknown gt `read_meta` token(s): 'bogus'.  Allowed: 'col_header', 'alignment', 'spanning', 'widths', 'titles', 'footnotes', 'styles'",
+    "Unknown gt `read_meta` token(s): 'bogus'.  Allowed: 'col_header', 'alignment', 'spanning', 'widths', 'titles', 'footnotes', 'footnote_marks', 'styles'",
     fixed = TRUE)
   msg <- "`read_meta` must be FALSE/TRUE or a character vector of tokens."
   df <- data.frame(a = "x", stringsAsFactors = FALSE)
@@ -1664,7 +1664,7 @@ test_that("FT-TB6701 [FR-TB120]: a read_meta token another adapter knows is skip
   # a token no adapter knows stops, on gt, on a data.frame and in a list
   expect_error(
     as_rtftables(g, read_meta = "lables"),
-    "Unknown gt `read_meta` token(s): 'lables'.  Allowed: 'col_header', 'alignment', 'spanning', 'widths', 'titles', 'footnotes', 'styles'; tokens only another adapter reads are skipped: 'footnote_marks', 'labels'",
+    "Unknown gt `read_meta` token(s): 'lables'.  Allowed: 'col_header', 'alignment', 'spanning', 'widths', 'titles', 'footnotes', 'footnote_marks', 'styles'; tokens only another adapter reads are skipped: 'labels'",
     fixed = TRUE)
   expect_error(
     as_rtftables(df, read_meta = c("labels", "lables")),

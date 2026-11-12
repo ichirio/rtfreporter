@@ -76,7 +76,12 @@ error, for every source.
 The tokens:
 \describe{
 \item{gt / gtsummary}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
-\code{"widths"}, \code{"titles"}, \code{"footnotes"}, \code{"styles"} (explicit
+\code{"widths"}, \code{"titles"}, \code{"footnotes"}, \code{"footnote_marks"} (the
+footnote marks gt prints on the column labels, spanning headers,
+title, subtitle and row-group labels, as \verb{^\{N\}} after the text, and
+each footnote line starting with its
+mark, \verb{^\{N\}} then the note, in gt's order; the marks in the body
+cells are always written), \code{"styles"} (explicit
 \code{tab_style()} borders and text styles; see \emph{What is carried}).}
 \item{rtables / tern}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
 \code{"titles"}, \code{"footnotes"}, \code{"footnote_marks"} (the indentation is
@@ -673,7 +678,7 @@ Spanning headers            \tab yes \tab yes \tab yes \tab yes \cr
 Column widths               \tab yes (px/pct) \tab -- \tab -- \tab -- \cr
 Title + subtitle            \tab yes \tab yes \tab yes (caption) \tab yes (caption) \cr
 Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab yes (\code{add_footnote()} rows) \cr
-In-cell footnote marks      \tab yes (superscript) \tab yes (superscript) \tab as text \tab -- \cr
+In-cell footnote marks      \tab yes (superscript, labels and footnote lines too) \tab yes (superscript) \tab as text \tab -- \cr
 Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab group rows, no indent \tab as typed, no indent \cr
 \code{tab_style()} cell styles   \tab yes (see below) \tab -- \tab -- \tab -- \cr
 }

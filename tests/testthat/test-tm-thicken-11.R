@@ -840,7 +840,7 @@ test_that("FT-TB6119 [FR-TB577]: from a gt_tbl or gtsummary table as_rtftables()
   expect_identical(p$column_widths_twips, c(900L, 1800L, 2700L))            # px * 15: 60, 120, 180
   expect_null(p$col_rel_width)
   expect_identical(attr(p, "rtf_titles"), c("TT", "SS"))                    # the title and subtitle
-  expect_identical(attr(p, "rtf_footnotes"), c("FN1", "SN"))                # the note, then the source note
+  expect_identical(attr(p, "rtf_footnotes"), c("^{1} FN1", "SN"))           # the note with its mark, then the source note
   expect_identical(.t11_plain(p$data$b), c("^{1} 1.5", "2.5"))                          # the mark as ^{N}
   # pct widths go to col_rel_width
   pc <- as_rtftables(gt::cols_width(g, a ~ gt::pct(20), b ~ gt::pct(30), c ~ gt::pct(50)))[[1L]]
@@ -852,10 +852,10 @@ test_that("FT-TB6119 [FR-TB577]: from a gt_tbl or gtsummary table as_rtftables()
       gtsummary::modify_column_alignment(.t11_gts(), columns = stat_1, align = "right"), label = "Foot L"),
     c(stat_1, stat_2) ~ "Trt")
   s <- as_rtftables(gs)[[1L]]
-  expect_identical(s$col_header[[2L]], c("Characteristic", "Drug A  \nN = 98", "Drug B  \nN = 102"))
+  expect_identical(s$col_header[[2L]], c("Characteristic^{1}", "Drug A  \nN = 98^{2}", "Drug B  \nN = 102^{2}"))
   expect_identical(s$col_spec[[2L]]$align, "right")
   expect_identical(vapply(s$col_header[[1L]], function(z) z$label, ""), c("", "Trt"))
-  expect_true("Foot L" %in% attr(s, "rtf_footnotes"))
+  expect_true("^{1} Foot L" %in% attr(s, "rtf_footnotes"))
 })
 
 test_that("FT-TB6120 [FR-TB578]: explicit gt::tab_style() declarations are carried (borders, bold, italic, underline, align on spanners, labels, body and stub cells); a label border promotes the label row; the verbs override; transparent theme borders are not carried", {
