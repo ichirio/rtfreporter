@@ -572,7 +572,7 @@ test_that("FT-DC6801 [FR-DC315]: the order is the module's own argument > the rt
   wide$part <- 1L
   wide$ord <- 0L
   ard <- cards::ard_summary(
-    d[!is.na(d$AVAL), ], by = tidyselect::all_of(c(by, col)), variables = AVAL,
+    d[!is.na(d$AVAL), ], by = dplyr::all_of(c(by, col)), variables = AVAL,
     statistic = ~ list(
       N = length,
       mean = function(x) if (length(x)) mean(x) else NA_real_,
@@ -643,7 +643,6 @@ test_that("FT-DC6801 [FR-DC315]: the order is the module's own argument > the rt
 test_that("FT-PL6801 [FR-PL901]: a listing above its summary, as two plans joined by plan_append(), gives byte for byte the RTF of the same table built by hand: the time points across in two column blocks, the PK parameters across, the analytes across; the table's verbs before or after plan_append() give the same bytes, and the later of two wins", {
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
-  skip_if_not_installed("tidyselect")
   stub <- "Subject ID/Age (years)/Gender"
   by_sub <- ~ "{USUBJID}/{AGE}/{SEX}"
 
