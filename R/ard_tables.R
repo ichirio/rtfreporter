@@ -1450,9 +1450,12 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
   }
   out <- cand[[1L]]
   # `levels` is a named list, as in widen_ard(); a plain vector is not read
-  ord <- if (!is.list(levels)) .ard_key_order(d, cols, key) else {
-    lv <- levels[[cols[1L]]] %||% levels[[1L]]
-    c(intersect(lv, names(out)), setdiff(names(out), lv))
+  # the values `levels` does not name follow in the data's order, as in
+  # widen_ard(), not in split()'s sorted order (#992)
+  ord <- .ard_key_order(d, cols, key)
+  if (is.list(levels)) {
+    lv  <- levels[[cols[1L]]] %||% levels[[1L]]
+    ord <- c(intersect(lv, names(out)), setdiff(ord, lv))
   }
   out[intersect(ord, names(out))]
 }
