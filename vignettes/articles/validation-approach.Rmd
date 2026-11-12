@@ -119,8 +119,8 @@ The Quality Plan names what is not tested, and accepts the risk:
 - a system without the suggested packages (most jobs install them);
 - the oldest versions of the suggested packages that `DESCRIPTION` allows;
 - other operating system versions, other architectures and other locales;
-- another RTF reader. The tests compare RTF text. They do not open it in a
-  word processor.
+- another RTF reader. The tests compare RTF text. A person opens the
+  reference files in Word, and no other reader is checked.
 
 ### What the package's evidence covers, and what you do
 
