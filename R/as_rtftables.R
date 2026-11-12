@@ -67,9 +67,10 @@
 }
 
 # Is the "labels" metadata token enabled for a plain data.frame input?
-# data.frame token resolution is deliberately LENIENT (unknown tokens are
-# ignored, not an error): a `list(gt_tbl, df)` input shares one `read_meta`,
-# so adapter-only tokens must not error on the data.frame elements.
+# data.frame token resolution skips the tokens of the other adapters (not an
+# error): a `list(gt_tbl, df)` input shares one `read_meta`, so adapter-only
+# tokens must not error on the data.frame elements.  A token no adapter knows
+# stops (.resolve_meta_tokens(), called in the data.frame branch).
 .df_labels_enabled <- function(read_meta) {
   isTRUE(read_meta) || (is.character(read_meta) && "labels" %in% read_meta)
 }
@@ -94,7 +95,10 @@
 # huxtable), each of which wraps this with its own allowed-token set and label:
 #   FALSE / NULL      -> character(0) (read no metadata)
 #   TRUE              -> `allowed`    (read everything the adapter offers)
-#   character vector  -> itself, after validating it is a subset of `allowed`
+#   character vector  -> the tokens of it that are in `allowed`; a token that
+#                        only ANOTHER adapter knows is skipped (a list mixing
+#                        adapters shares one `read_meta`, FR-TB119), and a
+#                        token that NO adapter knows stops
 # `label` names the adapter in the "unknown token" error.
 .resolve_meta_tokens <- function(read, allowed, label) {
   if (is.null(read) || isFALSE(read)) return(character(0))
@@ -105,13 +109,27 @@
   }
   bad <- setdiff(read, allowed)
   if (length(bad)) {
-    stop(sprintf("Unknown %s `read_meta` token(s): %s.  Allowed: %s",
-                 label,
-                 paste(sQuote(bad),     collapse = ", "),
-                 paste(sQuote(allowed), collapse = ", ")),
-         call. = FALSE)
+    unknown <- setdiff(bad, .all_meta_tokens())
+    if (length(unknown)) {
+      stop(sprintf(
+        "Unknown %s `read_meta` token(s): %s.  Allowed: %s; tokens only another adapter reads are skipped: %s",
+        label,
+        paste(sQuote(unknown), collapse = ", "),
+        paste(sQuote(allowed), collapse = ", "),
+        paste(sQuote(setdiff(.all_meta_tokens(), allowed)), collapse = ", ")),
+        call. = FALSE)
+    }
+    read <- read[!read %in% bad]
   }
   read
+}
+
+# Every `read_meta` token some adapter reads (gt, rtables, rlistings, flextable,
+# huxtable, and the data.frame "labels").  An adapter skips a token in this set
+# that is not its own and stops on one outside it.
+.all_meta_tokens <- function() {
+  unique(c(.GT_META_TOKENS, .RTABLES_TOKENS_ALL, .RLISTINGS_TOKENS_ALL,
+           .FLEXTABLE_TOKENS_ALL, .HUXTABLE_TOKENS_ALL, "labels"))
 }
 
 #' Convert a table object into rtfreporter table pages
@@ -247,9 +265,11 @@
 #'     \item{data.frame / tibble}{The single token `"labels"`: a column's
 #'       `label` attribute (the haven / labelled / xportr convention) is
 #'       used as its header label (columns without one keep their name).
-#'       Unknown tokens are *ignored* for data.frames -- a `list()` mixing
-#'       table objects and data.frames shares one `read_meta`, so adapter
-#'       tokens must not error on the data.frame elements.}
+#'       Tokens that only another source reads are *skipped* for data.frames
+#'       (and every other source skips the data.frame's `"labels"`) -- a
+#'       `list()` mixing table objects and data.frames shares one
+#'       `read_meta`, so a token must not error on the elements that do not
+#'       read it.  A token that no source reads (a typo) is an error.}
 #'   }
 #' @param split How to break the body into pages. A strategy name (a unique
 #'   prefix such as `"group_s"` is enough; another value is an error):
@@ -1103,6 +1123,8 @@ as_rtftables.default <- function(x,
     titles_block    <- kw$titles_block
     footnotes_block <- kw$footnotes_block
   } else if (is.data.frame(x)) {
+    # checks the tokens (a typo stops, another adapter's token is skipped)
+    .resolve_meta_tokens(read_meta, "labels", "data.frame")
     body            <- x
     kw              <- list()
     cell_styles     <- NULL

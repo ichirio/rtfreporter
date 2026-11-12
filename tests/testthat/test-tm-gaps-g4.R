@@ -1643,3 +1643,38 @@ test_that("FT-TB3087 [FR-TB347]: set_decimal_split(cols) of a missing column or 
   expect_error(set_decimal_split(tb, cols = 9),
                "`set_decimal_split(cols)` index 9 out of range (1..3).", fixed = TRUE)
 })
+
+test_that("FT-TB6701 [FR-TB120]: a read_meta token another adapter knows is skipped, a token no adapter knows stops, a wrong type stops", {
+  skip_if_not_installed("gt")
+  g <- gt::tab_header(gt::gt(data.frame(p = "x", stringsAsFactors = FALSE)), title = "TT")
+  df <- data.frame(a = 1:2, b = 3:4)
+  attr(df$a, "label") <- "Label A"
+  # gt with the data.frame's token: accepted and ignored -- the pages are those of reading nothing
+  expect_no_error(withl <- as_rtftables(g, read_meta = "labels"))
+  expect_identical(withl, as_rtftables(g, read_meta = character(0)))
+  expect_identical(as_rtftables(g, read_meta = c("labels", "titles")),
+                   as_rtftables(g, read_meta = "titles"))
+  # a list mixing the two shares one read_meta: each reads the tokens it knows
+  mixed <- as_rtftables(list(g, df), read_meta = c("labels", "titles"))
+  expect_identical(attr(mixed[[1L]], "rtf_titles"), "TT")
+  expect_identical(mixed[[2L]]$col_header, list(c("Label A", "b")))
+  only_labels <- as_rtftables(list(g, df), read_meta = "labels")
+  expect_null(attr(only_labels[[1L]], "rtf_titles"))
+  expect_identical(only_labels[[2L]]$col_header, list(c("Label A", "b")))
+  # a token no adapter knows stops, on gt, on a data.frame and in a list
+  expect_error(
+    as_rtftables(g, read_meta = "lables"),
+    "Unknown gt `read_meta` token(s): 'lables'.  Allowed: 'col_header', 'alignment', 'spanning', 'widths', 'titles', 'footnotes', 'styles'; tokens only another adapter reads are skipped: 'footnote_marks', 'labels'",
+    fixed = TRUE)
+  expect_error(
+    as_rtftables(df, read_meta = c("labels", "lables")),
+    "Unknown data.frame `read_meta` token(s): 'lables'.  Allowed: 'labels'; tokens only another adapter reads are skipped:",
+    fixed = TRUE)
+  expect_error(as_rtftables(list(g, df), read_meta = c("labels", "lables")),
+               "Unknown gt `read_meta` token(s): 'lables'", fixed = TRUE)
+  # the type guard is as before
+  msg <- "`read_meta` must be FALSE/TRUE or a character vector of tokens."
+  expect_error(as_rtftables(g, read_meta = 1), msg, fixed = TRUE)
+  expect_error(as_rtftables(df, read_meta = NA), msg, fixed = TRUE)
+  expect_error(as_rtftables(list(g, df), read_meta = c(TRUE, FALSE)), msg, fixed = TRUE)
+})
