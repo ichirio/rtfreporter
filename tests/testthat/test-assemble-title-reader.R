@@ -141,3 +141,48 @@ test_that("FT-AS7005 [FR-AS250 FR-AS258]: toc = \"auto\", a table with no label 
   expect_false(any(grepl("\\line", .tr_entries(auto), fixed = TRUE)))
   expect_false(any(grepl("\\sub", .tr_entries(auto), fixed = TRUE)))
 })
+
+test_that("FT-AS7006 [FR-AS250 FR-AS112]: one level-1 entry per file, read the same way by toc = \"auto\" and assemble_folder(): title rows joined, a blank row passed over, a line break joined, table / figure / listing by title, the header's \"Table N\" line, then the file name; tokens filled, markup without its formatting; the outline entry the same", {
+  d <- .tr_dir()
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  # a table: a line break in a row, a blank row, own / run / static / dynamic
+  # page tokens, the book slot, markup and non-ASCII text
+  t1 <- file.path(d, "t_14_1_1.rtf")
+  doc <- rtf_document(tokens = list(STUDY = "XY-1"), program = "prog_x.R") |>
+    rtf_tables(data.frame(A = 1:2, B = "x")) |>
+    rtf_titles(list(c("Table 14.1.1\nDemographics", "",
+                      paste("{STUDY} {PROGRAM} p{PAGE}/{TOTAL_PAGES}",
+                            "[{AUTO_PAGE}/{AUTO_TOTAL_PAGES}] {BOOK_PAGE} H_{2}O \u00b5g"))))
+  generate_rtfreport(doc, t1, overwrite = TRUE)
+  f1 <- .tr_doc(d, "f_14_2_1", c("Figure 14.2.1", "Mean Values"), kind = "figure")
+  l1 <- .tr_doc(d, "l_16_1", c("Listing 16.1", "Subject Listing"))
+  h1 <- .tr_doc(d, "t_14_3_1", NULL,
+                header = list(c(c = "Table 14.3.1"), c(c = "Vital Signs")))
+  u1 <- .tr_doc(d, "untitled", NULL)
+  files <- c(t1, f1, l1, h1, u1)
+  # the file shows the break, the fields, the slot and the markup group
+  src <- paste(readLines(t1, warn = FALSE), collapse = "\n")
+  expect_true(grepl("\\b Table 14.1.1\\line Demographics\\b0", src, fixed = TRUE))
+  expect_true(grepl("\\chpgn", src, fixed = TRUE))
+  expect_true(grepl("NUMPAGES", src, fixed = TRUE))
+  expect_true(grepl("{\\*\\rtfreporterbookpage}", src, fixed = TRUE))
+  expect_true(grepl("H{\\sub 2}O", src, fixed = TRUE))
+
+  want <- c("Table 14.1.1  Demographics  XY-1 prog_x.R p1/1 [ / ] H2O \u00b5g",
+            "Figure 14.2.1  Mean Values", "Listing 16.1  Subject Listing",
+            "Table 14.3.1  Vital Signs", "untitled")
+  want_rtf <- want
+  want_rtf[1L] <- "Table 14.1.1  Demographics  XY-1 prog_x.R p1/1 [ / ] H2O \\u181?g"
+
+  x <- .tr_asm(files, "auto")
+  e <- grep("HYPERLINK", x, value = TRUE)
+  expect_length(e, 5L)
+  # level 1: no indent
+  expect_true(all(startsWith(e, "{\\pard\\fs20\\tqr\\tldot\\tx14112 {\\field")))
+  expect_identical(.tr_entries(x), want_rtf)
+  expect_identical(.tr_outline(x), want_rtf)
+  expect_false(any(grepl("\\\\line|\\\\chpgn|NUMPAGES|rtfreporterbookpage|\\\\sub|\\{STUDY\\}", e)))
+  # assemble_folder(): the same labels, as plain text
+  sp <- assemble_folder(d)
+  expect_identical(sp$label[match(files, sp$file)], want)
+})

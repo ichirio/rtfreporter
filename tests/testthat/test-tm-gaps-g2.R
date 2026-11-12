@@ -438,6 +438,14 @@ test_that("FT-AS3014 [FR-AS149]: the table assemble_folder() returns has heading
   expect_identical(sp$heading, rep(NA_character_, 4L))
   expect_identical(sp$level, rep(2L, 4L))
   expect_identical(sp$pages[c(1, 2, 4)], rep(1L, 3L))
+
+  # a file of several title rows: the label is the rows joined with two spaces
+  d2 <- .g2_dir()
+  on.exit(unlink(d2, recursive = TRUE), add = TRUE)
+  doc3 <- rtf_document() |>
+    rtf_tables(data.frame(A = 1), titles = list(c("Table 3", "Demographics", "Safety Population")))
+  generate_rtfreport(doc3, file.path(d2, "t3.rtf"), overwrite = TRUE)
+  expect_identical(assemble_folder(d2)$label, "Table 3  Demographics  Safety Population")
 })
 
 test_that("FT-AS3015 [FR-AS150]: the title is the longest centred header cell that is not the Table N line or a <...> subtitle, decoded (signed / unsigned, surrogate pairs, no-break space), or the rest of the Table N line", {
