@@ -207,3 +207,57 @@ test_that("FT-TB6901 [FR-TB115]: a row-split member of a grouped gt keeps its gr
   expect_identical(plain, list(c("subj", sprintf("S%02d", 1:4)),
                                c("subj", sprintf("S%02d", 5:6))))
 })
+
+# The cell texts ending in "*" on each page of an RTF file.
+.t70_page_marks <- function(pages) {
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
+  generate_rtfreport(rtf_tables(rtf_document(), pages), f, overwrite = TRUE)
+  txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  lapply(strsplit(txt, "\\page", fixed = TRUE)[[1L]], function(p) {
+    regmatches(p, gregexpr("[0-9]+\\*", p))[[1L]]
+  })
+}
+
+test_that("FT-TB7001 [FR-TB115]: a row-split member applies text_transform() to its own rows", {
+  skip_if_not_installed("gt")
+  df <- data.frame(subj = sprintf("S%02d", 1:10),
+                   age  = c(34, 45, 40, 51, 29, 60, 41, 38, 47, 55),
+                   stringsAsFactors = FALSE)
+  star <- function(rows) {
+    gt::text_transform(gt::gt(df),
+                       locations = gt::cells_body(columns = "age", rows = rows),
+                       fn = function(x) paste0(x, "*"))
+  }
+  # the whole table marks S03 (40) and S09 (47); unchanged by the fix
+  g <- star(c(3, 9))
+  expect_identical(.t70_page_marks(as_rtftables(g)), list(c("40*", "47*")))
+  # the reproduction: each page marks the rows the whole table marks,
+  # S07 (41) on page 2 stays plain and S09 on page 3 keeps its mark
+  sp <- gt::gt_split(g, row_every_n = 4)
+  expect_identical(.t70_page_marks(as_rtftables(sp)),
+                   list("40*", character(0), "47*"))
+  # a single row on page 2
+  g6 <- star(6)
+  expect_identical(.t70_page_marks(as_rtftables(g6)), list("60*"))
+  sp6 <- gt::gt_split(g6, row_every_n = 4)
+  expect_identical(.t70_page_marks(as_rtftables(sp6)),
+                   list(character(0), "60*", character(0)))
+  # a member pulled alone gives the same page
+  one <- as_rtftables(gt::grp_pull(sp, 3L))
+  expect_identical(one[[1L]]$data, as_rtftables(sp)[[3L]]$data)
+  expect_identical(.t70_page_marks(one), list("47*"))
+})
+
+test_that("FT-TB7002 [FR-TB115]: a row-split member hides the row the whole table hides", {
+  skip_if_not_installed("gt", "1.4.0")  # rows_hide() is new in gt 1.4.0
+  df <- data.frame(subj = sprintf("S%02d", 1:10),
+                   age  = c(34, 45, 40, 51, 29, 60, 41, 38, 47, 55),
+                   stringsAsFactors = FALSE)
+  g <- gt::rows_hide(gt::gt(df), rows = 6)
+  expect_false("S06" %in% as_rtftables(g)[[1L]]$data$subj)
+  # S06 sits on page 2 and stays hidden there
+  pages <- as_rtftables(gt::gt_split(g, row_every_n = 4))
+  expect_identical(pages[[1L]]$data$subj, sprintf("S%02d", 1:4))
+  expect_identical(pages[[2L]]$data$subj, c("S05", "S07", "S08"))
+})

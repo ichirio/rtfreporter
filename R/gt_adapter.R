@@ -574,8 +574,12 @@
 # `_stub_df$rownum_i` and in the row slots built on them, while its `_data`
 # holds only its own rows.  extract_body() reads `_data` by those numbers and
 # gives NA for page 2 onward (#1005).  The numbers are renumbered to 1..n, in
-# the member's own order, in `_stub_df`, `_formats`, `_styles` and
-# `_footnotes`.  Works on the copy; a table already numbered 1..n is returned
+# the member's own order, in every slot extract_body() reads by row:
+# `_stub_df`, `_formats`, `_substitutions`, `_col_merge`, the resolved rows of
+# `_transforms` (text_transform(), #1022), `_rows_hidden`, `_styles` and
+# `_footnotes`; a row of another page is dropped.  `_summary` (by group),
+# `_row_order` (by column values) and `_deferred_styles` (spanners) hold no
+# row numbers.  Works on the copy; a table already numbered 1..n is returned
 # as it is.
 .gt_renumber_rows <- function(gt_obj) {
   sd <- gt_obj[["_stub_df"]]
@@ -583,14 +587,25 @@
   old <- sd$rownum_i
   if (anyNA(old) || identical(as.integer(old), seq_along(old))) return(gt_obj)
   remap <- function(x) match(x, old)
+  own   <- function(x) as.integer(stats::na.omit(remap(x)))
   sd$rownum_i <- seq_along(old)
   gt_obj[["_stub_df"]] <- sd
-  fm <- gt_obj[["_formats"]]
-  for (i in seq_along(fm)) {
-    r <- fm[[i]][["rows"]]
-    if (is.numeric(r)) fm[[i]][["rows"]] <- as.integer(stats::na.omit(remap(r)))
+  for (slot in c("_formats", "_substitutions", "_col_merge")) {
+    fm <- gt_obj[[slot]]
+    for (i in seq_along(fm)) {
+      r <- fm[[i]][["rows"]]
+      if (is.numeric(r)) fm[[i]][["rows"]] <- own(r)
+    }
+    if (!is.null(fm)) gt_obj[[slot]] <- fm
   }
-  gt_obj[["_formats"]] <- fm
+  tr <- gt_obj[["_transforms"]]
+  for (i in seq_along(tr)) {
+    r <- tr[[i]][["resolved"]][["rows"]]
+    if (is.numeric(r)) tr[[i]][["resolved"]][["rows"]] <- own(r)
+  }
+  if (!is.null(tr)) gt_obj[["_transforms"]] <- tr
+  hid <- gt_obj[["_rows_hidden"]]
+  if (is.numeric(hid) && length(hid)) gt_obj[["_rows_hidden"]] <- own(hid)
   for (slot in c("_styles", "_footnotes")) {
     tb <- gt_obj[[slot]]
     if (is.data.frame(tb) && "rownum" %in% names(tb) && nrow(tb)) {
