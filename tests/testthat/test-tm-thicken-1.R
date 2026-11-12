@@ -22,6 +22,8 @@
   grDevices::png(f, width = w, height = h, res = res)
   .t1_pl()
   grDevices::dev.off()
+  # the density asked for, on every system (helper-png-dpi.R)
+  .png_set_dpi(f, res)
   f
 }
 
