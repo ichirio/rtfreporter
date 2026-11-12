@@ -42,3 +42,24 @@ test_that("FT-DC225 [FR-DC297]: a colour that is not one 6-digit hex string is r
   expect_error(rtf_header(list(c(l = "x"), list(columns = c(l = "y"), color = "red"))),
                "`rtf_header()` row 2's `color` must be NULL", fixed = TRUE)
 })
+
+test_that("FT-DC5107 [FR-DC384]: a title row's colour that is not one 6-digit hex string is refused (#986)", {
+  write_with <- function(titles) {
+    doc <- rtf_document() |> rtf_tables(list(data.frame(A = 1)))
+    doc <- rtf_titles(doc, titles)
+    f <- tempfile(fileext = ".rtf")
+    on.exit(unlink(f), add = TRUE)
+    generate_rtfreport(doc, f, overwrite = TRUE)
+    paste(readLines(f, warn = FALSE), collapse = "\n")
+  }
+  msg <- "`color` must be NULL or a 6-digit hex colour such as \"#7F7F7F\"."
+  for (bad in list("red", "#FFF", c("#000000", "#FFFFFF"), NA_character_, 1)) {
+    expect_error(write_with(list(list(list(text = "T", color = bad)))), msg, fixed = TRUE)
+  }
+  out <- write_with(list(list(list(text = "T", color = "#c00000"),
+                              list(text = "S", color = "#7f7f7f"))))
+  tbl <- regmatches(out, regexpr("\\{\\\\colortbl[^}]*\\}", out))
+  expect_false(grepl("NA", tbl, fixed = TRUE))
+  expect_match(tbl, "\\red192\\green0\\blue0;", fixed = TRUE)
+  expect_match(tbl, "\\red127\\green127\\blue127;", fixed = TRUE)
+})

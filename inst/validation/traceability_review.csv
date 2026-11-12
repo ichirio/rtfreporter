@@ -4450,3 +4450,4 @@
 "FT-PL2006","FR-TB634","part","expect_identical(.hl_rtf(.hl_pages(p)), .hl_rtf(want))","yes"
 "FT-TB2009","FR-TB634","part","expect_identical(t1$col_spec[[3L]]$header_color, ""#1F3864"") | expect_match(rtf, ""\\red31\\green56\\blue100;"", fixed = TRUE) | expect_match(hdr, ""\\\\cf[0-9]+ Active\\\\cf1 "") | expect_no_match(hdr, ""\\\\cf[0-9]+ Placebo"") | expect_no_mat...","yes"
 "FT-TB2010","FR-TB634","asserts","expect_identical(ra, .hl_rtf(list(b))) | expect_match(.hl_rows(ra)[1L], ""\\\\cf[0-9]+ Active\\\\cf1 "") | expect_no_match(.hl_rows(ra)[1L], ""\\\\cf[0-9]+ Placebo"")","yes"
+"FT-DC5107","FR-DC384","asserts","expect_error(write_with(list(list(list(text = ""T"", color = bad)))), msg, fixed = TRUE) for red, #FFF, two values, NA and 1; expect_match(tbl, red192 green0 blue0 and red127 green127 blue127) with no NA in the colour table","yes"
