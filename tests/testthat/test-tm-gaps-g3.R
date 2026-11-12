@@ -1060,6 +1060,10 @@ test_that("FT-LS3011 [FR-LS182 FR-LS183]: listing_wrap_code() is rtf_listing_cod
   expect_true(any(grepl("listing_disp_width(", lines, fixed = TRUE)))
   expect_true(any(grepl("listing_split_after(", lines, fixed = TRUE)))
   expect_false(any(grepl(":::", lines, fixed = TRUE)))
+  # no internal function, no copy of the measures: only the exported ones are called
+  expect_false(any(grepl(".listing_", lines, fixed = TRUE)))
+  expect_false(any(grepl("shared_disp_width", lines, fixed = TRUE)))
+  expect_false(any(grepl("^[[:space:]]*(listing_disp_width|listing_take|listing_split_after) <- function", lines)))
   env <- new.env()
   eval(parse(text = lines), env)
   expect_setequal(ls(env), c("my_wrap", "my_wrap_flow", "my_wrap_words"))
