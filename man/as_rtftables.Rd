@@ -77,8 +77,9 @@ The tokens:
 \describe{
 \item{gt / gtsummary}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
 \code{"widths"}, \code{"titles"}, \code{"footnotes"}, \code{"footnote_marks"} (the
-footnote marks gt prints on the column labels and spanning headers,
-as \verb{^\{N\}} after the label, and each footnote line starting with its
+footnote marks gt prints on the column labels, spanning headers,
+title, subtitle and row-group labels, as \verb{^\{N\}} after the text, and
+each footnote line starting with its
 mark, \verb{^\{N\}} then the note, in gt's order; the marks in the body
 cells are always written), \code{"styles"} (explicit
 \code{tab_style()} borders and text styles; see \emph{What is carried}).}

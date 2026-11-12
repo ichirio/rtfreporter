@@ -147,11 +147,16 @@
 }
 
 # Title + subtitle (+ preheader) as a character vector for the page title.
-.extract_titles <- function(gt_obj) {
+# `marks` (from .gt_footnote_marks()) puts gt's footnote mark after the
+# title and the subtitle.
+.extract_titles <- function(gt_obj, marks = NULL) {
   heading <- gt_obj[["_heading"]]
   if (is.null(heading)) return(NULL)
-  rows <- c(.flatten_to_chr(heading$title),
-            .flatten_to_chr(heading$subtitle),
+  ttl <- .flatten_to_chr(heading$title)
+  sub <- .flatten_to_chr(heading$subtitle)
+  if (!is.na(ttl)) ttl <- .gt_add_mark(ttl, marks$title)
+  if (!is.na(sub)) sub <- .gt_add_mark(sub, marks$subtitle)
+  rows <- c(ttl, sub,
             .flatten_to_chr(heading$preheader))
   rows <- rows[!is.na(rows)]
   if (!length(rows)) return(NULL)
@@ -251,7 +256,8 @@
 }
 
 # gt's footnote marks for one gt_tbl: list(label = marks by column var,
-# spanner = by spanner id, stubhead = mark or NULL, lines = the footnote
+# spanner = by spanner id, stubhead / title / subtitle = mark or NULL,
+# group = by row-group id, lines = the footnote
 # lines, each "^{mark} text" or the bare text of a note with no location, in
 # the order gt prints them).  NULL when the table has no footnotes.
 .gt_footnote_marks <- function(gt_obj) {
@@ -365,7 +371,10 @@
     }, character(1L))
     stats::setNames(out, keys)
   }
-  stubhead <- joined("stubhead", rep("stubhead", length(loc)))
+  one <- function(at) {
+    m <- joined(at, rep(at, length(loc)))
+    if (length(m)) unname(m[[1L]])
+  }
 
   # the lines: no-location notes first (or last), each (mark, text) once
   none <- idx[loc[idx] == "none"]
@@ -379,7 +388,10 @@
 
   list(label    = joined("columns_columns", col),
        spanner  = joined("columns_groups", grp),
-       stubhead = if (length(stubhead)) unname(stubhead[[1L]]),
+       stubhead = one("stubhead"),
+       title    = one("title"),
+       subtitle = one("subtitle"),
+       group    = joined("row_groups", grp),
        lines    = unname(lines))
 }
 
@@ -1072,7 +1084,7 @@
 
   # ---- titles / footnotes (page-level blocks) --------------------------
   if ("titles" %in% tokens) {
-    tt <- .extract_titles(gt_obj)
+    tt <- .extract_titles(gt_obj, marks = fmarks)
     if (!is.null(tt)) out$titles_block <- tt
   }
   if ("footnotes" %in% tokens) {
@@ -1083,7 +1095,10 @@
     if (length(fn)) out$footnotes_block <- fn
   }
 
-  if (!is.null(group_of_row)) out <- .gt_interleave_groups(out, group_of_row)
+  if (!is.null(group_of_row)) {
+    out <- .gt_interleave_groups(out, group_of_row,
+                                 group_marks = fmarks$group)
+  }
   out
 }
 
@@ -1092,7 +1107,9 @@
 # group (#650).  The body is in gt's render order already (a group's rows
 # together), so a heading goes wherever the group changes; a row of no group
 # (NA) gets none.  The per-row cell styles move with their rows.
-.gt_interleave_groups <- function(out, group_of_row) {
+# `group_marks` (by group id, "footnote_marks" token) puts gt's footnote
+# mark after a heading's label.
+.gt_interleave_groups <- function(out, group_of_row, group_marks = NULL) {
   df <- out$data
   n  <- nrow(df)
   if (!n || length(group_of_row) != n) return(out)
@@ -1102,7 +1119,9 @@
   if (!length(starts)) return(out)
   heading <- df[rep(1L, length(starts)), , drop = FALSE]
   heading[] <- lapply(heading, function(col) rep("", length(starts)))
-  heading[[1L]] <- g[starts]
+  heading[[1L]] <- vapply(g[starts], function(id) {
+    .gt_add_mark(id, if (id %in% names(group_marks)) group_marks[[id]])
+  }, character(1L), USE.NAMES = FALSE)
   # each row's place once the headings are in: one more for every heading
   # at or above it
   pos <- seq_len(n) + findInterval(seq_len(n), starts)

@@ -357,6 +357,43 @@ test_that("FT-TB7102 [FR-TB577]: a gtsummary tbl_summary(by = ) header carries i
   expect_true(any(grepl("{\\super 1} Median (Q1, Q3); n (%)\\cell", rtf, fixed = TRUE)))
 })
 
+test_that("FT-TB7104 [FR-TB577]: gt's footnote marks on the title, the subtitle and a row-group label match their footnote lines", {
+  skip_if_not_installed("gt")
+  df <- data.frame(grp = c("A", "A", "B", "B"), subj = sprintf("S%02d", 1:4),
+                   age = c(34, 45, 40, 51), stringsAsFactors = FALSE)
+  g <- gt::gt(df, groupname_col = "grp", rowname_col = "subj") |>
+    gt::tab_header("Title T", "Sub S") |>
+    gt::tab_footnote("Grp B.", locations = gt::cells_row_groups("B")) |>
+    gt::tab_footnote("Ttl.", locations = gt::cells_title("title")) |>
+    gt::tab_footnote("Sub.", locations = gt::cells_title("subtitle")) |>
+    gt::tab_footnote("Cell 1.", locations = gt::cells_body(columns = age, rows = 1))
+  p <- as_rtftables(g)[[1L]]
+  # gt numbers title (1), subtitle (2), body row 1 (3), group B (4)
+  expect_identical(attr(p, "rtf_titles"), c("Title T^{1}", "Sub S^{2}"))
+  nb2 <- strrep(intToUtf8(160L), 2L)
+  expect_identical(p$data[[1L]],
+                   c("A", paste0(nb2, c("S01", "S02")), "B^{4}", paste0(nb2, c("S03", "S04"))))
+  expect_identical(attr(p, "rtf_footnotes"),
+                   c("^{1} Ttl.", "^{2} Sub.", "^{3} Cell 1.", "^{4} Grp B."))
+  rtf <- .t71_rtf(g)
+  expect_true(any(grepl("Title T{\\super 1}", rtf, fixed = TRUE)))
+  expect_true(any(grepl("Sub S{\\super 2}", rtf, fixed = TRUE)))
+  expect_true(any(grepl("B{\\super 4}\\cell", rtf, fixed = TRUE)))
+  expect_true(any(grepl("{\\super 4} Grp B.", rtf, fixed = TRUE)))
+  # the same as gt prints them
+  h <- as.character(gt::as_raw_html(g, inline_css = FALSE))
+  sup <- function(x) {
+    regmatches(h, regexpr(paste0(x, "<span[^>]*><sup>[^<]*</sup>"), h))
+  }
+  expect_match(sup("Title T"), "<sup>1</sup>", fixed = TRUE)
+  expect_match(sup("Sub S"), "<sup>2</sup>", fixed = TRUE)
+  expect_match(sup("B"), "<sup>4</sup>", fixed = TRUE)
+  # without "footnote_marks" the title and group rows stay bare
+  q <- as_rtftables(g, read_meta = c("titles", "footnotes"))[[1L]]
+  expect_identical(attr(q, "rtf_titles"), c("Title T", "Sub S"))
+  expect_identical(q$data[[1L]][4L], "B")
+})
+
 test_that("FT-TB7103 [FR-TB577 FR-TB118]: read_meta without \"footnote_marks\" writes neither the label marks nor the line marks", {
   skip_if_not_installed("gt")
   df <- data.frame(subj = sprintf("S%02d", 1:4), age = c(34, 45, 40, 51),

@@ -252,8 +252,9 @@
 #'   \describe{
 #'     \item{gt / gtsummary}{`"col_header"`, `"alignment"`, `"spanning"`,
 #'       `"widths"`, `"titles"`, `"footnotes"`, `"footnote_marks"` (the
-#'       footnote marks gt prints on the column labels and spanning headers,
-#'       as `^{N}` after the label, and each footnote line starting with its
+#'       footnote marks gt prints on the column labels, spanning headers,
+#'       title, subtitle and row-group labels, as `^{N}` after the text, and
+#'       each footnote line starting with its
 #'       mark, `^{N}` then the note, in gt's order; the marks in the body
 #'       cells are always written), `"styles"` (explicit
 #'       `tab_style()` borders and text styles; see *What is carried*).}

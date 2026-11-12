@@ -233,8 +233,9 @@ to opt in selectively.
                             bold / italic / underline / indent, carried
                             on the rtftable's `cell_styles` field
     * `"footnote_marks"` -- the footnote marks gt prints on the column
-                            labels and spanning headers -> rtfreporter
-                            `^{N}` superscript markup after the label,
+                            labels, spanning headers, title, subtitle
+                            and row-group labels -> rtfreporter `^{N}`
+                            superscript markup after the text,
                             and each line read by `"footnotes"` starting
                             with its mark (`^{N}` then the note), in
                             gt's order, so the marks match the notes
