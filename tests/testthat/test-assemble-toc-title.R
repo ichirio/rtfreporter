@@ -463,6 +463,9 @@ test_that("FT-AS4033 [FR-AS268]: the file column may hold absolute paths, or pat
                toc = data.frame(file = c("./t_14_1_1.rtf", "t_14_2_1.rtf"),
                                 label = c("one", "two")))
   expect_identical(.tt_labels(readLines(out, warn = FALSE)), c("one", "two"))
+  # a number (an index) is not accepted: it is looked for as a file name, and stops
+  expect_error(assemble_rtf(f, out, overwrite = TRUE, toc = data.frame(file = 1:2, label = c("a", "b"))),
+               "The table of contents names missing file(s): 1, 2", fixed = TRUE)
 })
 
 test_that("FT-AS4034 [FR-AS268]: a file given as a number (an index) is not accepted by a table: it is looked for as a file", {
