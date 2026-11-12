@@ -1316,6 +1316,8 @@ test_that("FT-PL3003 [FR-PL117 FR-PL126 FR-PL128]: an edited normalized frame is
   expect_identical(inp, f)
   expect_identical(inp$stat_fmt[2L], "edited")
   expect_false(identical(inp, plan_apply(table_plan(d, cols = "TRT"), "input")))
+  # the frame straight from normalize_ard(): the input stage is it, unchanged
+  expect_identical(plan_apply(table_plan(d, cols = "TRT"), "input"), d)
   # not a data frame
   expect_error(table_plan(1:3, cols = "TRT"), "NORMALIZED frame", fixed = TRUE)
   expect_error(table_plan(list(a = 1), cols = "TRT"), "NORMALIZED frame", fixed = TRUE)
