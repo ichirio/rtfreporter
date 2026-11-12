@@ -296,6 +296,10 @@ test_that("FT-AR3013 [FR-AR124]: stack adds NAME / NAME_level, NA on a row of no
                    c("F", "<65", "<65 / F", ">=65 / M", NA))
   expect_true(is.factor(n$subgroup))
   expect_identical(levels(n$subgroup), c("SEX", "AGEGR1", "AGEGR1 / SEX"))
+  # NAME_level is a factor too, its levels in the order the layers are written:
+  # the SEX layer (F), the AGEGR1 layer (<65), the crossed layer (<65 / F, >=65 / M)
+  expect_true(is.factor(n$subgroup_level))
+  expect_identical(levels(n$subgroup_level), c("F", "<65", "<65 / F", ">=65 / M"))
   # the variables' own columns stay
   expect_identical(n$SEX, c("F", NA, "F", "M", NA))
   expect_identical(n$AGEGR1, c(NA, "<65", "<65", ">=65", NA))
@@ -313,8 +317,13 @@ test_that("FT-AR3014 [FR-AR128]: a cards ARD built with a by variable is one row
     dat, by = TRT, variables = AGE,
     statistic = ~ cards::continuous_summary_fns(c("N", "mean")))
   expect_true("group1" %in% names(ard))
+  # cards keeps stat, fmt_fun and the by-level in list columns
+  expect_true(is.list(ard$stat))
+  expect_true(is.list(ard$fmt_fun))
+  expect_true(is.list(ard$group1_level))
   expect_identical(nrow(ard), 4L)
   d <- normalize_ard(ard)
+  expect_false(any(vapply(d, is.list, logical(1))))
   expect_identical(nrow(d), 4L)
   expect_identical(d$TRT, c("A", "A", "B", "B"))
   expect_identical(d$stat_name, c("N", "mean", "N", "mean"))
@@ -397,6 +406,19 @@ test_that("FT-AR3018 [FR-AR136]: a stack that is not a named list of character l
   expect_error(normalize_ard(d, stack = list(g = character())), msg, fixed = TRUE)
   expect_error(normalize_ard(d, stack = list("SEX")), msg, fixed = TRUE)
   expect_error(normalize_ard(d, stack = list(g = 1)), msg, fixed = TRUE)
+  # not a list at all, a name used twice, an NA or empty variable, an empty crossed list
+  expect_error(normalize_ard(d, stack = c("SEX", "AGEGR1")), msg, fixed = TRUE)
+  expect_error(normalize_ard(d, stack = list(g = "SEX", g = "AGE")), msg, fixed = TRUE)
+  expect_error(normalize_ard(d, stack = list(g = c("SEX", NA))), msg, fixed = TRUE)
+  expect_error(normalize_ard(d, stack = list(g = "")), msg, fixed = TRUE)
+  expect_error(normalize_ard(d, stack = list(g = list())), msg, fixed = TRUE)
+  # the message goes on: variables crossed, with the call to write
+  expect_error(
+    normalize_ard(d, stack = list(g = character())),
+    paste0("or variables crossed: `stack = list(subgroup = list(\"SEX\", ",
+           "\"AGEGR1\", c(\"AGEGR1\", \"SEX\")))`."), fixed = TRUE)
+  # a well-formed stack is not refused
+  expect_s3_class(normalize_ard(d, stack = list(g = "TRT")), "ard_long")
 })
 
 # ------------------------------------------------------------- widen_ard
@@ -431,6 +453,22 @@ test_that("FT-AR3019 [FR-AR143]: widen_ard() gives a plain data.frame of charact
   expect_identical(tbl$label, c("F", "M", "U"))
   expect_identical(tbl$A, c("4", "5", "1"))
   expect_identical(tbl$B, c("3", "6", "0"))
+  # one character column per combination of the column keys: TRT x SITE
+  x1 <- .g1_cat()
+  x1$SITE <- "S1"
+  x2 <- x1
+  x2$SITE <- "S2"
+  x2$stat <- x2$stat + 100
+  two <- widen_ard(normalize_ard(rbind(x1, x2)), cols = c("TRT", "SITE"),
+                   cells = "{n:.0f}", notes = FALSE)
+  expect_identical(class(two), "data.frame")
+  expect_identical(names(two), c("label", "A____S1", "A____S2", "B____S1", "B____S2"))
+  expect_true(all(vapply(two[-1L], is.character, logical(1))))
+  expect_identical(nrow(two), 3L)
+  expect_identical(two$A____S1, c("4", "5", "1"))
+  expect_identical(two$A____S2, c("104", "105", "101"))
+  expect_identical(two$B____S1, c("3", "6", "0"))
+  expect_identical(two$B____S2, c("103", "106", "100"))
 })
 
 test_that("FT-AR3020 [FR-AR146]: rows left out are reported in the notes", {
@@ -493,6 +531,16 @@ test_that("FT-AR3022 [FR-AR153]: rows keys are named by name, column, a leading 
                  rows = c(group = "variable"), cells = .g1_cells(), notes = FALSE)
   expect_identical(names(v)[1:2], c("group", "label"))
   expect_identical(v$group, c("AGE", "SEX"))
+  # a grouping variable (TRT) is a row key too, and the keys come in the order written
+  cat <- normalize_ard(.g1_cat())
+  g <- widen_ard(cat, cols = "variable_level", rows = c(arm = "TRT"),
+                 cells = "{n:.0f}", notes = FALSE)
+  expect_identical(names(g), c("arm", "label", "F", "M", "U"))
+  expect_identical(g$arm, c("A", "A", "A", "B", "B", "B"))
+  gv <- widen_ard(cat, cols = "variable_level", rows = c(v = "variable", arm = "TRT"),
+                  cells = "{n:.0f}", notes = FALSE)
+  expect_identical(names(gv), c("v", "arm", "label", "F", "M", "U"))
+  expect_identical(unique(gv$v), "SEX")
 })
 
 test_that("FT-AR3023 [FR-AR154]: rows = NULL: `group` for several variables, none with hierarchy", {
@@ -586,6 +634,13 @@ test_that("FT-AR3027 [FR-AR161]: guards are judged over the record's statistics 
   dp <- widen_ard(h, cols = "TRT", notes = FALSE,
                   cells = c(.depth == 2 ~ "  {n}", "{n}"))
   expect_identical(dp$A, c("5", "3", "  2"))
+  # a guard on `variable`: AGE (a mean, 12.34 and 15.67) and SEX (n 4 and 6)
+  b <- normalize_ard(.g1_base())
+  vg <- widen_ard(b, cols = "TRT", rows = c(group = "variable"), notes = FALSE,
+                  cells = c(variable == "AGE" ~ "age {mean:.0f}", "{n:.0f}"))
+  expect_identical(vg$group, c("AGE", "SEX"))
+  expect_identical(vg$A, c("age 12", "4"))
+  expect_identical(vg$B, c("age 16", "6"))
   # a template with an unresolved token moves on to the next element
   un <- widen_ard(d, cols = "TRT", cells = c("{n} ({nope})", "{n}"), notes = FALSE)
   expect_identical(un$A, c("4", "5", "1"))
@@ -737,6 +792,12 @@ test_that("FT-AR3032 [FR-AR168]: levels order a row key by output name, label ro
   plain <- widen_ard(d, cols = "TRT", rows = c(sx = "SEX"), cells = "{mean:.0f}",
                      notes = FALSE)
   expect_identical(plain$sx, c("F", "M"))
+  # a column key: the spread columns in the order of the levels (A is 1 and 2, B is 3 and 4)
+  cl <- widen_ard(d, cols = "TRT", rows = c(sx = "SEX"), cells = "{mean:.0f}",
+                  levels = list(TRT = c("B", "A")), notes = FALSE)
+  expect_identical(names(cl), c("sx", "label", "B", "A"))
+  expect_identical(cl$B, c("3", "4"))
+  expect_identical(cl$A, c("1", "2"))
   # the row key's output name: orders the rows and makes a factor
   by_out <- widen_ard(d, cols = "TRT", rows = c(sx = "SEX"), cells = "{mean:.0f}",
                       levels = list(sx = c("M", "F")), notes = FALSE)
@@ -781,6 +842,21 @@ test_that("FT-AR3033 [FR-AR169]: a level the ARD does not have is said, whatever
     capture_messages(widen_ard(d, cols = "TRT", cells = "{n:.0f}", notes = FALSE,
                                levels = list(TRT = c("B", "A")))),
     character())
+  # a value named as `labels` prints it is a value the ARD has: no message, the row
+  # first; the value as it was in the ARD, "F", is then not named by its code
+  expect_identical(
+    capture_messages(lab <- widen_ard(d, cols = "TRT", cells = "{n:.0f}", notes = FALSE,
+                                      labels = list(SEX = c(F = "Female")),
+                                      levels = list(SEX = c("Female", "U")))),
+    character())
+  expect_identical(as.character(lab$label), c("Female", "U", "M"))
+  # one that is neither is said
+  got3 <- capture_messages(
+    widen_ard(d, cols = "TRT", cells = "{n:.0f}", notes = FALSE,
+              labels = list(SEX = c(F = "Female")),
+              levels = list(SEX = c("Female", "Nope"))))
+  expect_true(startsWith(got3[1L], msg))
+  expect_match(got3[1L], "SEX: \"Nope\"", fixed = TRUE)
 })
 
 test_that("FT-AR3034 [FR-AR171]: labels scope: output name, then source name; .default the rest", {
@@ -829,6 +905,27 @@ test_that("FT-AR3035 [FR-AR173]: sort = FALSE keeps first-seen order; a factor k
                    sort = FALSE, notes = FALSE)
   expect_identical(as.character(fct$sx), c("F", "M"))
   expect_identical(fct$A, c("2", "1"))
+  # nothing is alphabetised: the variables stay WT, AGE (first seen); SEX, a factor
+  # nested in each variable's block, goes F, M within that block
+  y <- data.frame(
+    group1 = "TRT", group1_level = "A",
+    group2 = "SEX", group2_level = rep(c("M", "F"), 2L),
+    variable = rep(c("WT", "AGE"), each = 2L), variable_level = NA_character_,
+    context = "continuous", stat_name = "mean", stat_label = "Mean",
+    stat = c(1, 2, 3, 4), stringsAsFactors = FALSE)
+  dy <- normalize_ard(y)
+  dy$SEX <- factor(dy$SEX, levels = c("F", "M"))
+  ny <- widen_ard(dy, cols = "TRT", rows = c(v = "variable", sx = "SEX"),
+                  cells = "{mean:.0f}", sort = FALSE, notes = FALSE)
+  expect_identical(ny$v, c("WT", "WT", "AGE", "AGE"))
+  expect_identical(as.character(ny$sx), c("F", "M", "F", "M"))
+  expect_identical(ny$A, c("2", "1", "4", "3"))
+  # the label column ordered by `levels` moves too (M, U, F), nothing else does
+  cat <- normalize_ard(.g1_cat())
+  lv <- widen_ard(cat, cols = "TRT", cells = "{n:.0f}", sort = FALSE,
+                  levels = list(SEX = c("M", "U")), notes = FALSE)
+  expect_identical(as.character(lv$label), c("M", "U", "F"))
+  expect_identical(lv$A, c("5", "1", "4"))
 })
 
 test_that("FT-AR3036 [FR-AR176]: sort = levels(soc) puts the values plan_levels() names first", {
@@ -1102,6 +1199,14 @@ test_that("FT-AR3047 [FR-AR220]: pull_ard(levels = ) orders by levels, factor, f
                    c(A = 2, B = 4))
   # a plain vector for levels is not read
   expect_identical(names(pull_ard(chr, cols = "TRT", levels = c("A", "B"))), c("B", "A"))
+  # the values it does not name follow; a value not there makes nothing
+  tri <- data.frame(
+    group1 = "TRT", group1_level = c("B", "A", "C"), variable = "AGE",
+    variable_level = NA_character_, context = "continuous", stat_name = "N",
+    stat_label = "N", stat = c(4, 2, 7), stringsAsFactors = FALSE)
+  expect_identical(pull_ard(tri, cols = "TRT"), c(B = 4, A = 2, C = 7))
+  expect_identical(pull_ard(tri, cols = "TRT", levels = list(TRT = c("C", "nope", "B"))),
+                   c(C = 7, B = 4, A = 2))
   # two column keys: levels are matched on the joined names (FR-AR240), so
   # the levels of the first key alone match none and the order is unchanged
   two <- data.frame(
@@ -1235,6 +1340,58 @@ test_that("FT-AR3052 [FR-AR253]: stats = 'rows' stops on cells of different valu
                               cells = "{n:.0f}", notes = FALSE))
   expect_no_warning(widen_ard(d, cols = "TRT", rows = c(site = "SITE"),
                               cells = "{n:.0f}", notes = FALSE))
+  # six cells in all: the first three are described, then how many more, then the advice
+  s1 <- .g1_cat()
+  s1$SITE <- "S1"
+  s2 <- s1
+  s2$SITE <- "S2"
+  s2$stat <- s2$stat + 100
+  many <- NULL
+  withCallingHandlers(
+    widen_ard(normalize_ard(rbind(s1, s2)), cols = "TRT", cells = "{n:.0f}",
+              notes = FALSE),
+    warning = function(cnd) {
+      many <<- c(many, conditionMessage(cnd))
+      invokeRestart("muffleWarning")
+    })
+  expect_length(many, 1L)
+  expect_true(startsWith(many, "widen_ard(): 6 cells are reached by records of different values"))
+  expect_identical(lengths(regmatches(many, gregexpr("\n  cell   :", many, fixed = TRUE))), 3L)
+  expect_match(many, "cell   : label = 'F', column 'A'\n  values : '4', '104'", fixed = TRUE)
+  expect_match(many, "\n  ... and 3 more cell(s)\n", fixed = TRUE)
+  expect_true(endsWith(many, paste0(
+    "Add the key that tells the records apart to `rows` (or `cols`), or filter ",
+    "the ARD to one record per cell first.")))
+  # a plan reading a position over stacked blocks is a supported use: the name
+  # column (group1) is quiet, the level alone (group1_level over TRT and SEX)
+  # warns as before -- of the position, not of values lost
+  b1 <- data.frame(
+    group1 = "TRT", group1_level = c("A", "B"), group2 = NA_character_,
+    group2_level = NA_character_, variable = "AGEGR", variable_level = "<75",
+    context = "categorical", stat_name = "n", stat_label = "n", stat = c(10, 12),
+    stringsAsFactors = FALSE)
+  b2 <- data.frame(
+    group1 = "SEX", group1_level = c("F", "M"), group2 = "TRT", group2_level = "A",
+    variable = "AGEGR", variable_level = "<75", context = "categorical",
+    stat_name = "n", stat_label = "n", stat = c(4, 6), stringsAsFactors = FALSE)
+  st <- normalize_ard(rbind(b1, b2))
+  warns <- function(...) {
+    w <- NULL
+    withCallingHandlers(
+      widen_ard(st, cells = "{n:.0f}", notes = FALSE, ...),
+      warning = function(cnd) {
+        w <<- c(w, conditionMessage(cnd))
+        invokeRestart("muffleWarning")
+      })
+    w
+  }
+  # SEX F and M both reach the cell (AGEGR, A): different values (4, 6)
+  expect_length(warns(cols = "TRT", rows = c(v = "group1")), 0L)
+  expect_match(warns(cols = "group1_level", rows = c(g = "variable")), "reads a POSITION",
+               fixed = TRUE)
+  # the same cell read by a key that is no position: the values lost are said
+  expect_match(warns(cols = "TRT", rows = c(g = "variable")),
+               "cells? (is|are) reached by records of different values")
   # stats = "rows" is not a warning: it stops
   expect_error(
     suppressWarnings(widen_ard(d, cols = "TRT", stats = "rows", notes = FALSE)),
