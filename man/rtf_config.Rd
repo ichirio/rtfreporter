@@ -9,7 +9,6 @@ rtf_config(
   font_table = NULL,
   color_table = NULL,
   page = NULL,
-  default_format = NULL,
   watermark = NULL,
   font_lang = NULL,
   style = NULL
@@ -24,10 +23,6 @@ rtf_config(
 
 \item{page}{New page geometry, \strong{merged per key} onto the current page: an
 \code{\link[=rtf_page]{rtf_page()}} object, or a named list with the same keys (see \code{\link[=rtf_page]{rtf_page()}}).}
-
-\item{default_format}{\strong{Deprecated}: use \code{style = rtf_style()}.  Still
-merged per key onto the current one, and mapped onto the shared level of
-\code{\link[=rtf_style]{rtf_style()}} beneath any \code{style}; warns once a session.}
 
 \item{watermark}{New page watermark: an \code{\link[=rtf_watermark]{rtf_watermark()}} object, a bare
 string, or \code{NA} to remove the one the document has. \code{NULL} (default)

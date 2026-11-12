@@ -1,10 +1,6 @@
 # Font-size-aware default row height is applied uniformly across all
 # table-shaped elements (RTF header, footer, table body).
 
-# rtf_default_format() / default_format = are deprecated (#804): these tests
-# check what they still do, not the warning (test-rtf-style.R does).
-silence_deprecation("rtf_default_format")
-
 
 test_that(".default_row_height_twips() honors lookup, linear fallback, and clamp", {
   expect_identical(rtfreporter:::.default_row_height_twips(18L), 230L)  # 9pt
@@ -52,7 +48,7 @@ test_that("per-element overrides win over the document-wide default", {
 
 test_that("a larger document font shifts the default row height upward", {
   df <- data.frame(A = 1:2, B = c("x", "y"), stringsAsFactors = FALSE)
-  doc <- rtf_document(default_format = list(font_size_half_points = 24L))
+  doc <- rtf_document(style = rtf_style(font_size_half_points = 24L))
   doc <- rtf_section(doc, page = 1, secinfo = list(
     header = rtf_header(rows = list(c(l = "T")))
   ))

@@ -435,6 +435,14 @@
 
 # ── Cover-page rendering ───────────────────────────────────────────────────
 
+# The cover and TOC sections' page: landscape letter with 0.6 in left and
+# right margins.  Its text width, 14112 twips, is where the TOC's page numbers
+# end and where its labels wrap (#967).
+.TOC_PAGE_W    <- 15840L
+.TOC_PAGE_H    <- 12240L
+.TOC_MARGIN_LR <- 864L
+.TOC_TEXT_W    <- .TOC_PAGE_W - 2L * .TOC_MARGIN_LR
+
 .build_cover_section <- function(cover) {
   if (is.null(cover)) return(character())
 
@@ -443,8 +451,9 @@
   # v0.0.33) was leaking font-size-0 into following content.
   blocks <- c(
     "\\sectd\\sbkpage\\lndscpsxn",
-    "\\pgwsxn15840\\pghsxn12240",
-    "\\marglsxn864\\margrsxn864\\margtsxn1296\\margbsxn1296",
+    paste0("\\pgwsxn", .TOC_PAGE_W, "\\pghsxn", .TOC_PAGE_H),
+    paste0("\\marglsxn", .TOC_MARGIN_LR, "\\margrsxn", .TOC_MARGIN_LR,
+           "\\margtsxn1296\\margbsxn1296"),
     # Push content vertically to roughly the upper third of the page
     "{\\pard\\fs18\\par}{\\pard\\fs18\\par}{\\pard\\fs18\\par}"
   )
@@ -538,7 +547,7 @@
 # have `hang` twips less width (a hanging indent).
 .toc_label_lines <- function(label, level, hp, hang = 0L) {
   char  <- .char_width_in("courier_new", 10) * 1440  # a 10 pt character, twips
-  width <- 14400 - .toc_indent_for_level(level) - 720
+  width <- .TOC_TEXT_W - .toc_indent_for_level(level) - 720
   len   <- nchar(label %||% "")
   n <- max(1, ceiling(len * char * hp / 20 / width))
   if (hang > 0L && n > 1) {
@@ -680,8 +689,9 @@
   toc_leader     <- match.arg(toc_leader)
   page_numbering <- match.arg(page_numbering)
   leader_cmd <- if (toc_leader == "dot") "\\tldot" else ""
-  # Right tab at 14400 twips (10 inches) -- landscape letter writable area.
-  tab_pos <- 14400L
+  # The page numbers sit on a right tab at the right margin: the TOC
+  # section's text width (#967).
+  tab_pos <- .TOC_TEXT_W
 
   # Section preamble.  \sbkpage forces a new page at the start; landscape +
   # rtfreporter-default margins.  \pgnlcrm switches to Roman lowercase
@@ -696,8 +706,9 @@
   # following body content.  See v0.0.33 bug fix.
   lines <- c(
     paste0("\\sectd\\sbkpage\\lndscpsxn", pg_cmd),
-    "\\pgwsxn15840\\pghsxn12240",
-    "\\marglsxn864\\margrsxn864\\margtsxn1296\\margbsxn1296",
+    paste0("\\pgwsxn", .TOC_PAGE_W, "\\pghsxn", .TOC_PAGE_H),
+    paste0("\\marglsxn", .TOC_MARGIN_LR, "\\margrsxn", .TOC_MARGIN_LR,
+           "\\margtsxn1296\\margbsxn1296"),
     sprintf("{\\pard%s%s %s\\par}", .toc_title_align(toc_title),
             .toc_char_cmd(style$title), title_rtf),
     sprintf("{\\pard%s\\par}", .toc_char_cmd(style$gap))

@@ -287,14 +287,6 @@ without writing a file.
 
 ---
 
-**Deprecated -- do not generate these** (they still work but warn, and are
-removed in 0.9):
-
-| Deprecated | Write instead |
-|---|---|
-| `rtf_default_format()` | `rtf_style()` (same keys at its shared level) |
-| `rtf_document(default_format = )` / `rtf_config(default_format = )` | `style = rtf_style(...)` |
-
 ## 5. `as_rtftables()` — the workhorse
 
 Converts a `data.frame` **or a gt / gtsummary / rtables / tern / tfrmt /
@@ -1093,7 +1085,7 @@ reference of a difference.
 ## 18. Complete public API (nothing outside this list exists)
 
 **Document / render:** `rtf_document` `rtf_config` `rtf_page`
-`rtf_style` `rtf_default_format` `rtf_watermark` `generate_rtfreport` `rtf_text_tokens`
+`rtf_style` `rtf_watermark` `generate_rtfreport` `rtf_text_tokens`
 `rtfreporter_options` `rtfreporter_reset_defaults` `rtfreporter_ai_manual`
 `rtfreporter_validation_kit`
 

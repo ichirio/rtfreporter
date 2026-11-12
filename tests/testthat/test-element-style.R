@@ -1,9 +1,5 @@
 # Tests for per-element style: font size, row height, markup, alignment (#292).
 
-# rtf_default_format() / default_format = are deprecated (#804): these tests
-# check what they still do, not the warning (test-rtf-style.R does).
-silence_deprecation("rtf_default_format")
-
 .df   <- function() data.frame(a = c("x", "y"), b = c("1", "2"),
                                stringsAsFactors = FALSE)
 .W    <- 9360L
@@ -115,7 +111,7 @@ test_that("rtftable() validates the font size", {
 # ──────── the title / footnote blocks ──────────────────────────────────────
 
 .doc <- function(...) {
-  rtf_document(default_format = rtf_default_format(title_format = "table")) |>
+  rtf_document(style = rtf_style(title_format = "table")) |>
     rtf_tables(rtftable(.df(), border = "tfl")) |>
     rtf_titles(list("MYTITLE"), ...)
 }
@@ -165,7 +161,7 @@ test_that("a row's own l / c / r slot beats the block default", {
 })
 
 test_that("markup can be turned on for one block only", {
-  d <- rtf_document(default_format = rtf_default_format(markup = "none")) |>
+  d <- rtf_document(style = rtf_style(markup = "none")) |>
     rtf_tables(rtftable(.df(), border = "tfl")) |>
     rtf_footnotes(list("^{a} MYFOOT"), markup = "script")
   expect_true(.peek(d, "MYFOOT")$super)
@@ -173,7 +169,7 @@ test_that("markup can be turned on for one block only", {
 
 test_that("the block style survives the text (paragraph) form", {
   d <- rtf_document(
-      default_format = rtf_default_format(footnote_format = "text")) |>
+      style = rtf_style(footnote_format = "text")) |>
     rtf_tables(rtftable(.df(), border = "tfl")) |>
     rtf_footnotes(list("MYFOOT"), font_size_half_points = 14L,
                   align = "center")

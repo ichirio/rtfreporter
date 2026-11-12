@@ -63,10 +63,6 @@
 #'   keys, or `NULL` (default) to use the option / factory defaults (landscape
 #'   Letter, 0.75" top/bottom and 0.75" left/right margins). An omitted key falls
 #'   back to the corresponding `rtfreporter.*` option (see [rtfreporter_options()]).
-#' @param default_format **Deprecated**: use `style = rtf_style()`.  An
-#'   [rtf_default_format()] object or a named list of its keys still works:
-#'   it maps onto the shared level of [rtf_style()], beneath any `style`
-#'   given, and warns once a session.
 #' @param watermark A diagonal word drawn behind the page body on every page:
 #'   an [rtf_watermark()] object, a bare string (`watermark = "DRAFT"` uses the
 #'   defaults), or `NULL` (default) for none. A section can override it by
@@ -131,7 +127,7 @@
 #'
 #' @return An `rtf_document` S3 object: a list with `document` (the
 #'   settings given here: `font_table`, `font_lang`, `color_table`, `page`,
-#'   `default_format`, `style`, `watermark`, `program`, `program_fallback`,
+#'   `style`, `watermark`, `program`, `program_fallback`,
 #'   `tokens` and `file`),
 #'   `contents` (filled by [rtf_tables()] / [rtf_figures()]: one block per
 #'   content, each with its own title and footnote; [rtf_layout()] shows how
@@ -167,7 +163,7 @@
 #'
 #' @export
 rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
-                         default_format = NULL, watermark = NULL,
+                         watermark = NULL,
                          program = NULL, tokens = NULL,
                          program_fallback = NULL, font_lang = NULL,
                          style = NULL, file = NULL) {
@@ -188,8 +184,6 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
   .check_style_arg(style, "rtf_document")
   .check_color_table(color_table)
   .check_font_table_arg(font_table)
-  .check_default_format_arg(default_format)
-  if (!is.null(default_format)) .warn_default_format()
   # Default clinical trial page used when none is supplied.  A *partial* `page`
   # is kept as given; any key left out (orientation, dimensions, margins) is
   # resolved to its default at render time -- including inferring the
@@ -224,7 +218,6 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
         font_lang = font_lang,
         color_table = color_table,
         page = page,
-        default_format = default_format,
         style = style,
         watermark = .normalize_watermark(watermark),
         program = program,
@@ -277,16 +270,6 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
     stop("`orientation` must be \"landscape\" or \"portrait\".", call. = FALSE)
   }
   invisible(page)
-}
-
-# `default_format` (deprecated): an rtf_default_format() or a named list of
-# its keys.  A string used to stop with "second argument must be a list".
-.check_default_format_arg <- function(x) {
-  if (!is.null(x) && !is.list(x)) {
-    stop("`default_format` must be an rtf_default_format() object or a ",
-         "named list of its settings.", call. = FALSE)
-  }
-  invisible(x)
 }
 
 # `color_table`: "#RRGGBB" colours.  "red" or NA used to be kept and written
@@ -354,9 +337,6 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
 #' @param color_table Optional colour table; replaces the current one.
 #' @param page New page geometry, **merged per key** onto the current page: an
 #'   [rtf_page()] object, or a named list with the same keys (see [rtf_page()]).
-#' @param default_format **Deprecated**: use `style = rtf_style()`.  Still
-#'   merged per key onto the current one, and mapped onto the shared level of
-#'   [rtf_style()] beneath any `style`; warns once a session.
 #' @param style An [rtf_style()], **merged key by key** over the document's
 #'   style: a key it sets wins, the others stay.
 #' @param watermark New page watermark: an [rtf_watermark()] object, a bare
@@ -382,7 +362,7 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
 #'
 #' @export
 rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
-                       default_format = NULL, watermark = NULL,
+                       watermark = NULL,
                        font_lang = NULL, style = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
@@ -394,7 +374,6 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
   # Whole-object replacements.
   .check_font_table_arg(font_table)
   .check_color_table(color_table)
-  .check_default_format_arg(default_format)
   if (!is.null(font_table)) {
     doc_copy$document$font_table <- .check_font_table(font_table)
   }
@@ -409,11 +388,6 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
   .check_page_arg(page)
   if (!is.null(page)) {
     doc_copy$document$page <- .merge_list(doc_copy$document$page, page)
-  }
-  if (!is.null(default_format)) {
-    .warn_default_format()
-    doc_copy$document$default_format <-
-      .merge_list(doc_copy$document$default_format, default_format)
   }
   .check_style_arg(style, "rtf_config")
   if (!is.null(style)) {

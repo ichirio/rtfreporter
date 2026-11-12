@@ -1,9 +1,5 @@
 # rtf_tables(auto_title = TRUE) -- the page name as the last title row (#310).
 
-# rtf_default_format() / default_format = are deprecated (#804): these tests
-# check what they still do, not the warning (test-rtf-style.R does).
-silence_deprecation("rtf_default_format")
-
 .pages <- function() {
   d <- data.frame(G = c("Cohort A", "Cohort A", "Cohort B"),
                   Stat = c("n", "Mean", "n"),
@@ -20,7 +16,7 @@ silence_deprecation("rtf_default_format")
 }
 
 .render <- function(doc, fmt) {
-  doc$default_format <- rtf_default_format(title_format = fmt)
+  doc$document$style <- rtf_style(title_format = fmt)
   f <- tempfile(fileext = ".rtf")
   on.exit(unlink(f), add = TRUE)
   generate_rtfreport(doc, f, overwrite = TRUE)

@@ -25,8 +25,14 @@ test_that("the functions deprecated before 0.9.0 are gone (#788)", {
             "rtf_border_box", "rtf_table_border", "rtf_border_tfl",
             "update_header_row", "update_footer_row", "set_header_cell")
   expect_identical(intersect(gone, .exports()), character(0))
-  # rtf_default_format() gave way to rtf_style() (#804), and goes in 0.9
-  expect_identical(rtfreporter:::.deprecated_exports, "rtf_default_format")
+  # rtf_default_format() gave way to rtf_style() (#804), and went in 0.9 (#975)
+  expect_false("rtf_default_format" %in% .exports())
+  expect_false("default_format" %in% names(formals(rtf_document)))
+  expect_false("default_format" %in% names(formals(rtf_config)))
+  # a call that still passes it is R's own "unused argument" error
+  expect_error(rtf_document(default_format = list(markup = "all")), "unused argument")
+  expect_error(rtf_config(rtf_document(), default_format = list(markup = "all")),
+               "unused argument")
 })
 
 test_that("one border constructor is left, and one line", {
@@ -62,8 +68,8 @@ test_that("the effective export count is the reviewed number", {
   # table's; 137 / 114 since rtfreporter_validation_kit(), the user's
   # validation templates; 114 since 0.9.0 removed the 23 deprecated ones,
   # #788; 115 since #804 added rtf_style(), one style object for every
-  # module.)
-  expect_length(.exports(), 115L)
+  # module; 114 since #975 removed rtf_default_format().)
+  expect_length(.exports(), 114L)
 })
 
 test_that("the argument names removed in 0.9.0 are gone (#788)", {
