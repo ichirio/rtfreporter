@@ -380,8 +380,17 @@ fit_listing_widths <- function(data, spec,
       # Frozen UNWRAPPED: the structural breaks between source variables are
       # kept, the width-induced ones are not, so widening the column in the
       # pasted template re-flows the header (#380).
-      cl$label <- .listing_resolve_label(data, cl, sepj, lay, labels,
-                                         wrap = FALSE, wrap_fn = spec$wrap)
+      joined <- .listing_resolve_label(data, cl, sepj, lay, labels,
+                                       wrap = FALSE, wrap_fn = spec$wrap)
+      # A variable label with a break of its own makes the joined string look
+      # hand-laid-out, so it would print as written, not stacked (#997).
+      # Freeze the header the derived path prints at this width instead.
+      cl$label <- if (grepl("\n", joined, fixed = TRUE)) {
+        .listing_resolve_label(data, cl, sepj, lay, labels,
+                               wrap_fn = spec$wrap)
+      } else {
+        joined
+      }
     }
     spec$cols[[j]] <- cl
   }

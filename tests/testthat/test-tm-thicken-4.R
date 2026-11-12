@@ -464,6 +464,9 @@ test_that("FT-PL5314 [FR-PL352]: plan_template() writes plan_col_header(values =
   none <- .t4_template(ard[!ard$stat_name %in% "N", ], cols = "TRT")
   expect_false(any(grepl("rtfreporter::plan_col_header(", none, fixed = TRUE)))
   expect_true(startsWith(none[grep("plan_style(", none, fixed = TRUE) + 1L], "# "))   # a comment follows
+  # ... that says why: no N rows, not "several column keys" (#990)
+  expect_true(any(grepl("^# The ARD has no denominator \\(N\\) rows", none)))
+  expect_false(any(grepl("^# Several column keys", none)))
   expect_no_error(parse(text = none))
   last <- grep("plan_style(border = \"tfl\")", none, fixed = TRUE, value = TRUE)
   expect_false(grepl("%>%[[:space:]]*$", last))
