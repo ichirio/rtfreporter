@@ -7,7 +7,9 @@ table names what was found, the version that first has it, and where that
 is recorded.  The minimum is the latest of those versions.  The Quality Plan
 (`quality-plan.md`, *The environment strategy*) says how the minimums are
 tested: the R-CMD-check job *dependency minimums* installs each of them
-exactly, on the oldest R.
+exactly, on the oldest R.  `tern` and `devEMF` cannot be installed on R 4.2
+(what they need wants a newer R), so that job leaves them out, as the R 4.2
+job of the matrix does.
 
 A use that does not set a minimum is named with the reason: a test that
 skips when the version is older (`skip_if_not_installed(pkg, version)` or a
@@ -29,7 +31,7 @@ one tag per release).
 | formatters | 0.5.2 | `mf_strings()`, `mf_spans()`, `mf_aligns()`, `mf_nlheader()`, `mf_rfnotes()`, `mf_rinfo()` -> 0.4.0; `matrix_form()`, `main_title()`, `subtitles()`, `main_footer()`, `prov_footer()`, `page_titles()` -> 0.2.0. These alone allow 0.4.0; the minimum was 0.5.0, kept as no reason was found to lower it, and raised to 0.5.2 because the minimum rtables (0.6.3) depends on formatters (>= 0.5.2). | `NAMESPACE` of each release; rtables 0.6.3 `DESCRIPTION` |
 | rtables | 0.6.3 | `main_title()`, `main_footer()` -> 0.5.0; `basic_table()`, `split_cols_by()`, `split_rows_by()`, `analyze()`, `build_table()`, `in_rows()`, `rcell()`, `summarize_row_groups()`, `prune_table()`, `keep_split_levels()`, `paginate_table()` -> 0.3.6, the first CRAN release. These allow 0.5.0; the minimum was 0.6.0, kept, and raised to 0.6.3 because the minimum tern (0.9.0) depends on rtables (>= 0.6.3): with 0.6.0 the minimums cannot be installed together. | `NAMESPACE` of each release; tern 0.9.0 `DESCRIPTION` |
 | rlistings | 0.2.1 | `as_listing()`, `listing_dispcols()`, and `matrix_form()` of a listing -> 0.2.1, the first CRAN release. The minimum was 0.2.0, which was never on CRAN, so it could not be installed. | CRAN archive of rlistings; `NAMESPACE` 0.2.1 |
-| tern | 0.9.0 | `analyze_vars()` -> 0.9.0 (before it, `summarize_vars()`); `count_occurrences()` -> 0.8.3, the first CRAN release. | tern NEWS 0.9.0; `NAMESPACE` of each release |
+| tern | 0.9.0 | `analyze_vars()` -> 0.9.0 (before it, `summarize_vars()`); `count_occurrences()` -> 0.8.3, the first CRAN release. Not tested at this minimum: tern needs car, whose dependencies need R (>= 4.4), so it cannot be installed in the job on R 4.2. | tern NEWS 0.9.0; `NAMESPACE` of each release |
 | tfrmt | 0.1.0 | `page_plan()`, `page_structure()` (a page_plan render is a `gt_group` that `as_rtftable()` and `as_rtftables()` read: FR-TB103, FR-TB115) -> 0.1.0; `tfrmt()`, `frmt()`, `frmt_structure()`, `body_plan()`, `row_grp_plan()`, `element_row_grp_loc()`, `print_to_gt()` -> 0.0.1. | tfrmt NEWS 0.1.0 ("Add `page_plan`"); `NAMESPACE` of each release |
 | flextable | 0.9.5 | `information_data_chunk()`, `information_data_paragraph()` (the flextable adapter reads the cells and their alignment with them) -> 0.9.5; `separate_header()` -> 0.7.1; `nrow_part()` -> 0.6.4; `fp_border_default()` -> 0.6.2; `colformat_double()`, `colformat_date()` -> 0.6.0; the others -> 0.5.10 or earlier. The minimum was 0.9.0, which has no `information_data_*()`. | `NAMESPACE` of 0.9.4 and 0.9.5 (the NEWS does not name them) |
 | huxtable | 5.0.0 | `header_rows()`, `set_header_rows()`, `markdown()`, `set_markdown()`, `merge_across()`, `merge_down()` -> 5.0.0; `merge_cells()` -> 4.2.0; `add_rows()` -> 4.1.0; the others -> 0.3.1 or earlier. | huxtable NEWS 5.0.0; `NAMESPACE` of each release |
