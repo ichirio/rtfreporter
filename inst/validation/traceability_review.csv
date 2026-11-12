@@ -1002,7 +1002,7 @@
 "FT-DC3015","FR-DC220","asserts","expect_s3_class(rtf_watermark(""DRAFT""), ""rtf_watermark"") | expect_true(grepl(""{\\sv DOCMARK}"", hdr[1], fixed = TRUE)) | expect_true(grepl(""{\\sv SECMARK}"", hdr[2], fixed = TRUE)) | expect_true(grepl(""shpfblwtxt1"", h, fixed = TRUE)) | expect_identical(lengths(regmatches(txt, gregexpr(""shpinst"", txt, fixed = TRUE))), 2L)","yes"
 "FT-DC041","FR-DC221","part","expect_identical(rtf_watermark(NA)$text, """")","yes"
 "FT-DC210","FR-DC221","part","expect_null(rtfreporter:::.normalize_watermark(NULL)) | expect_null(rtfreporter:::.normalize_watermark(NA)) | expect_null(rtfreporter:::.normalize_watermark(""""))","yes"
-"FT-DC3016","FR-DC221","part","expect_identical(rtf_watermark("""")$text, """") | expect_identical(rtf_watermark(NA)$text, """") | expect_false(grepl(""shpinst"", txt, fixed = TRUE))","yes"
+"FT-DC3016","FR-DC221","asserts","expect_identical(rtf_watermark("""")$text, """") | expect_identical(rtf_watermark(NA)$text, """") | expect_false(grepl(""shpinst"", txt, fixed = TRUE)) | expect_error(rtf_watermark(character(0)), req, fixed = TRUE) | expect_error(rtf_watermark(), req, fixed = TRUE)","yes"
 "FT-DC041","FR-DC222","asserts","expect_error(rtf_watermark(), ""`text` is required"") | expect_error(rtf_watermark(NULL), ""`text` is required"") | expect_error(rtf_watermark(character(0)), ""`text` is required"")","yes"
 "FT-DC216","FR-DC222","part","expect_error(rtf_watermark(), ""`text` is required"")","yes"
 "FT-DC3017","FR-DC223","asserts","expect_true(grepl(""{\\sn gtextSize}{\\sv 1440}"", def, fixed = TRUE)) # 144 half-points = 72 pt | expect_identical(box(def), c(w = 8640L, h = 2880L)) # 6 x 2 in | expect_true(grepl(""{\\sn gtextSize}{\\sv 1000}"", small, fixed = TRUE))","yes"

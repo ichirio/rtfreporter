@@ -1541,6 +1541,10 @@ test_that("FT-DC3016 [FR-DC221]: a watermark of an empty string writes no shape"
   expect_false(grepl("shpinst", .render_to_string(
     rtf_tables(rtf_config(rtf_document(), watermark = rtf_watermark("")), .g2_tb())),
     fixed = TRUE))
+  # a zero-length text stops, as a missing one does
+  req <- "`text` is required; give the word to draw, e.g. \"DRAFT\"."
+  expect_error(rtf_watermark(character(0)), req, fixed = TRUE)
+  expect_error(rtf_watermark(), req, fixed = TRUE)
 })
 
 test_that("FT-DC3017 [FR-DC223 FR-DC231 FR-DC229]: rtf_watermark() size, box and font: 144 half-points by default, a 6 x 2 in box, the document font unless font is given", {
