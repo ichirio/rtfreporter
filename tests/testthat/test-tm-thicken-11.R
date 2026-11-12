@@ -208,6 +208,9 @@ test_that("FT-TB6105 [FR-TB115]: a gt_group, a tfrmt page_plan render and a tbl_
   expect_length(one, 2L)
   expect_identical(one[[1L]]$data$a, c("1", "2"))
   expect_identical(one[[2L]]$data$a, c("3", "4"))
+  # a page set per member table: the same as each member given on its own
+  alone <- c(as_rtftables(gt::gt(d4[1:2, ])), as_rtftables(gt::gt(d4[3:4, ])))
+  expect_identical(lapply(one, `[[`, "data"), lapply(alone, `[[`, "data"))
   many <- as_rtftables(sp, split = "group_force", max_rows = 1)
   expect_length(many, 4L)
   expect_identical(unname(vapply(many, function(p) p$data$a, "")), c("1", "2", "3", "4"))
@@ -230,6 +233,10 @@ test_that("FT-TB6105 [FR-TB115]: a gt_group, a tfrmt page_plan render and a tbl_
   expect_identical(.t11_plain(tp[[2L]]$data$rowname)[1L], "g2")
   expect_identical(tp[[1L]]$data$A, c("", "1", "3"))       # g1 rows are 1 and 3 in dat
   expect_identical(tp[[2L]]$data$A, c("", "2", "4"))
+  # ... each page set is the member table's own, as grp_pull() gives it
+  rendered <- tfrmt::print_to_gt(spec, dat)
+  members <- lapply(1:2, function(i) as_rtftables(gt::grp_pull(rendered, i)))
+  expect_identical(lapply(tp, `[[`, "data"), lapply(unlist(members, recursive = FALSE), `[[`, "data"))
 
   skip_if_not("tbl_split_by_rows" %in% getNamespaceExports("gtsummary"))
   ts <- gtsummary::tbl_split_by_rows(.t11_gts(), variables = c(age, grade))
@@ -238,6 +245,9 @@ test_that("FT-TB6105 [FR-TB115]: a gt_group, a tfrmt page_plan render and a tbl_
   expect_gt(length(pages), 1L)
   expect_identical(pages[[1L]]$data[[1L]][1L], "Age")
   expect_identical(pages[[2L]]$data[[1L]][1L], "Grade")
+  # one page set a member: each is the member table given on its own
+  own <- unlist(lapply(seq_along(ts), function(i) as_rtftables(ts[[i]])), recursive = FALSE)
+  expect_identical(lapply(pages, `[[`, "data"), lapply(own, `[[`, "data"))
 
   expect_identical(as_rtftables(gt::gt_group()), list())
 })
