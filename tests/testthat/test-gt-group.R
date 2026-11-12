@@ -122,3 +122,37 @@ test_that("a tfrmt page_plan render (gt_group) converts page by page", {
   expect_length(pages, 2L)                     # one page per group value
   expect_true(all(vapply(pages, inherits, logical(1), "rtftable")))
 })
+
+# ── row-split members (#1005) ─────────────────────────────────────────────────
+
+test_that("FT-TB6601 [FR-TB115]: a row-split gt_group member gives its own rows", {
+  skip_if_not_installed("gt")
+  d4 <- data.frame(a = as.character(1:4), b = letters[1:4],
+                   x = c(1.234, 2.345, 3.456, 4.567), stringsAsFactors = FALSE)
+  # the reproduction: page 2 holds rows 3 and 4, not empty cells
+  sp <- gt::gt_split(gt::gt(d4[c("a", "b")]), row_every_n = 2)
+  pages <- as_rtftables(sp)
+  expect_length(pages, 2L)
+  expect_identical(pages[[1L]]$data$a, c("1", "2"))
+  expect_identical(pages[[2L]]$data$a, c("3", "4"))
+  expect_identical(pages[[2L]]$data$b, c("c", "d"))
+  # formatted text and a cell style on page-2 rows
+  g <- gt::tab_style(gt::fmt_number(gt::gt(d4), "x", decimals = 1),
+                     gt::cell_text(weight = "bold"),
+                     gt::cells_body(columns = "b", rows = 4))
+  sp2 <- gt::gt_split(g, row_every_n = 2)
+  pg <- as_rtftables(sp2, read_meta = TRUE)
+  expect_identical(pg[[1L]]$data$x, c("1.2", "2.3"))
+  expect_identical(pg[[2L]]$data$x, c("3.5", "4.6"))
+  jb <- match("b", names(pg[[2L]]$data))
+  expect_true(pg[[2L]]$cell_styles[[2L]]$bold[jb])
+  expect_false(isTRUE(pg[[2L]]$cell_styles[[1L]]$bold[jb]))
+  # a member pulled alone gives the same
+  one <- as_rtftables(gt::grp_pull(sp2, 2L), read_meta = TRUE)
+  expect_identical(one[[1L]]$data, pg[[2L]]$data)
+  expect_identical(one[[1L]]$cell_styles, pg[[2L]]$cell_styles)
+  # a column split is unchanged
+  cs <- as_rtftables(gt::gt_split(gt::gt(d4[c("a", "b")]), col_slice_at = "a"))
+  expect_identical(cs[[1L]]$data$a, as.character(1:4))
+  expect_identical(cs[[2L]]$data$b, letters[1:4])
+})
