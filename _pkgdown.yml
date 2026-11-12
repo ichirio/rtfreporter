@@ -116,7 +116,6 @@ home:
             sources you define.
           - Inline formatting inside a text: bold, italic and superscript
             spans.
-          - Images inside table cells.
           - Footnote marks attached to a named row or cell.
           - Styling rules for single body rows.
       community:
