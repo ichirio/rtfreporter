@@ -406,6 +406,13 @@ test_that("FT-TB719 [FR-TB173]: footnote rows are strings or c(l =, r =), left-a
                "A footnote row is a string or a named vector", fixed = TRUE)
   s <- .at_rs(rtf_footnotes(rtf_tables(doc, t1), "FNZ", border = rtf_border(top = TRUE)))
   expect_true(grepl("\\clbrdrt", .at_line(s, "FNZ"), fixed = TRUE))
+  # a list of length(tables) blocks, or of length 1 (one block for every page)
+  two <- rtf_tables(doc, list(t1[[1L]], t1[[1L]]), footnotes = list(list("ONE"), list("TWO")))
+  expect_identical(two$contents[[1L]]$footnote, list("ONE"))
+  expect_identical(two$contents[[2L]]$footnote, list("TWO"))
+  same <- rtf_tables(doc, list(t1[[1L]], t1[[1L]]), footnotes = list(list("ONE")))
+  expect_identical(same$contents[[2L]]$footnote, list("ONE"))
+  expect_null(rtf_tables(doc, t1)$contents[[1L]]$footnote)
 })
 
 test_that("FT-TB720 [FR-TB574]: auto_title writes the name the same under either title_format, and composes with auto_section", {
@@ -438,6 +445,15 @@ test_that("FT-TB721 [FR-TB124]: max_rows is optional for split = \"by_value\": a
   # ignored by "none" and "rows"
   expect_length(as_rtftables(bv, max_rows = 2), 1L)
   expect_length(as_rtftables(bv, split = "rows", split_rows = 4, max_rows = 2), 2L)
+  # for "group_safe" and "group_force" it is the largest number of body rows on a page, and
+  # there is none by default: three groups of 2 and max_rows = 4 give pages of 4 and 2 rows
+  g <- data.frame(g = rep(c("A", "B", "C"), each = 2), v = 1:6)
+  for (s in c("group_safe", "group_force")) {
+    pg <- as_rtftables(g, split = s, max_rows = 4, group_col = "g")
+    expect_identical(unname(vapply(pg, function(x) nrow(x$data), 1L)), c(4L, 2L), info = s)
+    expect_error(as_rtftables(g, split = s, group_col = "g"),
+                 paste0("`max_rows` is required when split = \"", s, "\"."), fixed = TRUE)
+  }
 })
 
 test_that("FT-TB722 [FR-TB151]: as_rtftables(first_rows = ) with split = \"by_value\" stops", {

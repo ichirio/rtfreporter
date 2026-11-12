@@ -224,9 +224,9 @@ test_that("FT-AS3007 [FR-AS115]: a toc table prints a heading above an entry whe
   l2 <- .g2_lines(out2)
   e2 <- grep("HYPERLINK", l2, fixed = TRUE)
   expect_length(e2, 3L)
-  expect_true(startsWith(l2[e2[1]], "{\\pard\\li1200\\fs20\\tqr\\tldot\\tx14400 "))
-  expect_true(startsWith(l2[e2[2]], "{\\pard\\li600\\fs20\\tqr\\tldot\\tx14400 "))
-  expect_true(startsWith(l2[e2[3]], "{\\pard\\fs20\\tqr\\tldot\\tx14400 "))
+  expect_true(startsWith(l2[e2[1]], "{\\pard\\li1200\\fs20\\tqr\\tldot\\tx14112 "))
+  expect_true(startsWith(l2[e2[2]], "{\\pard\\li600\\fs20\\tqr\\tldot\\tx14112 "))
+  expect_true(startsWith(l2[e2[3]], "{\\pard\\fs20\\tqr\\tldot\\tx14112 "))
   expect_true(grepl("{\\fldrslt Own two}}", l2[e2[1]], fixed = TRUE))
   expect_true(grepl("{\\fldrslt Table 3 T3}}", l2[e2[2]], fixed = TRUE))
   expect_true(grepl("{\\fldrslt Table 1 T1}}", l2[e2[3]], fixed = TRUE))
@@ -2267,6 +2267,12 @@ test_that("FT-DC3051 [FR-DC365]: rtf_titles(border = ) in the table form: inside
   expect_identical(.g2_sides(.g2_rows_with(txt, "T1x")), "blr")
   expect_identical(.g2_sides(.g2_rows_with(txt, "T2x")), "blr")
   expect_identical(.g2_sides(.g2_rows_with(txt, "T3x")), "lr")
+  # top is the rule above the first row, bottom the rule below the last
+  tb2 <- .render_to_string(doc(list(c("T1x", "T2x", "T3x")),
+                               border = rtf_border(top = TRUE, bottom = TRUE)))
+  expect_identical(.g2_sides(.g2_rows_with(tb2, "T1x")), "t")
+  expect_identical(.g2_sides(.g2_rows_with(tb2, "T2x")), "")
+  expect_identical(.g2_sides(.g2_rows_with(tb2, "T3x")), "b")
   # a row's own border is merged side by side over the block's
   own <- list(list(c("T1x", list(text = "T2x", border = rtf_border(left = "none", bottom = FALSE)),
                      "T3x")))

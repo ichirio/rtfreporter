@@ -178,6 +178,11 @@ test_that("FT-TB3005 [FR-TB111]: the list is named for a value-based split and a
   expect_identical(names(res), c("A", "B"))
   expect_identical(res$A$data$v, c("1", "2"))
   expect_identical(res$B$data$v, "3")
+  # a list of rtftable objects, one per page
+  expect_type(res, "list")
+  expect_length(res, 2L)
+  expect_true(all(vapply(res, inherits, logical(1L), "rtftable")))
+  expect_length(as_rtftables(d, split = "rows", split_rows = 3), 2L)
 
   lst <- as_rtftables(list(a = data.frame(x = "1"), b = data.frame(x = "2")))
   expect_identical(names(lst), c("a", "b"))
@@ -898,6 +903,23 @@ test_that("FT-TB3041 [FR-TB176]: page-number tokens in a title and a footnote re
   expect_gte(.g4_count(txt, field), 2L)
   expect_false(grepl("{TOTAL_PAGES}", txt, fixed = TRUE))
   expect_false(grepl("{PAGE}", txt, fixed = TRUE))
+
+  # {AUTO_PAGE} is the page-number control word the viewer fills, in a title and a footnote
+  auto <- .g4_rtf(rtf_tables(rtf_document(), list(d),
+                             titles = list("A {AUTO_PAGE}"), footnotes = list("B {AUTO_PAGE}")))
+  expect_identical(.g4_count(auto, paste0(bs, "chpgn")), 2L)
+  expect_false(grepl("{AUTO_PAGE}", auto, fixed = TRUE))
+
+  # a table paginated on a column fills {<column name>} with its page's value
+  s <- data.frame(PARAM = c("ALT", "ALT", "AST"), v = c("1", "2", "3"), stringsAsFactors = FALSE)
+  pg <- as_rtftables(s, page_by = "PARAM")
+  col <- .g4_rtf(rtf_tables(rtf_document(), pg, titles = list("Param {PARAM}"),
+                            footnotes = list("Shown {PARAM}")))
+  expect_identical(.g4_count(col, "Param ALT"), 1L)
+  expect_identical(.g4_count(col, "Param AST"), 1L)
+  expect_identical(.g4_count(col, "Shown ALT"), 1L)
+  expect_identical(.g4_count(col, "Shown AST"), 1L)
+  expect_false(grepl("{PARAM}", col, fixed = TRUE))
 })
 
 test_that("FT-TB3042 [FR-TB177]: auto_section opens a section where the name changes and appends the heading to the common header", {
@@ -928,6 +950,10 @@ test_that("FT-TB3042 [FR-TB177]: auto_section opens a section where the name cha
   expect_identical(names(pages), c("A...1", "A...2", "B"))
   for (i in seq_along(pages)) attr(pages[[i]], "rtf_heading_at") <- "section"
   expect_length(.pipe_doc_to_rtfreport(rtf_tables(base, pages))$sections, 2L)
+  # the "...n" tail is stripped from the heading the section prints
+  tailed <- .pipe_doc_to_rtfreport(rtf_tables(base, pages))$sections
+  expect_identical(unname(vapply(tailed[[1L]]$header$rows, function(x) x[[1L]], "")),
+                   c("Study", "A"))
   expect_length(.pipe_doc_to_rtfreport(rtf_tables(base, pages,
                                                   auto_section = FALSE))$sections, 1L)
 })
@@ -1016,6 +1042,15 @@ test_that("FT-TB3046 [FR-TB188]: cont_title is a line under the title of the pag
                      first_rows = 3)
   expect_identical(.g4_count(.g4_rtf(none), "(continued)"), 0L)
   expect_identical(.g4_count(.g4_rtf(none), "Table 2"), 2L)
+
+  # a table's own later pages take it too (as_rtftables() pages: 10 rows cut before rows 4
+  # and 8 make three pages, so two later ones)
+  own <- rtf_tables(rtf_document(),
+                    as_rtftables(.g4_df(10, "Row"), split = "rows", split_rows = c(4, 8)),
+                    titles = list("Table 3"), cont_title = "(continued)")
+  own_txt <- .g4_rtf(own)
+  expect_identical(.g4_count(own_txt, "Table 3"), 3L)
+  expect_identical(.g4_count(own_txt, "(continued)"), 2L)
 })
 
 test_that("FT-TB3047 [FR-TB192]: rtf_tables() reads a gt as as_rtftables() does, alone and in a list", {
@@ -1349,6 +1384,15 @@ test_that("FT-TB3065 [FR-TB272]: a list of pages is cut alike; positions refer t
   expect_identical(names(cut[[2L]]$data), c("soc / pt", "m", "k"))
   expect_identical(cut[[1L]]$col_header, list(c("Term", "N")))
   expect_identical(cut[[2L]]$col_header, list(c("Term", "M", "K")))
+
+  # a multi-DF table is cut on every constituent frame, and an empty list gives an empty list
+  multi <- paginate_cols(rtftable(list(.g4_pc_df(), .g4_pc_df())), at = 4, fit = FALSE)
+  expect_length(multi, 2L)
+  for (i in 1:2) {
+    expect_identical(names(multi[[1L]]$data_list[[i]]), c("P", "A_n", "A_m"))
+    expect_identical(names(multi[[2L]]$data_list[[i]]), c("P", "B_n", "B_m"))
+  }
+  expect_identical(paginate_cols(list(), at = 2), list())
 })
 
 test_that("FT-TB3066 [FR-TB283]: paginate_cols() with no way to cut, or two, stops with the full message", {
