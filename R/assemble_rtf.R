@@ -245,6 +245,8 @@
   if (!one_string(toc_title)) {
     stop("`toc_title` must be a single string.", call. = FALSE)
   }
+  # (named l / c / r as a header cell is: the title's alignment)
+  if (!is.null(names(toc_title))) .check_hf_row_names(list(toc_title), "assemble_rtf")
   if (!one_string(bookmark_prefix) ||
       !grepl("^[A-Za-z0-9_]*$", bookmark_prefix)) {
     stop("`bookmark_prefix` must be a single string of letters, digits ",
@@ -342,6 +344,16 @@
   NA_character_
 }
 
+# The label a file's TOC entry gets when none is given: the file's title (as
+# `toc = "auto"` reads it), else the file's name without ".rtf".
+.toc_label_from_title <- function(file) {
+  ttl <- .extract_first_title(readLines(file, warn = FALSE))
+  if (is.na(ttl) || !nzchar(ttl)) {
+    ttl <- sub("\\.rtf$", "", basename(file), ignore.case = TRUE)
+  }
+  ttl
+}
+
 # Normalise the user-supplied `toc` into a uniform list of:
 #   list(label, level, file_idx (NA = heading), type = "heading"|"entry")
 .normalize_toc <- function(toc, input_files) {
@@ -353,11 +365,8 @@
   # "auto" -> extract title from each input file
   if (is.character(toc) && length(toc) == 1L && toc == "auto") {
     out <- lapply(seq_along(input_files), function(i) {
-      ttl <- .extract_first_title(readLines(input_files[i], warn = FALSE))
-      if (is.na(ttl) || !nzchar(ttl)) {
-        ttl <- sub("\\.rtf$", "", basename(input_files[i]), ignore.case = TRUE)
-      }
-      list(label = ttl, level = 1L, file_idx = i, type = "entry")
+      list(label = .toc_label_from_title(input_files[i]), level = 1L,
+           file_idx = i, type = "entry")
     })
     return(out)
   }
@@ -492,17 +501,21 @@
 # its indent and page number, and a page is filled to 90% only, so the page
 # breaks are the TOC's own (\pagebb) and its page count is known for the
 # cached page numbers.  A heading last on a page goes over with what it heads.
-.toc_entry_pages <- function(toc_entries) {
+# The title takes `title_lines` lines (default 1: a title of one line; a "\n"
+# in it adds a line); the sizes are those of `style` (.toc_style(): 14 pt
+# title, 9 pt blank line, 11 pt heading, 10 pt entry by default).
+.toc_entry_pages <- function(toc_entries, title_lines = 1L,
+                             style = .toc_style(NULL)) {
   if (!length(toc_entries)) return(integer(0))
   room <- 0.9 * (12240 - 2 * 1296)
   line <- function(hp) 1.15 * hp * 10               # half-points -> twips
   char <- .char_width_in("courier_new", 10) * 1440  # a 10 pt character, twips
-  used <- line(28) + line(18)                       # the title, the blank
+  used <- title_lines * line(.toc_hp(style$title)) + line(.toc_hp(style$gap))
   page <- 1L
   out  <- integer(length(toc_entries))
   for (i in seq_along(toc_entries)) {
     e  <- toc_entries[[i]]
-    hp <- if (identical(e$type, "heading")) 22 else 20
+    hp <- .toc_hp(if (identical(e$type, "heading")) style$heading else style$entry)
     width <- 14400 - .toc_indent_for_level(e$level) - 720
     n  <- max(1, ceiling(nchar(e$label %||% "") * char * hp / 20 / width))
     h  <- n * line(hp)
@@ -521,13 +534,116 @@
   out
 }
 
+# -- The TOC's text styles (assemble_rtf(toc_style = )) ----------------------
+
+# Today's sizes: the title 14 pt bold, a heading 11 pt bold, an entry 10 pt,
+# and the blank line below the title 9 pt (`gap`, a size only).
+.TOC_STYLE_DEFAULT <- list(
+  title   = list(size = 14, bold = TRUE),
+  heading = list(size = 11, bold = TRUE),
+  entry   = list(size = 10, bold = FALSE),
+  gap     = list(size = 9)
+)
+
+# A style item's size in half-points (the `\fs` unit)
+.toc_hp <- function(item) as.integer(round(item$size * 2))
+
+# `toc_style` (NULL, or a list of list(size = , bold = ) by title / heading /
+# entry / gap) merged over the defaults, key by key; anything else an error.
+.toc_style <- function(x = NULL, where = "toc_style") {
+  out <- .TOC_STYLE_DEFAULT
+  if (is.null(x)) return(out)
+  keys <- names(out)
+  if (!is.list(x) || is.data.frame(x) ||
+      (length(x) && (is.null(names(x)) || any(!nzchar(names(x)))))) {
+    stop("`", where, "` must be NULL or a list with the keys ",
+         paste(keys, collapse = ", "), ", e.g. list(title = list(size = 12)).",
+         call. = FALSE)
+  }
+  bad <- setdiff(names(x), keys)
+  if (length(bad)) {
+    stop("`", where, "` has unknown key(s) ", paste0("'", bad, "'", collapse = ", "),
+         "; the keys are ", paste(keys, collapse = ", "), ".", call. = FALSE)
+  }
+  for (k in names(x)) {
+    v <- x[[k]]
+    w <- sprintf("`%s$%s`", where, k)
+    fields <- names(out[[k]])
+    if (!is.list(v) || (length(v) && (is.null(names(v)) || any(!nzchar(names(v)))))) {
+      stop(w, " must be a list with ", paste(fields, collapse = " and "),
+           ", e.g. list(size = 12).", call. = FALSE)
+    }
+    badf <- setdiff(names(v), fields)
+    if (length(badf)) {
+      stop(w, " has unknown key(s) ", paste0("'", badf, "'", collapse = ", "),
+           "; it takes ", paste(fields, collapse = " and "), ".", call. = FALSE)
+    }
+    if (!is.null(v$size)) {
+      s <- v$size
+      if (!is.numeric(s) || length(s) != 1L || is.na(s) || !is.finite(s) ||
+          s <= 0 || s * 2 != round(s * 2)) {
+        stop(sprintf("`%s$%s$size`", where, k), " must be a positive number of points, whole or half ",
+             "(10, 10.5).", call. = FALSE)
+      }
+      out[[k]]$size <- as.numeric(s)
+    }
+    if (!is.null(v$bold)) {
+      if (!is.logical(v$bold) || length(v$bold) != 1L || is.na(v$bold)) {
+        stop(sprintf("`%s$%s$bold`", where, k), " must be TRUE or FALSE.", call. = FALSE)
+      }
+      out[[k]]$bold <- v$bold
+    }
+  }
+  out
+}
+
+# The control words of a styled paragraph: `\b` (when bold) and `\fs<n>`
+.toc_char_cmd <- function(item) {
+  paste0(if (isTRUE(item$bold)) "\\b" else "", "\\fs", .toc_hp(item))
+}
+
+# The title's alignment: named l / c / r as a header cell is; centred when
+# unnamed.
+.toc_title_align <- function(toc_title) {
+  switch(names(toc_title)[1L] %||% "c", l = "\\ql", r = "\\qr", "\\qc")
+}
+
+# The TOC title as RTF text, filled as a page's title is: "\n" becomes a line
+# break, and the tokens are filled (the session's own tokens,
+# options(rtfreporter.tokens); {DATETIME}, {PROGRAM}; {AUTO_PAGE} ...).  A
+# token that is not one stays as text, as in a title.  The page tokens that
+# need a page ({PAGE}, {TOTAL_PAGES}) are not filled: the title is on no page
+# of its own.  A heading's text is filled the same way.
+.toc_title_rtf <- function(toc_title) {
+  toc_title <- unname(toc_title)
+  .run_ctx$tokens <- .user_tokens()
+  on.exit({
+    .run_ctx$program <- NULL
+    .run_ctx$program_done <- NULL
+    .run_ctx$time <- NULL
+    .run_ctx$tokens <- NULL
+  }, add = TRUE)
+  .substitute_page_tokens(.rtf_escape(toc_title))
+}
+
+# The lines a rendered TOC title takes: one, and one more per line break (a
+# `\line` that is not an escaped backslash followed by "line").
+.toc_title_lines <- function(title_rtf) {
+  rx <- "(?<!\\\\)(?:\\\\\\\\)*\\\\line(?![A-Za-z])"
+  m  <- gregexpr(rx, title_rtf, perl = TRUE)[[1L]]
+  1L + if (m[1L] == -1L) 0L else length(m)
+}
+
 # Render the TOC section.  page_numbering = "roman" inserts \pgnlcrm
 # (Roman lowercase) so TOC pages are i, ii, iii.  The caller is
 # responsible for inserting \pgnrestart\pgndec on the next body section.
 .build_toc_section <- function(toc_entries, bookmarks, toc_title,
                                 toc_leader = c("dot", "none"),
                                 page_numbering = c("none", "roman", "decimal"),
-                                entry_pages = NULL) {
+                                entry_pages = NULL, title_rtf = NULL,
+                                toc_style = NULL) {
+  if (is.null(title_rtf)) title_rtf <- .toc_title_rtf(toc_title)
+  style <- .toc_style(toc_style)
   toc_leader     <- match.arg(toc_leader)
   page_numbering <- match.arg(page_numbering)
   leader_cmd <- if (toc_leader == "dot") "\\tldot" else ""
@@ -549,12 +665,12 @@
     paste0("\\sectd\\sbkpage\\lndscpsxn", pg_cmd),
     "\\pgwsxn15840\\pghsxn12240",
     "\\marglsxn864\\margrsxn864\\margtsxn1296\\margbsxn1296",
-    sprintf("{\\pard\\qc\\b\\fs28 %s\\par}",
-            .toc_escape(toc_title)),
-    "{\\pard\\fs18\\par}"
+    sprintf("{\\pard%s%s %s\\par}", .toc_title_align(toc_title),
+            .toc_char_cmd(style$title), title_rtf),
+    sprintf("{\\pard%s\\par}", .toc_char_cmd(style$gap))
   )
 
-  on_page <- .toc_entry_pages(toc_entries)
+  on_page <- .toc_entry_pages(toc_entries, .toc_title_lines(title_rtf), style)
   for (k in seq_along(toc_entries)) {
     e          <- toc_entries[[k]]
     indent     <- .toc_indent_for_level(e$level)
@@ -565,8 +681,8 @@
     if (e$type == "heading") {
       # Heading -- bold, no leader, no page number.
       lines <- c(lines,
-        sprintf("{\\pard%s\\b\\fs22 %s\\par}",
-                indent_cmd, .toc_escape(e$label))
+        sprintf("{\\pard%s%s %s\\par}", indent_cmd,
+                .toc_char_cmd(style$heading), .toc_title_rtf(e$label))
       )
       next
     }
@@ -582,14 +698,14 @@
       as.integer(entry_pages[e$file_idx])
     } else 1L
     line <- sprintf(
-      paste0("{\\pard%s\\fs20\\tqr%s\\tx%d ",
+      paste0("{\\pard%s%s\\tqr%s\\tx%d ",
              "{\\field{\\*\\fldinst HYPERLINK \\\\l \"%s\"}",
              "{\\fldrslt %s}}",
              "\\tab",
              "{\\field{\\*\\fldinst PAGEREF %s \\\\h}",
              "{\\fldrslt %d}}",
              "\\par}"),
-      indent_cmd, leader_cmd, tab_pos, bm, txt, bm, pg
+      indent_cmd, .toc_char_cmd(style$entry), leader_cmd, tab_pos, bm, txt, bm, pg
     )
     lines <- c(lines, line)
   }
@@ -649,10 +765,12 @@
 #'   \item{a character vector of TOC labels}{one per input file -- same as
 #'     `"auto"` but with explicit labels.}
 #'   \item{a table (`data.frame`)}{one row per file, in order, for
-#'     multi-level (chapter / table) layouts: `file` (the path), `label` (the
-#'     entry text), and optionally `heading` (a heading printed above the
-#'     row's entry whenever it changes; `NA` = none), `level` (the entry's
-#'     indent, a whole number from 1 to 3, default 2) and `order`.  [assemble_folder()] makes one from a
+#'     multi-level (chapter / table) layouts: `file` (the path), and
+#'     optionally `label` (the entry text; a row with no `label`, or an `NA`
+#'     one, takes its file's title, read as `"auto"` reads it), `heading` (a
+#'     heading printed above the row's entry whenever it changes; `NA` =
+#'     none), `level` (the entry's indent, a whole number from 1 to 3,
+#'     default 2) and `order`.  [assemble_folder()] makes one from a
 #'     folder, ready to edit.  `input_files` can then be left out: the
 #'     table's `file` column is used.}
 #'   \item{the path of such a table}{an `.xlsx` or `.csv` file, e.g. the one
@@ -692,11 +810,18 @@
 #'   for a cover page.  `NULL` (default) = no cover page.
 #' @param toc Table-of-Contents specification.  `NULL` (default) =
 #'   no TOC, no bookmarks; `"auto"` = auto-extract titles; a
-#'   character vector = one label per input file; a table (columns `file`,
-#'   `label`, `heading`, `level`) or the path of one (`.xlsx` / `.csv`) =
-#'   multi-level layout.  See **Table of Contents** above.
-#' @param toc_title Centred bold title rendered on the TOC page, a single
-#'   string (`""` = an empty title line).  Default `"Table of Contents"`.
+#'   character vector = one label per input file; a table (column `file`,
+#'   and optionally `label`, `heading`, `level`) or the path of one (`.xlsx` /
+#'   `.csv`) = multi-level layout.  See **Table of Contents** above.
+#' @param toc_title Bold title rendered on the TOC page, a single
+#'   string (`""` = an empty title line).  Named `l`, `c` or `r` as a header
+#'   cell is, it is aligned left, centre or right (`c(l = "Contents")`);
+#'   unnamed it is centred.  `"\n"` is a line break in the
+#'   title, and the tokens of [rtf_text_tokens()] that need no page are filled
+#'   as in a title: the session's own tokens
+#'   (`options(rtfreporter.tokens = )`), `{DATETIME}`, `{PROGRAM}`.  A token
+#'   that is none of them stays as text.  The same goes for the text of a
+#'   `heading` of a table `toc`.  Default `"Table of Contents"`.
 #' @param toc_leader `"dot"` (default) draws a dotted leader between
 #'   each TOC entry and its page number; `"none"` leaves whitespace.
 #' @param toc_page_numbering `"none"` (default) / `"roman"` /
@@ -725,6 +850,17 @@
 #'       slot sits in one band shared by every page of a section, so a
 #'       single substitution cannot give each page its own number.}
 #'   }
+#' @param toc_style The size and boldness of the TOC's text: `NULL` (the
+#'   built-in sizes) or a list with the keys `title`, `heading` and `entry`,
+#'   each `list(size = <points>, bold = TRUE/FALSE)`, and `gap`
+#'   (`list(size = )`: the blank line below the title).  A list is merged over
+#'   the built-in values key by key, so `list(entry = list(size = 9))` changes
+#'   the entries' size only.  Built in: title 14 pt bold, heading 11 pt bold,
+#'   entry 10 pt, gap 9 pt.  A size is a positive number of points, whole or
+#'   half (`10.5`).  Default `getOption("rtfreporter.toc_style")`.  The font is
+#'   the document's (that of the first input file).  Another key, a size that
+#'   is not a positive number or a `bold` that is not `TRUE` / `FALSE` is an
+#'   error.
 #'
 #' @return Invisibly returns `output_file`.
 #'
@@ -777,11 +913,13 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
                           toc_leader         = c("dot", "none"),
                           toc_page_numbering = c("none", "roman", "decimal"),
                           bookmark_prefix    = "tfl_",
-                          book_page          = NULL) {
+                          book_page          = NULL,
+                          toc_style          = getOption("rtfreporter.toc_style")) {
   toc_leader         <- match.arg(toc_leader)
   toc_page_numbering <- match.arg(toc_page_numbering)
   .check_assemble_args(output_file, overwrite, cover, toc_title,
                        bookmark_prefix, book_page)
+  toc_style <- .toc_style(toc_style)
 
   # A table of contents given as a table, or as the path of one: its rows in
   # `order`, and its files when `input_files` is left out.
@@ -859,7 +997,10 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
   # spelled, so the start page of file i = front-matter pages + 1 + pages in
   # files 1..i-1.
   entry_pages <- NULL
-  toc_pages   <- if (use_toc) max(1L, .toc_entry_pages(toc_entries)) else 0L
+  title_rtf   <- if (use_toc) .toc_title_rtf(toc_title)
+  toc_pages   <- if (use_toc) {
+    max(1L, .toc_entry_pages(toc_entries, .toc_title_lines(title_rtf), toc_style))
+  } else 0L
   if (use_toc) {
     npages <- vapply(input_files, function(f)
       .count_rtf_pages(readLines(f, warn = FALSE)), integer(1L))
@@ -895,7 +1036,8 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
         .build_toc_section(toc_entries, bookmarks, toc_title,
                            toc_leader = toc_leader,
                            page_numbering = toc_page_numbering,
-                           entry_pages = entry_pages)
+                           entry_pages = entry_pages, title_rtf = title_rtf,
+                           toc_style = toc_style)
       )
     }
 

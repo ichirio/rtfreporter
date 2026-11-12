@@ -238,8 +238,10 @@
     # .toc_entry(), not cut to 2)
     lvl <- if (!is.null(spec$level) && !is.na(spec$level[i]))
       as.numeric(spec$level[i]) else 2L
-    toc <- c(toc, list(.toc_entry(spec$label[i], file = spec$file[i],
-                                  level = lvl)))
+    # (no label, or an NA one: the file's own title, as toc = "auto" reads it)
+    lab <- spec$label[i]
+    if (is.na(lab)) lab <- .toc_label_from_title(spec$file[i])
+    toc <- c(toc, list(.toc_entry(lab, file = spec$file[i], level = lvl)))
   }
   toc
 }
@@ -247,14 +249,16 @@
 # A table of contents given as a table: the columns it needs, its rows in
 # `order` when it has one, and its files present.
 .check_toc_table <- function(spec) {
-  if (!all(c("file", "label") %in% names(spec))) {
-    stop("A table of contents needs the columns `file` and `label` ",
-         "(and optionally `heading`, `level`, `order`; see assemble_folder()).",
+  if (!"file" %in% names(spec)) {
+    stop("A table of contents needs the column `file` (and optionally ",
+         "`label`, `heading`, `level`, `order`; see assemble_folder()).",
          call. = FALSE)
   }
   if (!is.null(spec$order)) spec <- spec[order(spec$order), , drop = FALSE]
   spec$file  <- as.character(spec$file)
-  spec$label <- as.character(spec$label)
+  # (no `label` column: every label is read from its file's title)
+  spec$label <- if (is.null(spec$label)) rep(NA_character_, nrow(spec)) else
+    as.character(spec$label)
   if (!is.null(spec$heading)) spec$heading <- as.character(spec$heading)
   missing <- !file.exists(spec$file)
   if (any(missing)) {
@@ -332,7 +336,7 @@
                                 toc_page_numbering = "decimal",
                                 overwrite = FALSE, ...) {
   if (is.character(spec) && length(spec) == 1L) spec <- .read_spec(spec)
-  if (!is.data.frame(spec) || !all(c("file", "label") %in% names(spec))) {
+  if (!is.data.frame(spec) || !"file" %in% names(spec)) {
     stop("`spec` must be an assembly-spec data.frame (see assemble_folder()) ",
          "or a path to one.", call. = FALSE)
   }

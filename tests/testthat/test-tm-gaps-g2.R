@@ -1589,7 +1589,8 @@ test_that("FT-DC3031 [FR-DC263]: rtfreporter_options() has one element per rtfre
            "rtfreporter.title_format", "rtfreporter.footnote_format",
            "rtfreporter.title_width", "rtfreporter.footnote_width",
            "rtfreporter.figure.default_dpi", "rtfreporter.png_device",
-           "rtfreporter.rounding", "rtfreporter.ard_pipe")
+           "rtfreporter.rounding", "rtfreporter.ard_pipe",
+           "rtfreporter.toc_style")
   saved <- stats::setNames(lapply(nms, getOption), nms)
   on.exit(options(saved), add = TRUE)
   rtfreporter_reset_defaults()
@@ -1637,7 +1638,8 @@ test_that("FT-DC3032 [FR-DC264]: the factory baseline is landscape Letter with 0
          rtfreporter.figure.default_dpi = 96L,
          rtfreporter.png_device = "auto",
          rtfreporter.rounding = "r",
-         rtfreporter.ard_pipe = NULL))
+         rtfreporter.ard_pipe = NULL,
+         rtfreporter.toc_style = NULL))
 })
 
 test_that("FT-DC3033 [FR-DC267]: rtfreporter_reset_defaults() returns invisibly the factory list it applied", {
