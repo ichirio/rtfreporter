@@ -232,10 +232,16 @@ to opt in selectively.
     * `"styles"`         -- `tab_style(cell_text(...))` -> per-cell
                             bold / italic / underline / indent, carried
                             on the rtftable's `cell_styles` field
-    * `"footnote_marks"` -- the in-cell footnote marks gt renders as
-                            `<sup>N</sup>` -> rtfreporter `^{N}`
-                            superscript markup (matching the texts read
-                            by `"footnotes"`)
+    * `"footnote_marks"` -- the footnote marks gt prints on the column
+                            labels, spanning headers, title, subtitle
+                            and row-group labels -> rtfreporter `^{N}`
+                            superscript markup after the text,
+                            and each line read by `"footnotes"` starting
+                            with its mark (`^{N}` then the note), in
+                            gt's order, so the marks match the notes
+                            (the in-cell marks gt renders as
+                            `<sup>N</sup>` in the body are always
+                            written as `^{N}`)
     * `"strip_html"`     -- remove stray HTML left in cell values
                             (`<br>` -> line break; other tags dropped)
 
