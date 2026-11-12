@@ -14,17 +14,69 @@
 
 # -- RTF title extraction ----------------------------------------------------
 
-# Decode a short run of RTF text into plain text: each `\uN?` becomes its
-# character (a non-breaking space, U+00A0, becomes a normal space), and the
-# escaped braces / backslash become literals.
+# Decode a short run of RTF text (one title row, one header cell) into plain
+# text: each `\uN?` becomes its character (a non-breaking space, U+00A0,
+# becomes a normal space), and the escaped braces / backslash become
+# literals.  A control word is not text: a line break inside the row
+# (`\line`, or `\par`) joins the text before and after it with two spaces, as
+# title rows are joined; `\tab` is a space; any other control word (`\i`,
+# `\ul`, `\cf3`, ...) is left out (#1021).
 .rtf_decode_text <- function(x) {
+  brk <- "\u0005"   # a line break inside the row
+  bsl <- "\u0007"   # an escaped backslash, kept apart from the control words
+  if (!length(x) || is.na(x)) return(x)
   x <- .rtf_label_text(x)
+  x <- gsub("\\\\", bsl, x, fixed = TRUE)
+  x <- gsub("\\\\(?:line|par)(?![A-Za-z]) ?", brk, x, perl = TRUE)
+  x <- gsub("\\\\tab(?![A-Za-z]) ?", " ", x, perl = TRUE)
   x <- .rtf_unicode_decode(x)
+  x <- gsub("\\\\[A-Za-z]+-?[0-9]* ?", "", x)
+  x <- gsub("\\~", " ", x, fixed = TRUE)
   x <- gsub(intToUtf8(160L), " ", x, fixed = TRUE)
   x <- gsub("\\{",  "{",  x, fixed = TRUE)
   x <- gsub("\\}",  "}",  x, fixed = TRUE)
-  x <- gsub("\\\\", "\\", x, fixed = TRUE)
-  trimws(x)
+  x <- gsub(bsl, "\\", x, fixed = TRUE)
+  parts <- trimws(strsplit(x, brk, fixed = TRUE)[[1L]])
+  paste(parts[nzchar(parts)], collapse = "  ")
+}
+
+# The title of a file as the file shows it, the one reader of a contents
+# entry's label (assemble_rtf(toc = "auto"), a table toc row with no label,
+# assemble_folder()'s label): the title rows rtf_titles() writes at the top
+# of the body -- the run of centred bold rows that begins at the first one,
+# within the first 200 lines and before any picture, a blank row inside the
+# run passed over -- each read by .rtf_decode_text() and joined with two
+# spaces ("Table 1  Demographics").  NA when the file has no such row.
+.rtf_title_text <- function(lines) {
+  n_scan <- min(length(lines), 200L)
+  pat   <- "\\\\qc\\\\li[0-9]+\\\\ri[0-9]+\\s+\\\\b\\s+(.+?)\\\\b0"
+  blank <- "\\\\q[lcr]\\\\li[0-9]+\\\\ri[0-9]+(?:\\\\[a-z]+-?[0-9]*)*\\s*\\\\(?:par|cell)"
+  rows <- character(0)
+  gap  <- FALSE
+  for (i in seq_len(n_scan)) {
+    line <- lines[i]
+    if (grepl("\\\\pict", line)) break
+    g <- regmatches(line, regexec(pat, line))[[1L]]
+    if (length(g) == 2L && nzchar(trimws(g[2L]))) {
+      rows <- c(rows, .rtf_decode_text(g[2L]))
+      gap  <- FALSE
+    } else if (length(rows) && !gap && grepl(blank, line, perl = TRUE)) {
+      gap <- TRUE            # a blank title row: the run may go on after it
+    } else if (length(rows)) {
+      break
+    }
+  }
+  rows <- rows[nzchar(rows)]
+  if (!length(rows)) return(NA_character_)
+  paste(rows, collapse = "  ")
+}
+
+# The label a file's contents entry gets when none is given, the same for
+# toc = "auto", a table toc row with no label and assemble_folder(): its
+# title (.rtf_title_text()); a file with no title rows, its running header's
+# "Table N" line (.rtf_table_label()); else the file's name without ".rtf".
+.toc_label_from_title <- function(file) {
+  .rtf_table_label(file)$label
 }
 
 # A title's RTF as the text of a label (a contents entry, its outline entry,
@@ -148,13 +200,17 @@
   tabnum <- tt$table
   title  <- tt$title
 
-  base <- sub("\\.rtf$", "", basename(file), ignore.case = TRUE)
-  label <- if (!is.na(tabnum)) {
-    trimws(paste0("Table ", tabnum, if (!is.na(title)) paste0("  ", title)))
-  } else if (!is.na(title)) {
-    title
-  } else {
-    base
+  # The label: the file's title rows, joined (.rtf_title_text(), as
+  # toc = "auto" reads them); without title rows, the running header's
+  # "Table N" line ("Table N  <title>"); else the file name (#1030).
+  base  <- sub("\\.rtf$", "", basename(file), ignore.case = TRUE)
+  label <- .rtf_title_text(lines)
+  if (is.na(label) || !nzchar(label)) {
+    label <- if (!is.na(tabnum)) {
+      trimws(paste0("Table ", tabnum, if (!is.na(title)) paste0("  ", title)))
+    } else {
+      base
+    }
   }
   list(file = file, table = tabnum, title = title, label = label)
 }
@@ -357,10 +413,11 @@
 #'
 #' Scans `dir` for `.rtf` files (natural-sorted, so `t2` comes before `t10`)
 #' and reads each file's table number and title into a **table of
-#' contents**: a `data.frame` with one row per file.  The number and title
-#' come from the running header (`rtf_header()`) when it has a `"Table N"`
-#' line, otherwise from the title block that [rtf_titles()] writes at the top
-#' of the body.  With an
+#' contents**: a `data.frame` with one row per file.  The number comes from
+#' the running header (`rtf_header()`) when it has a `"Table N"` line,
+#' otherwise from the title block that [rtf_titles()] writes at the top of
+#' the body; the label is the file's title, read as
+#' `assemble_rtf(toc = "auto")` reads it.  With an
 #' `output_file` it assembles the deliverable with that table of contents
 #' ([assemble_rtf()]); without one it only returns the table, to edit
 #' (rename labels, fill `heading` to group entries, change `level`, reorder
@@ -380,7 +437,12 @@
 #' (the table number read from the header or the titles, or `NA`), `heading`
 #' (a heading
 #' printed above the entry whenever it changes; `NA` = none), `label` (the
-#' entry text, `"Table N  <title>"`), `level` (the entry's indent, a whole
+#' entry text: the file's title, read as `assemble_rtf(toc = "auto")` reads
+#' it -- its title rows joined with two spaces, a line break inside a row
+#' too, as `"Table 14.1.1  Safety Population"`; a figure or a listing is
+#' labelled by its title as a table is; a file with no title rows takes its
+#' running header's `"Table N"` line, and a file with neither, its file
+#' name without `.rtf`), `level` (the entry's indent, a whole
 #' number from 1 to 3, default 2) and `pages` (informational).
 #'
 #' @param dir Directory of `.rtf` files to assemble: one folder path.  A

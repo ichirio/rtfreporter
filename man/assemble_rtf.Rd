@@ -80,7 +80,7 @@ single substitution cannot give each page its own number.}
 
 \item{toc_style}{The size and boldness of the TOC's text: \code{NULL} (the
 built-in sizes) or a list with the keys \code{title}, \code{heading} and \code{entry},
-each \code{list(size = <points>, bold = TRUE/FALSE)}, and \code{gap}
+each \verb{list(size = <points>, bold = TRUE/FALSE)}, and \code{gap}
 (\code{list(size = )}: the blank line below the title).  A list is merged over
 the built-in values key by key, so \code{list(entry = list(size = 9))} changes
 the entries' size only.  Built in: title 14 pt bold, heading 11 pt bold,
@@ -142,13 +142,19 @@ Any field that is \code{NULL}, \code{NA} or empty is skipped, as is an \code{NA}
 \describe{
 \item{\code{NULL} (default)}{no TOC, no bookmarks.  Byte-for-byte the
 pre-v0.0.29 behaviour.}
-\item{\code{"auto"}}{auto-extract each input file's title (the first
-centred-bold cell of the title block) and use it as a level-1
-TOC entry.  Falls back to the file's basename if no title is
-detected.  The title is read as the file shows it, its tokens filled
-(\code{{STUDY}}, \code{{PAGE}}), except that a dynamic page number
+\item{\code{"auto"}}{each input file's title as a level-1 TOC entry.  The
+title is the file's title rows (the centred bold rows \code{\link[=rtf_titles]{rtf_titles()}}
+writes at the top of the body), read as the file shows them and
+joined into one entry with two spaces between them (\code{"Table 1"} and
+\code{"Demographics"} give \code{"Table 1  Demographics"}); a line break inside
+a row (\code{"\\n"}) is joined the same way, never printed as \verb{\\line}.  A
+table, a figure and a listing are each labelled by their title; a
+file with no title rows takes its running header's \code{"Table N"} line,
+and a file with neither, its file name without \code{.rtf}.  Its tokens
+are filled (\code{{STUDY}}, \code{{PAGE}}), except that a dynamic page number
 (\code{{AUTO_PAGE}}, \code{{AUTO_TOTAL_PAGES}}) and the \code{{BOOK_PAGE}} slot are
-left out, and markup keeps its text without its formatting.}
+left out, and markup keeps its text without its formatting.
+\code{\link[=assemble_folder]{assemble_folder()}} labels its rows the same way.}
 \item{a character vector of TOC labels}{one per input file -- same as
 \code{"auto"} but with explicit labels.}
 \item{a table (\code{data.frame})}{one row per file, in order, for

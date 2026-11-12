@@ -241,16 +241,18 @@ test_that("FT-AS137 [FR-AS242]: assemble_folder() reads the rtf_titles() title b
   titled("t14_1_1.rtf", c("Table 14.1.1", "Safety Population"))
   # a header-based file still sorts and reads as before
   .a7_tbl(d, "a_hdr.rtf", "14.1.5", "Vital Signs")
-  # the header's "Table N" wins over the title block
+  # the header's "Table N" wins over the title block for the number and the
+  # order; the label is the file's title (#1030)
   titled("b_both.rtf", c("Table 99.9", "Body Title"), header = "Table 14.1.3")
-  # no "Table N" anywhere: by file name, after the numbered files
+  # no "Table N" anywhere: ordered by file name, after the numbered files,
+  # and labelled by its title (#1030)
   titled("l16_1.rtf", c("Listing 16.1", "Subject Listing"))
   spec <- assemble_folder(d)
   expect_identical(basename(spec$file),
                    c("t14_1_1.rtf", "b_both.rtf", "a_hdr.rtf", "t14_2_1.rtf", "l16_1.rtf"))
   expect_identical(spec$table, c("14.1.1", "14.1.3", "14.1.5", "14.2.1", NA))
   expect_identical(spec$label,
-                   c("Table 14.1.1  Safety Population", "Table 14.1.3",
+                   c("Table 14.1.1  Safety Population", "Table 99.9  Body Title",
                      "Table 14.1.5  Vital Signs", "Table 14.2.1  Safety Population",
-                     "l16_1"))
+                     "Listing 16.1  Subject Listing"))
 })

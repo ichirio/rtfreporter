@@ -423,8 +423,9 @@ test_that("FT-AS3014 [FR-AS149]: the table assemble_folder() returns has heading
   expect_identical(sp$level, c(2L, 2L))
 
   # the other columns: the number of the "Table N" line (of the running header, else of
-  # the title block) is table, NA when there is none; the label is "Table N  <title>",
-  # or the title alone, or the file name without .rtf; pages is the page count
+  # the title block) is table, NA when there is none; the label is the file's title as
+  # the file shows it (#1030), else the header's "Table N  <title>", else the file name
+  # without .rtf; pages is the page count
   .g2_hdr_file(file.path(d, "h.rtf"), c("Table 14.1.1", "Demographics"))
   .g2_demo(file.path(d, "c_plain.rtf"), NULL)
   sp <- assemble_folder(d)
@@ -432,7 +433,7 @@ test_that("FT-AS3014 [FR-AS149]: the table assemble_folder() returns has heading
   # by table number (1, 2, 14.1.1), then the file without one
   expect_identical(basename(sp$file), c("a.rtf", "b.rtf", "h.rtf", "c_plain.rtf"))
   expect_identical(sp$table, c("1", "2", "14.1.1", NA))
-  expect_identical(sp$label, c("Table 1  A", "Table 2  B", "Table 14.1.1  Demographics",
+  expect_identical(sp$label, c("Table 1 A", "Table 2 B", "Table 14.1.1  Demographics",
                                "c_plain"))
   expect_identical(sp$heading, rep(NA_character_, 4L))
   expect_identical(sp$level, rep(2L, 4L))
@@ -566,7 +567,7 @@ test_that("FT-AS3020 [FR-AS159]: a table from assemble_folder(), edited, gives t
   .g2_demo(file.path(d, "b.rtf"), "Table 2 Beta")
   .g2_demo(file.path(d, "c.rtf"), "Table 3 Gamma")
   sp <- assemble_folder(d)
-  expect_identical(sp$label, c("Table 1  Alpha", "Table 2  Beta", "Table 3  Gamma"))
+  expect_identical(sp$label, c("Table 1 Alpha", "Table 2 Beta", "Table 3 Gamma"))
   ed <- sp[c(1, 3), ]                          # a row dropped
   ed$label[1] <- "Edited first"                # a label changed
   ed$level[1] <- 3L                            # a level changed
@@ -579,7 +580,7 @@ test_that("FT-AS3020 [FR-AS159]: a table from assemble_folder(), edited, gives t
   ent <- l[grepl("HYPERLINK", l, fixed = TRUE)]
   expect_length(ent, 2L)
   expect_true(startsWith(ent[1], "{\\pard\\li600\\fs20"))
-  expect_true(grepl("{\\fldrslt Table 3  Gamma}}", ent[1], fixed = TRUE))
+  expect_true(grepl("{\\fldrslt Table 3 Gamma}}", ent[1], fixed = TRUE))
   expect_true(startsWith(ent[2], "{\\pard\\li1200\\fs20"))
   expect_true(grepl("{\\fldrslt Edited first}}", ent[2], fixed = TRUE))
   txt <- paste(l, collapse = "\n")
@@ -595,7 +596,7 @@ test_that("FT-AS3021 [FR-AS250]: a contents entry keeps the text of markup (H_{2
   .g2_demo(file.path(d, "a.rtf"), "Table 1 H_{2}O at \u00b5g/mL")
   .g2_demo(file.path(d, "b.rtf"), "Table 2 Plain")
   sp <- assemble_folder(d)
-  expect_identical(sp$label[1], "Table 1  H2O at \u00b5g/mL")
+  expect_identical(sp$label[1], "Table 1 H2O at \u00b5g/mL")
   # an assemble_folder() label comes from the header or title block alike
   w <- .g2_dir()
   out <- file.path(w, "out.rtf")
