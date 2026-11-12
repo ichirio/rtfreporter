@@ -7331,10 +7331,16 @@ plan_template <- function(x, cols = NULL, hierarchy = character(),
   } else {
     # fixed: the base pipe is " |>", and "|" is alternation in a regex
     L[length(L)] <- sub(paste0(" ", op), "", L[length(L)], fixed = TRUE)
-    L <- c(L,
-           "# Several column keys: as_rtftables(header_sep = ) rebuilds the",
-           "# spanning header from the \"____\" in the names, so plan_col_header()",
-           "# is only needed for text the data does not carry.")
+    L <- c(L, if (length(f$cols) == 1L) {
+      # one column key but no denominators to show (#990)
+      c("# The ARD has no denominator (N) rows, so no \"N = \" header is written:",
+        "# the columns are headed by their values.  plan_col_header() sets",
+        "# other labels.")
+    } else {
+      c("# Several column keys: as_rtftables(header_sep = ) rebuilds the",
+        "# spanning header from the \"____\" in the names, so plan_col_header()",
+        "# is only needed for text the data does not carry.")
+    })
   }
 
   L <- c(L, "",
