@@ -3437,7 +3437,7 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
 #'   Placebo   = c("86", "75.2 (8.59)", "53 (61.6)"),
 #'   Active    = c("84", "75.7 (8.29)", "50 (59.5)"))
 #'
-#' # Minimal: the clinical rules (a rule over and under the header, one
+#' # Minimal: the clinical rules (a rule over and under the header, none
 #' # under the last row)
 #' pages <- table_plan(tbl) |> plan_style(border = "tfl") |> plan_apply()
 #' class(pages[[1]]$border)
