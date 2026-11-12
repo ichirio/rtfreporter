@@ -19,12 +19,11 @@
 # a PNG of w x h pixels at res dpi
 .t1_png <- function(dir, name = "p.png", w = 400, h = 300, res = 100) {
   f <- file.path(dir, name)
-  # the cairo device writes res = as the file's density; macOS's default
-  # (quartz) writes 72 dpi whatever res is
-  type <- if (isTRUE(unname(capabilities("cairo")))) "cairo" else getOption("bitmapType")
-  grDevices::png(f, width = w, height = h, res = res, type = type)
+  grDevices::png(f, width = w, height = h, res = res)
   .t1_pl()
   grDevices::dev.off()
+  # the density asked for, on every system (helper-png-dpi.R)
+  .png_set_dpi(f, res)
   f
 }
 
