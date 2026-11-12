@@ -485,7 +485,44 @@
   }
   multi_stub <- !is.null(boxh) && sum(type == "stub", na.rm = TRUE) > 1L
   if (multi_stub) return(.gt_body_from_slots(gt_obj))
-  gt::extract_body(.gt_one_group_col(gt_obj), output = "html")
+  gt::extract_body(.gt_one_group_col(.gt_restore_group_col(gt_obj)),
+                   output = "html")
+}
+
+# extract_body() names a row's group (`::group_id::`) from the row-group
+# COLUMN, while the rows' groups themselves are in `_stub_df$group_id` and
+# `_row_groups`.  A member of a row-split gt_group (gt_split(row_every_n =),
+# or one pulled with grp_pull()) keeps those, but has no row-group column in
+# `_data` / `_boxhead` any more, so its group rows were lost (#1019).  A copy
+# is handed to extract_body() with that column put back from `_stub_df`
+# (render order and the group of each row stay gt's own).  A table that has
+# a row-group column, or no groups, is returned as it is.  Slot access only,
+# as above.
+.gt_restore_group_col <- function(gt_obj) {
+  boxh <- gt_obj[["_boxhead"]]
+  dat  <- gt_obj[["_data"]]
+  sd   <- gt_obj[["_stub_df"]]
+  if (is.null(boxh) || !nrow(boxh) || is.null(dat) || is.null(sd) ||
+      any(as.character(boxh$type) == "row_group") ||
+      !length(gt_obj[["_row_groups"]]) ||
+      !all(c("group_id", "rownum_i") %in% names(sd)) ||
+      nrow(sd) != nrow(dat) ||
+      !identical(sort(as.integer(sd$rownum_i)), seq_len(nrow(dat))) ||
+      all(is.na(sd$group_id))) {
+    return(gt_obj)
+  }
+  var <- "::rtf_group::"
+  while (var %in% names(dat)) var <- paste0(var, ":")
+  grp <- rep(NA_character_, nrow(dat))
+  grp[sd$rownum_i] <- as.character(sd$group_id)
+  dat[[var]] <- grp
+  row <- boxh[1L, , drop = FALSE]
+  row$var  <- var
+  row$type <- "row_group"
+  row$column_label <- list(var)
+  gt_obj[["_data"]]    <- dat
+  gt_obj[["_boxhead"]] <- rbind(row, boxh)
+  gt_obj
 }
 
 # extract_body() also assumes ONE row-group column: `gt(groupname_col =

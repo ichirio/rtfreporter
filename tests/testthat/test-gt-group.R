@@ -156,3 +156,54 @@ test_that("FT-TB6601 [FR-TB115]: a row-split gt_group member gives its own rows"
   expect_identical(cs[[1L]]$data$a, as.character(1:4))
   expect_identical(cs[[2L]]$data$b, letters[1:4])
 })
+
+# The first-cell text of every table row on each page of an RTF file
+# ("~" for a non-breaking space), the header row included.
+.t69_page_rows <- function(pages) {
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
+  generate_rtfreport(rtf_tables(rtf_document(), pages), f, overwrite = TRUE)
+  txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  lapply(strsplit(txt, "\\page", fixed = TRUE)[[1L]], function(p) {
+    m <- regmatches(p, gregexpr("\\\\ql\\\\li0\\\\ri0 [^\n]*?\\\\cell", p))[[1L]]
+    m <- sub("^\\\\ql\\\\li0\\\\ri0 ", "", sub("\\\\cell$", "", m))
+    gsub("\\u160?", "~", m, fixed = TRUE)
+  })
+}
+
+test_that("FT-TB6901 [FR-TB115]: a row-split member of a grouped gt keeps its group rows", {
+  skip_if_not_installed("gt")
+  df <- data.frame(grp  = rep(c("Arm A", "Arm B"), each = 3),
+                   subj = sprintf("S%02d", 1:6),
+                   age  = c(34, 45, 40, 51, 29, 60), stringsAsFactors = FALSE)
+  whole <- gt::gt(df, groupname_col = "grp")
+  # the whole table: one heading per group, its rows indented under it
+  all_rows <- c("subj", "Arm A", "~~S01", "~~S02", "~~S03",
+                "Arm B", "~~S04", "~~S05", "~~S06")
+  expect_identical(.t69_page_rows(as_rtftables(whole)), list(all_rows))
+  # the reproduction: each page carries its own group rows
+  sp <- gt::gt_split(whole, row_every_n = 4)
+  expect_identical(.t69_page_rows(as_rtftables(sp)), list(
+    c("subj", "Arm A", "~~S01", "~~S02", "~~S03", "Arm B", "~~S04"),
+    c("subj", "Arm B", "~~S05", "~~S06")))
+  # a group that runs across a page boundary shows its row again, as gt does
+  sp2 <- gt::gt_split(whole, row_every_n = 2)
+  expect_identical(.t69_page_rows(as_rtftables(sp2)), list(
+    c("subj", "Arm A", "~~S01", "~~S02"),
+    c("subj", "Arm A", "~~S03", "Arm B", "~~S04"),
+    c("subj", "Arm B", "~~S05", "~~S06")))
+  # a member pulled alone gives the same page
+  one <- as_rtftables(gt::grp_pull(sp, 2L))
+  expect_identical(one[[1L]]$data, as_rtftables(sp)[[2L]]$data)
+  # rows in an order other than the groups': gt's own order on each page
+  du <- df[c(4L, 1L, 5L, 2L, 3L, 6L), ]
+  spu <- gt::gt_split(gt::gt(du, groupname_col = "grp"), row_every_n = 4)
+  expect_identical(.t69_page_rows(as_rtftables(spu)), list(
+    c("subj", "Arm B", "~~S04", "~~S05", "Arm A", "~~S01", "~~S02"),
+    c("subj", "Arm B", "~~S06", "Arm A", "~~S03")))
+  # an ungrouped split is unchanged: no group rows
+  plain <- .t69_page_rows(as_rtftables(gt::gt_split(gt::gt(df[-1L]),
+                                                    row_every_n = 4)))
+  expect_identical(plain, list(c("subj", sprintf("S%02d", 1:4)),
+                               c("subj", sprintf("S%02d", 5:6))))
+})
