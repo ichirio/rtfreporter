@@ -224,24 +224,32 @@ the package supports:
 | The R versions in use now | Ubuntu, R oldrel-1 and release; Windows and macOS, release; the local R 4.4.2 and 4.6.1 | Between them they run the current and the previous release of R. |
 | The next R | Ubuntu, R devel | A change in R that will break the package shows here first. |
 | Windows, macOS and Linux | Windows, macOS and Ubuntu, each with at least one CI job | Each system is run, with the tests and R CMD check. |
+| The minimum versions of the suggested packages: each `(>= x)` in `DESCRIPTION` | Ubuntu, R 4.2, with each suggested package that has a minimum installed at exactly that version (the CI job *dependency minimums*) | The use of a feature newer than a minimum fails here. |
+| The latest versions of the suggested packages | Every other CI job and the local runs, which install the newest versions their R allows | A new version of a dependency that breaks the package shows here. |
 
 The package imports only packages that ship with R (`DESCRIPTION`), so
 there is no range of imported versions to cover.  The suggested packages
 (`cards`, `gt`, `rtables`, `ggplot2`, `devEMF` and others) are used where a
-function adapts to them, and by the tests that need them.
+function adapts to them, and by the tests that need them.  Each minimum in
+`DESCRIPTION` is the first version that has every function and argument the
+package and its tests use; `inst/validation/dependency-minimums.md` gives,
+for each package, what needs which version and where that is recorded.  A
+suggested package with no minimum is one whose every version that installs
+beside the others has what the package uses.  So two points of each range
+are tested: the minimums, in the job *dependency minimums*, and the latest
+versions, in the other jobs and the local runs.  When a test fails at a
+minimum, the minimum is raised.
 
 What is not tested, and the risk accepted:
 
-- **A suggested package absent.**  Only the R 4.2 job runs with
-  `force-suggests` false, and it leaves out `tern` and `devEMF` where they
-  cannot be installed on that R.  The other jobs have the suggested packages
-  installed.  A test that needs one is skipped when it is absent
-  (`skip_if_not_installed()`).  The risk is a failure on a system without
-  one that no job shows.
-- **Older versions of the suggested packages.**  The jobs install the
-  newest versions the job's R allows, not the minimum `DESCRIPTION` names
-  (`cards (>= 0.7.0)`, `gt (>= 0.11.1)` and others).  The risk is a failure
-  with a package at its minimum.
+- **A suggested package absent.**  Only the two R 4.2 jobs run with
+  `force-suggests` false, and they leave out `devEMF` (and the R 4.2 job of
+  the matrix also `tern`) where it cannot be installed on that R.  The other
+  jobs have the suggested packages installed.  A test that needs one is
+  skipped when it is absent (`skip_if_not_installed()`).  The risk is a
+  failure on a system without one that no job shows.
+- **Versions between the minimum and the latest** of a suggested package,
+  and a mix of them other than the two tested.
 - **Other versions of an operating system**, other architectures, and other
   locales than those of the CI images and the maintainers' PC.
 - **Another RTF reader.**  The tests compare the RTF text.  They do not open
@@ -297,9 +305,11 @@ maintainers' own; no third-party audit is made.
 
 ## 5. Environments
 
-- **CI** (6): the R-CMD-check workflow's matrix -- Ubuntu (R devel,
-  release, oldrel-1, 4.2), macOS (release), Windows (release) -- at the
-  release's commit; the tests and R CMD check.
+- **CI** (7): the R-CMD-check workflow's matrix -- Ubuntu (R devel,
+  release, oldrel-1, 4.2), macOS (release), Windows (release) -- and its
+  job *dependency minimums* (Ubuntu, R 4.2, the suggested packages at the
+  minimum versions `DESCRIPTION` names), at the release's commit; the tests
+  and R CMD check.
 - **Local** (2): the maintainers' PC, two versions of R (now 4.4.2 and
   4.6.1), the tests run by hand with `validation/env.R` before the release;
   the records are committed in `validation/env-local/`.
@@ -313,6 +323,21 @@ maintainers' own; no third-party audit is made.
 
 What GitHub already records -- issues, pull requests, the CI runs, the
 releases -- is referred to, not copied.
+
+### When a dependency changes
+
+A new version of a package rtfreporter uses (an import, a suggested
+package, or R) is followed by a release of rtfreporter in one of two ways:
+
+- when rtfreporter can follow it and still work with the versions it
+  supported before (the minimums in `DESCRIPTION` stay), it is a **minor
+  version**;
+- when it cannot, and that new version of the dependency must be required
+  (a minimum in `DESCRIPTION` is raised for it), it is a **major version**.
+
+The minimums and why each is what it is are in
+`inst/validation/dependency-minimums.md`; a release that raises one says so
+there and in `NEWS.md`.
 
 ## 7. Roles and responsibilities
 

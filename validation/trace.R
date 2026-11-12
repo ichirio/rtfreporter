@@ -277,8 +277,8 @@ unassessed <- union(unassessed, intersect(untested, unlist(dev_ids[is.na(dev$ris
 
 # ---- the environments (gathered by validation/report.R) ---------------------------------
 # every CI job's record and the maintainers' local runs; the Quality Plan
-# (section 5) names them: 6 in CI, 2 local
-expected_env <- c(ci = 6L, local = 2L)
+# (section 5) names them: 7 in CI, 2 local
+expected_env <- c(ci = 7L, local = 2L)
 envs <- if (file.exists(file.path(out, "environments.rds"))) readRDS(file.path(out, "environments.rds"))
 if (!is.null(envs) && !nrow(envs)) envs <- NULL
 n_env <- if (is.null(envs)) c(ci = 0L, local = 0L) else
@@ -433,9 +433,15 @@ env_for <- function(supported) {
   rv <- suppressWarnings(numeric_version(ifelse(grepl("^R version [0-9]", envs$r),
                                          sub("^R version ([0-9]+[.][0-9]+).*$", "\\1", envs$r), NA)))
   is_min <- !devel & !is.na(rv) & rv == numeric_version(r_min[1L])[1L, 1:2]
+  # the CI job that installs each suggested package at DESCRIPTION's minimum
+  deps_min <- grepl("dependency minimums", envs$environment, fixed = TRUE)
   os_is <- function(re) which(grepl(re, envs$os))
   if (grepl("^The lowest R", supported)) {
     list(list(label = NULL, idx = which(is_min)))
+  } else if (grepl("^The minimum versions", supported)) {
+    list(list(label = NULL, idx = which(deps_min)))
+  } else if (grepl("^The latest versions", supported)) {
+    list(list(label = NULL, idx = which(!deps_min)))
   } else if (grepl("in use now", supported)) {
     list(list(label = NULL, idx = which(!devel & !is_min)))
   } else if (grepl("^The next R", supported)) {
@@ -514,8 +520,9 @@ sup_lines <- c(
   "The suggested packages, as the environments ran them (those with a minimum version, and those not installed in some environment):",
   "",
   sug_lines,
-  if (!is.na(at_min)) c("", sprintf("%d of the %d suggested packages with a minimum version were run at that minimum in at least one environment; for the others the tests ran only with a newer version (the risk below).",
-                                    at_min, sum(nzchar(sug_min)))),
+  if (!is.na(at_min)) c("", sprintf("%d of the %d suggested packages with a minimum version were run at that minimum in at least one environment%s.",
+                                    at_min, sum(nzchar(sug_min)),
+                                    if (at_min < sum(nzchar(sug_min))) "; the others ran only with a newer version" else "")),
   "",
   "What is not tested, and the risk accepted (the Quality Plan, the *environment strategy*):",
   "",
