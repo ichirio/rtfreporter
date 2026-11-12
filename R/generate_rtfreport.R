@@ -1833,7 +1833,8 @@
                                    doc_pad_l = NULL, doc_pad_r = NULL,
                                    doc_markup = character(0),
                                    font_index_map = list(),
-                                   doc_pad_t = NULL, doc_pad_b = NULL) {
+                                   doc_pad_t = NULL, doc_pad_b = NULL,
+                                   table_align = "left") {
   if (is.null(hf) || length(hf$rows) == 0L) {
     return(character())
   }
@@ -1971,6 +1972,10 @@
 
     row <- table_cmd$row_start
     row <- paste0(row, row_rh_str)
+    # the block's placement across the page (a footnote under a centred
+    # content, #968); a header / footer band stays at the margin
+    row <- paste0(row, switch(table_align, center = "\\trqc",
+                              right = "\\trqr", ""))
     for (j in seq_len(n_cols)) {
       cx <- cellx[j]
       if (nzchar(cell_border_cmds[j]) || nzchar(vpad_cmd)) {

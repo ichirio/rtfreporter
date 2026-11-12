@@ -121,7 +121,7 @@ ard <- ard_stack(adsl_dm,
   ard_categorical(variables = c(AGEGR1, SEX, RACE)),
   .by = ACTARM, .overall = TRUE, .total_n = TRUE)
 ard_tbl <- ard |>
-  shuffle_card(fill_overall = "Total") |>
+  shuffle_card(by = "ACTARM", fill_overall = "Total") |>
   prep_big_n(vars = "ACTARM") |>
   prep_combine_vars(vars = c("AGE", "AGEGR1", "SEX", "RACE")) |>
   prep_label() |>
@@ -218,7 +218,7 @@ ae_tot <- ard_stack_hierarchical(
   over_variables = TRUE, overall = TRUE) |>
   filter(group2 == "ACTARM" | variable == "ACTARM")
 ae_card <- bind_ard(ae_ard, ae_tot) |>
-  shuffle_card(fill_hierarchical_overall = "ANY EVENT") |>
+  shuffle_card(by = "ACTARM", fill_hierarchical_overall = "ANY EVENT") |>
   prep_big_n(vars = "ACTARM") |>
   prep_hierarchical_fill(vars = c("AEBODSYS", "AEDECOD"), fill = "ANY EVENT") |>
   mutate(ACTARM = ifelse(ACTARM == "Overall ACTARM", "All Patients", ACTARM))
