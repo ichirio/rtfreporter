@@ -587,11 +587,12 @@ test_that("FT-LS5824 [FR-LS211]: the fit writes rel_width and a frozen label onl
   sp <- listing_spec(list(listing_col(c("A", "B"), name = "AB"), listing_col("C", rel_width = 40, label = "MINE")))
   f <- fit_listing_widths(d, sp, total_width = 50)
   w <- .t8_w(f)
-  # AB: the author set neither: rel_width is the fitted width, the label is frozen unwrapped
-  # (the variables' labels joined by the separator, "Alpha label words" is not cut to the
-  # width) with only the line break the label itself holds ("Beta\nline2")
+  # AB: the author set neither: rel_width is the fitted width, the label is frozen as the
+  # header prints ("Alpha label words" is not cut to the width): a variable label with a
+  # break of its own ("Beta\nline2") is stacked under the other, as the derived header
+  # stacks it (#997), not joined on one line
   expect_identical(f$cols[[1L]]$rel_width, as.numeric(w[[1L]]))
-  expect_identical(f$cols[[1L]]$label, "Alpha label words/Beta\nline2")
+  expect_identical(f$cols[[1L]]$label, "Alpha label words/\nBeta\nline2")
   # C: what the author set stays
   expect_identical(f$cols[[2L]]$rel_width, 40)
   expect_identical(f$cols[[2L]]$label, "MINE")
