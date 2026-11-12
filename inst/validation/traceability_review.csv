@@ -4004,7 +4004,7 @@
 "FT-TB479","FR-TB405","part","expect_identical(.n_shade(.bg_render(as_rtftables(.bg_df())[[1L]])), 0L)","yes"
 "FT-TB480","FR-TB405","part","expect_identical(.n_shade(txt), 3L) | expect_length(idx, 2L)","yes"
 "FT-TB482","FR-TB405","part","expect_match(txt, ""clcbpat[0-9]+\\\\clvertal[a-z]+\\\\cellx"")","yes"
-"FT-TB6009","FR-TB405","asserts","expect_false(any(grepl(""clcbpat"", .t10_rtf(rtftable(d)), fixed = TRUE))) | expect_true(any(grepl(""\\red18\\green52\\blue86;"", rtf, fixed = TRUE))) | expect_identical(lengths(regmatches(.t10_row(rtf, ""Sex""), gregexpr(""clcbpat3"", .t10_row(...","yes"
+"FT-TB6009","FR-TB405","part","expect_false(any(grepl(""clcbpat"", .t10_rtf(rtftable(d)), fixed = TRUE))) | expect_true(any(grepl(""\\red18\\green52\\blue86;"", rtf, fixed = TRUE))) | expect_identical(lengths(regmatches(.t10_row(rtf, ""Sex""), gregexpr(""clcbpat3"", .t10_row(...","yes"
 "FT-TB625","FR-TB406","asserts","expect_equal(ql_p[4] - ql_c[4], 3L) # cols 2-4 flip center -> left | expect_equal(ql_p[5], ql_c[5]) # row 2 untouched | expect_equal(pat$cell_styles[[1]]$align, c(NA, ""left"", ""left"", ""left"")) | expect_error(style_body(ctrl, rows = 1, ali...","yes"
 "FT-TB683","FR-TB407","asserts","expect_error(style_body(t, align = ""middle""),","yes"
 "FT-TB451","FR-TB408","part","expect_match(rtf, RED_TBL) | expect_match(rtf, ""\\\\clbrdrb\\\\brdrs\\\\brdrw15\\\\brdrcf[0-9]+"")","yes"
