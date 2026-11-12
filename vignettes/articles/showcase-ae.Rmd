@@ -582,8 +582,13 @@ doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape"
   rtf_tables(pages)
 generate_rtfreport(doc, "ae_flextable.rtf", overwrite = TRUE)
 
-# huxtable
-pages <- as_rtftables(gtsummary::as_hux_table(bake_indent(g)), read_meta = FALSE, split = "group_force",
+# huxtable: as_hux_table() ends the table with the statistic footnote as a last
+# row; read_meta = FALSE leaves that row in the body, so the footnote is dropped
+# from the gtsummary table first (the flextable keeps its own in the footer part,
+# which is never read).
+pages <- as_rtftables(gtsummary::as_hux_table(
+                        modify_footnote(bake_indent(g), everything() ~ NA)),
+                      read_meta = FALSE, split = "group_force",
                       max_rows = AE_MAX_ROWS, blank_rows = "between_groups",
                       cell_format = fmt_ae, col_header = ae_col_header,
                       col_spec = ae_col_spec, col_rel_width = ae_widths,
