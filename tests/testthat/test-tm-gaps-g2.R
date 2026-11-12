@@ -2088,6 +2088,12 @@ test_that("FT-DC3051 [FR-DC365]: rtf_titles(border = ) in the table form: inside
   expect_identical(.g2_sides(.g2_rows_with(txt, "T1x")), "blr")
   expect_identical(.g2_sides(.g2_rows_with(txt, "T2x")), "blr")
   expect_identical(.g2_sides(.g2_rows_with(txt, "T3x")), "lr")
+  # top is the rule above the first row, bottom the rule below the last
+  tb2 <- .render_to_string(doc(list(c("T1x", "T2x", "T3x")),
+                               border = rtf_border(top = TRUE, bottom = TRUE)))
+  expect_identical(.g2_sides(.g2_rows_with(tb2, "T1x")), "t")
+  expect_identical(.g2_sides(.g2_rows_with(tb2, "T2x")), "")
+  expect_identical(.g2_sides(.g2_rows_with(tb2, "T3x")), "b")
   # a row's own border is merged side by side over the block's
   own <- list(list(c("T1x", list(text = "T2x", border = rtf_border(left = "none", bottom = FALSE)),
                      "T3x")))
