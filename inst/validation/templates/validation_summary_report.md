@@ -39,7 +39,8 @@
 
 | Document | Version / date | Conclusion |
 |---|---|---|
-| rtfreporter Quality Report (`quality-report-<tag>.pdf`) | `<x.y.z>`, `<date>` | `<validation-ready / ...>` |
+| rtfreporter Quality Report (`quality-report-<tag>.pdf`, from the GitHub release, not a DRAFT) | `<x.y.z>`, `<date>` | `<validation-ready / ...>` |
+| Its supported environments, and the tested ones that stand for them: is ours one of them? | `<x.y.z>` | `<yes: which / no: what we ran ourselves>` |
 | Its deviations relevant to our URs | `<none / list the FR ids and our assessment>` | |
 
 ## 5. UAT results
@@ -78,4 +79,5 @@ The system may be released for production use from `<date>`.
 - Installation and test logs, sessionInfo
 - rtfreporter `<x.y.z>` Quality Report and its attachments (from the GitHub
   release: `quality-report-<tag>.pdf`, `traceability_matrix-<tag>.xlsx`,
-  `environments-<tag>.txt`)
+  `environments-<tag>.txt`, and `test-log-<tag>.txt` if you cite the tests'
+  results)

@@ -170,7 +170,7 @@ the place of the Plan and the Report.
 | Reference outputs | The RTF files that the end-to-end tests compare against. |
 | Reference reviews | `reference_review.csv`: for each reference RTF, its md5, the verdict, what was checked. |
 | Deviations | `deviations.csv`: an FR the tests cannot check, with its risk, the reason it is accepted and the action planned. |
-| Quality Report | The conclusion for a release: the environments and their results, the deviations, how to read the attachments. |
+| Quality Report | The conclusion for a release, from 0.9.0 on: the results (overall, by area, the skipped tests with their reasons), the environments run, the supported environments and the tested ones that stand for them, the deviations, how to read the attachments. |
 | Change Request Plan | The release's GitHub milestone: each issue with its impact, risk and related FRs. |
 | Change Report | The merged pull requests and issues, the FRs added or changed, the regression evidence and the environments. |
 
@@ -179,7 +179,8 @@ FR with tests passes them. Every FR without a test is a deviation with its
 risk and reason. The tests pass on every environment. The changes were made
 under the roles of the Quality Plan. Only the CI run of a published release
 can conclude *validation-ready*. A run on a PC, or a CI run started by hand,
-writes the same report marked DRAFT.
+writes the same report marked DRAFT, and a DRAFT concludes nothing: read the
+report attached to the release.
 
 ### The company's documents
 
@@ -214,7 +215,7 @@ UR-008  ----> FR-PL161  ----------------------> FT
 | Deviations | `inst/validation/deviations.csv` | By hand. A row is removed when a test is added. |
 | Tests | `tests/testthat/` in the repository | With each change. |
 | Local environment records | `validation/env-local/` in the repository | The maintainers run them before a release. |
-| Quality Report | `quality-report-<tag>.pdf`, attached to the GitHub release | CI makes it at a published release. |
+| Quality Report | `quality-report-<tag>.pdf`, attached to the GitHub release | CI makes it at a published release, from 0.9.0 on. A CI run started by hand keeps a DRAFT as its artifact `quality-report`. |
 | Attachments | The same release: `traceability_matrix-<tag>.xlsx`, `environments-<tag>.txt` (every environment's sessionInfo and test log), `test-log-<tag>.txt`, `ft-<tag>.csv`, `functions-<tag>.csv`, `candidates-<tag>.csv` | CI makes them with the report. |
 | Change Request Plan | The release's GitHub milestone | Between major releases. |
 | Change Report | The release, between major releases | Made from the merged pull requests and issues; the reasons for deviations by hand. |
@@ -224,7 +225,10 @@ The package folder `inst/validation/` is installed with the package. The
 `validation/` folder of the repository holds the scripts that make the
 report, and the local records.
 
-The attachments help you read the report. `functions-<tag>.csv` has one row
+The attachments help you read the report. `traceability_matrix-<tag>.xlsx`
+answers which tests check a requirement, `test-log-<tag>.txt` whether they
+passed, and `environments-<tag>.txt` what each environment ran with.
+`ft-<tag>.csv` has one row per test. `functions-<tag>.csv` has one row
 per exported function: its FRs by kind, how many have a test, and the
 arguments that no FR names. `candidates-<tag>.csv` lists tests that call a
 function but map to no FR. They decide nothing, and they never count as

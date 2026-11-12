@@ -291,7 +291,8 @@ Line coverage and the arguments the tests give are aids, not criteria.
 
 Only the CI run of a published release can conclude *validation-ready*.  A
 run on a maintainer's PC, or a CI run started by hand, writes the same
-report marked **DRAFT**, whatever it finds.  The conclusion is the
+report marked **DRAFT**, whatever it finds: a DRAFT concludes nothing, and
+its conclusion names what is not yet met.  The conclusion is the
 maintainers' own; no third-party audit is made.
 
 ## 5. Environments
@@ -307,7 +308,7 @@ maintainers' own; no third-party audit is made.
 
 | When | Plan | Report |
 |---|---|---|
-| The first release under this plan, and each major version | this **Quality Plan** (by hand) | the **Quality Report** (`quality-report-<tag>.pdf`): made by CI at the published release from the records -- the environments' table, the results, the deviations and why accepted, the conclusion, how to read the attachments; attached to the release with the Traceability Matrix (`traceability_matrix-<tag>.xlsx`), every environment's sessionInfo and tests' log (`environments-<tag>.txt`), the tests' log of the mapped tests (`test-log-<tag>.txt`) and the tables behind the results (`ft-<tag>.csv`, `functions-<tag>.csv`, `candidates-<tag>.csv`) |
+| The first release under this plan, and each major version | this **Quality Plan** (by hand) | the **Quality Report** (`quality-report-<tag>.pdf`), from 0.9.0 on: made by CI at the published release from the records -- the results (overall and by area, the skipped tests with their reasons), the environments' table, the supported environments and the tested ones that stand for them, the deviations and why accepted, the conclusion against section 4, how to read the attachments; a CI run started by hand makes it marked DRAFT (kept as the run's artifact `quality-report`, not attached to a release); attached to the release with the Traceability Matrix (`traceability_matrix-<tag>.xlsx`), every environment's sessionInfo and tests' log (`environments-<tag>.txt`), the tests' log of the mapped tests (`test-log-<tag>.txt`) and the tables behind the results (`ft-<tag>.csv`, `functions-<tag>.csv`, `candidates-<tag>.csv`) |
 | Releases between them | the **Change Request Plan**: the release's GitHub milestone, each issue with its impact, risk and related FRs | the **Change Report**: made from the merged pull requests and issues, the FRs added or changed, the regression evidence (the tests, the byte comparison of the reference outputs), the environments; the deviations' reasons by hand |
 
 What GitHub already records -- issues, pull requests, the CI runs, the
