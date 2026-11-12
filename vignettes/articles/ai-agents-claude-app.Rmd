@@ -83,7 +83,7 @@ rule on `Version` and `NEWS.md`, and the tests and lint before a pull request.
 Add only what is missing. For example, these two lines:
 
 ```markdown
-- After the `pre-pr` skill below is added, run it (`/pre-pr`) before you open a pull request.
+- Run the `pre-pr` skill (`/pre-pr`) before you open a pull request.
 - Stop and ask before you push, install into any library other than the work library, or delete files.
 ```
 
@@ -156,8 +156,9 @@ Sources: <https://code.claude.com/docs/en/permissions>,
 A **skill** is a folder with a `SKILL.md` file. A project skill lives in
 `.claude/skills/<name>/SKILL.md`; commit it to share it. Local sessions in the
 desktop app load personal skills from `~/.claude/skills/` and project skills
-from the repository. You start it with `/<name>`. This example is
-`.claude/skills/pre-pr/SKILL.md`:
+from the repository. You start it with `/<name>`. The repository has this one
+as [`.claude/skills/pre-pr/SKILL.md`](https://github.com/ichirio/rtfreporter/blob/main/.claude/skills/pre-pr/SKILL.md),
+in `next` now and in `main` with the next merge of `next` into `main`. Its text is:
 
 ```markdown
 ---
@@ -178,7 +179,8 @@ Run these in order. Stop at the first failure and report it.
 Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:`.
 ```
 
-`disable-model-invocation: true` means only you start it. Then type `/pre-pr`
+The front matter follows the skills documentation. The skill was checked against
+that page, not run in Claude Code. `disable-model-invocation: true` means only you start it. Then type `/pre-pr`
 in the prompt box. The desktop page says the slash menu includes project skills
 from your codebase, so `/pre-pr` is listed there.
 
@@ -205,13 +207,13 @@ of the package build, so it is in the repository, not in the installed
 package.) The hook commands call `bash`; on
 Windows that means Git Bash, with `bash` on the path. The two hooks:
 
-* `hooks/guard-version-news.sh` (`PreToolUse`) refuses an edit to `NEWS.md` or
+* [`hooks/guard-version-news.sh`](https://github.com/ichirio/rtfreporter/blob/main/.claude/hooks/guard-version-news.sh) (`PreToolUse`) refuses an edit to `NEWS.md` or
   `CHANGELOG.md`, and an edit to `DESCRIPTION` that touches its `Version:` line, with a message
   that says why: a pull request leaves them to the release. A maintainer making
   a release sets `TFL_ALLOW_RELEASE_EDIT=1`. A whole-file `Write` of
   `DESCRIPTION` is refused too, because its text always holds `Version:`. Change
   other fields with `Edit`.
-* `hooks/lint-changed.sh` (`PostToolUse`) lints a changed file under `R/` and
+* [`hooks/lint-changed.sh`](https://github.com/ichirio/rtfreporter/blob/main/.claude/hooks/lint-changed.sh) (`PostToolUse`) lints a changed file under `R/` and
   sends the lints back to Claude. The repository lints `R/` only, as `.lintr`
   and `CONTRIBUTING.md` do. The hook runs only when `TFL_HOOK_RSCRIPT` names the
   `Rscript` of your work set-up. The library it reads is the one the session's

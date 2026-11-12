@@ -225,7 +225,8 @@ This task is not the four pre-push checks of `CONTRIBUTING.md`:
 lintr. CI runs the full set, and so does a maintainer before a release.
 
 The Claude desktop app holds the task as a **skill**, and VS Code as a
-**prompt file**. The set-up pages show both.
+**prompt file**. The set-up pages show both. The repository ships the skill, as
+`.claude/skills/pre-pr/SKILL.md`; it has no prompt file.
 
 ### Checks that decide
 

@@ -134,8 +134,10 @@ VS Code のユーザープロファイルに保存されます。どちらも、
 `/<name>` と入力するか、コマンドパレットの **Chat: Run Prompt** で起動します。
 Chat ビューの Local ハーネスのセッションでだけ実行されます。Local ハーネスは非推奨で、
 2027 年 2 月に削除される予定です。Copilot ハーネスはプロンプトファイルを実行しません。
-そちらには、ドキュメントはスキルを勧めています。このページでは、Copilot ハーネス用のスキルは
-示しません。次は `.github/prompts/pre-pr.prompt.md` の例です。
+そちらには、ドキュメントはスキルを勧めています。そのため、次の例は非推奨の Local ハーネスでしか動きません。
+このページでは、Copilot ハーネス用のスキルは示しません。リポジトリにも、そのための
+Copilot 用ファイルはありません。Copilot のスキルの例は、あとで加えるかもしれません。
+次は `.github/prompts/pre-pr.prompt.md` の例です。
 
 ```markdown
 Run these in order. Stop at the first failure and report it.

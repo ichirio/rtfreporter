@@ -85,7 +85,7 @@ Claude Code は、セッションの開始時に `CLAUDE.md` を読みます。`
 足してください。たとえば次の 2 行です。
 
 ```markdown
-- After the `pre-pr` skill below is added, run it (`/pre-pr`) before you open a pull request.
+- Run the `pre-pr` skill (`/pre-pr`) before you open a pull request.
 - Stop and ask before you push, install into any library other than the work library, or delete files.
 ```
 
@@ -157,8 +157,9 @@ Claude が止まって、あなたに聞きます（`deny` にするとコマン
 **スキル**は、`SKILL.md` ファイルを入れたフォルダーです。プロジェクトのスキルは
 `.claude/skills/<name>/SKILL.md` に置きます。コミットすれば共有できます。デスクトップ
 アプリのローカルセッションは、個人のスキルを `~/.claude/skills/` から、プロジェクトの
-スキルをリポジトリから読み込みます。起動は `/<name>` です。次の例は
-`.claude/skills/pre-pr/SKILL.md` です。
+スキルをリポジトリから読み込みます。起動は `/<name>` です。リポジトリには、次のスキルが
+[`.claude/skills/pre-pr/SKILL.md`](https://github.com/ichirio/rtfreporter/blob/main/.claude/skills/pre-pr/SKILL.md) としてあります。
+今は `next` にあり、次に `next` を `main` にマージしたときに `main` に入ります。中身は次のとおりです。
 
 ```markdown
 ---
@@ -179,7 +180,8 @@ Run these in order. Stop at the first failure and report it.
 Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:`.
 ```
 
-`disable-model-invocation: true` は、あなただけが起動できるという意味です。プロンプト欄に
+フロントマターはスキルのドキュメントに沿っています。このスキルはそのページと照らして確かめたもので、
+Claude Code では実行していません。`disable-model-invocation: true` は、あなただけが起動できるという意味です。プロンプト欄に
 `/pre-pr` と入力します。デスクトップのページによると、スラッシュメニューにはコードベースの
 プロジェクトスキルが含まれるので、`/pre-pr` はそこに出ます。
 
@@ -205,13 +207,13 @@ Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:`.
 ありません）。フックのコマンドは `bash` を呼びます。Windows では Git Bash のことで、
 `bash` がパスに通っている必要があります。2 つのフックは次のとおりです。
 
-* `hooks/guard-version-news.sh` (`PreToolUse`) は、`NEWS.md` と `CHANGELOG.md` の編集と、`DESCRIPTION` の
+* [`hooks/guard-version-news.sh`](https://github.com/ichirio/rtfreporter/blob/main/.claude/hooks/guard-version-news.sh) (`PreToolUse`) は、`NEWS.md` と `CHANGELOG.md` の編集と、`DESCRIPTION` の
   `Version:` 行に触れる編集を、理由を書いたメッセージ付きで拒否します。理由は、
   プルリクエストではこれらをリリースに任せるからです。リリースを作るメンテナーは
   `TFL_ALLOW_RELEASE_EDIT=1` を設定します。`DESCRIPTION` をファイルごと `Write` する
   操作も、本文に必ず `Version:` が入るので拒否されます。ほかのフィールドは `Edit` で
   変更してください。
-* `hooks/lint-changed.sh` (`PostToolUse`) は、`R/` の下で変更されたファイルを lint し、
+* [`hooks/lint-changed.sh`](https://github.com/ichirio/rtfreporter/blob/main/.claude/hooks/lint-changed.sh) (`PostToolUse`) は、`R/` の下で変更されたファイルを lint し、
   lint の結果を Claude に返します。このリポジトリが lint するのは、`.lintr` と
   `CONTRIBUTING.md` のとおり `R/` だけです。実行されるのは、`TFL_HOOK_RSCRIPT` に作業用
   セットアップの `Rscript` が指定されているときだけです。読み込むライブラリは、セッションの

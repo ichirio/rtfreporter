@@ -141,8 +141,10 @@ prompt file lives in `.github/prompts/`. You start it by typing `/<name>` in
 the chat input, or with **Chat: Run Prompt** in the Command Palette. It runs only in Local harness sessions in the Chat view. The Local harness is
 deprecated and will be removed in February 2027, and the Copilot harness does
 not run a prompt file; for that harness the documentation suggests a skill
-instead. This page does not show a skill for the Copilot harness. This example
-is `.github/prompts/pre-pr.prompt.md`:
+instead. The example below therefore works only in the deprecated Local
+harness. This page does not show a skill for the Copilot harness, and the
+repository has no Copilot file for it. A Copilot skill example may come later.
+This example is `.github/prompts/pre-pr.prompt.md`:
 
 ```markdown
 Run these in order. Stop at the first failure and report it.
