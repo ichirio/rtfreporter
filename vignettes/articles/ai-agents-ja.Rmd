@@ -37,7 +37,6 @@ Claude デスクトップアプリ（Code タブ）と、VS Code の GitHub Copi
 * [Claude デスクトップアプリのセットアップ](ai-agents-claude-app-ja.html)
 * [VS Code と GitHub Copilot のセットアップ](ai-agents-vscode-copilot-ja.html)
 
-**（要確認）** と付けた項目は、まだ確認が取れていません。事実ではなく、未解決の疑問として読んでください。
 ツールのドキュメントに書かれていない、この記事独自の助言には、そのことを明記しています。
 
 ## 1. この記事の位置づけ
@@ -232,20 +231,19 @@ Claude デスクトップアプリでは、このタスクを**スキル**とし
 * `lint` ワークフロー。CI で lintr を実行します。
 * カバレッジ。`test-coverage.yaml` にあります。
 * 宣言されていない依存。差分で `pkg::` と `requireNamespace()` を検索し、名前を `DESCRIPTION` と
-  突き合わせます。**（要確認:** 既製のツールでこの検索を置き換えるべきか。**）**
+  突き合わせます。
 * 依存パッケージの既知の脆弱性のスキャン。GitHub が公開している Dependabot 対応エコシステムの
-  一覧には GitHub Actions があり、R の行はありません。そのため Dependabot は R パッケージの
-  `DESCRIPTION` を読みません。このリポジトリには、現在 `.github/dependabot.yml` もなく、
+  一覧には GitHub Actions があり、R の行は見つかりませんでした。このリポジトリには、現在 `.github/dependabot.yml` もなく、
   セキュリティ設定（2026-11-08 に確認）では、Dependabot のセキュリティ更新とシークレットスキャンが
-  無効です。**（要確認:** R の依存にはどのスキャナーを使うか。**）**
+  無効です。R の依存には、スキャナーを設定していません。
 
 ### 編集ごとのチェック
 
 ルールによっては、最後にまとめて確認するより、編集のたびに強制するほうが向いています。変更した
 R ファイルの lint や、`DESCRIPTION` の `Version:`、`NEWS.md`、`CHANGELOG.md` への編集の拒否などです。
 Claude Code では**フック**で行います。VS Code にもフックがありますが、プレビュー版です。Claude の
-ページには、プルリクエスト #935 にある例のセットを載せています。#935 が `next` にマージされ、
-`next` が `main` にマージされると、リポジトリに含まれます。VS Code のページには、フックの形式を
+ページには、リポジトリの `.claude/` にある例のセットを載せています。今は `next` にあり、次のマージで
+`main` に入ります。VS Code のページには、フックの形式を
 載せています。ツールにできない場合は、PR 前チェックと CI が
 同じ範囲をカバーします。
 
@@ -324,12 +322,12 @@ Table は、この `""` を 1 つのカテゴリとして扱います。空白�
 | 作業 | Claude デスクトップアプリ（Code タブ） | VS Code と Copilot |
 |---|---|---|
 | リポジトリの常設の指示 | `CLAUDE.md`。`AGENTS.md` は `CLAUDE.md` がないときだけ読まれます。`CLAUDE.md` がインポートしていれば読まれます。 | `.github/copilot-instructions.md` か `AGENTS.md`。 |
-| 繰り返し使うタスク（PR 前チェック） | スキル: `.claude/skills/<name>/SKILL.md`。`/name` で起動します。 | プロンプトファイル: `.github/prompts/<name>.prompt.md`。`/name` で起動します。 |
+| 繰り返し使うタスク（PR 前チェック） | スキル: `.claude/skills/<name>/SKILL.md`。`/name` で起動します。 | プロンプトファイル: `.github/prompts/<name>.prompt.md`。`/name` で起動します。Local ハーネスでだけ動き、Local は非推奨です。 |
 | テストと lint の実行 | Bash ツールでコマンドを実行します。 | 統合ターミナルでコマンドを実行します（Local セッション）。 |
 | 確認なしで実行できるもの | 権限ルールと権限モード。 | ターミナルの自動承認ルール（`chat.tools.terminal.autoApprove`）。 |
 | 編集ごとのチェック | `.claude/settings.json` のフック。 | `.github/hooks/*.json` のフック（プレビュー）。 |
 | 作業の一部を補助に渡す | 別々のセッションを並行して動かせます。**Worktree** をオンにすると、それぞれが専用の worktree を使います。 | サブエージェント。独自のコンテキストで動きます。 |
-| Issue やプルリクエストの読み取り | ターミナルの `gh`。アプリは、プルリクエストを開くと CI の状態を表示します。 | **（要確認:** VS Code の Copilot が Issue やプルリクエストをどう読むか。**）** |
+| Issue やプルリクエストの読み取り | ターミナルの `gh`。アプリは、プルリクエストを開くと CI の状態を表示します。 | ターミナルの `gh`。この設定のために読んだ VS Code のページには、Copilot が Issue やプルリクエストをどう読むかが書かれていません。 |
 
 この表の内容は、各ツールのドキュメントを 2026-11-08 に読んで得たものです。リンクはセットアップの
 ページにあります。Claude アプリについての 2 つの事実は、アプリでのテストで確認したもので、

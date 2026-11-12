@@ -12,8 +12,8 @@ Copilot のエージェントを設定します。先に
 が書いてあります。設定が終わったら、ワークフローはそちらのページに戻って確認します。
 
 ここに書いた内容は、2026-11-08 に読んだ VS Code と GitHub のドキュメントに基づいて
-います（リンクを参照）。このページの手順は、VS Code では実行していません。Copilot の画面や設定はよく変わります。ドキュメントで手順を
-確認できなかった箇所には **（要確認）** と付けています。
+います（リンクを参照）。このページの手順は、VS Code では実行していません。Copilot の画面や設定はよく変わります。手順が手元の画面と
+合わないときは、リンク先のページを読み直してください。
 
 ## リポジトリを開く
 
@@ -28,9 +28,10 @@ Copilot のエージェントを設定します。先に
    （`CONTRIBUTING.md` の *Branching & collaboration*）。Copilot の指示ファイルが指す
    `AGENTS.md` には `main` しか書かれていないので、メンテナーは
    `CONTRIBUTING.md` に従ってください。
-4. チャット入力で、agent picker から **Agent** を選びます。**（要確認：**どの
-   「ハーネス」を選ぶか。ドキュメントには Local と Copilot のハーネスセッションが
-   出てきます。**）**
+4. チャット入力で、agent picker から **Agent** を選びます。ドキュメントには Local ハーネスと
+   Copilot ハーネスが出てきます。Local ハーネスは非推奨で、2027 年 2 月に削除される予定とあり、
+   Copilot ハーネスへの移行を勧めています。ただし、プロンプトファイルは Local ハーネスでしか
+   動きません（後述の PR 前チェック）。
 
 出典：<https://code.visualstudio.com/docs/sourcecontrol/overview>、
 <https://code.visualstudio.com/docs/sourcecontrol/branches-worktrees>、
@@ -48,8 +49,9 @@ Copilot のエージェントを設定します。先に
   `R_USER_CACHE_DIR`、`R_USER_DATA_DIR`、`R_USER_CONFIG_DIR`、`TMP`、`TEMP`、
   `TMPDIR`、`WORK_ROOT`）を設定したシェルから VS Code を起動します。そうすれば、
   すべてのターミナルが変数を引き継ぎます。
-  **（要確認：**お使いのプラットフォームで、統合ターミナルに変数を設定する VS Code
-  の設定は何か。エージェントのターミナルがそれを使うかどうか。**）**
+  VS Code は、ターミナルの変数を `terminal.integrated.env.windows`、`.osx`、`.linux` でも
+  設定できます（ターミナルプロファイルのページ）。エージェントのターミナルがこれを読むかどうかは
+  ドキュメントに書かれていないので、チェックスクリプトで確かめます。
 * どの R を呼ぶかは、フルパスで指示ファイルに書いてエージェントに伝えます
   （次の節）。
 
@@ -77,7 +79,10 @@ VS Code の Copilot は `.github/copilot-instructions.md` または `AGENTS.md` 
 
 `.github/copilot-instructions.md` は追跡されるファイルなので、足した行はプルリクエストに
 入ります。全員の役に立つ行だけを足し、プルリクエストでそう説明してください。
-**（要確認：**自分だけの指示を、VS Code ではどこに置くか。**）**
+自分だけの指示は、Agent Customizations エディターの **User** に置きます。Copilot ハーネスでは
+`~/.copilot/copilot-instructions.md` か `~/.copilot/instructions/` にあります。Local ハーネスでは、
+VS Code のユーザープロファイルに保存されます。どちらも、指示ファイルのリファレンスのページに
+説明があります。
 
 ファイルが読まれたかどうかは、次の方法で確認します。
 
@@ -115,8 +120,10 @@ VS Code の Copilot は `.github/copilot-instructions.md` または `AGENTS.md` 
 自分のファイルから分けておいてください。
 
 次の 3 つは「確認する」のままにします。`git push`、作業用ライブラリ以外への
-インストール、ファイルの削除です。**（要確認：**プロジェクトの R をフルパスで許可
-するルールの書き方。`Rscript` を許可するルールが適切かどうか。**）**
+インストール、ファイルの削除です。承認のページには、フルパスで指定したコマンドにルールが
+どう一致するかが書かれていません。プロジェクトの R のルールは、頼る前に試してください。
+これはこの記事自身の助言です。`Rscript` を許可するルールは、エージェントにどんな R コードも
+実行させます。環境チェックが通ってから足してください。
 
 出典：<https://code.visualstudio.com/docs/agents/run/approvals>
 
@@ -125,8 +132,10 @@ VS Code の Copilot は `.github/copilot-instructions.md` または `AGENTS.md` 
 **プロンプトファイル**は、`<name>.prompt.md` という名前の Markdown ファイルです。
 ワークスペースのプロンプトファイルは `.github/prompts/` に置きます。チャット入力で
 `/<name>` と入力するか、コマンドパレットの **Chat: Run Prompt** で起動します。
-Chat ビューの Local セッションで実行されます。次は
-`.github/prompts/pre-pr.prompt.md` の例です。
+Chat ビューの Local ハーネスのセッションでだけ実行されます。Local ハーネスは非推奨で、
+2027 年 2 月に削除される予定です。Copilot ハーネスはプロンプトファイルを実行しません。
+そちらには、ドキュメントはスキルを勧めています。このページでは、Copilot ハーネス用のスキルは
+示しません。次は `.github/prompts/pre-pr.prompt.md` の例です。
 
 ```markdown
 Run these in order. Stop at the first failure and report it.
@@ -182,14 +191,15 @@ VS Code にはフックがあります（**Preview**）。フックは、決ま�
 `permissionDecision` に `"deny"` を入れ、`permissionDecisionReason` を付けて出力
 します。`{}` は「判断しない」の意味です。`PreToolUse` のようなパスカルケースの
 イベント名は別名で、snake_case の項目と Claude 形式のツール名（`Read`、`Write`、
-`Edit`）を使います。**（要確認：**ファイル編集の Copilot ネイティブのツール名。
-ドキュメントに載っていないため、このページではマッチャーの例を示しません。**）**
+`Edit`）を使います。GitHub のフックのリファレンスによると、`matcher` は `toolName` の全体に
+一致する正規表現で、ファイルのツールは `edit` と `create` です（パスカルケースの別名では
+`Edit` と `Write`）。ファイル編集のフックなら、マッチャーは `edit|create` になります。
+VS Code のフックのページには、Local ハーネスはマッチャーの値を無視するとあります。
 この機能は Preview なので、自分でフックを試すまでは、これらのルールを PR 前チェック
 と CI に任せてください。
 
-PR #935 のブランチの `.claude/` にあるフックの例は、Claude Code 向けに書かれ、Claude でのみ
-確認しています。#935 が `next` にマージされ、`next` が `main` にマージされると、リポジトリに
-含まれます。
+リポジトリの `.claude/` にあるフックの例は、Claude Code 向けに書かれ、Claude でのみ
+確認しています。今は `next` にあり、次のマージで `main` に入ります。
 [Claude アプリのページ](ai-agents-claude-app-ja.html#checks-on-each-edit) を参照して
 ください。
 
@@ -199,8 +209,8 @@ PR #935 のブランチの `.claude/` にあるフックの例は、Claude Code 
 
 [共有ページのワークフロー](ai-agents-ja.html#the-workflow)に戻ります。Issue、小さな
 ブランチ、テストを先に書く、PR 前チェック、PR の順です。Issue や PR を読むときは、
-ターミナルの GitHub CLI（`gh`）を使うのが安全です。**（要確認：**VS Code の GitHub
-連携で Issue や PR を読む方法。**）**
+ターミナルの GitHub CLI（`gh`）を使うのが安全です。この設定のために読んだ VS Code のページには、Copilot が Issue や PR をどう読むかが
+書かれていません。
 
 作業の一部を別のエージェントに任せるには、VS Code のサブエージェントを使います。
 サブエージェントは、自分のコンテキストで作業し、絞った結果だけを返します。会話は

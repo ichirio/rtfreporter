@@ -12,8 +12,8 @@ first: it says what the set-up is for. Come back to that page for the workflow
 when you are done.
 
 The facts here come from the VS Code and GitHub documentation, read on
-2026-11-08 (see the links). None of the steps was run in VS Code for this page. Copilot's screens and settings change often. Where
-the documentation does not show a step, it is marked **(to check)**.
+2026-11-08 (see the links). None of the steps was run in VS Code for this page. Copilot's screens and settings change often. If a step
+does not match what you see, read the linked page again.
 
 ## Open the repository
 
@@ -28,9 +28,11 @@ the documentation does not show a step, it is marked **(to check)**.
    (*Branching & collaboration* in `CONTRIBUTING.md`). `AGENTS.md`, which
    Copilot's instructions point to, names `main` only, so a maintainer follows
    `CONTRIBUTING.md`.
-4. In the chat input, select **Agent** from the agent picker. **(To check:**
-   which "harness" to choose; the documentation describes Local and Copilot
-   harness sessions.**)**
+4. In the chat input, select **Agent** from the agent picker. The
+   documentation names a Local harness and a Copilot harness. It says the
+   Local harness is deprecated and will be removed in February 2027, and it
+   advises moving to the Copilot harness. But prompt files run only in the
+   Local harness (see the pre-PR check below).
 
 Sources: <https://code.visualstudio.com/docs/sourcecontrol/overview>,
 <https://code.visualstudio.com/docs/sourcecontrol/branches-worktrees>,
@@ -47,8 +49,10 @@ The agent's commands must see the work library and the work home, not yours
   shell where the variables are set (`R_LIBS_USER`, `HOME`, `R_USER_CACHE_DIR`,
   `R_USER_DATA_DIR`, `R_USER_CONFIG_DIR`, `TMP`, `TEMP`, `TMPDIR`,
   `WORK_ROOT`), so that every terminal inherits them.
-  **(To check:** the VS Code setting that sets variables for the integrated
-  terminal on your platform, and whether the agent's terminal uses it.**)**
+  VS Code can also set variables for its terminals in
+  `terminal.integrated.env.windows`, `.osx` or `.linux` (the terminal
+  profiles page). The documentation does not say whether the agent's terminal
+  reads it, so run the check script to find out.
 * Tell the agent which R to call, by its full path, in the instruction file
   (next section).
 
@@ -77,8 +81,11 @@ it short and keep the rules in one place. Add only the lines that are missing:
 
 `.github/copilot-instructions.md` is a tracked file, so a line you add lands in
 your pull request. Add a line only if it helps every contributor, and say so in
-the pull request. **(To check:** where VS Code keeps instructions that are only
-for you.**)**
+the pull request. Instructions that are only for you go under **User** in the
+Agent Customizations editor. In the Copilot harness they are in
+`~/.copilot/copilot-instructions.md` or in `~/.copilot/instructions/`. In the
+Local harness they are kept in your VS Code user profile. The instructions
+reference page describes both.
 
 To confirm that the file was read:
 
@@ -118,9 +125,12 @@ not a security boundary", so keep the work area apart from your own files, as
 in the environment section.
 
 Keep these as "ask": `git push`, installing into any library other than the
-work library, and deleting files. **(To check:** how to allow the project's R
-by its full path in these rules, and whether a rule that allows `Rscript` is
-wise.**)**
+work library, and deleting files. The approvals page does not say how a rule
+matches a command that is given by its full path, so test any rule for the
+project's R before you rely on it. This article's own advice: a rule that allows
+`Rscript` lets the agent run any R code, so add it only after the environment
+check passes.
+
 
 Source: <https://code.visualstudio.com/docs/agents/run/approvals>
 
@@ -128,8 +138,11 @@ Source: <https://code.visualstudio.com/docs/agents/run/approvals>
 
 A **prompt file** is a Markdown file named `<name>.prompt.md`. A workspace
 prompt file lives in `.github/prompts/`. You start it by typing `/<name>` in
-the chat input, or with **Chat: Run Prompt** in the Command Palette. It runs in
-Local sessions in the Chat view. This example is `.github/prompts/pre-pr.prompt.md`:
+the chat input, or with **Chat: Run Prompt** in the Command Palette. It runs only in Local harness sessions in the Chat view. The Local harness is
+deprecated and will be removed in February 2027, and the Copilot harness does
+not run a prompt file; for that harness the documentation suggests a skill
+instead. This page does not show a skill for the Copilot harness. This example
+is `.github/prompts/pre-pr.prompt.md`:
 
 ```markdown
 Run these in order. Stop at the first failure and report it.
@@ -183,14 +196,17 @@ The script gets `toolName` and `toolArgs` as input. To deny, it prints
 `permissionDecision` set to `"deny"` with a `permissionDecisionReason`; `{}`
 means no decision. A PascalCase event name such as `PreToolUse` is an alias that
 uses snake_case fields and Claude-style tool names (`Read`, `Write`, `Edit`).
-**(To check:** the Copilot-native tool name for a file edit. It is not on the
-page, so this page gives no matcher example.**)** Because the feature is in
+GitHub's hooks reference says a `matcher` is a regular expression that must
+match the whole `toolName`, and that the file tools are `edit` and `create`
+(`Edit` and `Write` for the PascalCase alias). A hook for file edits would use
+the matcher `edit|create`. The VS Code hooks page says the Local harness
+ignores matcher values. Because the feature is in
 Preview, rely on the pre-PR check and on CI for these rules until you have
 tested a hook yourself.
 
-The example hooks in `.claude/` on the branch of pull request #935 are written
-for Claude Code and tested only with it. Once #935 is merged into `next`, and
-`next` into `main`, the repository holds them. See
+The example hooks in `.claude/` in the repository are written for Claude Code
+and tested only with it. They are in `next` now, and they reach `main` with the
+next merge. See
 [the Claude app page](ai-agents-claude-app.html#checks-on-each-edit).
 
 Source: <https://code.visualstudio.com/docs/copilot/customization/hooks>
@@ -200,8 +216,8 @@ Source: <https://code.visualstudio.com/docs/copilot/customization/hooks>
 Back to [the workflow in the shared article](ai-agents.html#the-workflow):
 issue, small branch, test first, pre-PR check, pull request. To read an Issue or
 a pull request, the safe route is the GitHub CLI (`gh`) in the terminal.
-**(To check:** the GitHub integration in VS Code for reading an Issue or a
-pull request.**)**
+The VS Code pages read for this page do not say how Copilot reads an Issue or
+a pull request.
 
 To hand a piece of work to a helper, VS Code has subagents: helpers that work
 in their own context and return a focused result. A subagent does not inherit the

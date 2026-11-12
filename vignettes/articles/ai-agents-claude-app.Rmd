@@ -12,8 +12,8 @@ it says what the set-up is for. Come back to that page for the workflow when
 you are done.
 
 The facts here come from Anthropic's Claude Code documentation, read on
-2026-11-08 (see the links). The app's own screens change often. Where the
-documentation does not show a screen, the step is marked **(to check)**.
+2026-11-08 (see the links). The app's own screens change often. If a step does not
+match your screen, read the linked page again.
 
 ## Open the repository
 
@@ -25,16 +25,15 @@ documentation does not show a screen, the step is marked **(to check)**.
 3. To keep the work apart from your main checkout, turn on **Worktree** before
    you start the session. It is off by default. Then Claude works in its own Git
    worktree, under `<project-root>/.claude/worktrees/` by default. Those
-   folders show up as untracked files in `git status`. Pull request #935 adds
-   `.claude/worktrees/` to `.gitignore`; until you have it, stage named files,
-   never `git add .`.
+   folders show up as untracked files in `git status`. The repository's `.gitignore` lists
+   `.claude/worktrees/`. Still, stage named files, never `git add .`.
    You can run several sessions in parallel, one per piece of work; each has its
    own project folder, and its own worktree when **Worktree** is on.
 4. Make the topic branch: ask Claude to run `git checkout -b <type>/<issue>-<slug>`
    from the right base. A contributor branches from `main` and opens the pull
    request against `main`; a maintainer's branch goes to `next`
    (*Branching & collaboration* in `CONTRIBUTING.md`).
-   **(To check:** whether the app has its own branch picker.**)**
+   The desktop page shows no branch picker, so ask Claude to make the branch.
 
 Source: <https://code.claude.com/docs/en/desktop>
 
@@ -48,8 +47,9 @@ The agent's commands must see the work library and the work home, not yours
   `R_USER_DATA_DIR`, `R_USER_CONFIG_DIR`, `TMP`, `TEMP`, `TMPDIR` and
   `WORK_ROOT` there. If you use the hooks below, put `TFL_HOOK_RSCRIPT` (and,
   for a maintainer making a release, `TFL_ALLOW_RELEASE_EDIT`) there too.
-  **(To check:** whether Windows paths with a drive letter
-  need quoting in that editor.**)**
+  The desktop page does not say whether to quote a value or how
+  to write a Windows path. Write the path as it is, and let the check script
+  below show whether it was read.
 * The `env` block of `~/.claude/settings.json` is a poor place for these. The
   desktop page says Claude Code ignores a `settings.json` value when the
   variable is already in the environment that the app starts the session with,
@@ -94,9 +94,10 @@ add to `.gitignore` (the memory page describes this).
 
 To confirm that the file was read, ask: "Which instructions did you load for
 this repository?" The answer should name `CLAUDE.md`, and the text it imports
-from `AGENTS.md`. The Claude Code documentation describes a `/memory` command
-that lists the memory files, and `/context all`, which lists those loaded at
-launch. **(To check:** whether the desktop app offers them, and where.**)**
+from `AGENTS.md`. The desktop page documents `/context`, which you type in the prompt box. The
+Claude Code memory page also describes `/context all`, which lists the memory
+files loaded at launch, and `/memory`. The desktop page does not mention
+`/memory`; if it is not in the slash menu, use the question above.
 
 An instruction file is context, not a lock. For a rule that must hold, use a
 hook (below).
@@ -138,9 +139,9 @@ as written, so `git -C . push` is not matched by `Bash(git push *)`. The page
 says a `deny` or `ask` rule is not a security boundary. Treat these rules as a
 guide and use a hook for a rule that must hold. The second is this
 article's own advice, not the documentation's: an allowed `Rscript` can run any
-R code, so allow it only after the environment check passes. **(To check:** how
-the permissions page's rules treat a quoted path with spaces, as in the example
-above.**)**
+R code, so allow it only after the environment check passes. The permissions page does
+not say how a rule treats a quoted path with spaces, so the example rule above
+is untested. If Claude still asks for that command, allow it when it asks.
 
 The `ask` list above keeps `git push` and `rm` with you: a push goes through
 you, as a person. Installing into any library other than the work library is
@@ -197,10 +198,11 @@ can block it with exit code 2; the message on stderr is what Claude sees. A
 The matcher `Edit|Write` selects file edits, and the file's path is in
 `tool_input.file_path`.
 
-An example set of two hooks is in `.claude/`, on the branch of pull request
-#935. Once #935 is merged into `next`, and `next` into `main`, the repository
-holds it. (`.claude` is left out of the package build, so it is in the
-repository, not in the installed package.) The hook commands call `bash`; on
+An example set of two hooks is in `.claude/` in the repository. It is in
+`next` now, and it reaches `main` with the next merge of `next` into `main`.
+`.claude/settings.json` holds the settings shown below. (`.claude` is left out
+of the package build, so it is in the repository, not in the installed
+package.) The hook commands call `bash`; on
 Windows that means Git Bash, with `bash` on the path. The two hooks:
 
 * `hooks/guard-version-news.sh` (`PreToolUse`) refuses an edit to `NEWS.md` or
@@ -247,8 +249,8 @@ repository: an edit to `NEWS.md` and an edit to the
 `DESCRIPTION` field, and writing and deleting an R file, went through. The app
 asked nothing before running the project's hooks, and has no `/hooks` screen.
 The lint hook has been tested by giving its script the input a tool call sends;
-in the app it was not run, since `TFL_HOOK_RSCRIPT` was not set. **(To check:**
-the lint hook in the app, with `TFL_HOOK_RSCRIPT` set.**)**
+in the app it was not run, since `TFL_HOOK_RSCRIPT` was not set, so it is not
+tested in the app.
 
 **`$CLAUDE_PROJECT_DIR`** is set for hook commands, and the hooks use it to
 find their scripts. It is not set in the agent's own Bash shell: a command the

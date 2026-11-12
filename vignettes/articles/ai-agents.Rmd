@@ -38,9 +38,8 @@ on its own page:
 * [Set-up in the Claude desktop app](ai-agents-claude-app.html)
 * [Set-up in VS Code with GitHub Copilot](ai-agents-vscode-copilot.html)
 
-Items marked **(to check)** are not confirmed yet. Treat them as open
-questions, not as facts. Advice that is the article's own, and not from a tool's
-documentation, is said to be so.
+Advice that is the article's own, and not from a tool's documentation, is said
+to be so.
 
 ## 1. What this article is for
 
@@ -242,23 +241,20 @@ An agent's judgment is not a check. These are:
 * the `lint` workflow, which runs lintr in CI;
 * coverage, in `test-coverage.yaml`;
 * undeclared dependencies: search the diff for `pkg::` and
-  `requireNamespace()` and compare the names with `DESCRIPTION`. **(To check:**
-  whether a ready-made tool should replace this search.**)**
+  `requireNamespace()` and compare the names with `DESCRIPTION`.
 * a scan of the dependencies for known vulnerabilities. GitHub's list of
-  ecosystems that Dependabot supports has GitHub Actions and has no row for R,
-  so Dependabot does not read an R package's `DESCRIPTION`. This repository has
-  no `.github/dependabot.yml` file today, and its security settings (read
+  ecosystems that Dependabot supports has GitHub Actions, and no R row was found. This repository has no
+  `.github/dependabot.yml` file today, and its security settings (read
   2026-11-08) show Dependabot security updates and secret scanning as
-  disabled. **(To check:** which scanner to use for R dependencies.**)**
+  disabled. No scanner is set up for the R dependencies.
 
 ### Checks on each edit
 
 Some rules are better enforced at each edit than at the end: lint a changed R
 file, or refuse an edit to `Version:` in `DESCRIPTION`, to `NEWS.md` or to
 `CHANGELOG.md`. Claude Code does this with **hooks**. VS Code has hooks too, in
-Preview. The Claude page shows an example set, which is in pull request #935.
-Once #935 is merged into `next`, and `next` into `main`, the repository holds
-it. The VS Code page shows the format of a hook. Where a tool cannot do it, the
+Preview. The Claude page shows an example set, which is in `.claude/` in the
+repository (in `next` now, and in `main` with the next merge). The VS Code page shows the format of a hook. Where a tool cannot do it, the
 pre-PR check and CI cover the same ground.
 
 ## 4. The workflow
@@ -342,12 +338,12 @@ When a check has found a problem once, keep it as a regression test.
 | Job | Claude desktop app (Code tab) | VS Code with Copilot |
 |---|---|---|
 | Standing instructions for the repository | `CLAUDE.md`. `AGENTS.md` is read only when there is no `CLAUDE.md`, unless `CLAUDE.md` imports it. | `.github/copilot-instructions.md`, or `AGENTS.md`. |
-| A reusable task (the pre-PR check) | A skill: `.claude/skills/<name>/SKILL.md`, started with `/name`. | A prompt file: `.github/prompts/<name>.prompt.md`, started with `/name`. |
+| A reusable task (the pre-PR check) | A skill: `.claude/skills/<name>/SKILL.md`, started with `/name`. | A prompt file: `.github/prompts/<name>.prompt.md`, started with `/name`. It runs only in the Local harness, which is deprecated. |
 | Running tests and lint | Runs commands with its Bash tool. | Runs commands in the integrated terminal (Local sessions). |
 | What it may run without asking | Permission rules and permission modes. | Terminal auto-approve rules (`chat.tools.terminal.autoApprove`). |
 | Checks on each edit | Hooks in `.claude/settings.json`. | Hooks (Preview) in `.github/hooks/*.json`. |
 | Handing a piece of work to a helper | Separate sessions run in parallel; with **Worktree** on, each has its own worktree. | Subagents, which work in their own context. |
-| Reading an Issue or a pull request | `gh` in the terminal. The app shows a pull request's CI status after you open it. | **(To check:** how Copilot in VS Code reads an Issue or a pull request.**)** |
+| Reading an Issue or a pull request | `gh` in the terminal. The app shows a pull request's CI status after you open it. | `gh` in the terminal. The VS Code pages read for this set-up do not say how Copilot reads an Issue or a pull request. |
 
 The facts in this table come from the tools' own documentation, read on
 2026-11-08; the set-up pages link the pages. Two facts about the Claude app
