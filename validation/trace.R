@@ -435,9 +435,9 @@ env_for <- function(supported) {
   is_min <- !devel & !is.na(rv) & rv == numeric_version(r_min[1L])[1L, 1:2]
   # the minimum environment: the CI job "ubuntu-24.04 (R <min>, minimum
   # environment)", R at DESCRIPTION's minimum and each dependency at its own;
-  # the recommended environment: the CI jobs of the latest R, "(release)"
+  # the recommended environment: the CI jobs of the latest R, "(R release)"
   min_env <- grepl("minimum environment", envs$environment, fixed = TRUE)
-  rec_env <- envs$source == "ci" & grepl("(release)", envs$environment, fixed = TRUE)
+  rec_env <- envs$source == "ci" & grepl("(R release)", envs$environment, fixed = TRUE)
   os_is <- function(re) which(grepl(re, envs$os))
   if (grepl("^The minimum environment", supported)) {
     list(list(label = NULL, idx = which(min_env & is_min)))
