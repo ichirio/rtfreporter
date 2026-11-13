@@ -654,7 +654,9 @@ rtftable as the attributes \code{rtf_titles} / \code{rtf_footnotes}, which
 Supported inputs: \code{gt_tbl}, \code{gt_group} (gt's multi-table container from
 \code{\link[gt:gt_group]{gt::gt_group()}} / \code{\link[gt:gt_split]{gt::gt_split()}} -- and what tfrmt's \code{print_to_gt()}
 returns when the spec has a \code{page_plan}; expanded to one page set per
-member table), gtsummary tables (including a \code{tbl_split} container from
+member table; a style on a cell of a row-split member,
+\code{gt::gt_split(row_every_n = )}, needs gt 1.4.0 or later, as older gt
+stops on it), gtsummary tables (including a \code{tbl_split} container from
 \code{gtsummary::tbl_split_by_rows()} / \code{tbl_split_by_columns()}, likewise
 expanded member by member), rtables/tern \code{VTableTree}
 tables, rlistings \code{listing_df} listings,
