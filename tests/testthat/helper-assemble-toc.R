@@ -129,9 +129,10 @@
   out
 }
 
-# a label that wraps (level 2 and level 3), the right tab and the leader on it
-.tt_long_label <- function() {
-  paste("Table 14.3.2 Summary of treatment-emergent adverse events by system",
+# a label that wraps (level 2 and level 3), the right tab and the leader on it;
+# `number` is the table's number ("14.3.2.1" for the level-3 entry)
+.tt_long_label <- function(number = "14.3.2") {
+  paste("Table", number, "Summary of treatment-emergent adverse events by system",
         "organ class, preferred term and maximum severity in the safety",
         "population, all randomised subjects who received at least one dose",
         "of study treatment, excluding those from site 99")
@@ -142,7 +143,7 @@
                          t_14_3_3 = "Table 14.3.3 Laboratory"))
   toc <- data.frame(file = f, label = c("Table 14.1.1 Demographics",
                                         .tt_long_label(),
-                                        .tt_long_label()),
+                                        .tt_long_label("14.3.2.1")),
                     level = c(2L, 2L, 3L))
   out <- file.path(dir, "assembled.rtf")
   assemble_rtf(f, out, toc = toc)
@@ -185,7 +186,7 @@
                          t_14_3_3 = "Table 14.3.3 Laboratory"))
   toc <- data.frame(file = f, label = c("Table 14.1.1 Demographics",
                                         .tt_long_label(),
-                                        .tt_long_label()),
+                                        .tt_long_label("14.3.2.1")),
                     level = c(2L, 2L, 3L))
   out <- file.path(dir, "assembled.rtf")
   assemble_rtf(f, out, toc = toc, toc_style = list(entry = list(hanging = TRUE)))

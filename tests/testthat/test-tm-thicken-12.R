@@ -834,7 +834,7 @@ test_that("FT-AS6203 [FR-AS260]: toc_style sets size and boldness of the title, 
   expect_identical(p[1L], "{\\pard\\qc\\b\\fs28 Table of Contents\\par}")
   expect_identical(p[2L], "{\\pard\\fs18\\par}")
   expect_identical(p[3L], "{\\pard\\b\\fs22 H\\par}")
-  expect_match(p[4L], "^\\{\\\\pard\\\\li600\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(p[4L], "^\\{\\\\pard\\\\li600\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
   # every item given: points are doubled to half points, bold FALSE drops \b
   st <- list(title = list(size = 16, bold = FALSE), heading = list(size = 12, bold = FALSE),
              entry = list(size = 9, bold = TRUE), gap = list(size = 6))
@@ -842,13 +842,13 @@ test_that("FT-AS6203 [FR-AS260]: toc_style sets size and boldness of the title, 
   expect_identical(q[1L], "{\\pard\\qc\\fs32 Table of Contents\\par}")
   expect_identical(q[2L], "{\\pard\\fs12\\par}")
   expect_identical(q[3L], "{\\pard\\fs24 H\\par}")
-  expect_match(q[4L], "^\\{\\\\pard\\\\li600\\\\b\\\\fs18\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(q[4L], "^\\{\\\\pard\\\\li600\\\\ri648\\\\keep\\\\b\\\\fs18\\\\tqr\\\\tldot\\\\tx14112 ")
   # a half point: 10.5 pt is \fs21
   expect_match(.tt_entries(.tt_asm(f, toc = "auto", toc_style = list(entry = list(size = 10.5))))[1L],
-               "^\\{\\\\pard\\\\fs21\\\\tqr")
+               "^\\{\\\\pard\\\\ri756\\\\keep\\\\fs21\\\\tqr")
   # a partial style is merged key by key: bold added with the size kept, size changed with bold kept
   p1 <- .tt_paras(.tt_asm(f, toc = tab, toc_style = list(entry = list(bold = TRUE))))
-  expect_match(p1[4L], "^\\{\\\\pard\\\\li600\\\\b\\\\fs20\\\\tqr")
+  expect_match(p1[4L], "^\\{\\\\pard\\\\li600\\\\ri720\\\\keep\\\\b\\\\fs20\\\\tqr")
   expect_identical(p1[1L], p[1L])
   p2 <- .tt_paras(.tt_asm(f, toc = tab, toc_style = list(heading = list(size = 13))))
   expect_identical(p2[3L], "{\\pard\\b\\fs26 H\\par}")
@@ -908,8 +908,8 @@ test_that("FT-AS6205 [FR-AS265]: a label too long for a line stays in its one pa
   lab <- .tt_long_label()
   expect_length(e, 3L)
   expect_true(grepl(lab, e[2L], fixed = TRUE))                    # the whole label in the one paragraph
-  expect_match(e[2L], "^\\{\\\\pard\\\\li600\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
-  expect_match(e[3L], "^\\{\\\\pard\\\\li1200\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(e[2L], "^\\{\\\\pard\\\\li600\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(e[3L], "^\\{\\\\pard\\\\li1200\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
   expect_false(any(grepl("\\\\fi[0-9-]", e)))
   expect_identical(sum(grepl("\\\\par\\}$", e)), 3L)              # three entries, three paragraphs
   # The estimate: a Courier New 10 pt character is 120 twips.  Level 2 has the width
@@ -938,19 +938,19 @@ test_that("FT-AS6206 [FR-AS269]: toc_style entry hanging is FALSE by default (no
   # default: no \fi, and the explicit FALSE writes the same bytes
   expect_length(e0, 3L)
   expect_false(any(grepl("\\\\fi[0-9-]", e0)))
-  expect_match(e0[2L], "^\\{\\\\pard\\\\li600\\\\fs20\\\\tqr")
+  expect_match(e0[2L], "^\\{\\\\pard\\\\li600\\\\ri720\\\\keep\\\\fs20\\\\tqr")
   expect_identical(.tt_asm(f, toc = toc, toc_style = list(entry = list(hanging = FALSE))), x0)
   # TRUE: 720 on every level (indent 0, 600, 1200 -> 720, 1320, 1920), first line where it was
   x1 <- .tt_asm(f, toc = toc, toc_style = list(entry = list(hanging = TRUE)))
   e1 <- .tt_entries(x1)
-  expect_match(e1[1L], "^\\{\\\\pard\\\\li720\\\\fi-720\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
-  expect_match(e1[2L], "^\\{\\\\pard\\\\li1320\\\\fi-720\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
-  expect_match(e1[3L], "^\\{\\\\pard\\\\li1920\\\\fi-720\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(e1[1L], "^\\{\\\\pard\\\\li720\\\\fi-720\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(e1[2L], "^\\{\\\\pard\\\\li1320\\\\fi-720\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(e1[3L], "^\\{\\\\pard\\\\li1920\\\\fi-720\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
   # a whole number of twips: 360 -> 360, 960, 1560
   e2 <- .tt_entries(.tt_asm(f, toc = toc, toc_style = list(entry = list(hanging = 360))))
-  expect_match(e2[1L], "^\\{\\\\pard\\\\li360\\\\fi-360\\\\fs20\\\\tqr")
-  expect_match(e2[2L], "^\\{\\\\pard\\\\li960\\\\fi-360\\\\fs20\\\\tqr")
-  expect_match(e2[3L], "^\\{\\\\pard\\\\li1560\\\\fi-360\\\\fs20\\\\tqr")
+  expect_match(e2[1L], "^\\{\\\\pard\\\\li360\\\\fi-360\\\\ri720\\\\keep\\\\fs20\\\\tqr")
+  expect_match(e2[2L], "^\\{\\\\pard\\\\li960\\\\fi-360\\\\ri720\\\\keep\\\\fs20\\\\tqr")
+  expect_match(e2[3L], "^\\{\\\\pard\\\\li1560\\\\fi-360\\\\ri720\\\\keep\\\\fs20\\\\tqr")
   # headings and the title are as they were
   noent <- function(l) .tt_paras(l)[!grepl("PAGEREF", .tt_paras(l))]
   expect_identical(noent(x1), noent(x0))
@@ -969,9 +969,9 @@ test_that("FT-AS6206 [FR-AS269]: toc_style entry hanging is FALSE by default (no
   # the option sets it, and the argument wins over it
   old <- options(rtfreporter.toc_style = list(entry = list(hanging = 360)))
   on.exit(options(old), add = TRUE)
-  expect_match(.tt_entries(.tt_asm(f, toc = toc))[2L], "^\\{\\\\pard\\\\li960\\\\fi-360\\\\fs20\\\\tqr")
+  expect_match(.tt_entries(.tt_asm(f, toc = toc))[2L], "^\\{\\\\pard\\\\li960\\\\fi-360\\\\ri720\\\\keep\\\\fs20\\\\tqr")
   expect_match(.tt_entries(.tt_asm(f, toc = toc, toc_style = list(entry = list(hanging = TRUE))))[2L],
-               "^\\{\\\\pard\\\\li1320\\\\fi-720\\\\fs20\\\\tqr")
+               "^\\{\\\\pard\\\\li1320\\\\fi-720\\\\ri720\\\\keep\\\\fs20\\\\tqr")
   expect_false(any(grepl("\\\\fi[0-9-]", .tt_entries(
     .tt_asm(f, toc = toc, toc_style = list(entry = list(hanging = FALSE)))))))
   options(old)

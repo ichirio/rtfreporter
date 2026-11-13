@@ -86,10 +86,10 @@ the built-in values key by key, so \code{list(entry = list(size = 9))} changes
 the entries' size only.  Built in: title 14 pt bold, heading 11 pt bold,
 entry 10 pt, gap 9 pt.  A size is a positive number of points, whole or
 half (\code{10.5}).  \code{entry} also takes \code{hanging}: \code{FALSE} (default) writes each
-entry's wrapped lines at the indent of its first line; \code{TRUE} hangs them
-720 twips (half an inch) further in, and a positive whole number is that
-many twips (\code{list(entry = list(hanging = 360))}).  Headings are not
-affected.  Default \code{getOption("rtfreporter.toc_style")}.  The font is
+entry's wrapped lines at the indent of its first line; \code{TRUE} lines them
+up where the title starts, after the number (see \strong{Table of Contents}),
+and a positive whole number of twips hangs them that far in, the label
+written whole (\code{list(entry = list(hanging = 360))}).  Headings are not affected.  Default \code{getOption("rtfreporter.toc_style")}.  The font is
 the document's (that of the first input file).  Another key, a size that
 is not a positive number, a \code{bold} that is not \code{TRUE} / \code{FALSE} or a
 \code{hanging} that is not \code{TRUE} / \code{FALSE} / a positive whole number is an
@@ -184,6 +184,31 @@ Each TOC entry is an RTF \code{HYPERLINK} field; clicking it in
 Word / Pages jumps to a per-source-file bookmark.  Each row also
 has a \code{PAGEREF} field so the page number next to the entry is
 calculated by the viewer when the file opens.
+
+The page number stands on a right tab at the right margin.  A label too
+long for one line wraps before the page-number column, never into it: each
+entry has a right indent (\verb{\\ri}) of the column's width plus a gap, six
+characters at the entry's font size (four digits and two spaces; more when
+a page number has more digits), 720 twips (0.5 in) at the default 10 pt.
+The page number and its leader stay on the label's last line, at the
+margin.  Every level has it, with or without a hanging indent; headings do
+not.  An entry is also kept on one page (\verb{\\keep}): Word never splits it
+across two TOC pages.
+
+With a hanging indent (\code{toc_style = list(entry = list(hanging = TRUE))})
+an entry is its number, a tab and its title (\code{"Table 14.3.2"}, then
+\code{"Summary of ..."}), and the title's wrapped lines start where its first
+line does, after the number.  The hang is the width of the widest number
+in the TOC and a gap of 1 em at the entry's size: a character is 0.6 em
+in Courier New (exact) and is taken as 0.65 em in any other font (an
+estimate on the safe side).  With \code{"auto"} and \code{\link[=assemble_folder]{assemble_folder()}} the
+number is the one the file's title is read with (\code{"Table 14.1.1"}); a
+label given as text is split when it starts with \code{Table}, \code{Figure} or
+\code{Listing} and a number (\verb{14.3.2}, \verb{14.3.2.1}, \verb{14.1.1a}).  A label that
+does not split is written whole, its wrapped lines at the same hang; when
+no label splits the hang is 720 twips.  A whole number of twips
+(\code{hanging = 360}) is the hang as given, and each label is written whole,
+its wrapped lines that far in.
 }
 
 \section{Page numbering}{

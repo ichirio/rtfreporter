@@ -82,7 +82,7 @@ test_that("FT-AS7002 [FR-AS250 FR-AS112]: toc = \"auto\" joins every title row o
   expect_identical(.tr_outline(x), .tr_entries(x))
   # the entries' layout is that of any entry: level 1, a dot leader
   e <- grep("HYPERLINK", x, value = TRUE)
-  expect_true(all(startsWith(e, "{\\pard\\fs20\\tqr\\tldot\\tx14112 {\\field")))
+  expect_true(all(startsWith(e, "{\\pard\\ri720\\keep\\fs20\\tqr\\tldot\\tx14112 {\\field")))
 })
 
 test_that("FT-AS7003 [FR-AS149 FR-AS250]: a figure and a listing are labelled by their titles, as a table is, by assemble_folder() and toc = \"auto\"", {
@@ -178,7 +178,7 @@ test_that("FT-AS7006 [FR-AS250 FR-AS112]: one level-1 entry per file, read the s
   e <- grep("HYPERLINK", x, value = TRUE)
   expect_length(e, 5L)
   # level 1: no indent
-  expect_true(all(startsWith(e, "{\\pard\\fs20\\tqr\\tldot\\tx14112 {\\field")))
+  expect_true(all(startsWith(e, "{\\pard\\ri720\\keep\\fs20\\tqr\\tldot\\tx14112 {\\field")))
   expect_identical(.tr_entries(x), want_rtf)
   expect_identical(.tr_outline(x), want_rtf)
   expect_false(any(grepl("\\\\line|\\\\chpgn|NUMPAGES|rtfreporterbookpage|\\\\sub|\\{STUDY\\}", e)))
