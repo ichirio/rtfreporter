@@ -114,6 +114,16 @@
 #'     given as paths are embedded as they are, whatever it says.}
 #' }
 #'
+#' One is the document's font:
+#' \describe{
+#'   \item{`rtfreporter.font`}{The default of `rtf_document(font_table = )`
+#'     and of every `font =` (factory `"Courier New"`).  A family name that
+#'     is not ASCII, such as a Japanese one, is written in the font table as
+#'     Word writes it: in its East Asian code page with the matching
+#'     `\fcharset`, and with its Latin name in `\falt` for common
+#'     families (see *Font names that are not ASCII* in [rtf_document()]).}
+#' }
+#'
 #' One is about the table of contents of [assemble_rtf()]:
 #' \describe{
 #'   \item{`rtfreporter.toc_style`}{The size and boldness of its text, the

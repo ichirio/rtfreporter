@@ -349,7 +349,7 @@ test_that("FT-DC284 [FR-DC186 FR-DC187 FR-DC188 FR-DC189 FR-DC192 FR-DC193 FR-DC
     E("markup", "prefix", "scr", mk),
     E("markup", "unknown", "bogus", mk),
     E("markup", "empty string", "", mk),
-    C("font", "non-ASCII", .eb2_kanji2, "ok:\\\\u26126\\?\\\\u26397\\?;"),
+    C("font", "non-ASCII", .eb2_kanji2, "ok:\\\\fcharset128 \\\\'96\\\\'be\\\\'92\\\\'a9;"),
     E("font", "empty string", "", fnt),
     E("font", "NA", NA_character_, fnt),
     E("font", "length 0", character(0), fnt),
@@ -482,7 +482,7 @@ test_that("FT-DC285 [FR-DC203 FR-DC204 FR-DC205 FR-DC206 FR-DC207 FR-DC213 FR-DC
     O("cell_padding_top_twips", "0 (min)", 0, function(b) identical(b$cell_padding_top_twips, 0L)),
     E("cell_padding_top_twips", "negative", -1, "^`cell_padding_top_twips` must be a single non-negative integer"),
     E("cell_padding_top_twips", "Inf", Inf, "^`cell_padding_top_twips` must be a single non-negative integer"),
-    C("font", "non-ASCII", .eb2_kanji2, "ok:\\\\u26126\\?\\\\u26397\\?;"),
+    C("font", "non-ASCII", .eb2_kanji2, "ok:\\\\fcharset128 \\\\'96\\\\'be\\\\'92\\\\'a9;"),
     E("font", "empty string", "", "^`font` must be a single font family name"),
     E("markup", "prefix", "scr", "^`markup` must be a subset"),
     O("drop_empty_rows", "TRUE", TRUE, function(b) isTRUE(b$drop_empty_rows)),
@@ -537,7 +537,7 @@ test_that("FT-DC288 [FR-DC309 FR-DC310 FR-DC311 FR-DC320 FR-DC321 FR-DC322 FR-DC
   ttl <- function(n) function(x) identical(.eb2_cellx1(x), paste0("\\cellx", n))
   cases <- list(
     E("fnt", "unknown name", "Arial", "^`rtf_style\\(\\)`: unknown argument `fnt`"),
-    C("font", "non-ASCII", .eb2_kanji2, "ok:\\\\u26126\\?\\\\u26397\\?;"),
+    C("font", "non-ASCII", .eb2_kanji2, "ok:\\\\fcharset128 \\\\'96\\\\'be\\\\'92\\\\'a9;"),
     E("font", "empty string", "", fnt),
     E("font", "NA", NA_character_, fnt),
     E("font", "length 0", character(0), fnt),

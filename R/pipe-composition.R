@@ -125,6 +125,29 @@
 #' `rtf_document(font_table = list(list(name = c(latin = "Times New Roman",
 #' east_asian = "MS Mincho"))), font_lang = c(east_asian = "ja"))`.
 #'
+#' @section Font names that are not ASCII:
+#' A family name with characters outside ASCII (Yu Mincho written in
+#' Japanese, say) is written in the font table as Word writes
+#' it, so that Word reads the same family for the Latin and the East Asian
+#' text: in the bytes of its East Asian code page, each as `\'xx`, with the
+#' matching `\fcharset` -- Japanese 128 (code page 932), Simplified Chinese
+#' 134 (936), Traditional Chinese 136 (950), Korean 129 (949).  The character
+#' set is:
+#'
+#' * a common family's own: Yu Mincho, Yu Gothic, MS Mincho, MS Gothic, MS
+#'   PMincho, MS PGothic and Meiryo are Japanese; SimSun and SimHei
+#'   Simplified Chinese; PMingLiU and Microsoft JhengHei Traditional
+#'   Chinese; Malgun Gothic and Batang Korean.  Their Latin name follows in
+#'   `{\*\falt Yu Mincho}`.
+#' * else Japanese for a name with kana, Korean for one with Hangul;
+#' * else (Han characters only) the `east_asian` language of `font_lang` when
+#'   it is one of these and writes the name, then the first of Japanese,
+#'   Simplified Chinese, Traditional Chinese and Korean that writes it.
+#'
+#' A slot tagged by `font_lang` keeps its language's character set when that
+#' code page writes the name.  A name none of these code pages can write keeps
+#' the `\uN?` form, and an ASCII name is written as it always was.
+#'
 #' @return An `rtf_document` S3 object: a list with `document` (the
 #'   settings given here: `font_table`, `font_lang`, `color_table`, `page`,
 #'   `style`, `watermark`, `program`, `program_fallback`,
