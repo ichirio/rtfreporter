@@ -220,7 +220,7 @@ the package supports.  The two ends of that range each have their own
 environment:
 
 - **the minimum environment**: R at the minimum `DESCRIPTION` names
-  (`Depends: R (>= 4.2)`) and every direct dependency at the minimum
+  (`Depends: R (>= 4.3)`) and every direct dependency at the minimum
   `DESCRIPTION` names for it.  A suggested package with no minimum, and
   every indirect dependency (what the dependencies need in turn), come from
   CRAN as it was on one date: a dated snapshot of the Posit Package Manager,
@@ -231,7 +231,7 @@ environment:
 
 | Supported | Stands for it | Why that is enough |
 |---|---|---|
-| The minimum environment: R and every dependency at the minimum `DESCRIPTION` names | Ubuntu, R 4.2, each direct dependency at its minimum, the rest from CRAN as on the snapshot date (the CI job *minimum environment*) | The use of an R feature or a dependency's feature newer than its minimum fails here. |
+| The minimum environment: R and every dependency at the minimum `DESCRIPTION` names | Ubuntu, R 4.3, each direct dependency at its minimum, the rest from CRAN as on the snapshot date (the CI job *minimum environment*) | The use of an R feature or a dependency's feature newer than its minimum fails here. |
 | The recommended environment: the latest R with the latest packages | Ubuntu, Windows and macOS, R release, with the newest packages | A new version of R or of a dependency that breaks the package shows here. |
 | The R versions in use now | Ubuntu, R oldrel-1 and release; Windows and macOS, release; the local R 4.4.2 and 4.6.1 | Between them they run the current and the previous release of R. |
 | The next R | Ubuntu, R devel | A change in R that will break the package shows here first. |
@@ -317,7 +317,7 @@ maintainers' own; no third-party audit is made.
 - **CI** (6): the R-CMD-check workflow's matrix -- Ubuntu (R devel,
   release, oldrel-1), macOS (release), Windows (release); the release jobs
   are the recommended environment -- and its job *minimum environment*
-  (Ubuntu, R 4.2, every dependency at the minimum `DESCRIPTION` names, the
+  (Ubuntu, R 4.3, every dependency at the minimum `DESCRIPTION` names, the
   rest from CRAN as on the snapshot date), at the release's commit; the
   tests and R CMD check.
 - **Local** (2): the maintainers' PC, two versions of R (now 4.4.2 and

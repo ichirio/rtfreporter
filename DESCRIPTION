@@ -25,7 +25,7 @@ BugReports: https://github.com/ichirio/rtfreporter/issues
 Encoding: UTF-8
 Language: en-GB
 Depends:
-    R (>= 4.2)
+    R (>= 4.3)
 Imports:
     grDevices,
     grid,

@@ -95,12 +95,12 @@ jobs:
   minimum-environment:
     runs-on: ubuntu-24.04
 
-    name: ubuntu-24.04 (R 4.2, minimum environment)
+    name: ubuntu-24.04 (R 4.3, minimum environment)
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
-      R_MIN: '4.2'
+      R_MIN: '4.3'
       PPM_DATE: '2026-01-25'
 
     steps:

@@ -654,7 +654,7 @@ releases -- is not written again; this section says only what it does not.
 
 ## Development setup
 
-Use R 4.2 or later (the oldest version CI tests).
+Use R 4.3 or later (the oldest version CI tests).
 
 ```r
 # tools for the pre-push checks; they are not in Suggests

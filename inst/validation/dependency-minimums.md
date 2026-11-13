@@ -34,7 +34,7 @@ one tag per release).
 
 | Package | Minimum | What needs it (function or argument -> version) | Source |
 |---|---|---|---|
-| R (`Depends`) | 4.2 | The native pipe `\|>` in the tests and examples -> 4.1.0. The minimums of gtsummary (2.3.0) and tfrmt (0.3.0) themselves depend on R (>= 4.2). The minimum environment runs it. | R NEWS 4.1.0; gtsummary 2.3.0 `DESCRIPTION` |
+| R (`Depends`) | 4.3 | Raised from 4.2 because tern's dependencies cannot be installed on R 4.2 in the minimum environment: tern 0.9.0 -> car -> quantreg -> MatrixModels, which needs Matrix (>= 1.6-0). R 4.2 ships Matrix 1.5, and the Matrix on CRAN on 2026-01-25 (1.7) needs R (>= 4.4); R 4.3 ships a Matrix 1.6, which MatrixModels accepts. What the package itself uses needs less: the native pipe `\|>` in the tests and examples -> 4.1.0; the minimums of gtsummary (2.3.0) and tfrmt (0.3.0) depend on R (>= 4.2). | The minimum environment's log, CI run 43340322522 ("MatrixModels: Can't install dependency Matrix (>= 1.6-0)", "Matrix: Needs R >= 4.4"); MatrixModels and Matrix `DESCRIPTION` in the snapshot of 2026-01-25; R NEWS 4.1.0 | R NEWS 4.1.0; gtsummary 2.3.0 `DESCRIPTION` |
 | grDevices, grid, methods, stats, utils (`Imports`) | none | They ship with R, so their version is R's. | -- |
 | cards | 0.7.0 | `ard_tabulate()`, `ard_summary()`, `ard_tabulate_value()` (the names the package and its tests use) -> 0.7.0; the `ADLB` data -> 0.7.0; `ard_stack_hierarchical()`, `ard_strata()` -> 0.3.0; `apply_fmt_fun()` -> 0.6.1 (the code also takes the older `apply_fmt_fn()`); `bind_ard()`, `ard_stack()`, `ard_hierarchical()`, `ADSL`, `ADAE`, `ADTTE` -> 0.1.0. Not counted: `diff_ard_hierarchical()` -> 0.9.0, used by one test that skips without it and by an article. | cards NEWS 0.7.0 (*Lifecycle Changes*: the renames; `ADLB`); `NAMESPACE` of each release |
 | cardx | 0.2.3 | `ard_categorical_ci()` returning the count `n` with the estimate and its interval (a cell `{n} ({estimate})` reads it; the tests of `plan_stat_groups()` and of ARD templates) -> 0.2.3 (raised from 0.2.0: in the first minimum-version CI run (43335864891), 0.2.0 gave no `n` and the cells were `NA`); `ard_stats_t_test()`, `ard_stats_chisq_test()`, `ard_stats_kruskal_test()`, `ard_stats_wilcox_test()`, `ard_stats_prop_test()` (their names since the renames) and `ard_categorical_ci(value = )` -> 0.2.0. | cardx NEWS 0.2.3 ("Little `n` is now returned with the results of the `proportion_ci_*()` functions"), 0.2.0; `NAMESPACE` 0.2.0 |
@@ -74,6 +74,7 @@ The minimums before this table was made (#1032), and why each changed:
 
 | Package | Was | Now | Why |
 |---|---|---|---|
+| R | 4.2 | 4.3 | tern's dependencies (car -> quantreg -> MatrixModels -> Matrix (>= 1.6-0)) cannot be installed on R 4.2 in the minimum environment. |
 | testthat | 3.0.0 | 3.1.7 | The tests use `local_mocked_bindings()` (3.1.7). |
 | gtsummary | 1.7.0 | 2.3.0 | A `tbl_split` (`tbl_split_by_rows()`, 2.3.0) is an input the requirements name. |
 | formatters | 0.5.0 | 0.5.5 | First to 0.5.2, to install together with tern 0.9.0 (through rtables 0.6.3); then to 0.5.5, which rtables 0.6.6 needs. |
