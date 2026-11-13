@@ -1,0 +1,260 @@
+# Adding a table-object adapter
+
+[In
+Japanese](https://ichirio.github.io/rtfreporter/articles/extending-adapters-ja.md)
+
+rtfreporter can read tables produced by other packages — gt, gtsummary,
+rtables/tern, rlistings, flextable, and huxtable — and turn them into
+RTF while preserving their metadata (column labels, alignment, spanning
+headers, titles, footnotes, per-cell styles). This article shows how to
+teach it about **a new table-object type**, using the existing
+`gt_adapter.R`, `rtables_adapter.R`, `rlistings_adapter.R`,
+`flextable_adapter.R` and `huxtable_adapter.R` as templates.
+
+Read [Architecture &
+internals](https://ichirio.github.io/rtfreporter/articles/architecture.md)
+first for the big picture.
+
+## The contract
+
+An adapter has one job: convert your object into the common **kwargs
+list** that
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+consumes. Every field except `data` is optional.
+
+``` r
+list(
+  data            = <data.frame>,   # REQUIRED: the rendered body (character cells are fine)
+  col_header      = <chr vector | stacked spanning rows>,
+  col_spec        = list(list(col = 1L, align = "left"), ...),
+  col_rel_width   = <numeric vector> | column_widths_twips = <integer vector>,
+  cell_styles     = <list, one element per data row, or NULL>,
+  titles_block    = <chr vector | NULL>,   # becomes the page title
+  footnotes_block = <chr vector | NULL>    # becomes the page footnote
+)
+```
+
+`col_header`, `col_spec` and the width fields are read from this list as
+they are; an argument the user passes to
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+wins over them. Of the existing adapters, only gt sets the width fields.
+
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+does everything else (pagination, per-page `cell_styles` slicing,
+replicating shared metadata, attaching titles/footnotes). You do **not**
+build the `rtftable` yourself.
+
+## Step 1 — a detector
+
+Add a cheap, dependency-light predicate. Keep it side-effect free.
+
+``` r
+
+# R/mypkg_adapter.R
+.is_mypkg_tbl <- function(x) inherits(x, "mypkg_table")
+# (for an S4 class use: isS4(x) && methods::is(x, "MyClass"))
+```
+
+## Step 2 — token resolution
+
+Tokens let users opt in/out of metadata via `read_meta =`. List your
+tokens and hand them to the shared
+`.resolve_meta_tokens(read, allowed, label)` (`R/as_rtftables.R`), as
+every existing adapter does. It maps `FALSE` to no tokens and `TRUE` to
+all of them, and stops with an error naming any unknown token.
+
+``` r
+
+.MYPKG_TOKENS_ALL <- c("col_header", "alignment", "titles", "footnotes")
+
+.resolve_mypkg_tokens <- function(read) {
+  .resolve_meta_tokens(read, .MYPKG_TOKENS_ALL, "mypkg")
+}
+```
+
+## Step 3 — the extractor
+
+Return the kwargs list. Start with `.need_pkg()` (`R/need_pkg.R`), so
+the package is needed only when a table of its kind is read. If the
+package is missing, `.need_pkg()` stops with an error. If it is older
+than the minimum in rtfreporter’s `DESCRIPTION`, it gives a warning,
+once per session, and the call goes on.
+
+``` r
+
+.mypkg_to_rtftable_kwargs <- function(x, tokens = .MYPKG_TOKENS_ALL) {
+  .need_pkg("mypkg", "Reading a mypkg table")
+
+  out <- list()
+  out$data <- mypkg::as_body_data_frame(x)          # however your package exposes the body
+
+  if ("col_header" %in% tokens)
+    out$col_header <- mypkg::column_labels(x)
+
+  if ("alignment" %in% tokens)
+    out$col_spec <- lapply(seq_len(ncol(out$data)), function(j)
+      list(col = j, align = mypkg::col_align(x, j)))
+
+  if ("titles" %in% tokens)
+    out$titles_block <- mypkg::title_lines(x)
+
+  if ("footnotes" %in% tokens)
+    out$footnotes_block <- mypkg::footnote_lines(x)
+
+  out
+}
+```
+
+Tips drawn from the existing adapters:
+
+- **Spanning headers** are a multi-row `col_header`: a list whose upper
+  elements are `list(col_cell(pos = c(from, to), label = ...), ...)` and
+  whose last element is the leaf-label character vector. See
+  `.extract_spanners_body()` (gt) and `.rtables_header_segments()`
+  (rtables).
+- **Per-cell styles** go in `cell_styles`: a list with one element per
+  data row, each either `NULL` or a list of vectors of length `ncol` —
+  `bold`, `italic`, `underline`, `indent_twips`, `color`, `align`,
+  `border` — with `NA` meaning “inherit from `col_spec`” (see
+  `cell_styles` in
+  [`?rtftable`](https://ichirio.github.io/rtfreporter/reference/rtftable.md)).
+  Only the gt adapter sets `cell_styles`; rtables bakes the row
+  indentation into the stub text instead.
+- **Footnote marks already in the text.** If your source renders marks
+  inline (gt wraps a mark in a `gt_footnote_marks` span holding
+  `<sup>N</sup>`; rtables writes `{N}`), convert them to rtfreporter’s
+  `^{N}` superscript markup **without `gsub` backreferences** (some
+  locale-broken R builds drop `\\1`) — use
+  [`regmatches()`](https://rdrr.io/r/base/regmatches.html) as in
+  `.convert_footnote_marks()` / `.convert_rtables_marks()`.
+
+## Step 4 — wire it in
+
+Four places name every adapter’s detector. Add yours to each.
+
+**1.
+[`as_rtftables.default()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+in `R/as_rtftables.R` — the list-input guard.** Needed only if your
+object is a plain list (not a data frame, not S4); the guard must not
+treat it as a list of items to convert one by one:
+
+``` r
+
+if (is.list(x) && !is.data.frame(x) && !isS4(x) &&
+    !.is_gt_tbl(x) && !.is_gtsummary_tbl(x) && !.is_rtables_tbl(x) &&
+    !.is_flextable_tbl(x) && !.is_mypkg_tbl(x)) { ... }
+```
+
+**2. The same function — the dispatch that resolves body and metadata.**
+Add a branch to the `if (.is_gt_tbl(x)) ... else if` chain:
+
+``` r
+} else if (.is_mypkg_tbl(x)) {
+  tokens          <- .resolve_mypkg_tokens(read_meta)
+  kw              <- .mypkg_to_rtftable_kwargs(x, tokens = tokens)
+  body            <- kw$data
+  cell_styles     <- kw$cell_styles
+  titles_block    <- kw$titles_block
+  footnotes_block <- kw$footnotes_block
+}
+```
+
+`col_header`, `col_spec` and the width fields are not copied: they stay
+in `kw`, which is read later. If your class is also a data frame
+(huxtable and rlistings are), put the branch before the
+`is.data.frame(x)` branch. The
+[`stop()`](https://rdrr.io/r/base/stop.html) that ends the chain names
+the supported types; add yours to its message.
+
+**3.
+[`as_rtftable()`](https://ichirio.github.io/rtfreporter/reference/as_rtftable.md)
+in `R/as_rtftable.R`.** It tests the object against the same list before
+it calls
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md),
+and stops with “`x` must be a gt_tbl, …” for a type it does not know.
+Add `.is_mypkg_tbl()` to that test and to the message. The requirements
+that list the types (`FR-TB102`, `FR-TB106` in
+`inst/validation/requirements.csv`) change with it.
+
+**4. `.is_table_source()` in `R/content.R`.** `rtf_tables(doc, x)` calls
+it to decide whether `x` is a table source. Without your detector, `x`
+is not treated as a table: `.rtf_content()` falls through to its default
+method, which hands `x` to
+[`rtfplot()`](https://ichirio.github.io/rtfreporter/reference/rtfplot.md)
+as a figure and prints it. An object whose class also includes
+`data.frame` becomes a plain table instead, without the adapter’s
+metadata. Calling `as_rtftables(x)` yourself works either way, so a test
+of the adapter alone does not show the gap; test `rtf_tables(doc, x)`
+too.
+
+## Step 5 — declare the dependency
+
+Add `mypkg` to `Suggests:` in `DESCRIPTION`, as `mypkg (>= x.y)` when
+there is a minimum. That entry is the only place the minimum is written:
+`.need_pkg()` reads it from rtfreporter’s `DESCRIPTION` when it runs, so
+no version number appears in R code. Never add the package to
+`Imports:`, which holds only packages that ship with R (grDevices, grid,
+methods, stats, utils). The `.need_pkg()` call in Step 3 gives the error
+when `mypkg` is missing.
+
+## Step 6 — tests and docs
+
+- Add `tests/testthat/test-mypkg-adapter.R`, wrapping every test in
+  `skip_if_not_installed("mypkg")`.
+- A new feature comes with its requirements: each test names an FT id
+  and the FR ids it checks at its head, and the FRs are added to
+  `inst/validation/requirements.csv` in the same PR. The rules are in
+  “Quality assurance: requirements, tests, traceability” in
+  `CONTRIBUTING.md`.
+- Document the new `read_meta` tokens (extend
+  [`?as_rtftables`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)),
+  and add the type where the supported types are listed:
+  [`?as_rtftables`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md),
+  [`?as_rtftable`](https://ichirio.github.io/rtfreporter/reference/as_rtftable.md),
+  [`?rtf_tables`](https://ichirio.github.io/rtfreporter/reference/rtf_tables.md),
+  `README.md` and `_pkgdown.yml`.
+- Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:` in the PR. Fill
+  the *User-visible change (for NEWS)* field of the PR template; the
+  maintainers write `NEWS.md` from it.
+- Run `devtools::document()`, `devtools::test()`, `devtools::check()`.
+
+## Supplying a method from your own package
+
+The steps above are for a package that does **not** know rtfreporter:
+gt, rtables and the rest never import it, so rtfreporter carries their
+adapters. If you are writing a package that **depends on** rtfreporter,
+do not add a branch here.
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+is an S3 generic, so register a method for your class instead, and
+rtfreporter never has to name it:
+
+Show code
+
+``` r
+
+# In your package's R/ (roxygen), with rtfreporter in Imports:
+#' @importFrom rtfreporter as_rtftables
+#' @export
+as_rtftables.my_report <- function(x, ...) {
+  df <- build_the_table(x)          # your own work
+  rtfreporter::as_rtftables(df, ...) # a list of rtftable pages
+}
+```
+
+This writes `importFrom(rtfreporter, as_rtftables)` and
+`S3method(as_rtftables, my_report)` to your NAMESPACE. The method must
+return what the default returns: a list of `rtftable` pages.
+`rtf_tables(doc, x)` then accepts your object directly, converting it up
+front the way it converts a `gt_tbl`. The dependency points the right
+way: your package depends on rtfreporter, and rtfreporter does not
+depend on yours.
+
+## A worked reference
+
+The rtables adapter (`R/rtables_adapter.R`) is a compact example. It
+reads multi-level spanning headers, per-column alignment, row-label
+indentation (baked into the stub text), inline `{N}` -\> `^{N}` mark
+conversion, and the titles and footnotes — all from a single
+[`formatters::matrix_form()`](https://pharmaverse.github.io/formatters/latest-tag/reference/matrix_form.html)
+call. The rlistings adapter reuses the same reader. It sets no
+`cell_styles`; the gt adapter is the one to read for those.

@@ -1,0 +1,331 @@
+# AI エージェント: Claude デスクトップアプリの設定
+
+[In
+English](https://ichirio.github.io/rtfreporter/articles/ai-agents-claude-app.md)
+
+このページでは、rtfreporter、tflspec、tflplanner の作業用に、Claude
+デスクトップアプリの Code タブを設定します。先に[AI
+エージェントを使った開発](https://ichirio.github.io/rtfreporter/articles/ai-agents-ja.md)を
+読んでください。そこに、この設定が何のためにあるかが書いてあります。設定が終わったら、
+作業の進め方はそのページに戻って確認してください。
+
+ここに書いた事実は、2026-11-08 に読んだ Anthropic の Claude Code
+ドキュメントによります
+(リンクを参照)。アプリの画面はよく変わります。手順が手元の画面と合わないときは、リンク先のページを
+読み直してください。
+
+## リポジトリを開く
+
+1.  `git`
+    でリポジトリをクローンします。コントリビューターはフォークをクローンします。
+    メンテナー（Collaborator）は `ichirio/rtfreporter` をクローンします
+    (`CONTRIBUTING.md` の *Contributor vs Collaborator*)。
+2.  Code
+    タブで、環境セレクターの隣にあるプロジェクトフォルダーのコントロールから、
+    クローンしたフォルダーを選びます。
+3.  作業をメインのチェックアウトから分けたいときは、セッションを始める前に
+    **Worktree**
+    をオンにします。デフォルトはオフです。オンにすると、Claude は専用の
+    Git ワークツリーで作業します。場所は、デフォルトでは
+    `<project-root>/.claude/worktrees/`
+    の下です。このフォルダーは、`git status` で未追跡
+    ファイルとして表示されます。リポジトリの `.gitignore` には
+    `.claude/worktrees/` が入っています。それでも、`git add .`
+    ではなく、 ファイル名を指定してステージしてください。
+    セッションは並行して複数動かせます。作業ごとに 1
+    つ使います。各セッションは専用の
+    プロジェクトフォルダーを持ち、**Worktree** がオンなら専用の worktree
+    も持ちます。
+4.  トピックブランチを作ります。Claude に、適切なベースから
+    `git checkout -b <type>/<issue>-<slug>`
+    を実行するよう頼みます。コントリビューターは `main`
+    からブランチを切り、`main` に向けてプルリクエストを出します。
+    メンテナーのブランチは [`next`](https://rdrr.io/r/base/Control.html)
+    に向かいます (`CONTRIBUTING.md` の *Branching & collaboration*)。
+    デスクトップのページには、ブランチを選ぶ画面の記載がありません。ブランチは
+    Claude に作らせます。
+
+出典: <https://code.claude.com/docs/en/desktop>
+
+## 環境
+
+エージェントが実行するコマンドには、あなたの環境ではなく、作業用のライブラリと
+作業用のホームが見えている必要があります ([共通記事の 2
+節](https://ichirio.github.io/rtfreporter/articles/ai-agents-ja.html#the-environment))。
+
+- アプリでは、`KEY=value`
+  の行を**保存したローカル環境**に書き、その環境からセッションを
+  始めます。`R_LIBS_USER`、`HOME`、`R_USER_CACHE_DIR`、`R_USER_DATA_DIR`、
+  `R_USER_CONFIG_DIR`、`TMP`、`TEMP`、`TMPDIR`、`WORK_ROOT`
+  をそこに書きます。 後述のフックを使うなら、`TFL_HOOK_RSCRIPT`
+  もそこに書きます（リリース作業をするメンテナーは
+  `TFL_ALLOW_RELEASE_EDIT` も）。
+  デスクトップのページには、値を引用符で囲むかどうかも、Windows
+  のパスの書き方も
+  書かれていません。パスはそのまま書き、読み込まれたかどうかは、後述のチェックスクリプトで確かめます。
+- `~/.claude/settings.json` の `env`
+  ブロックは、これらの置き場所には向きません。
+  デスクトップのページによると、Claude Code
+  は、アプリがセッションを始める環境に
+  その変数がすでにある場合と、アプリ自身がその変数を設定する場合に、`settings.json`
+  の
+  値を無視します。あなたの変数のどれが該当するかは、マシンによります。
+  保存したローカル環境を使うのが、この記事のおすすめです。
+- どの R
+  を呼ぶかは、フルパスで指示ファイルに書いてエージェントに伝えます
+  (次の節)。
+
+そのうえで、Claude に共通記事のチェックスクリプトを実行させます。Claude
+はその記事を
+読んでいないので、先にスクリプトをチャットに貼り付けてから、次のように頼みます。
+
+> 上のスクリプトを `check-env.R`
+> としてリポジトリの外に保存し、プロジェクトの R で
+> 実行して、出力を見せてください。
+
+最後に `Environment OK.`
+と出れば成功です。途中で止まったら、ほかのことより先に
+環境を直してください。
+
+出典: <https://code.claude.com/docs/en/desktop>
+
+## 指示
+
+Claude Code は、セッションの開始時に `CLAUDE.md` を読みます。`AGENTS.md`
+を読むのは、 そのフォルダーにも上位のフォルダーにも `CLAUDE.md`
+がないときだけです (Claude Code 2.1.277 以降)。このリポジトリにはすでに
+`CLAUDE.md` があります。 先頭が `@AGENTS.md`
+で、共通ファイルを取り込み、そのあとに Claude Code 向けのメモが
+続きます。この形を保ってください。2 つ目のファイルは作りません。
+
+この `CLAUDE.md` には、エージェントに必要なことの大半がすでにあります。R
+のパス、 `Version` と `NEWS.md` のルール、プルリクエスト前のテストと
+lint です。足りないものだけを 足してください。たとえば次の 2 行です。
+
+``` markdown
+- Run the `pre-pr` skill (`/pre-pr`) before you open a pull request.
+- Stop and ask before you push, install into any library other than the work library, or delete files.
+```
+
+`CLAUDE.md`
+は追跡されるファイルなので、足した行はプルリクエストに入ります。全員の役に立つ
+行だけをコミットし、プルリクエストでそう説明してください。自分だけの行は、プロジェクトの
+ルートの `CLAUDE.local.md` に書き、`.gitignore`
+に追加します（メモリのページに説明があります）。
+
+ファイルが読まれたかを確かめるには、「このリポジトリでどの指示を読み込みましたか」と
+聞きます。答えに `CLAUDE.md` と、そこから取り込んだ `AGENTS.md`
+の内容が出るはずです。
+デスクトップのページには、プロンプトボックスに入力する `/context`
+の説明があります。 Claude Code
+のメモリのページには、起動時に読み込んだメモリファイルを一覧する
+`/context all` と、`/memory` の説明もあります。デスクトップのページに
+`/memory` の記載は
+ありません。スラッシュメニューになければ、上の質問を使ってください。
+
+指示ファイルは文脈であって、鍵ではありません。必ず守らせたいルールには、
+フック(後述)を使います。
+
+出典: <https://code.claude.com/docs/en/memory>
+
+## 権限
+
+Claude
+は、ファイルを編集するときと、ほとんどのコマンドを実行するときに確認を取ります。
+アプリには権限モードがあります: Manual、Accept edits、Plan、Auto、
+Bypass permissions です。この作業では **Manual** か **Accept edits**
+を使ってください。 Bypass permissions
+は、コンテナーのようなサンドボックスの外では使わないでください。
+ドキュメントも同じことを述べています。
+
+よく使うコマンドは許可し、自分で判断したいものは
+**ask**（確認する）にします。そのたびに Claude
+が止まって、あなたに聞きます（`deny`
+にするとコマンドは完全にブロックされます）。ルールは
+`.claude/settings.json` (共有) か `.claude/settings.local.json` (自分用)
+に書きます。 下の R のパスは例です。
+
+``` json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(\"C:/Program Files/R/R-4.6.1/bin/Rscript.exe\" *)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(rm *)"
+    ]
+  }
+}
+```
+
+注意点が 2 つあります。1
+つ目は権限のページにあることです。ルールは書かれたとおりの
+コマンドに一致するので、`git -C . push` は `Bash(git push *)`
+に一致しません。 権限のページは、`deny` と `ask`
+のルールはセキュリティ境界ではないと述べています。これらは目安
+として扱い、必ず守らせたいルールにはフックを使ってください。 2
+つ目はドキュメントではなく、この記事自身のおすすめです。許可した
+`Rscript` は どんな R
+コードでも実行できます。環境チェックが通ってから許可してください。
+権限のページには、ルールがスペースを含む引用符付きのパスをどう扱うかが書かれていません。
+そのため、上の例のルールは未確認です。それでも Claude
+が確認してきたら、そのときに許可します。
+
+上の `ask` のリストで、`git push` と `rm` はあなたの確認を通ります。push
+は、人であるあなたを
+通します。作業用以外のライブラリへのインストールは、ここではルールにしていません。前の節の
+指示の行で扱います。権限のページには `allow`、`ask`、`deny`
+があり、deny、ask、allow の順に 照合されます。
+
+出典: <https://code.claude.com/docs/en/permissions>,
+<https://code.claude.com/docs/en/desktop>
+
+## PR 前のチェック
+
+**スキル**は、`SKILL.md`
+ファイルを入れたフォルダーです。プロジェクトのスキルは
+`.claude/skills/<name>/SKILL.md`
+に置きます。コミットすれば共有できます。デスクトップ
+アプリのローカルセッションは、個人のスキルを `~/.claude/skills/`
+から、プロジェクトの スキルをリポジトリから読み込みます。起動は
+`/<name>` です。リポジトリには、次のスキルが
+[`.claude/skills/pre-pr/SKILL.md`](https://github.com/ichirio/rtfreporter/blob/main/.claude/skills/pre-pr/SKILL.md)
+としてあります。 今は [`next`](https://rdrr.io/r/base/Control.html)
+にあり、次に [`next`](https://rdrr.io/r/base/Control.html) を `main`
+にマージしたときに `main` に入ります。中身は次のとおりです。
+
+``` markdown
+---
+name: pre-pr
+description: The checks to run before opening a pull request in rtfreporter, tflspec or tflplanner.
+disable-model-invocation: true
+---
+
+Run these in order. Stop at the first failure and report it.
+
+1. Run the tests of the changed area.
+2. Run `lintr::lint_package()`. It must report 0 lints.
+3. List the `pkg::` uses and `requireNamespace()` calls added in the diff, and
+   check each is declared in `DESCRIPTION`.
+4. When a change in tflspec can break tflplanner, run tflplanner's tests too.
+5. Report each result in the pull request description, in the form the pull request template asks for.
+
+Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:`.
+```
+
+フロントマターはスキルのドキュメントに沿っています。このスキルはそのページと照らして確かめたもので、
+Claude Code では実行していません。`disable-model-invocation: true`
+は、あなただけが起動できるという意味です。プロンプト欄に `/pre-pr`
+と入力します。デスクトップのページによると、スラッシュメニューにはコードベースの
+プロジェクトスキルが含まれるので、`/pre-pr` はそこに出ます。
+
+これは変更ごとに回す軽いチェックで、`CONTRIBUTING.md` の 4 つの push
+前チェック
+(`R CMD check --as-cran`、`devtools::test()`、[`pkgdown::check_pkgdown()`](https://pkgdown.r-lib.org/reference/check_pkgdown.html)、lintr)
+の代わりではありません。フルセットは CI
+が実行し、メンテナーもリリース前に実行します。
+
+出典: <https://code.claude.com/docs/en/skills>
+
+## 編集ごとのチェック
+
+**フック**は、Claude Code
+が決まったタイミングで実行するコマンドです。フックは
+`.claude/settings.json` に設定します。`PreToolUse`
+フックはツール呼び出しの前に実行され、 終了コード 2
+でそれを止められます。stderr のメッセージが Claude に見えます。
+`PostToolUse`
+フックは呼び出しのあとに実行されます。編集を元に戻すことはできず、
+結果を返すだけです。マッチャー `Edit|Write`
+はファイルの編集を選び、ファイルのパスは `tool_input.file_path`
+に入っています。
+
+2 つのフックの例が、リポジトリの `.claude/` にあります。今は
+[`next`](https://rdrr.io/r/base/Control.html) にあり、次に
+[`next`](https://rdrr.io/r/base/Control.html) を `main`
+にマージしたときに `main` に入ります。下の設定は `.claude/settings.json`
+に入っています （`.claude` はパッケージの
+ビルドから除外されているので、あるのはリポジトリであって、インストールされるパッケージでは
+ありません）。フックのコマンドは `bash` を呼びます。Windows では Git
+Bash のことで、 `bash` がパスに通っている必要があります。2
+つのフックは次のとおりです。
+
+- [`hooks/guard-version-news.sh`](https://github.com/ichirio/rtfreporter/blob/main/.claude/hooks/guard-version-news.sh)
+  (`PreToolUse`) は、`NEWS.md` と `CHANGELOG.md` の編集と、`DESCRIPTION`
+  の `Version:`
+  行に触れる編集を、理由を書いたメッセージ付きで拒否します。理由は、
+  プルリクエストではこれらをリリースに任せるからです。リリースを作るメンテナーは
+  `TFL_ALLOW_RELEASE_EDIT=1` を設定します。`DESCRIPTION` をファイルごと
+  `Write` する 操作も、本文に必ず `Version:`
+  が入るので拒否されます。ほかのフィールドは `Edit` で
+  変更してください。
+- [`hooks/lint-changed.sh`](https://github.com/ichirio/rtfreporter/blob/main/.claude/hooks/lint-changed.sh)
+  (`PostToolUse`) は、`R/` の下で変更されたファイルを lint し、 lint
+  の結果を Claude に返します。このリポジトリが lint するのは、`.lintr`
+  と `CONTRIBUTING.md` のとおり `R/`
+  だけです。実行されるのは、`TFL_HOOK_RSCRIPT` に作業用 セットアップの
+  `Rscript`
+  が指定されているときだけです。読み込むライブラリは、セッションの
+  環境が設定するもの（`R_LIBS_USER`）なので、作業ライブラリもそこに設定してください。
+  未設定なら何もしません。
+
+``` json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-version-news.sh\"", "timeout": 10 }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/lint-changed.sh\"", "timeout": 120 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**テスト済みのこと。** この段落の内容と、下の `$CLAUDE_PROJECT_DIR`
+の件は、ドキュメントでは なく、Windows のデスクトップアプリの Code
+タブでのテストで確認したことです。このリポジトリを
+開いたセッションで確かめました。`NEWS.md` の編集と `Version:`
+行の編集は、フックのメッセージ付きで 拒否されました。`DESCRIPTION`
+の別のフィールドの編集と、R ファイルの作成と削除は
+通りました。アプリは、プロジェクトのフックを実行する前に何も確認せず、`/hooks`
+画面も ありません。lint
+フックは、ツール呼び出しが送る入力をスクリプトに直接与えてテストしました。
+アプリでは、`TFL_HOOK_RSCRIPT`
+を設定していなかったので実行していません。アプリでは未テストです。
+
+**`$CLAUDE_PROJECT_DIR`**
+はフックのコマンドに設定され、フックはこれでスクリプトを
+見つけます。エージェント自身の Bash
+シェルには設定されません。エージェントが実行する
+コマンドからは空に見えます。
+
+お使いの環境でフックが動かない場合は、PR 前のチェックと CI
+が同じルールをカバーします。
+
+出典: <https://code.claude.com/docs/en/hooks>
+
+## 次に
+
+[共通記事の進め方](https://ichirio.github.io/rtfreporter/articles/ai-agents-ja.html#the-workflow)に戻ります。Issue、小さなブランチ、
+先にテスト、PR
+前のチェック、プルリクエストの順です。プルリクエストを開くと、アプリは
+それを **Changes** カードに、CI
+チェックの状態とともに表示します。ドキュメントによると、これには GitHub
+CLI (`gh`) のインストールとサインインが必要です。
+
+出典: <https://code.claude.com/docs/en/desktop>

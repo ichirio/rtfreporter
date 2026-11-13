@@ -1,0 +1,296 @@
+# AI agents: set-up in the Claude desktop app
+
+[In
+Japanese](https://ichirio.github.io/rtfreporter/articles/ai-agents-claude-app-ja.md)
+
+This page sets up the Claude desktop app’s Code tab for work on
+rtfreporter, tflspec or tflplanner. Read [Developing with AI
+agents](https://ichirio.github.io/rtfreporter/articles/ai-agents.md)
+first: it says what the set-up is for. Come back to that page for the
+workflow when you are done.
+
+The facts here come from Anthropic’s Claude Code documentation, read on
+2026-11-08 (see the links). The app’s own screens change often. If a
+step does not match your screen, read the linked page again.
+
+## Open the repository
+
+1.  Clone the repository with `git`. A contributor clones a fork. A
+    maintainer (a Collaborator) clones `ichirio/rtfreporter`
+    (*Contributor vs Collaborator* in `CONTRIBUTING.md`).
+2.  In the Code tab, use the project folder control, next to the
+    environment selector, and choose the clone’s folder.
+3.  To keep the work apart from your main checkout, turn on **Worktree**
+    before you start the session. It is off by default. Then Claude
+    works in its own Git worktree, under
+    `<project-root>/.claude/worktrees/` by default. Those folders show
+    up as untracked files in `git status`. The repository’s `.gitignore`
+    lists `.claude/worktrees/`. Still, stage named files, never
+    `git add .`. You can run several sessions in parallel, one per piece
+    of work; each has its own project folder, and its own worktree when
+    **Worktree** is on.
+4.  Make the topic branch: ask Claude to run
+    `git checkout -b <type>/<issue>-<slug>` from the right base. A
+    contributor branches from `main` and opens the pull request against
+    `main`; a maintainer’s branch goes to
+    [`next`](https://rdrr.io/r/base/Control.html) (*Branching &
+    collaboration* in `CONTRIBUTING.md`). The desktop page shows no
+    branch picker, so ask Claude to make the branch.
+
+Source: <https://code.claude.com/docs/en/desktop>
+
+## The environment
+
+The agent’s commands must see the work library and the work home, not
+yours ([section 2 of the shared
+article](https://ichirio.github.io/rtfreporter/articles/ai-agents.html#the-environment)).
+
+- In the app, put `KEY=value` lines in a **saved local environment** and
+  start the session from it. Put `R_LIBS_USER`, `HOME`,
+  `R_USER_CACHE_DIR`, `R_USER_DATA_DIR`, `R_USER_CONFIG_DIR`, `TMP`,
+  `TEMP`, `TMPDIR` and `WORK_ROOT` there. If you use the hooks below,
+  put `TFL_HOOK_RSCRIPT` (and, for a maintainer making a release,
+  `TFL_ALLOW_RELEASE_EDIT`) there too. The desktop page does not say
+  whether to quote a value or how to write a Windows path. Write the
+  path as it is, and let the check script below show whether it was
+  read.
+- The `env` block of `~/.claude/settings.json` is a poor place for
+  these. The desktop page says Claude Code ignores a `settings.json`
+  value when the variable is already in the environment that the app
+  starts the session with, or when the app sets the variable itself.
+  Which of your variables that catches depends on your machine. Using
+  the saved local environment is this article’s advice.
+- Tell the agent which R to call, by its full path, in the instruction
+  file (next section).
+
+Then ask Claude to run the check script from the shared article. Claude
+has not read the article, so paste the script into the chat first, and
+then write:
+
+> Save the script above as `check-env.R` outside the repository, run it
+> with the project’s R, and show me the output.
+
+It must end with `Environment OK.` If it stops, fix the environment
+before anything else.
+
+Source: <https://code.claude.com/docs/en/desktop>
+
+## Instructions
+
+Claude Code reads `CLAUDE.md` at the start of each session. It reads
+`AGENTS.md` only when there is no `CLAUDE.md` in the folder or above it
+(this needs Claude Code 2.1.277 or later). This repository already has a
+`CLAUDE.md`. It starts with `@AGENTS.md`, which imports the shared file,
+and then adds the notes for Claude Code. Keep it that way: do not create
+a second one.
+
+That `CLAUDE.md` already holds most of what an agent needs: the R path,
+the rule on `Version` and `NEWS.md`, and the tests and lint before a
+pull request. Add only what is missing. For example, these two lines:
+
+``` markdown
+- Run the `pre-pr` skill (`/pre-pr`) before you open a pull request.
+- Stop and ask before you push, install into any library other than the work library, or delete files.
+```
+
+`CLAUDE.md` is a tracked file, so a line you add lands in your pull
+request. Commit it only if it helps every contributor, and say so in the
+pull request. A line only for you goes in `CLAUDE.local.md` at the
+project root, which you add to `.gitignore` (the memory page describes
+this).
+
+To confirm that the file was read, ask: “Which instructions did you load
+for this repository?” The answer should name `CLAUDE.md`, and the text
+it imports from `AGENTS.md`. The desktop page documents `/context`,
+which you type in the prompt box. The Claude Code memory page also
+describes `/context all`, which lists the memory files loaded at launch,
+and `/memory`. The desktop page does not mention `/memory`; if it is not
+in the slash menu, use the question above.
+
+An instruction file is context, not a lock. For a rule that must hold,
+use a hook (below).
+
+Source: <https://code.claude.com/docs/en/memory>
+
+## Permissions
+
+Claude asks before it edits files or runs most commands. The app has
+permission modes: Manual, Accept edits, Plan, Auto and Bypass
+permissions. For this work use **Manual** or **Accept edits**. Do not
+use Bypass permissions outside a sandbox, such as a container; the
+documentation says the same.
+
+Allow the commands you run often, and set the ones you want to decide
+yourself to **ask**: Claude then stops and asks you each time. (A `deny`
+rule would block the command outright.) The rules go in
+`.claude/settings.json` (shared) or `.claude/settings.local.json`
+(yours). The R path below is an example:
+
+``` json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(\"C:/Program Files/R/R-4.6.1/bin/Rscript.exe\" *)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(rm *)"
+    ]
+  }
+}
+```
+
+Two cautions. The first is in the permissions page: a rule matches the
+command as written, so `git -C . push` is not matched by
+`Bash(git push *)`. The page says a `deny` or `ask` rule is not a
+security boundary. Treat these rules as a guide and use a hook for a
+rule that must hold. The second is this article’s own advice, not the
+documentation’s: an allowed `Rscript` can run any R code, so allow it
+only after the environment check passes. The permissions page does not
+say how a rule treats a quoted path with spaces, so the example rule
+above is untested. If Claude still asks for that command, allow it when
+it asks.
+
+The `ask` list above keeps `git push` and `rm` with you: a push goes
+through you, as a person. Installing into any library other than the
+work library is not a rule here; the instruction lines above cover it.
+The permissions page lists `allow`, `ask` and `deny`, and checks them in
+the order deny, ask, allow.
+
+Sources: <https://code.claude.com/docs/en/permissions>,
+<https://code.claude.com/docs/en/desktop>
+
+## The pre-PR check
+
+A **skill** is a folder with a `SKILL.md` file. A project skill lives in
+`.claude/skills/<name>/SKILL.md`; commit it to share it. Local sessions
+in the desktop app load personal skills from `~/.claude/skills/` and
+project skills from the repository. You start it with `/<name>`. The
+repository has this one as
+[`.claude/skills/pre-pr/SKILL.md`](https://github.com/ichirio/rtfreporter/blob/main/.claude/skills/pre-pr/SKILL.md),
+in [`next`](https://rdrr.io/r/base/Control.html) now and in `main` with
+the next merge of [`next`](https://rdrr.io/r/base/Control.html) into
+`main`. Its text is:
+
+``` markdown
+---
+name: pre-pr
+description: The checks to run before opening a pull request in rtfreporter, tflspec or tflplanner.
+disable-model-invocation: true
+---
+
+Run these in order. Stop at the first failure and report it.
+
+1. Run the tests of the changed area.
+2. Run `lintr::lint_package()`. It must report 0 lints.
+3. List the `pkg::` uses and `requireNamespace()` calls added in the diff, and
+   check each is declared in `DESCRIPTION`.
+4. When a change in tflspec can break tflplanner, run tflplanner's tests too.
+5. Report each result in the pull request description, in the form the pull request template asks for.
+
+Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:`.
+```
+
+The front matter follows the skills documentation. The skill was checked
+against that page, not run in Claude Code.
+`disable-model-invocation: true` means only you start it. Then type
+`/pre-pr` in the prompt box. The desktop page says the slash menu
+includes project skills from your codebase, so `/pre-pr` is listed
+there.
+
+This is a faster subset for each change, not the four pre-push checks of
+`CONTRIBUTING.md` (`R CMD check --as-cran`, `devtools::test()`,
+[`pkgdown::check_pkgdown()`](https://pkgdown.r-lib.org/reference/check_pkgdown.html)
+and lintr). CI runs the full set, and so does a maintainer before a
+release.
+
+Source: <https://code.claude.com/docs/en/skills>
+
+## Checks on each edit
+
+A **hook** is a command that Claude Code runs at a fixed point. Hooks
+are set in `.claude/settings.json`. A `PreToolUse` hook runs before a
+tool call and can block it with exit code 2; the message on stderr is
+what Claude sees. A `PostToolUse` hook runs after it: it cannot undo the
+edit, only report back. The matcher `Edit|Write` selects file edits, and
+the file’s path is in `tool_input.file_path`.
+
+An example set of two hooks is in `.claude/` in the repository. It is in
+[`next`](https://rdrr.io/r/base/Control.html) now, and it reaches `main`
+with the next merge of [`next`](https://rdrr.io/r/base/Control.html)
+into `main`. `.claude/settings.json` holds the settings shown below.
+(`.claude` is left out of the package build, so it is in the repository,
+not in the installed package.) The hook commands call `bash`; on Windows
+that means Git Bash, with `bash` on the path. The two hooks:
+
+- [`hooks/guard-version-news.sh`](https://github.com/ichirio/rtfreporter/blob/main/.claude/hooks/guard-version-news.sh)
+  (`PreToolUse`) refuses an edit to `NEWS.md` or `CHANGELOG.md`, and an
+  edit to `DESCRIPTION` that touches its `Version:` line, with a message
+  that says why: a pull request leaves them to the release. A maintainer
+  making a release sets `TFL_ALLOW_RELEASE_EDIT=1`. A whole-file `Write`
+  of `DESCRIPTION` is refused too, because its text always holds
+  `Version:`. Change other fields with `Edit`.
+- [`hooks/lint-changed.sh`](https://github.com/ichirio/rtfreporter/blob/main/.claude/hooks/lint-changed.sh)
+  (`PostToolUse`) lints a changed file under `R/` and sends the lints
+  back to Claude. The repository lints `R/` only, as `.lintr` and
+  `CONTRIBUTING.md` do. The hook runs only when `TFL_HOOK_RSCRIPT` names
+  the `Rscript` of your work set-up. The library it reads is the one the
+  session’s environment sets (`R_LIBS_USER`), so set the work library
+  there too. Unset, it does nothing.
+
+``` json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-version-news.sh\"", "timeout": 10 }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/lint-changed.sh\"", "timeout": 120 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**What has been tested.** The facts in this paragraph, and the one about
+`$CLAUDE_PROJECT_DIR` below, were seen in a test in the desktop app’s
+Code tab on Windows, not taken from the documentation. In a session
+opened on the repository: an edit to `NEWS.md` and an edit to the
+`Version:` line were refused with the hook’s message; an edit to another
+`DESCRIPTION` field, and writing and deleting an R file, went through.
+The app asked nothing before running the project’s hooks, and has no
+`/hooks` screen. The lint hook has been tested by giving its script the
+input a tool call sends; in the app it was not run, since
+`TFL_HOOK_RSCRIPT` was not set, so it is not tested in the app.
+
+**`$CLAUDE_PROJECT_DIR`** is set for hook commands, and the hooks use it
+to find their scripts. It is not set in the agent’s own Bash shell: a
+command the agent runs sees it empty.
+
+If hooks do not run in your set-up, the pre-PR check and CI cover the
+same rules.
+
+Source: <https://code.claude.com/docs/en/hooks>
+
+## Then
+
+Back to [the workflow in the shared
+article](https://ichirio.github.io/rtfreporter/articles/ai-agents.html#the-workflow):
+issue, small branch, test first, pre-PR check, pull request. After you
+open the pull request, the app shows it in the **Changes** card with the
+status of its CI checks; the documentation says this needs the GitHub
+CLI (`gh`) installed and signed in.
+
+Source: <https://code.claude.com/docs/en/desktop>

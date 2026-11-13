@@ -1,0 +1,134 @@
+# Assemble every RTF in a folder into one TOC deliverable
+
+Scans `dir` for `.rtf` files (natural-sorted, so `t2` comes before
+`t10`) and reads each file's table number and title into a **table of
+contents**: a `data.frame` with one row per file. The number comes from
+the running header
+([`rtf_header()`](https://ichirio.github.io/rtfreporter/reference/rtf_header.md))
+when it has a `"Table N"` line, otherwise from the title block that
+[`rtf_titles()`](https://ichirio.github.io/rtfreporter/reference/rtf_titles.md)
+writes at the top of the body; the label is the file's title, read as
+`assemble_rtf(toc = "auto")` reads it. With an `output_file` it
+assembles the deliverable with that table of contents
+([`assemble_rtf()`](https://ichirio.github.io/rtfreporter/reference/assemble_rtf.md));
+without one it only returns the table, to edit (rename labels, fill
+`heading` to group entries, change `level`, reorder or drop rows) and
+hand to `assemble_rtf(toc = )`.
+
+## Usage
+
+``` r
+assemble_folder(
+  dir,
+  output_file = NULL,
+  spec_file = NULL,
+  recursive = FALSE,
+  toc_title = "Table of Contents",
+  toc_leader = "dot",
+  overwrite = FALSE,
+  ...
+)
+```
+
+## Arguments
+
+- dir:
+
+  Directory of `.rtf` files to assemble: one folder path. A value that
+  is not one non-empty string is an error, as is a folder that does not
+  exist or holds no `.rtf` file.
+
+- output_file:
+
+  Path of the assembled `.rtf` to write, or `NULL` (default): return the
+  table of contents only. Assembling needs two or more files, so with an
+  `output_file` a folder of one `.rtf` file is an error (without one,
+  its one-row table is returned).
+
+- spec_file:
+
+  Optional path (`.xlsx` or `.csv`). When given, the generated spec is
+  **saved** there (so you can inspect / edit it); when `NULL` (default)
+  the spec is kept in memory only. It is written, never read back:
+  assemble an edited one with `assemble_rtf(toc = spec_file)`. One path
+  in a folder that exists; another value is an error, checked before any
+  file is read or written.
+
+- recursive:
+
+  Recurse into sub-directories when scanning? `TRUE` or `FALSE`
+  (default); another value is an error.
+
+- toc_title, toc_leader, overwrite, ...:
+
+  Passed through to
+  [`assemble_rtf()`](https://ichirio.github.io/rtfreporter/reference/assemble_rtf.md)
+  (`cover`, `book_page`, `toc_style` ... go in `...`). An argument in
+  `...` that
+  [`assemble_rtf()`](https://ichirio.github.io/rtfreporter/reference/assemble_rtf.md)
+  does not take, or one without a name, is an error ("unused argument"),
+  with or without an `output_file`, checked before any file is read or
+  written. The assembled file's pages are numbered as
+  [`assemble_rtf()`](https://ichirio.github.io/rtfreporter/reference/assemble_rtf.md)
+  numbers them (its **Page numbering**): one Arabic sequence from the
+  first page, a cover and the table of contents included, and the total
+  is all pages.
+
+## Value
+
+Without `output_file`, the table of contents. With one, invisibly, a
+list with `output` (the assembled file) and `spec` (the table of
+contents used).
+
+## Details
+
+The rows come in this order, the same in every locale and on every OS:
+first the files with a `"Table N"` line (in the header or the titles),
+by that number in natural order (`14.1.2` before `14.1.10`, `14.1.x`
+before `14.3.x`, whatever the file names); then the files without one –
+listings, figures, any file with no `"Table N"` line – by file name in
+natural order. Names are compared character by character as in the C
+locale, so upper case comes before lower case (`B` before `a`) and `-`
+before `_`. Files with the same table number keep their file-name order.
+
+The table has the columns `order` (the assembly order), `file`, `table`
+(the table number read from the header or the titles, or `NA`),
+`heading` (a heading printed above the entry whenever it changes; `NA` =
+none), `label` (the entry text: the file's title, read as
+`assemble_rtf(toc = "auto")` reads it – its title rows joined with two
+spaces, a line break inside a row too, as
+`"Table 14.1.1 Safety Population"`; a figure or a listing is labelled by
+its title as a table is; a file with no title rows takes its running
+header's `"Table N"` line, the title written after the number winning
+over the centred lines below it, and a file with neither, its file name
+without `.rtf`; one row a file, so a file whose titles change from page
+to page with `page_by` (`"Summary of {PARAM}"`) is labelled by its first
+page's title), `level` (the entry's indent, a whole number from 1 to 3,
+default 2) and `pages` (informational).
+
+## See also
+
+[`assemble_rtf()`](https://ichirio.github.io/rtfreporter/reference/assemble_rtf.md).
+
+## Examples
+
+``` r
+# two TFL files in a folder, as a study's output
+dir <- file.path(tempdir(), "tfl")
+dir.create(dir, showWarnings = FALSE)
+for (t in c("14.1.1", "14.2.1")) {
+  doc <- rtf_document() |>
+    rtf_tables(data.frame(Parameter = "Age", Value = "75.1")) |>
+    rtf_titles(list(c(paste("Table", t), "Safety Population")))
+  generate_rtfreport(doc, file.path(dir, paste0("t", gsub(".", "_", t,
+    fixed = TRUE), ".rtf")), overwrite = TRUE)
+}
+# One call: scan a folder of TFL .rtf files and assemble them, in catalog
+# order, into a single deliverable with an auto table of contents.
+assemble_folder(dir, tempfile(fileext = ".rtf"), toc_title = "Contents")
+
+# Or look at the table of contents first, edit it, then assemble
+spec <- assemble_folder(dir)
+spec$heading <- "Demographics and safety"
+assemble_rtf(toc = spec, output_file = tempfile(fileext = ".rtf"))
+```

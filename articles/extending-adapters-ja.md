@@ -1,0 +1,270 @@
+# テーブルオブジェクトアダプタの追加
+
+[In
+English](https://ichirio.github.io/rtfreporter/articles/extending-adapters.md)
+
+rtfreporter は、他パッケージ（gt, gtsummary, rtables/tern, rlistings,
+flextable,
+huxtable）が生成したテーブルを読み込み、メタデータ（カラムラベル、
+整列、スパニングヘッダー、タイトル、脚注、セル単位スタイル）を保ったまま
+RTF に 変換できます。この記事では、既存の
+`gt_adapter.R`・`rtables_adapter.R`・
+`rlistings_adapter.R`・`flextable_adapter.R`・`huxtable_adapter.R`
+を雛形に、 **新しいテーブルオブジェクト型**を認識させる方法を示します。
+
+まずは全体像のために
+[アーキテクチャと内部構造](https://ichirio.github.io/rtfreporter/articles/architecture-ja.md)
+を読んでください。
+
+## 契約（contract）
+
+アダプタの仕事は 1 つだけです。あなたのオブジェクトを、
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+が消費する共通の **kwargs リスト**へ変換することです。`data`
+以外のフィールドはすべて任意です。
+
+``` r
+list(
+  data            = <data.frame>,   # 必須: 描画済み本体（文字セルで可）
+  col_header      = <文字ベクタ | 多段スパニング行>,
+  col_spec        = list(list(col = 1L, align = "left"), ...),
+  col_rel_width   = <数値ベクタ> | column_widths_twips = <整数ベクタ>,
+  cell_styles     = <データ行ごとに 1 要素のリスト, または NULL>,
+  titles_block    = <文字ベクタ | NULL>,   # ページタイトルになる
+  footnotes_block = <文字ベクタ | NULL>    # ページ脚注になる
+)
+```
+
+`col_header`・`col_spec`・幅のフィールドは、このリストの値がそのまま使われます。
+ユーザーが
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+に渡した引数は、これらより優先されます。既存の
+アダプタで幅のフィールドを設定するのは gt だけです。
+
+それ以外（ページ分割、ページごとの `cell_styles`
+スライス、共有メタデータの 複製、タイトル/脚注の付与）はすべて
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+が行います。 `rtftable` を自分で組み立てる必要は**ありません**。
+
+## ステップ 1 — 判定関数（detector）
+
+軽量・依存の少ない述語を追加します。副作用を持たせないこと。
+
+``` r
+
+# R/mypkg_adapter.R
+.is_mypkg_tbl <- function(x) inherits(x, "mypkg_table")
+# （S4 クラスなら: isS4(x) && methods::is(x, "MyClass")）
+```
+
+## ステップ 2 — トークン解決
+
+トークンにより、ユーザーは `read_meta =`
+でメタデータの取り込みを取捨選択できます。
+トークンの一覧を用意し、共有の
+`.resolve_meta_tokens(read, allowed, label)`
+（`R/as_rtftables.R`）に渡します。既存のアダプタはすべてそうしています。
+`FALSE` はトークンなし、`TRUE`
+はすべて、と解釈し、未知のトークンがあれば
+その名前を示してエラーにします。
+
+``` r
+
+.MYPKG_TOKENS_ALL <- c("col_header", "alignment", "titles", "footnotes")
+
+.resolve_mypkg_tokens <- function(read) {
+  .resolve_meta_tokens(read, .MYPKG_TOKENS_ALL, "mypkg")
+}
+```
+
+## ステップ 3 — 抽出関数（extractor）
+
+kwargs リストを返します。最初に
+`.need_pkg()`（`R/need_pkg.R`）を呼びます。
+こうすると、その型のテーブルを読むときだけパッケージが必要になります。
+パッケージがなければ、`.need_pkg()` はエラーにします。rtfreporter の
+`DESCRIPTION` に書かれた最低版より古い場合は、セッションごとに 1
+回だけ警告し、 処理は続けます。
+
+``` r
+
+.mypkg_to_rtftable_kwargs <- function(x, tokens = .MYPKG_TOKENS_ALL) {
+  .need_pkg("mypkg", "Reading a mypkg table")
+
+  out <- list()
+  out$data <- mypkg::as_body_data_frame(x)          # 本体の取り出し方は各パッケージ次第
+
+  if ("col_header" %in% tokens)
+    out$col_header <- mypkg::column_labels(x)
+
+  if ("alignment" %in% tokens)
+    out$col_spec <- lapply(seq_len(ncol(out$data)), function(j)
+      list(col = j, align = mypkg::col_align(x, j)))
+
+  if ("titles" %in% tokens)
+    out$titles_block <- mypkg::title_lines(x)
+
+  if ("footnotes" %in% tokens)
+    out$footnotes_block <- mypkg::footnote_lines(x)
+
+  out
+}
+```
+
+既存アダプタから得られるコツ：
+
+- **スパニングヘッダー**は多段の `col_header` です。上段の要素は
+  `list(col_cell(pos = c(from, to), label = ...), ...)`、最終要素が
+  葉ラベルの文字ベクタになります。`.extract_spanners_body()`（gt）と
+  `.rtables_header_segments()`（rtables）を参照。
+- **セル単位スタイル**は `cell_styles` に入れます。データ行ごとに 1
+  要素の リストで、各要素は `NULL` か、長さ `ncol`
+  のベクタのリスト（`bold`, `italic`, `underline`, `indent_twips`,
+  `color`, `align`, `border`）です。 `NA` は「`col_spec`
+  から継承」を意味します（[`?rtftable`](https://ichirio.github.io/rtfreporter/reference/rtftable.md)
+  の `cell_styles` を参照）。`cell_styles` を設定するのは gt
+  アダプタだけです。rtables は行ラベルの
+  インデントをスタブ（stub）のテキストに含めます。
+- **テキストに埋め込み済みの脚注マーク。** ソースがマークをインラインで
+  描画する場合（gt はマークを、`<sup>N</sup>` を含む `gt_footnote_marks`
+  の span に入れ、 rtables は `{N}` と書きます）、rtfreporter の
+  上付き記法 `^{N}` に変換します。このとき **`gsub`
+  の後方参照を使わない** こと（一部のロケール不全な R ビルドは `\\1`
+  を落とします）。 `.convert_footnote_marks()` /
+  `.convert_rtables_marks()` のように
+  [`regmatches()`](https://rdrr.io/r/base/regmatches.html)
+  を使ってください。
+
+## ステップ 4 — 組み込み
+
+どのアダプタの判定関数も、4 か所に名前が出てきます。あなたの判定関数を
+それぞれに加えます。
+
+**1. `R/as_rtftables.R` の
+[`as_rtftables.default()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+— リスト入力の判定。** オブジェクトが単なるリスト（データフレームでも S4
+でもない）のときだけ必要です。 判定が、これを「1
+要素ずつ変換するリスト」と見なさないようにします。
+
+``` r
+
+if (is.list(x) && !is.data.frame(x) && !isS4(x) &&
+    !.is_gt_tbl(x) && !.is_gtsummary_tbl(x) && !.is_rtables_tbl(x) &&
+    !.is_flextable_tbl(x) && !.is_mypkg_tbl(x)) { ... }
+```
+
+**2. 同じ関数 — 本体とメタデータを解決するディスパッチ。**
+`if (.is_gt_tbl(x)) ... else if` の連なりに分岐を足します。
+
+``` r
+} else if (.is_mypkg_tbl(x)) {
+  tokens          <- .resolve_mypkg_tokens(read_meta)
+  kw              <- .mypkg_to_rtftable_kwargs(x, tokens = tokens)
+  body            <- kw$data
+  cell_styles     <- kw$cell_styles
+  titles_block    <- kw$titles_block
+  footnotes_block <- kw$footnotes_block
+}
+```
+
+`col_header`・`col_spec`・幅のフィールドはここでは写しません。`kw`
+に残り、
+後で読まれます。あなたのクラスがデータフレームでもある場合（huxtable と
+rlistings がそうです）は、この分岐を `is.data.frame(x)`
+の分岐より前に置きます。 連なりの最後の
+[`stop()`](https://rdrr.io/r/base/stop.html)
+は対応する型を列挙しているので、メッセージにあなたの型を 加えます。
+
+**3. `R/as_rtftable.R` の
+[`as_rtftable()`](https://ichirio.github.io/rtfreporter/reference/as_rtftable.md)。**
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+を呼ぶ前に、 同じ一覧でオブジェクトを調べ、知らない型には「`x` must be a
+gt_tbl, …」で 止まります。この判定とメッセージに `.is_mypkg_tbl()`
+を加えます。対応する型を
+並べている要件（`inst/validation/requirements.csv` の `FR-TB102`,
+`FR-TB106`）も一緒に変わります。
+
+**4. `R/content.R` の `.is_table_source()`。** `rtf_tables(doc, x)`
+は、これで `x`
+がテーブルソースかを判断します。あなたの判定関数がなければ `x`
+は認識されず、 `.rtf_content()` は既定のメソッドに落ちて、`x` を図として
+[`rtfplot()`](https://ichirio.github.io/rtfreporter/reference/rtfplot.md)
+に渡し、 プリントします。クラスに `data.frame`
+も含む場合は、代わりに単なる表になり、
+アダプタのメタデータは使われません。`as_rtftables(x)`
+を自分で呼べばどちらでも
+動くので、アダプタだけのテストでは抜けに気づけません。`rtf_tables(doc, x)`
+も テストしてください。
+
+## ステップ 5 — 依存の宣言
+
+`DESCRIPTION` の `Suggests:` に `mypkg` を追加します。最低版が必要なら
+`mypkg (>= x.y)`
+と書きます。最低版を書く場所はここだけです。`.need_pkg()` が 実行時に
+rtfreporter の `DESCRIPTION` から読むので、R のコードにバージョン番号は
+現れません。`Imports:` には**絶対に入れない**こと。`Imports:` には R
+に同梱の パッケージ（grDevices, grid, methods, stats,
+utils）だけを置きます。`mypkg` が
+未インストールのときのエラーは、ステップ 3 の `.need_pkg()` が出します。
+
+## ステップ 6 — テストとドキュメント
+
+- `tests/testthat/test-mypkg-adapter.R` を追加し、各テストを
+  `skip_if_not_installed("mypkg")` で包みます。
+- 新しい挙動には要件を付けます。各テストの先頭に FT の id と、確認する
+  FR の id を書き、FR は同じ PR で `inst/validation/requirements.csv`
+  に加えます。 決まりは `CONTRIBUTING.md` の「Quality assurance:
+  requirements, tests, traceability」にあります。
+- 新しい `read_meta`
+  トークンを文書化（[`?as_rtftables`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+  を拡張）し、対応する型を
+  並べている所にも加えます。[`?as_rtftables`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)、[`?as_rtftable`](https://ichirio.github.io/rtfreporter/reference/as_rtftable.md)、[`?rtf_tables`](https://ichirio.github.io/rtfreporter/reference/rtf_tables.md)、
+  `README.md`、`_pkgdown.yml` です。
+- PR では `NEWS.md`・`CHANGELOG.md`・`Version:` を編集しません。PR
+  テンプレートの *User-visible change (for NEWS)*
+  欄を埋めてください。メンテナーがそこから `NEWS.md` を書きます。
+- `devtools::document()`, `devtools::test()`, `devtools::check()`
+  を実行。
+
+## 自分のパッケージからメソッドを提供する
+
+上の手順は、rtfreporter を**知らない**パッケージのためのものです。gt や
+rtables などは rtfreporter を import しないので、アダプタを rtfreporter
+側が持ちます。 rtfreporter
+に**依存する**パッケージを書いているなら、ここに分岐を足すのでは
+なく、自分のクラスに対するメソッドを登録してください。[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+は S3 総称関数なので、rtfreporter
+があなたのクラスを名指しする必要はありません。
+
+Show code
+
+``` r
+
+# あなたのパッケージの R/ で（roxygen、rtfreporter は Imports）:
+#' @importFrom rtfreporter as_rtftables
+#' @export
+as_rtftables.my_report <- function(x, ...) {
+  df <- build_the_table(x)          # あなたのパッケージの処理
+  rtfreporter::as_rtftables(df, ...) # rtftable ページのリスト
+}
+```
+
+NAMESPACE には `importFrom(rtfreporter, as_rtftables)` と
+`S3method(as_rtftables, my_report)`
+が書かれます。メソッドは既定メソッドと同じもの、 つまり `rtftable`
+ページのリストを返してください。すると `rtf_tables(doc, x)` が
+あなたのオブジェクトをそのまま受け取り、`gt_tbl`
+と同じように最初に変換します。 依存の向きは正しく、あなたのパッケージが
+rtfreporter に依存し、その逆はありません。
+
+## 参考になる実装
+
+rtables
+アダプタ（`R/rtables_adapter.R`）はコンパクトな実例です。多段スパニング
+ヘッダー、列ごとの整列、行ラベルのインデント（スタブのテキストに含める）、
+インラインの `{N}` -\> `^{N}` マーク変換、タイトルと脚注を、たった 1
+回の
+[`formatters::matrix_form()`](https://pharmaverse.github.io/formatters/latest-tag/reference/matrix_form.html)
+呼び出しから読みます。rlistings アダプタも同じ
+読み取りを使います。`cell_styles` は設定しないので、それを見たいときは
+gt アダプタを読んでください。

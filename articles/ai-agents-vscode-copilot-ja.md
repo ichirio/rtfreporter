@@ -1,0 +1,260 @@
+# AI エージェント：VS Code と GitHub Copilot の設定
+
+[In
+English](https://ichirio.github.io/rtfreporter/articles/ai-agents-vscode-copilot.md)
+
+このページでは、rtfreporter、tflspec、tflplanner の作業用に、VS Code と
+GitHub Copilot のエージェントを設定します。先に [AI
+エージェントを使った開発](https://ichirio.github.io/rtfreporter/articles/ai-agents-ja.md)
+を読んでください。設定が何のためか
+が書いてあります。設定が終わったら、ワークフローはそちらのページに戻って確認します。
+
+ここに書いた内容は、2026-11-08 に読んだ VS Code と GitHub
+のドキュメントに基づいて います（リンクを参照）。このページの手順は、VS
+Code では実行していません。Copilot
+の画面や設定はよく変わります。手順が手元の画面と
+合わないときは、リンク先のページを読み直してください。
+
+## リポジトリを開く
+
+1.  リポジトリをクローンします。コントリビューターはフォークをクローンします。
+    メンテナー（Collaborator）は `ichirio/rtfreporter` をクローンします
+    （`CONTRIBUTING.md` の *Contributor vs Collaborator*）。VS Code の
+    Source Control を使う手順も `CONTRIBUTING.md` にあります。
+2.  VS Code でフォルダーを開きます（**File** \> **Open Folder…**）。
+3.  正しいベースからトピックブランチを作ります。コマンドパレットで
+    **Git: Create Branch…** を実行します。コントリビューターは `main`
+    からブランチ を作り、`main` に向けて PR
+    を出します。メンテナーのブランチは
+    [`next`](https://rdrr.io/r/base/Control.html) に向けます
+    （`CONTRIBUTING.md` の *Branching & collaboration*）。Copilot
+    の指示ファイルが指す `AGENTS.md` には `main`
+    しか書かれていないので、メンテナーは `CONTRIBUTING.md`
+    に従ってください。
+4.  チャット入力で、agent picker から **Agent**
+    を選びます。ドキュメントには Local ハーネスと Copilot
+    ハーネスが出てきます。Local ハーネスは非推奨で、2027 年 2
+    月に削除される予定とあり、 Copilot
+    ハーネスへの移行を勧めています。ただし、プロンプトファイルは Local
+    ハーネスでしか 動きません（後述の PR 前チェック）。
+
+出典：<https://code.visualstudio.com/docs/sourcecontrol/overview>、
+<https://code.visualstudio.com/docs/sourcecontrol/branches-worktrees>、
+<https://code.visualstudio.com/docs/copilot/agents/agent-tools>
+
+## 環境
+
+エージェントが実行するコマンドには、自分の環境ではなく、作業用のライブラリと作業用
+のホームが見えている必要があります
+（[共有ページの「環境」](https://ichirio.github.io/rtfreporter/articles/ai-agents-ja.html#the-environment)）。
+
+- Local
+  セッションでは、エージェントはコマンドを統合ターミナルで実行します。Copilot
+  ハーネスのセッションは、デフォルトでは組み込みのシェルツールを使います（agent-tools
+  の ページ）。変数（`R_LIBS_USER`、`HOME`、
+  `R_USER_CACHE_DIR`、`R_USER_DATA_DIR`、`R_USER_CONFIG_DIR`、`TMP`、`TEMP`、
+  `TMPDIR`、`WORK_ROOT`）を設定したシェルから VS Code
+  を起動します。そうすれば、 すべてのターミナルが変数を引き継ぎます。 VS
+  Code は、ターミナルの変数を
+  `terminal.integrated.env.windows`、`.osx`、`.linux` でも
+  設定できます（ターミナルプロファイルのページ）。エージェントのターミナルがこれを読むかどうかは
+  ドキュメントに書かれていないので、チェックスクリプトで確かめます。
+- どの R
+  を呼ぶかは、フルパスで指示ファイルに書いてエージェントに伝えます
+  （次の節）。
+
+そのうえで、共有ページのチェックスクリプトをエージェントに実行させます。エージェントは
+その記事を読んでいないので、先にスクリプトをチャットに貼り付けてから、次のように頼みます。
+
+> 上のスクリプトを `check-env.R`
+> としてリポジトリの外に保存し、プロジェクトの R
+> で実行して、出力を見せてください。
+
+最後に `Environment OK.`
+と出れば成功です。途中で止まったら、先に環境を直します。
+
+## 指示ファイル
+
+VS Code の Copilot は `.github/copilot-instructions.md` または
+`AGENTS.md` を読み
+ます。このリポジトリには両方あります。`.github/copilot-instructions.md`
+は `AGENTS.md`、`CONTRIBUTING.md`、AI
+開発者マニュアルをすでに指しており、プルリクエストで
+`NEWS.md`、`CHANGELOG.md`、`Version:`
+を編集しないことも書いてあります。短く保ち、 ルールは 1
+か所にまとめてください。足りない行だけを追加します。
+
+``` markdown
+- Call R by its full path (the project's R), never a bare `Rscript`.
+- After the `pre-pr` prompt file below is added, run it (`/pre-pr`) before you open a pull request.
+- Stop and ask before you push, install into any library other than the work library, or delete files.
+```
+
+`.github/copilot-instructions.md`
+は追跡されるファイルなので、足した行はプルリクエストに
+入ります。全員の役に立つ行だけを足し、プルリクエストでそう説明してください。
+自分だけの指示は、Agent Customizations エディターの **User**
+に置きます。Copilot ハーネスでは `~/.copilot/copilot-instructions.md` か
+`~/.copilot/instructions/` にあります。Local ハーネスでは、 VS Code
+のユーザープロファイルに保存されます。どちらも、指示ファイルのリファレンスのページに
+説明があります。
+
+ファイルが読まれたかどうかは、次の方法で確認します。
+
+- コマンドパレットで **Chat: Open Customizations**
+  を実行し、**Instructions** を
+  選びます。ファイルが一覧に出るはずです。これは、ファイルが見つかったことを示す
+  だけで、エージェントが従ったことは示しません。
+- 新しいチャットを始め、回答の **References**
+  セクションを見ます（表示される場合）。
+- 変更内容とツールの動きを読んで、ルールが守られたかを確認します。
+
+出典：<https://code.visualstudio.com/docs/copilot/customization/custom-instructions>、
+<https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions>
+
+## 承認
+
+エージェントは、ツールを実行する前に承認を求めます。承認のプロンプトでは
+**Allow Once** を選べます。ターミナルの設定
+`chat.tools.terminal.autoApprove` には、
+確認なしでコマンドを承認するルールを書きます。各ルールは
+`true`（承認）、 `false`（確認する）、または `/`
+で囲んだ正規表現です。この作業では、ユーザー設定
+またはワークスペース設定に次のように書きます。
+
+``` json
+{
+  "chat.tools.terminal.autoApprove": {
+    "/^git (status|diff|log)\\b/": true,
+    "git push": false,
+    "rm": false
+  }
+}
+```
+
+ドキュメントから、3 点を挙げます。複合コマンドは、すべての部分が `true`
+のルールに 一致したときだけ承認されます。`false` のルールは VS Code
+に確認させるだけで、コマンド
+をブロックはしません。そしてドキュメントはこのルールを「最善努力の便宜機能であり、
+セキュリティ境界ではない」としています。そのため、環境の節にあるように、作業領域を
+自分のファイルから分けておいてください。
+
+次の 3
+つは「確認する」のままにします。`git push`、作業用ライブラリ以外への
+インストール、ファイルの削除です。承認のページには、フルパスで指定したコマンドにルールが
+どう一致するかが書かれていません。プロジェクトの R
+のルールは、頼る前に試してください。
+これはこの記事自身の助言です。`Rscript`
+を許可するルールは、エージェントにどんな R コードも
+実行させます。環境チェックが通ってから足してください。
+
+出典：<https://code.visualstudio.com/docs/agents/run/approvals>
+
+## PR 前チェック
+
+**プロンプトファイル**は、`<name>.prompt.md` という名前の Markdown
+ファイルです。 ワークスペースのプロンプトファイルは `.github/prompts/`
+に置きます。チャット入力で `/<name>` と入力するか、コマンドパレットの
+**Chat: Run Prompt** で起動します。 Chat ビューの Local
+ハーネスのセッションでだけ実行されます。Local ハーネスは非推奨で、 2027
+年 2 月に削除される予定です。Copilot
+ハーネスはプロンプトファイルを実行しません。
+そちらには、ドキュメントはスキルを勧めています。そのため、次の例は非推奨の
+Local ハーネスでしか動きません。 このページでは、Copilot
+ハーネス用のスキルは示しません。リポジトリにも、そのための Copilot
+用ファイルはありません。Copilot
+のスキルの例は、あとで加えるかもしれません。 次は
+`.github/prompts/pre-pr.prompt.md` の例です。
+
+``` markdown
+Run these in order. Stop at the first failure and report it.
+
+1. Run the tests of the changed area.
+2. Run `lintr::lint_package()`. It must report 0 lints.
+3. List the `pkg::` uses and `requireNamespace()` calls added in the diff, and
+   check each is declared in `DESCRIPTION`.
+4. When a change in tflspec can break tflplanner, run tflplanner's tests too.
+5. Report each result in the pull request description, in the form the pull request template asks for.
+
+Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:`.
+```
+
+プロンプトファイルは、先頭にフロントマターを置けます。項目はすべて任意です。
+`description`、`name`、`argument-hint`、`agent`（`ask`、`agent`、`plan`、または
+カスタムエージェント）、`model`、`tools` があります。`mode`
+という項目はありません。
+この例にはどれも要りません。実行するエージェントを固定したいときは
+`agent: agent` を足します。
+
+これは、変更ごとに回す軽いサブセットです。`CONTRIBUTING.md` にある push
+前の 4 つの
+チェック（`R CMD check --as-cran`、`devtools::test()`、[`pkgdown::check_pkgdown()`](https://pkgdown.r-lib.org/reference/check_pkgdown.html)、
+lintr）の代わりにはなりません。完全なセットは CI
+が実行し、リリース前にはメンテナー も実行します。
+
+出典：<https://code.visualstudio.com/docs/copilot/customization/prompt-files>
+
+## 編集ごとのチェック
+
+VS Code
+にはフックがあります（**Preview**）。フックは、決まったタイミングで実行
+されるコマンドです。ワークスペースのフックは `.github/hooks/` の JSON
+ファイルです。 イベント名は `preToolUse` と `postToolUse`
+です。`preToolUse` フックは `permissionDecision` に `"deny"`
+を入れて返すと、呼び出しをブロックします。 `postToolUse`
+フックは、終わった操作を取り消せません。`preToolUse` フックがエラーで
+失敗すると、呼び出しは拒否されます。タイムアウトの場合は、通常の承認に進みます。
+「`NEWS.md` や `Version:` の編集を拒否する」というルールは、`preToolUse`
+フック 1 つで書けます。
+
+フックファイルの形は次のとおりです（コマンドはプレースホルダーです）。
+
+``` json
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      { "type": "command", "command": "<your script>", "timeoutSec": 10 }
+    ]
+  }
+}
+```
+
+スクリプトには入力として `toolName` と `toolArgs`
+が渡されます。拒否するには、 `permissionDecision` に `"deny"`
+を入れ、`permissionDecisionReason` を付けて出力
+します。[`{}`](https://rdrr.io/r/base/Paren.html)
+は「判断しない」の意味です。`PreToolUse` のようなパスカルケースの
+イベント名は別名で、snake_case の項目と Claude
+形式のツール名（`Read`、`Write`、 `Edit`）を使います。GitHub
+のフックのリファレンスによると、`matcher` は `toolName` の全体に
+一致する正規表現で、ファイルのツールは `edit` と `create`
+です（パスカルケースの別名では `Edit` と
+`Write`）。ファイル編集のフックなら、マッチャーは `edit|create`
+になります。 VS Code のフックのページには、Local
+ハーネスはマッチャーの値を無視するとあります。 この機能は Preview
+なので、自分でフックを試すまでは、これらのルールを PR 前チェック と CI
+に任せてください。
+
+リポジトリの `.claude/` にあるフックの例は、Claude Code
+向けに書かれ、Claude でのみ 確認しています。今は
+[`next`](https://rdrr.io/r/base/Control.html) にあり、次のマージで
+`main` に入ります。 [Claude
+アプリのページ](https://ichirio.github.io/rtfreporter/articles/ai-agents-claude-app-ja.html#checks-on-each-edit)
+を参照して ください。
+
+出典：<https://code.visualstudio.com/docs/copilot/customization/hooks>
+
+## その後
+
+[共有ページのワークフロー](https://ichirio.github.io/rtfreporter/articles/ai-agents-ja.html#the-workflow)に戻ります。Issue、小さな
+ブランチ、テストを先に書く、PR 前チェック、PR の順です。Issue や PR
+を読むときは、 ターミナルの GitHub
+CLI（`gh`）を使うのが安全です。この設定のために読んだ VS Code
+のページには、Copilot が Issue や PR をどう読むかが 書かれていません。
+
+作業の一部を別のエージェントに任せるには、VS Code
+のサブエージェントを使います。
+サブエージェントは、自分のコンテキストで作業し、絞った結果だけを返します。会話は
+引き継がないので、目的、対象のファイル、期待する結果を伝えてください。
+出典：<https://code.visualstudio.com/docs/copilot/agents/subagents>

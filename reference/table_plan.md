@@ -1,0 +1,254 @@
+# A deferred, last-wins plan for a table
+
+`table_plan()` starts a plan, and takes the **roles**: which column goes
+across the table, which go down it, which carries the row identity. The
+names must be columns of the data you hand it, so you can check them by
+looking. Every `plan_*()` verb after it adds a declaration, and nothing
+runs until
+[`plan_apply()`](https://ichirio.github.io/rtfreporter/reference/plan_apply.md).
+
+## Usage
+
+``` r
+table_plan(
+  x = NULL,
+  cols = NULL,
+  rows = NULL,
+  label = NULL,
+  stat = NULL,
+  show_keys = NULL,
+  value = NULL
+)
+```
+
+## Arguments
+
+- x:
+
+  What the table is built from. A plan does **not** flatten: `cols` /
+  `rows` / `label` name columns of what you hand it, so flatten first
+  and look at the result.
+
+  - a frame through
+    [`normalize_ard()`](https://ichirio.github.io/rtfreporter/reference/normalize_ard.md)
+    — the ordinary case;
+
+  - **any long frame of statistics**: keys, a `stat_name` and a `stat`,
+    built with dplyr and no cards anywhere.
+    [`plan_cells()`](https://ichirio.github.io/rtfreporter/reference/plan_cells.md)
+    does the work;
+
+  - a frame that is already the table, for the display half on its own;
+
+  - a frame of subject records, with
+    [`plan_listing()`](https://ichirio.github.io/rtfreporter/reference/plan_listing.md).
+
+  A raw cards ARD is refused, with the line to write.
+
+- cols:
+
+  The key that goes **across** the table, as `widen_ard(cols = )` takes
+  it: one or more columns, optionally renamed `c(new = old)`. The order
+  of its values across the table is the ARD's (a factor's levels) unless
+  `plan_levels(<key> = c(...))` says otherwise. Left out when the ARD
+  has no group to spread (one arm): one column, `All` (see
+  [`widen_ard()`](https://ichirio.github.io/rtfreporter/reference/widen_ard.md)).
+
+- rows:
+
+  The keys that go **down** it, likewise. Left out, the analysis
+  variable is used (as `group`).
+
+  Names
+
+  :   Each name is the column the finished table gets, and later verbs
+      refer to it by that name
+      ([`plan_stub()`](https://ichirio.github.io/rtfreporter/reference/plan_stub.md),
+      `plan_paginate_group(col = )`,
+      [`plan_hide()`](https://ichirio.github.io/rtfreporter/reference/plan_hide.md));
+      left unnamed, a key keeps its column's name (`rows = "variable"`
+      gives a column `variable`).
+
+  `"variable"`
+
+  :   The column that holds the analysis variable's name, so
+      `c(group = "variable")` makes one block of rows per analysis
+      variable (AGE, SEX, ...).
+
+  Subgroups
+
+  :   Subgroups from different variables laid one under another come
+      from `normalize_ard(stack = )`; see the article *Tables from an
+      ARD, step by step* (*Subgroups*).
+
+- label:
+
+  The column carrying the **row identity** — the text in the label
+  column. `".label"` by default (what
+  [`normalize_ard()`](https://ichirio.github.io/rtfreporter/reference/normalize_ard.md)
+  builds), `NA` for a table that has none, or a guarded template.
+  `.label` holds, per row: the category (`variable_level`) for a
+  categorical variable; the deepest level's value in a `hierarchy`; and
+  `NA` for a continuous variable, whose rows are named by the
+  [`plan_cells()`](https://ichirio.github.io/rtfreporter/reference/plan_cells.md)
+  template names (`"Mean (SD)"`).
+
+- stat:
+
+  Which of **your** columns play the three parts
+  [`widen_ard()`](https://ichirio.github.io/rtfreporter/reference/widen_ard.md)
+  reads by name, as a named vector:
+
+  `variable`
+
+  :   the analysis variable, what
+      [`plan_cells()`](https://ichirio.github.io/rtfreporter/reference/plan_cells.md)
+      and
+      [`plan_digits()`](https://ichirio.github.io/rtfreporter/reference/plan_digits.md)
+      key on;
+
+  `name`
+
+  :   which statistic a row is;
+
+  `value`
+
+  :   what it is worth.
+
+  `stat = c(variable = "PARAMCD", name = "STAT", value = "AVAL")`. A
+  frame from cards already calls them `variable`, `stat_name` and `stat`
+  and needs none of this; a summary somebody built with dplyr says so
+  here, once, instead of being asked again by every verb. Name only the
+  parts your frame calls something else.
+
+- show_keys:
+
+  Row keys this table also shows **as variables**. `NULL` (default):
+  none, as before.
+
+  What it does
+
+  :   A key's own counts
+      (`cards::ard_tabulate(adsl, by = TRT, variables = SEX)`), which
+      [`normalize_ard()`](https://ichirio.github.io/rtfreporter/reference/normalize_ard.md)
+      marks as a key's own tabulation once SEX is a key anywhere in the
+      ARD (a subgroup layer of another analysis), go to the body instead
+      of only to the header's `{n}`.
+
+  Example
+
+  :   With
+      `rows = c(block = "variable", grp = "subgroup", lvl = "subgroup_level")`
+      SEX's n (%) is a block of its own beside the ORR's SEX subgroups.
+
+  Refused
+
+  :   A column key (its counts are the columns' populations).
+
+- value:
+
+  For a frame of **records** (an ADaM, one row a record): the column
+  whose value a cell prints, `value = "AVAL"`. That makes a records
+  plan: one row a `rows` key (a subject:
+  `rows = c(subject = ~ "{USUBJID}/{AGE}/{SEX}")`), the records' values
+  spread across `cols`, one cell template
+  (`plan_cells("{value:.3s}", na = "BLQ")`) – a listing laid out as a
+  table, with nothing reshaped by hand. Two records of one key and
+  column (the row key as resolved, a template included) with different
+  values stop, naming the key, the column and the values; the same value
+  twice is one. See
+  [`plan_append()`](https://ichirio.github.io/rtfreporter/reference/plan_append.md)
+  for its summary under it.
+
+## Value
+
+An object of class `table_plan`.
+
+## Details
+
+The rule is **last wins** — a later layer overwrites what an earlier one
+said about the same key — so "set everything, then fix one variable" is
+a two-line edit:
+
+    plan_digits(2) |> plan_digits(AGE = 0)
+
+Last wins argument by argument. An argument whose value is a named list
+or named vector, such as
+`plan_columns(widths = c(AGE = 1200, SEX = 900))`, is replaced as a
+whole: a later `plan_columns(widths = c(AGE = 1500))` leaves `AGE` only,
+and the names it leaves out are not kept from the earlier call. An
+argument the later call leaves out keeps its earlier value.
+[`plan_levels()`](https://ichirio.github.io/rtfreporter/reference/plan_levels.md),
+[`plan_labels()`](https://ichirio.github.io/rtfreporter/reference/plan_labels.md)
+and
+[`plan_nest()`](https://ichirio.github.io/rtfreporter/reference/plan_nest.md)
+are the exception: they merge one key at a time.
+
+Within one layer the keys are picked by specificity, as
+[`widen_ard()`](https://ichirio.github.io/rtfreporter/reference/widen_ard.md)'s
+`cells` are: an analysis variable before a kind, a kind before the
+default.
+
+## Where the other settings went
+
+`table_plan()` takes the **roles** and nothing else. Every other setting
+belongs to the verb whose job it is:
+
+- a template per cell or a row per statistic, `stat` / `stat_fmt`, the
+  empty-cell text:
+  [`plan_cells()`](https://ichirio.github.io/rtfreporter/reference/plan_cells.md)
+  (`stats =`, `value =`, `na =`)
+
+- the statistic a frequency order totals:
+  [`plan_sort()`](https://ichirio.github.io/rtfreporter/reference/plan_sort.md)
+  (`stat =`)
+
+- reporting what the templates did not use:
+  [`plan_cells()`](https://ichirio.github.io/rtfreporter/reference/plan_cells.md)
+  (`notes =`)
+
+- the separator several `cols` keys are joined with in the column names:
+  [`plan_columns()`](https://ichirio.github.io/rtfreporter/reference/plan_columns.md)
+  (`sep =`)
+
+## See also
+
+[`plan_apply()`](https://ichirio.github.io/rtfreporter/reference/plan_apply.md),
+[`normalize_ard()`](https://ichirio.github.io/rtfreporter/reference/normalize_ard.md),
+[`widen_ard()`](https://ichirio.github.io/rtfreporter/reference/widen_ard.md)
+
+## Examples
+
+``` r
+if (requireNamespace("cards", quietly = TRUE)) {
+  ard <- cards::ard_stack(
+    cards::ADSL, .by = ARM,
+    cards::ard_summary(variables = c(AGE, BMIBL)),
+    cards::ard_tabulate(variables = SEX))
+
+  ard |>
+    normalize_ard() |>
+    table_plan(cols = "ARM", rows = c(group = "variable")) |>
+    plan_cells(continuous  = c("Mean (SD)" = "{mean} ({sd})"),
+               categorical = "{n} ({p:%})") |>
+    plan_digits(2) |>
+    plan_digits(AGE = 0, SEX = 1) |>
+    plan_apply()
+}
+#> widen_ard(): 51 ARD rows were not used.
+#>   summary        N                6  no template named it
+#>   summary        max              6  no template named it
+#>   summary        median           6  no template named it
+#>   summary        min              6  no template named it
+#>   summary        p25              6  no template named it
+#>   summary        p75              6  no template named it
+#>   tabulate       N                6  no template named it
+#>   tabulate       N                3  a key variable's own tabulation
+#>   ... and 2 more; see attr(, "ard_ignored")
+#>   (notes = FALSE to silence; attr(, "ard_ignored") has the detail)
+#>   group     label      Placebo Xanomeline High Dose Xanomeline Low Dose
+#> 1   AGE Mean (SD)       75 (9)               74 (8)              76 (8)
+#> 2 BMIBL Mean (SD) 23.64 (3.67)         25.35 (4.16)        25.06 (4.27)
+#> 3   SEX         F  53.0 (61.6)          40.0 (47.6)         50.0 (59.5)
+#> 4   SEX         M  33.0 (38.4)          44.0 (52.4)         34.0 (40.5)
+```
