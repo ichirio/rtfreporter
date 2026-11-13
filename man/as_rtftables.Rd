@@ -110,7 +110,9 @@ setting for fixed-size pages} -- \code{max_rows = 25} gives pages of 25 rows.
 Ignored by \code{"none"} and \code{"rows"} (which cuts at the positions in
 \code{split_rows}).  Optional for \code{"by_value"}: a value's page longer than
 \code{max_rows} is cut as \code{"group_force"} cuts, its pages named by the value
-with the \code{"...n"} tail (\code{"A...1"}, \code{"A...2"}).}
+with the \code{"...n"} tail (\code{"A...1"}, \code{"A...2"}).  For a \code{listing} and for
+an rlistings listing, \code{max_rows} alone switches \code{split} to
+\code{"group_safe"} (see \code{listing}).}
 
 \item{split}{How to break the body into pages. A strategy name (a unique
 prefix such as \code{"group_s"} is enough; another value is an error):
@@ -163,7 +165,8 @@ group-aware splits (\code{"group_safe"}, \code{"group_force"}, \code{"by_value"}
 detect groups on, given by name or position (a whole number in
 \verb{1..ncol}; \code{TRUE}, a fraction or a factor is an error, as in every
 column argument).  \code{NULL} (default) uses
-\strong{column 1}.  This selects only the \emph{column}; how a group boundary is
+\strong{column 1} (for an rlistings listing, its first key column; see
+\code{listing}).  This selects only the \emph{column}; how a group boundary is
 found on it is set by \code{group_by}.
 \describe{
 \item{Naming it}{For gt / gtsummary the body keeps gt's column
@@ -512,6 +515,17 @@ argument you pass yourself is never overridden.}
 up and passing \code{listing} as well is an error.  An rlistings
 \code{listing_df} is rejected: it is already laid out, and needs no
 \code{listing} argument.}
+\item{An rlistings listing}{Pages by its first key column instead:
+\code{split} becomes \code{"group_safe"} when \code{max_rows} is set, and a
+group-aware split gets \code{group_col} on the listing's first key column
+-- found by name among the display columns, wherever
+\code{listing_dispcols()} puts it -- with \code{group_by = "filled"}, since
+rlistings prints a key once per run.  A subject's rows then stay on
+one page when they fit; a longer one is cut as \code{"group_safe"} cuts
+it, the key repeated with \code{cont_label}.  A listing with no key
+columns groups on column 1.  These are \strong{defaults} too: \code{split},
+\code{group_col} and \code{group_by} you pass yourself win, and without
+\code{max_rows} the listing is one page.}
 }}
 
 \item{stub}{Row-stub settings, as a \code{\link[=stub_spec]{stub_spec()}} object -- or, as a
