@@ -1027,8 +1027,13 @@ as_rtftables.default <- function(x,
     out <- list()
     for (i in seq_along(x)) {
       # An rlistings listing fills in `split` and `group_by` only when the
-      # caller left them out (#1045), so they are left out here too.
+      # caller left them out (#1045), and so does a data frame given a
+      # `listing` or built by build_listing() (#1052), with `blank_row_first`
+      # as well; so they are left out here too.
       lst_default <- .is_rlistings_tbl(x[[i]])
+      spec_default <- is.data.frame(x[[i]]) && !lst_default &&
+        (!is.null(listing) ||
+           !is.null(attr(x[[i]], "rtf_listing", exact = TRUE)))
       args <- list(
         read_meta = read_meta, max_rows = max_rows, split = split,
         split_rows = split_rows, group_col = group_col, group_by = group_by,
@@ -1046,8 +1051,11 @@ as_rtftables.default <- function(x,
         header_sep = header_sep,
         auto_width = auto_width, table_width_twips = table_width_twips,
         border = border, style = style)
-      if (lst_default && !split_given)    args$split    <- NULL
-      if (lst_default && !group_by_given) args$group_by <- NULL
+      if ((lst_default || spec_default) && !split_given) args$split <- NULL
+      if ((lst_default || spec_default) && !group_by_given) {
+        args$group_by <- NULL
+      }
+      if (spec_default && !blank_row_first_given) args$blank_row_first <- NULL
       chunks <- do.call(as_rtftables, c(list(x[[i]]), args, list(...)))
       if (!is.null(in_names) && nzchar(in_names[i])) {
         base <- in_names[i]
