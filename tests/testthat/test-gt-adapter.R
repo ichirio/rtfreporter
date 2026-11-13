@@ -419,3 +419,103 @@ test_that("FT-TB7103 [FR-TB577 FR-TB118]: read_meta without \"footnote_marks\" w
   expect_identical(attr(q, "rtf_footnotes"),
                    c("^{1} Spanner note.", "^{2} Age at consent.", "^{3} Imputed."))
 })
+
+# ── a tab_caption() / modify_caption() caption is the title (#1029) ──────────
+
+# The RTF of a document, through generate_rtfreport().
+.t73_rtf <- function(doc) {
+  d <- tempfile("t73_")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  f <- file.path(d, "t73.rtf")
+  generate_rtfreport(doc, f, overwrite = TRUE)
+  readLines(f, warn = FALSE)
+}
+
+# The first line of `rtf` holding `txt` (NA: none).
+.t73_at <- function(rtf, txt) {
+  i <- which(grepl(txt, rtf, fixed = TRUE))
+  if (length(i)) i[[1L]] else NA_integer_
+}
+
+test_that("FT-TB7301 [FR-TB577]: a gt tab_caption() caption is the page title", {
+  skip_if_not_installed("gt")
+  g <- gt::gt(data.frame(A = 1:2)) |> gt::tab_caption("Table 9 Summary")
+  p <- as_rtftables(g)
+  expect_identical(attr(p[[1L]], "rtf_titles"), "Table 9 Summary")
+  rtf <- .t73_rtf(rtf_tables(rtf_document(), p))
+  expect_false(is.na(.t73_at(rtf, "Table 9 Summary")))
+  # above the table's header row
+  expect_lt(.t73_at(rtf, "Table 9 Summary"), .t73_at(rtf, "A\\cell"))
+  # without the "titles" token it is not read
+  q <- as_rtftables(g, read_meta = c("col_header", "footnotes"))
+  expect_null(attr(q[[1L]], "rtf_titles"))
+})
+
+test_that("FT-TB7302 [FR-TB577]: a gtsummary modify_caption() caption is the title, its markdown ** markers dropped", {
+  skip_if_not_installed("gt")
+  skip_if_not_installed("gtsummary")
+  ts <- gtsummary::tbl_summary(gtsummary::trial[c("trt", "age")], by = "trt") |>
+    gtsummary::modify_caption("**Table 9** Summary")
+  p <- as_rtftables(ts)
+  expect_identical(attr(p[[1L]], "rtf_titles"), "Table 9 Summary")
+  rtf <- .t73_rtf(rtf_tables(rtf_document(), p))
+  expect_false(is.na(.t73_at(rtf, "Table 9 Summary")))
+  expect_false(any(grepl("**", rtf, fixed = TRUE)))
+})
+
+test_that("FT-TB7303 [FR-TB577]: a caption with a tab_header() title and subtitle: the caption first, then the title, then the subtitle, as gt prints them", {
+  skip_if_not_installed("gt")
+  g <- gt::gt(data.frame(A = 1:2)) |>
+    gt::tab_header("Title T", "Sub S") |>
+    gt::tab_caption("Cap C") |>
+    gt::tab_footnote("Ttl.", locations = gt::cells_title("title"))
+  p <- as_rtftables(g)[[1L]]
+  # the title's footnote mark stays where #1020 writes it
+  expect_identical(attr(p, "rtf_titles"), c("Cap C", "Title T^{1}", "Sub S"))
+  rtf <- .t73_rtf(rtf_tables(rtf_document(), list(p)))
+  at <- vapply(c("Cap C", "Title T{\\super 1}", "Sub S"),
+               function(t) .t73_at(rtf, t), integer(1L))
+  expect_false(anyNA(at))
+  expect_true(all(diff(at) > 0L))
+  # gt prints the caption above the header too
+  h <- as.character(gt::as_raw_html(g, inline_css = FALSE))
+  expect_lt(regexpr("Cap C", h, fixed = TRUE), regexpr("Title T", h, fixed = TRUE))
+})
+
+test_that("FT-TB7304 [FR-TB577 FR-TB174]: titles the user gives win, and the caption is not written, as for the gt title", {
+  skip_if_not_installed("gt")
+  g <- gt::gt(data.frame(A = 1:2)) |>
+    gt::tab_header("Title T") |>
+    gt::tab_caption("Cap C")
+  # rtf_tables(titles = )
+  rtf <- .t73_rtf(rtf_tables(rtf_document(), as_rtftables(g),
+                             titles = list("Mine M")))
+  expect_false(is.na(.t73_at(rtf, "Mine M")))
+  expect_true(is.na(.t73_at(rtf, "Cap C")))
+  expect_true(is.na(.t73_at(rtf, "Title T")))
+  # rtf_titles()
+  doc <- rtf_titles(rtf_tables(rtf_document(), as_rtftables(g)), "Ours O")
+  rtf <- .t73_rtf(doc)
+  expect_false(is.na(.t73_at(rtf, "Ours O")))
+  expect_true(is.na(.t73_at(rtf, "Cap C")))
+  expect_true(is.na(.t73_at(rtf, "Title T")))
+  # none given: the caption and the title are the page's
+  rtf <- .t73_rtf(rtf_tables(rtf_document(), as_rtftables(g)))
+  expect_lt(.t73_at(rtf, "Cap C"), .t73_at(rtf, "Title T"))
+})
+
+test_that("FT-TB7305 [FR-TB577 FR-TB115]: each member of a gt_split carries the caption, read the same way", {
+  skip_if_not_installed("gt")
+  g <- gt::gt(data.frame(A = 1:4)) |>
+    gt::tab_header("Title T") |>
+    gt::tab_caption(gt::md("**Table 9** Summary"))
+  pages <- as_rtftables(gt::gt_split(g, row_every_n = 2))
+  expect_length(pages, 2L)
+  for (p in pages) {
+    expect_identical(attr(p, "rtf_titles"), c("Table 9 Summary", "Title T"))
+  }
+  rtf <- .t73_rtf(rtf_tables(rtf_document(), pages))
+  expect_identical(sum(grepl("Table 9 Summary", rtf, fixed = TRUE)), 2L)
+  expect_false(any(grepl("**", rtf, fixed = TRUE)))
+})
