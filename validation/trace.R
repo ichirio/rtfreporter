@@ -433,11 +433,18 @@ env_for <- function(supported) {
   rv <- suppressWarnings(numeric_version(ifelse(grepl("^R version [0-9]", envs$r),
                                          sub("^R version ([0-9]+[.][0-9]+).*$", "\\1", envs$r), NA)))
   is_min <- !devel & !is.na(rv) & rv == numeric_version(r_min[1L])[1L, 1:2]
+  # the minimum environment: the CI job "ubuntu-24.04 (R <min>, minimum
+  # environment)", R at DESCRIPTION's minimum and each dependency at its own;
+  # the recommended environment: the CI jobs of the latest R, "(R release)"
+  min_env <- grepl("minimum environment", envs$environment, fixed = TRUE)
+  rec_env <- envs$source == "ci" & grepl("(R release)", envs$environment, fixed = TRUE)
   os_is <- function(re) which(grepl(re, envs$os))
-  if (grepl("^The lowest R", supported)) {
-    list(list(label = NULL, idx = which(is_min)))
+  if (grepl("^The minimum environment", supported)) {
+    list(list(label = NULL, idx = which(min_env & is_min)))
+  } else if (grepl("^The recommended environment", supported)) {
+    list(list(label = NULL, idx = which(rec_env)))
   } else if (grepl("in use now", supported)) {
-    list(list(label = NULL, idx = which(!devel & !is_min)))
+    list(list(label = NULL, idx = which(!devel & !min_env)))
   } else if (grepl("^The next R", supported)) {
     list(list(label = NULL, idx = which(devel)))
   } else if (grepl("^Windows, macOS and Linux", supported)) {
@@ -514,8 +521,9 @@ sup_lines <- c(
   "The suggested packages, as the environments ran them (those with a minimum version, and those not installed in some environment):",
   "",
   sug_lines,
-  if (!is.na(at_min)) c("", sprintf("%d of the %d suggested packages with a minimum version were run at that minimum in at least one environment; for the others the tests ran only with a newer version (the risk below).",
-                                    at_min, sum(nzchar(sug_min)))),
+  if (!is.na(at_min)) c("", sprintf("%d of the %d suggested packages with a minimum version were run at that minimum in at least one environment%s.",
+                                    at_min, sum(nzchar(sug_min)),
+                                    if (at_min < sum(nzchar(sug_min))) "; the others ran only with a newer version" else "")),
   "",
   "What is not tested, and the risk accepted (the Quality Plan, the *environment strategy*):",
   "",
