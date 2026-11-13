@@ -200,8 +200,11 @@ an entry is its number, a tab and its title (\code{"Table 14.3.2"}, then
 \code{"Summary of ..."}), and the title's wrapped lines start where its first
 line does, after the number.  The hang is the width of the widest number
 in the TOC and a gap of 1 em at the entry's size: a character is 0.6 em
-in Courier New (exact) and is taken as 0.65 em in any other font (an
-estimate on the safe side).  With \code{"auto"} and \code{\link[=assemble_folder]{assemble_folder()}} the
+in Courier New (exact) and is taken as 0.75 em in any other font (a
+generous estimate: a wrong one leaves a little too much room).  Two more
+tab stops follow the hang, 2 and 4 em after it, so a number wider than
+the hang puts its title at the next of them, never at the page number's
+tab.  With \code{"auto"} and \code{\link[=assemble_folder]{assemble_folder()}} the
 number is the one the file's title is read with (\code{"Table 14.1.1"}); a
 label given as text is split when it starts with \code{Table}, \code{Figure} or
 \code{Listing} and a number (\verb{14.3.2}, \verb{14.3.2.1}, \verb{14.1.1a}).  A label that

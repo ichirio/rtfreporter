@@ -547,17 +547,18 @@
 }
 
 # The width of a character of the TOC's font in ems, for the hanging style's
-# number column: 0.6 for Courier New (or Courier), exact; 0.65 for any other
-# font, a safe estimate (wider than the digits, capitals and lower case of the
-# usual proportional fonts on average).  The font is the document's: that of
-# the first input's \deff.
+# number column: 0.6 for Courier New (or Courier), exact; 0.75 for any other
+# font, a generous estimate (wider than the digits, capitals and lower case of
+# the usual proportional fonts), so a wrong guess leaves a little too much
+# room, not too little.  The font is the document's: that of the first
+# input's \deff.
 .toc_font_em <- function(lines) {
-  head <- paste(utils::head(lines, 20L), collapse = " ")
+  head <- paste(lines[seq_len(min(20L, length(lines)))], collapse = " ")
   deff <- regmatches(head, regexec("\\\\deff([0-9]+)", head))[[1L]]
   f    <- if (length(deff) == 2L) deff[2L] else "0"
   rx   <- paste0("\\{\\\\f", f, "(?![0-9])[^ ;}]* ([^;}]*);")
   name <- regmatches(head, regexec(rx, head, perl = TRUE))[[1L]]
-  if (length(name) == 2L && grepl("^Courier", trimws(name[2L]))) 0.6 else 0.65
+  if (length(name) == 2L && grepl("^Courier", trimws(name[2L]))) 0.6 else 0.75
 }
 
 # The hanging indent of the TOC's entries in twips: 0 when off (FALSE); a
@@ -783,7 +784,11 @@
     tabs <- ""
     if (!is.null(sp)) {
       txt  <- paste0(.toc_escape(sp[["number"]]), "\\tab ", .toc_escape(sp[["title"]]))
-      tabs <- sprintf("\\tx%d", indent + hang)
+      # the stop at the hang, and two more 2 and 4 em after it: a number
+      # wider than the hang tabs to the next of them, never to the page
+      # number's right tab (Word has no default stops left of the last one)
+      em_tw <- as.integer(round(style$entry$size * 20))
+      tabs  <- paste(sprintf("\\tx%d", indent + hang + c(0L, 2L, 4L) * em_tw), collapse = "")
     }
     pg  <- if (!is.null(entry_pages) && e$file_idx <= length(entry_pages) &&
                !is.na(entry_pages[e$file_idx])) {
@@ -906,8 +911,11 @@
 #' `"Summary of ..."`), and the title's wrapped lines start where its first
 #' line does, after the number.  The hang is the width of the widest number
 #' in the TOC and a gap of 1 em at the entry's size: a character is 0.6 em
-#' in Courier New (exact) and is taken as 0.65 em in any other font (an
-#' estimate on the safe side).  With `"auto"` and [assemble_folder()] the
+#' in Courier New (exact) and is taken as 0.75 em in any other font (a
+#' generous estimate: a wrong one leaves a little too much room).  Two more
+#' tab stops follow the hang, 2 and 4 em after it, so a number wider than
+#' the hang puts its title at the next of them, never at the page number's
+#' tab.  With `"auto"` and [assemble_folder()] the
 #' number is the one the file's title is read with (`"Table 14.1.1"`); a
 #' label given as text is split when it starts with `Table`, `Figure` or
 #' `Listing` and a number (`14.3.2`, `14.3.2.1`, `14.1.1a`).  A label that
