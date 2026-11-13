@@ -1028,11 +1028,12 @@ as_rtftables.default <- function(x,
     for (i in seq_along(x)) {
       # An rlistings listing fills in `split` and `group_by` only when the
       # caller left them out (#1045), and so does a data frame given a
-      # `listing` (#1052), with `blank_row_first` as well; so they are left
-      # out here too.
+      # `listing` or built by build_listing() (#1052), with `blank_row_first`
+      # as well; so they are left out here too.
       lst_default <- .is_rlistings_tbl(x[[i]])
-      spec_default <- !is.null(listing) && is.data.frame(x[[i]]) &&
-        !lst_default
+      spec_default <- is.data.frame(x[[i]]) && !lst_default &&
+        (!is.null(listing) ||
+           !is.null(attr(x[[i]], "rtf_listing", exact = TRUE)))
       args <- list(
         read_meta = read_meta, max_rows = max_rows, split = split,
         split_rows = split_rows, group_col = group_col, group_by = group_by,

@@ -151,3 +151,21 @@ test_that("FT-TB7804 [FR-IX318]: every listing = default and every override, at 
                                                 group_col = "S")[[1L]])$group_col,
                    "S")
 })
+
+test_that("FT-TB7805 [FR-IX318]: a list of bodies built by build_listing(), passed without listing =, pages each element as that body alone", {
+  b1 <- build_listing(.t78_d1(), .t78_spec())
+  b2 <- build_listing(.t78_d1(), .t78_spec(blank_row_first = TRUE))
+  lst   <- as_rtftables(list(b1, b2), max_rows = 5)
+  alone <- c(as_rtftables(b1, max_rows = 5), as_rtftables(b2, max_rows = 5))
+  expect_identical(.t78_bodies(lst), .t78_bodies(alone))
+  expect_identical(.t78_rtf(lst), .t78_rtf(alone))
+  expect_identical(.t78_rows(lst), c(4L, 4L, 4L, 4L, 4L, 4L))
+  for (p in lst) {
+    expect_identical(.t78_meta(p)$strategy, "group_safe")
+    expect_identical(.t78_meta(p)$group_col, ".rtf_record")
+    expect_false(".rtf_record" %in% names(p$data))
+  }
+  # the caller's split still wins
+  none <- as_rtftables(list(b1, b2), max_rows = 5, split = "none")
+  expect_identical(.t78_rows(none), c(12L, 12L))
+})
