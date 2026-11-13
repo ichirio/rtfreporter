@@ -142,7 +142,7 @@ test_that("FT-AS7005 [FR-AS250 FR-AS258]: toc = \"auto\", a table with no label 
   expect_false(any(grepl("\\sub", .tr_entries(auto), fixed = TRUE)))
 })
 
-test_that("FT-AS7006 [FR-AS250 FR-AS112]: one level-1 entry per file, read the same way by toc = \"auto\" and assemble_folder(): title rows joined, a blank row passed over, a line break joined, table / figure / listing by title, the header's \"Table N\" line, then the file name; tokens filled, markup without its formatting; the outline entry the same", {
+test_that("FT-AS7006 [FR-AS250 FR-AS112]: one level-1 entry per file, read the same way by toc = \"auto\" and assemble_folder(): title rows joined, a blank row passed over, a line break joined, table / figure / listing by title, the header's \"Table N\" line, then the file name; tokens filled, markup without its formatting; the outline entry the same; one entry a file, titles that change by page read from the first page", {
   d <- .tr_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   # a table: a line break in a row, a blank row, own / run / static / dynamic
@@ -185,4 +185,109 @@ test_that("FT-AS7006 [FR-AS250 FR-AS112]: one level-1 entry per file, read the s
   # assemble_folder(): the same labels, as plain text
   sp <- assemble_folder(d)
   expect_identical(sp$label[match(files, sp$file)], want)
+
+  # one entry a file: titles that change by page are read from the first page
+  d2 <- .tr_dir()
+  on.exit(unlink(d2, recursive = TRUE), add = TRUE)
+  pv <- data.frame(PARAM = rep(c("ALT", "AST"), each = 2), Value = c("1", "2", "3", "4"))
+  p1 <- file.path(d2, "t_14_4_1.rtf")
+  generate_rtfreport(rtf_document() |>
+                       rtf_tables(as_rtftables(pv, page_by = "PARAM", drop_cols = "PARAM"),
+                                  titles = list(c("Table 14.4.1", "Summary of {PARAM}"))),
+                     p1, overwrite = TRUE)
+  p2 <- .tr_doc(d2, "t_14_4_2", c("Table 14.4.2", "Other"))
+  expect_true(grepl("Summary of AST", paste(readLines(p1, warn = FALSE), collapse = "\n"), fixed = TRUE))
+  want_pv <- c("Table 14.4.1  Summary of ALT", "Table 14.4.2  Other")
+  expect_identical(.tr_entries(.tr_asm(c(p1, p2), "auto")), want_pv)
+  expect_identical(assemble_folder(d2)$label, want_pv)
+})
+
+# -- #1046: a running header's "Table N" line keeps the title written on it --
+
+# A file whose running header has the centred lines `lines` and no title rows
+.tr_hdr <- function(dir, name, lines) {
+  .tr_doc(dir, name, NULL,
+          header = c(list(c(l = "Study XYZ-001", r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")),
+                     lapply(lines, function(x) c(c = x))))
+}
+
+test_that("FT-AS7101 [FR-AS150]: a \"Table N\" line that carries the title keeps it over the centred lines below it (a population, \"Draft\"), for toc = \"auto\", a table with no label and assemble_folder()", {
+  d <- .tr_dir()
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  a <- .tr_hdr(d, "t_14_1_1", c("Table 14.1.1 Demographic Characteristics",
+                                "Safety Population"))
+  b <- .tr_hdr(d, "t_14_1_2", c("Table 14.1.2 Vital Signs", "Full Analysis Set",
+                                "Draft"))
+  c3 <- .tr_doc(d, "t_14_1_3", c("Table 14.1.3", "Demo"))
+  files <- c(a, b, c3)
+  want <- c("Table 14.1.1  Demographic Characteristics", "Table 14.1.2  Vital Signs",
+            "Table 14.1.3  Demo")
+  expect_identical(.tr_entries(.tr_asm(files, "auto")), want)
+  expect_identical(.tr_outline(.tr_asm(files, "auto")), want)
+  expect_identical(.tr_entries(.tr_asm(files, data.frame(file = files))), want)
+  sp <- assemble_folder(d)
+  expect_identical(sp$label[match(files, sp$file)], want)
+  expect_identical(sp$table[match(files, sp$file)], c("14.1.1", "14.1.2", "14.1.3"))
+})
+
+test_that("FT-AS7102 [FR-AS150]: a \"Table N\" line with the number only takes the longest other centred line, as before", {
+  d <- .tr_dir()
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  a <- .tr_hdr(d, "t_14_2_1", c("Table 14.2.1", "Vital Signs Summary by Visit",
+                                "Safety Population"))
+  b <- .tr_doc(d, "t_14_2_2", c("Table 14.2.2", "Other"))
+  files <- c(a, b)
+  want <- c("Table 14.2.1  Vital Signs Summary by Visit", "Table 14.2.2  Other")
+  expect_identical(.tr_entries(.tr_asm(files, "auto")), want)
+  expect_identical(.tr_entries(.tr_asm(files, data.frame(file = files))), want)
+  expect_identical(assemble_folder(d)$label, want)
+})
+
+test_that("FT-AS7103 [FR-AS150]: a <...> subtitle is never the title, with the number alone on its line or the title on it", {
+  d <- .tr_dir()
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  a <- .tr_hdr(d, "t_14_3_1", c("Table 14.3.1", "Lab Values",
+                                "<Safety Population of all treated subjects>"))
+  b <- .tr_hdr(d, "t_14_3_2", c("Table 14.3.2 Lab Shifts",
+                                "<Safety Population of all treated subjects>"))
+  files <- c(a, b)
+  want <- c("Table 14.3.1  Lab Values", "Table 14.3.2  Lab Shifts")
+  expect_identical(.tr_entries(.tr_asm(files, "auto")), want)
+  expect_identical(.tr_entries(.tr_asm(files, data.frame(file = files))), want)
+  expect_identical(assemble_folder(d)$label, want)
+})
+
+test_that("FT-AS7104 [FR-AS250]: a file whose titles change by page ({PARAM} with page_by) gets one entry, named from its first page's title, from its title rows or its running header", {
+  d <- .tr_dir()
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  pv <- data.frame(PARAM = rep(c("ALT", "AST", "BILI"), each = 2),
+                   Value = as.character(1:6))
+  pages <- as_rtftables(pv, page_by = "PARAM", drop_cols = "PARAM")
+  a <- file.path(d, "t_14_5_1.rtf")
+  generate_rtfreport(rtf_document() |>
+                       rtf_tables(pages, titles = list(c("Table 14.5.1", "Summary of {PARAM}"))),
+                     a, overwrite = TRUE)
+  b <- file.path(d, "t_14_5_2.rtf")
+  generate_rtfreport(rtf_document() |>
+                       rtf_section(header = rtf_header(list(c(c = "Table 14.5.2 Lab {PARAM}"),
+                                                            c(c = "Safety Population")))) |>
+                       rtf_tables(pages),
+                     b, overwrite = TRUE)
+  # the files do show a title per page
+  src_a <- paste(readLines(a, warn = FALSE), collapse = "\n")
+  src_b <- paste(readLines(b, warn = FALSE), collapse = "\n")
+  for (v in c("ALT", "AST", "BILI")) {
+    expect_true(grepl(paste("Summary of", v), src_a, fixed = TRUE))
+    expect_true(grepl(paste("Lab", v), src_b, fixed = TRUE))
+  }
+  files <- c(a, b)
+  want <- c("Table 14.5.1  Summary of ALT", "Table 14.5.2  Lab ALT")
+  x <- .tr_asm(files, "auto")
+  expect_length(grep("HYPERLINK", x), 2L)
+  expect_identical(.tr_entries(x), want)
+  expect_identical(.tr_entries(.tr_asm(files, data.frame(file = files))), want)
+  sp <- assemble_folder(d)
+  expect_identical(nrow(sp), 2L)
+  expect_identical(sp$label, want)
+  expect_identical(sp$pages, c(3L, 3L))
 })
