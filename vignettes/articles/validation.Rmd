@@ -32,9 +32,10 @@ it to the GitHub release as `quality-report-<tag>.pdf`. It holds:
 
 - the results: the requirements with a test and the tests that pass, overall
   and by area, and each skipped test with its reason;
-- the environments the tests ran on (seven in CI -- Linux, macOS and
-  Windows, several R versions, and the suggested packages at their minimum
-  versions -- and two runs on the maintainers' PC), each with its result;
+- the environments the tests ran on (six in CI -- Linux, macOS and
+  Windows, several R versions, among them the minimum environment, with R
+  and every dependency at its minimum version -- and two runs on the
+  maintainers' PC), each with its result;
 - the environments the package supports (the R version, the operating
   systems, the suggested packages) and, for each, the tested environment
   that stands for it, with what is not tested and the risk accepted;

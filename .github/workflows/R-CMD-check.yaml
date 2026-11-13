@@ -43,10 +43,6 @@ jobs:
           - {os: ubuntu-latest,  r: 'devel',     http-user-agent: 'release'}
           - {os: ubuntu-latest,  r: 'release'}
           - {os: ubuntu-latest,  r: 'oldrel-1'}
-          # the oldest R tested: a suggested package that cannot be installed
-          # on it (it, or what it needs, wants a newer R) is left out
-          # (`pkgs`), and the check lets a suggested package be missing
-          - {os: ubuntu-latest,  r: '4.2', pkgs: 'tern=?ignore-before-r=4.4.0 devEMF=?ignore-before-r=4.3.0', force-suggests: 'false'}
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
 
@@ -67,13 +63,11 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck ${{ matrix.config.pkgs }}
+          extra-packages: any::rcmdcheck
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
         id: check
-        env:
-          _R_CHECK_FORCE_SUGGESTS_: ${{ matrix.config.force-suggests || 'true' }}
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
@@ -91,21 +85,23 @@ jobs:
           name: env-${{ matrix.config.os }}-${{ matrix.config.r }}
           path: validation/env-out/
 
-  # The dependency minimums: every suggested package that DESCRIPTION gives a
-  # minimum installed at exactly that version (the others at the newest
-  # version this R allows).  The matrix above tests the newest versions; this
-  # job tests the lowest ones the package says it works with.  It runs on
-  # R 4.5, not on R's minimum (4.2, the matrix's R 4.2 job): tern's
-  # dependencies (car -> ... -> Deriv) need R >= 4.5.  Why each minimum:
-  # inst/validation/dependency-minimums.md.
-  minimums:
-    runs-on: ubuntu-latest
+  # The minimum environment: R at DESCRIPTION's `Depends` and every direct
+  # dependency at the minimum DESCRIPTION names (`pkg@<minimum>`); the
+  # suggested packages with no minimum, and every indirect dependency, come
+  # from CRAN as it was on PPM_DATE (a dated Posit Package Manager snapshot,
+  # the first with the newest minimum, tfrmt 0.3.0).  The recommended
+  # environment -- the latest R with the latest packages -- is the matrix's
+  # release jobs.  Why each minimum: inst/validation/dependency-minimums.md.
+  minimum-environment:
+    runs-on: ubuntu-24.04
 
-    name: ubuntu-latest (R 4.5, dependency minimums)
+    name: ubuntu-24.04 (R 4.2, minimum environment)
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
+      R_MIN: '4.2'
+      PPM_DATE: '2026-01-25'
 
     steps:
       - uses: actions/checkout@v4
@@ -114,17 +110,35 @@ jobs:
 
       - uses: r-lib/actions/setup-r@v2
         with:
-          r-version: '4.5'
-          use-public-rspm: true
+          r-version: ${{ env.R_MIN }}
+          use-public-rspm: false
 
-      # pak refs from DESCRIPTION's Suggests: `pkg@<minimum>` where it names a
-      # minimum, `any::pkg` where it does not
+      # CRAN as it was on PPM_DATE, as binaries for this Ubuntu (noble); pak
+      # reads the repos option, and the user agent makes PPM serve binaries
+      - name: CRAN as on PPM_DATE
+        shell: bash
+        run: |
+          cat >> "$(R RHOME)/etc/Rprofile.site" <<EOF
+          options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/noble/${PPM_DATE}"),
+                  HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(),
+                                          paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"])))
+          EOF
+          Rscript -e 'print(getOption("repos"))'
+
+      # pak refs from DESCRIPTION: `pkg@<minimum>` where it names a minimum,
+      # `any::pkg` where it does not; and R must be DESCRIPTION's minimum
       - name: The minimum versions, from DESCRIPTION
         id: pins
         shell: Rscript {0}
         run: |
-          s <- read.dcf("DESCRIPTION", fields = "Suggests")[1, 1]
-          s <- trimws(strsplit(s, ",")[[1L]])
+          d <- read.dcf("DESCRIPTION", fields = c("Depends", "Suggests"))[1, ]
+          r_min <- sub("^.*R [(]>= *([0-9.]+)[)].*$", "\\1", d[["Depends"]])
+          if (!identical(r_min, Sys.getenv("R_MIN")) ||
+              !identical(paste(R.version$major, sub("[.].*$", "", R.version$minor), sep = "."), r_min)) {
+            stop("R_MIN (", Sys.getenv("R_MIN"), ") and this R (", getRversion(),
+                 ") must be DESCRIPTION's Depends: R (>= ", r_min, ")")
+          }
+          s <- trimws(strsplit(d[["Suggests"]], ",")[[1L]])
           s <- s[nzchar(s)]
           pkg <- sub("\\s*[(].*$", "", s)
           min <- ifelse(grepl("[(]>=", s), sub("^.*[(]>=\\s*([^)]+)[)].*$", "\\1", s), NA)
@@ -139,9 +153,15 @@ jobs:
           extra-packages: any::rcmdcheck ${{ steps.pins.outputs.refs }}
           needs: check
 
-      - name: The versions installed
+      - name: The repository and the versions installed
         shell: Rscript {0}
         run: |
+          print(getOption("repos"))
+          # what pak resolved from: the lockfile setup-r-dependencies wrote
+          lock <- tryCatch(readLines(".github/pkg.lock", warn = FALSE), error = function(e) character())
+          urls <- regmatches(lock, regexpr("https?://[^\"]+", lock))
+          cat("Where the lockfile's packages come from:\n")
+          print(table(sub("^(https?://[^/]+/[^/]+/[^/]+/[^/]+/[^/]+).*$", "\\1", urls)))
           s <- read.dcf("DESCRIPTION", fields = "Suggests")[1, 1]
           s <- trimws(strsplit(s, ",")[[1L]])
           s <- s[nzchar(s)]
@@ -152,8 +172,6 @@ jobs:
 
       - uses: r-lib/actions/check-r-package@v2
         id: check
-        env:
-          _R_CHECK_FORCE_SUGGESTS_: 'true'
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
@@ -163,19 +181,19 @@ jobs:
         if: always() && (github.event_name == 'release' || github.event_name == 'workflow_dispatch')
         shell: bash
         run: |
-          Rscript validation/env.R "ubuntu-latest (R 4.5, dependency minimums)" ci "${{ steps.check.outcome }}" check
+          Rscript validation/env.R "ubuntu-24.04 (R ${R_MIN}, minimum environment)" ci "${{ steps.check.outcome }}" check
 
       - uses: actions/upload-artifact@v4
         if: always() && (github.event_name == 'release' || github.event_name == 'workflow_dispatch')
         with:
-          name: env-ubuntu-latest-4.5-minimums
+          name: env-minimum-environment
           path: validation/env-out/
 
   # The Quality Report: every environment, the Traceability Matrix, the
   # deviations; one PDF and its attachments.  At a release they are attached
   # to it; by hand they are this run's artifact (and the report a DRAFT).
   quality-report:
-    needs: [R-CMD-check, minimums]
+    needs: [R-CMD-check, minimum-environment]
     if: always() && (github.event_name == 'release' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:

@@ -107,24 +107,26 @@ Report states the figure of the release.
 
 ### Environments: tested, and supported
 
-The package runs the tests and R CMD check on seven CI environments: Ubuntu
-with R devel, release, oldrel-1 and 4.2, macOS with release R, Windows
-with release R, and Ubuntu with R 4.5 and the suggested packages at their
-minimum versions. Before a release, the maintainers also run the tests on
-their PC with two R versions. The lowest R is the one `DESCRIPTION` names,
-so a newer R feature fails there. R devel shows a change in R that will
-break the package.
+The package runs the tests and R CMD check on six CI environments: Ubuntu
+with R devel, release and oldrel-1, macOS with release R, Windows with
+release R, and the minimum environment. Before a release, the maintainers
+also run the tests on their PC with two R versions. R devel shows a change
+in R that will break the package.
 
-The suggested packages are tested at two points: at the minimum version
-`DESCRIPTION` names for each, in that one CI job, and at the latest
-versions, in the other jobs and on the maintainers' PC. Each minimum is the
-first version with what the package uses, and
-`inst/validation/dependency-minimums.md` says why.
+Two environments stand for the two ends of what the package supports. The
+**minimum environment** is Ubuntu with the R version `DESCRIPTION` names,
+every dependency at the minimum version `DESCRIPTION` names for it, and the
+rest from CRAN as it was on one date (a dated Posit Package Manager
+snapshot). A feature of R or of a dependency newer than its minimum fails
+there. The **recommended environment** is the latest R with the latest
+packages: the release jobs. Each minimum is the first version with what the
+package uses, and `inst/validation/dependency-minimums.md` says why, and
+which date the snapshot is.
 
 The Quality Plan names what is not tested, and accepts the risk:
 
 - a system without the suggested packages (most jobs install them);
-- versions of the suggested packages between the minimum and the latest;
+- versions of R and of the suggested packages between the minimum and the latest;
 - other operating system versions, other architectures and other locales;
 - another RTF reader. The tests compare RTF text. A person opens the
   reference files in Word, and no other reader is checked.
