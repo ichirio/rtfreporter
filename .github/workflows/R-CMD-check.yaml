@@ -118,7 +118,7 @@ jobs:
       - name: CRAN as on PPM_DATE
         shell: bash
         run: |
-          cat >> "$(R RHOME)/etc/Rprofile.site" <<EOF
+          sudo tee -a "$(R RHOME)/etc/Rprofile.site" > /dev/null <<EOF
           options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/noble/${PPM_DATE}"),
                   HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(),
                                           paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"])))
