@@ -161,9 +161,10 @@
 }
 
 # Table number and title from a set of centred title cells: the first
-# "Table N" cell gives the number; the title is the longest cell that is
-# neither a "Table N" line nor a "<...>" subtitle, else the text after the
-# number on the "Table N" line.
+# "Table N" cell gives the number; the title is the text after the number on
+# that line when there is any, whatever other centred cells follow (a
+# population line, "Draft"); else the longest cell that is neither a
+# "Table N" line nor a "<...>" subtitle (#1046).
 .rtf_cells_table_title <- function(cells) {
   tabnum <- NA_character_
   title_inline <- ""
@@ -175,12 +176,12 @@
       break
     }
   }
+  if (!is.na(tabnum) && nzchar(title_inline)) {
+    return(list(table = tabnum, title = title_inline))
+  }
   cand <- cells[!grepl("^Table\\s", cells) & !grepl("^<.*>$", cells) &
                   nchar(cells) > 0L]
   title <- if (length(cand)) cand[which.max(nchar(cand))] else NA_character_
-  if (!is.na(tabnum) && nzchar(title_inline) && is.na(title)) {
-    title <- title_inline
-  }
   list(table = tabnum, title = title)
 }
 
@@ -439,8 +440,11 @@
 #' it -- its title rows joined with two spaces, a line break inside a row
 #' too, as `"Table 14.1.1  Safety Population"`; a figure or a listing is
 #' labelled by its title as a table is; a file with no title rows takes its
-#' running header's `"Table N"` line, and a file with neither, its file
-#' name without `.rtf`), `level` (the entry's indent, a whole
+#' running header's `"Table N"` line, the title written after the number
+#' winning over the centred lines below it, and a file with neither, its file
+#' name without `.rtf`; one row a file, so a file whose titles change from
+#' page to page with `page_by` (`"Summary of {PARAM}"`) is labelled by its
+#' first page's title), `level` (the entry's indent, a whole
 #' number from 1 to 3, default 2) and `pages` (informational).
 #'
 #' @param dir Directory of `.rtf` files to assemble: one folder path.  A

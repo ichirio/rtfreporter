@@ -782,8 +782,15 @@
 #'     `"Demographics"` give `"Table 1  Demographics"`); a line break inside
 #'     a row (`"\n"`) is joined the same way, never printed as `\line`.  A
 #'     table, a figure and a listing are each labelled by their title; a
-#'     file with no title rows takes its running header's `"Table N"` line,
-#'     and a file with neither, its file name without `.rtf`.  Its tokens
+#'     file with no title rows takes its running header's `"Table N"` line
+#'     (`"Table 14.1.1  Demographic Characteristics"`: the title written
+#'     after the number on that line, whatever centred lines follow it, a
+#'     population line for one; a line with the number only takes the
+#'     longest other centred line that is not a `<...>` subtitle), and a
+#'     file with neither, its file name without `.rtf`.  A file gets one
+#'     entry however many pages it has: a file whose titles change from
+#'     page to page (`"Summary of {PARAM}"` with `page_by`) is labelled by
+#'     its first page's title.  Its tokens
 #'     are filled (`{STUDY}`, `{PAGE}`), except that a dynamic page number
 #'     (`{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`) and the `{BOOK_PAGE}` slot are
 #'     left out, and markup keeps its text without its formatting.

@@ -157,8 +157,15 @@ joined into one entry with two spaces between them (\code{"Table 1"} and
 \code{"Demographics"} give \code{"Table 1  Demographics"}); a line break inside
 a row (\code{"\\n"}) is joined the same way, never printed as \verb{\\line}.  A
 table, a figure and a listing are each labelled by their title; a
-file with no title rows takes its running header's \code{"Table N"} line,
-and a file with neither, its file name without \code{.rtf}.  Its tokens
+file with no title rows takes its running header's \code{"Table N"} line
+(\code{"Table 14.1.1  Demographic Characteristics"}: the title written
+after the number on that line, whatever centred lines follow it, a
+population line for one; a line with the number only takes the
+longest other centred line that is not a \verb{<...>} subtitle), and a
+file with neither, its file name without \code{.rtf}.  A file gets one
+entry however many pages it has: a file whose titles change from
+page to page (\code{"Summary of {PARAM}"} with \code{page_by}) is labelled by
+its first page's title.  Its tokens
 are filled (\code{{STUDY}}, \code{{PAGE}}), except that a dynamic page number
 (\code{{AUTO_PAGE}}, \code{{AUTO_TOTAL_PAGES}}) and the \code{{BOOK_PAGE}} slot are
 left out, and markup keeps its text without its formatting.

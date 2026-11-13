@@ -80,8 +80,11 @@ entry text: the file's title, read as \code{assemble_rtf(toc = "auto")} reads
 it -- its title rows joined with two spaces, a line break inside a row
 too, as \code{"Table 14.1.1  Safety Population"}; a figure or a listing is
 labelled by its title as a table is; a file with no title rows takes its
-running header's \code{"Table N"} line, and a file with neither, its file
-name without \code{.rtf}), \code{level} (the entry's indent, a whole
+running header's \code{"Table N"} line, the title written after the number
+winning over the centred lines below it, and a file with neither, its file
+name without \code{.rtf}; one row a file, so a file whose titles change from
+page to page with \code{page_by} (\code{"Summary of {PARAM}"}) is labelled by its
+first page's title), \code{level} (the entry's indent, a whole
 number from 1 to 3, default 2) and \code{pages} (informational).
 }
 \examples{
