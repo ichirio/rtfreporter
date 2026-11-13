@@ -18,7 +18,11 @@ plan_blanks(.plan, where = NULL, first = NULL, last = NULL, counted = NULL)
 \item{\code{"none"}}{none: a listing's records follow each other with no
 blank row between them (\code{blank_row = FALSE}).}
 \item{positions}{an integer vector, a blank row after each given row;
-\code{0} before the first, \code{-1} after the last.  A fraction or a
+\code{0} before the first, \code{-1} after the last.  The positions count
+rows of the whole body, not of each page: a blank goes after that
+body row on the page it lands on, once, and one after a row that
+ends a page stays at that page's foot (not carried to the next).
+A fraction or a
 position past the body's last row stops at \code{\link[=plan_apply]{plan_apply()}}, naming
 the positions, as \code{as_rtftables(blank_rows = )} does.}
 \item{a rule}{a \code{\link[=blank_rows_by_change]{blank_rows_by_change()}} or \code{\link[=blank_rows_by_rule]{blank_rows_by_rule()}}

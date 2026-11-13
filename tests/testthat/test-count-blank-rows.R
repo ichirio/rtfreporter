@@ -46,11 +46,14 @@ test_that("count_blank_rows counts an existing rtf_blank_rows attribute", {
   for (p in pages) expect_lte(.total(p), 6L)
 })
 
-test_that("a leading blank is suppressed at the top of a page", {
-  # Position 0 (before first row) must never appear as a page's first row.
+test_that("position 0 is the top of page 1 only; no later page opens with a blank", {
+  # Position 0 is before the body's first row (#1028): it takes a row of
+  # page 1 and opens no other page.
   pages <- as_rtftables(.df9(), split = "group_force", max_rows = 4,
                         blank_rows = c(0L, 3L), count_blank_rows = TRUE)
-  for (p in pages) expect_false(0L %in% p$blank_rows)
+  expect_true(0L %in% pages[[1L]]$blank_rows)
+  for (p in pages[-1L]) expect_false(0L %in% p$blank_rows)
+  for (p in pages) expect_lte(.total(p), 4L)
 })
 
 test_that("the marker column never leaks into the rendered table", {
@@ -118,10 +121,14 @@ test_that("the page-level settings still own the edges", {
 test_that("an explicit position is honoured wherever it lands", {
   d <- data.frame(G = rep(c("A", "B", "C"), each = 3),
                   N = as.character(1:9), stringsAsFactors = FALSE)
-  # Per page, "after row 3" IS the last row -- a direct request, not a
-  # separator, so it stays.
+  # "After body row 3" is the last row of page 1 -- a direct request, not a
+  # separator, so it stays there; it is the whole body's row 3, so the other
+  # pages have none (#1028).
   p <- as_rtftables(d, split = "group_safe", max_rows = 3, group_col = "G",
                     blank_rows = 3)
+  expect_identical(lapply(p, `[[`, "blank_rows"), list(3L, NULL, NULL))
+  p <- as_rtftables(d, split = "group_safe", max_rows = 3, group_col = "G",
+                    blank_rows = c(3, 6, 9))
   for (pg in p) expect_identical(pg$blank_rows, 3L)
 })
 
@@ -130,7 +137,8 @@ test_that("a mixed spec trims only the separator half", {
                   N = as.character(1:9), stringsAsFactors = FALSE)
   p <- as_rtftables(d, split = "group_safe", max_rows = 3, group_col = "G",
                     blank_rows = list("between_groups", 1))
-  for (pg in p) expect_identical(pg$blank_rows, 1L)
+  # body row 1 is on page 1 only (#1028)
+  expect_identical(lapply(p, `[[`, "blank_rows"), list(1L, NULL, NULL))
 })
 
 test_that(".split_blank_spec partitions the two kinds", {

@@ -1053,11 +1053,16 @@ test_that("FT-TB778 [FR-TB607 FR-PL187]: a blank_rows position past the last row
   # plan_blanks() says which verb declared it
   expect_error(plan_apply(plan_blanks(table_plan(grp), where = 7)),
                "declared by:\\s+plan_blanks\\(where = 7\\)")
-  # checked on the whole body: a position within it, past a shorter page,
-  # puts no blank on that page
+  # checked on the whole body, and counted on it (#1028): a position is after
+  # that body row, on the page it lands on, once
   # (two pages of three rows each here)
   pg <- as_rtftables(grp, blank_rows = 4, max_rows = 4, split = "group_force")
-  expect_identical(lapply(pg, `[[`, "blank_rows"), list(NULL, NULL))
+  expect_identical(lapply(pg, `[[`, "blank_rows"), list(NULL, 1L))
   pg <- as_rtftables(grp, blank_rows = 2, max_rows = 4, split = "group_force")
-  expect_identical(lapply(pg, `[[`, "blank_rows"), list(2L, 2L))
+  expect_identical(lapply(pg, `[[`, "blank_rows"), list(2L, NULL))
+  # plan_blanks(where = ) the same: after body row 4, the first row of page 2
+  pg <- plan_apply(table_plan(grp) |>
+                     plan_paginate_rows(max_rows = 4, split = "group_force") |>
+                     plan_blanks(where = 4))
+  expect_identical(lapply(pg, `[[`, "blank_rows"), list(NULL, 1L))
 })

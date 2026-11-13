@@ -315,8 +315,17 @@ given data-row index; \code{0} = before the first row, \code{-1} = after the las
 row (e.g. \code{c(0, 5, -1)}).  A position is a whole number in
 \verb{-1..nrow} of the whole body (after \code{stub}, before pagination): a
 fraction, \code{NA}, or a position past the body's last row (or below
-\code{-1}) stops, naming the positions.  On a page shorter than \code{k}, a
-position \code{k} within the body puts no blank on that page.}
+\code{-1}) stops, naming the positions.  The positions count rows of
+the whole body, not of each page: \code{c(3, 12)} puts one blank after
+body row 3 and one after body row 12, once each, on the pages those
+rows land on, and a page that no position falls on gets none.  \code{0}
+is before the body's first row (top of page 1) and \code{-1} after its
+last (foot of the last page).  A blank after a row that ends a page
+stays at the foot of that page; it is not carried to the top of the
+next one.  Under \code{count_blank_rows = TRUE} the blank takes a row of
+the page, so where its page has no room for it (its row fills the
+page to \code{max_rows}, or \code{0} does not fit beside the first group) it
+is dropped, not carried over.}
 \item{\code{"between_groups"}}{a blank at every group transition on \code{group_col},
 using this call's \code{group_by} detection (auto / indent / value / filled).}
 \item{a \code{\link[=blank_rows_by_change]{blank_rows_by_change()}} object}{insert a blank whenever the group
@@ -356,8 +365,12 @@ groups, so the printed page can be taller than \code{max_rows}.}
 }
 Under \code{TRUE} the blank positions resolved from \code{blank_rows} (and from any
 \code{rtf_blank_rows} attribute already on the input) are materialised before
-the split and re-attached per page afterwards, with a leading blank
-suppressed at the top of each page.}
+the split and re-attached per page afterwards.  A separator blank is
+never left at a page's top or foot; an integer position is the whole
+body's, so \code{0} takes a row at the top of page 1 only, and a position
+that the cut leaves at the top of a later page (it follows the previous
+page's last row) is dropped rather than carried over; no page is made
+of blank rows alone.}
 
 \item{align_count_pct}{The cell alignment to apply before pagination.
 \describe{
