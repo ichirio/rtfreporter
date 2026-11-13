@@ -117,7 +117,8 @@
 #   What is carried: rtables / tern                         | FR-TB579    | FT-TB738 to FT-TB742
 #   What is carried: flextable                              | FR-TB580    | FT-TB743 to FT-TB746
 #   What is carried: huxtable                               | FR-TB581    | FT-TB747 to FT-TB750
-#   What is carried: a gt with several stub columns         | FR-TB582    | FT-TB751, FT-TB752
+#   What is carried: a gt with several stub columns         | FR-TB582    | FT-TB751, FT-TB752,
+#     each headed by the stubhead, not its name             |             | FT-TB7501, FT-TB7502
 #   flextable caption set with as_paragraph()               | FR-TB618    | FT-TB980
 #   flextable line break, written as \line                  | FR-TB619    | FT-TB981
 #   no header rows: a blank header (flextable, huxtable)    | FR-TB620    | FT-TB982
