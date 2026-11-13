@@ -221,7 +221,11 @@ jobs:
       NOT_CRAN: true
 
     steps:
+      # the whole history: trace.R compares each local record's commit with
+      # this one (a record committed by its own PR is one commit behind)
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/download-artifact@v4
         with:

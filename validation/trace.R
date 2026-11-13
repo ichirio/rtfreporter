@@ -302,8 +302,22 @@ env_ok <- env_complete && !length(env_failing) && !length(env_stale)
 this_commit <- tryCatch(system2("git", c("rev-parse", "--short", "HEAD"), stdout = TRUE),
                         error = function(e) "unknown")
 short_sha <- function(x) ifelse(is.na(x) | !nzchar(x), "--", substr(x, 1L, 7L))
+# A record is of this code when it was made at this commit, or when nothing
+# the tests run changed between its commit and this one: only validation/
+# (the records themselves, committed by their own PR, and the report's
+# scripts) or .github/ (CI).  Unknown when git cannot tell (no history): then
+# it counts as another commit.
+same_code <- function(sha) {
+  if (is.na(sha) || !nzchar(sha)) return(FALSE)
+  if (identical(substr(sha, 1L, 7L), substr(this_commit, 1L, 7L))) return(TRUE)
+  changed <- suppressWarnings(tryCatch(
+    system2("git", c("diff", "--name-only", sha, "HEAD"), stdout = TRUE, stderr = FALSE),
+    error = function(e) NULL))
+  if (is.null(changed) || !is.null(attr(changed, "status"))) return(FALSE)
+  all(startsWith(changed, "validation/") | startsWith(changed, ".github/"))
+}
 env_other_commit <- if (is.null(envs) || is.null(envs$commit)) character() else
-  envs$environment[short_sha(envs$commit) != substr(this_commit, 1L, 7L)]
+  envs$environment[!vapply(envs$commit, same_code, logical(1L))]
 env_lines <- if (is.null(envs)) {
   "No environment's record was gathered in this run (the CI run of the release gathers them)."
 } else c(
