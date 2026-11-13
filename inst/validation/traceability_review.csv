@@ -70,6 +70,7 @@
 "FT-PL041","FR-AR129","part","expect_true(""All"" %in% names(t)) | expect_identical(unname(unlist(tok$values[tok$token == ""{n}""])), as.numeric(nrow(adsl)))","yes"
 "FT-AR044","FR-AR130","part","expect_equal(normalize_ard(stripped), normalize_ard(ard))","yes"
 "FT-AR3016","FR-AR130","part","expect_false(any(vapply(plain, is.list, logical(1)))) | expect_identical(class(plain), ""data.frame"") | expect_identical(normalize_ard(plain)[cols], from_cards[cols])","yes"
+"FT-AR7001","FR-AR130","asserts","expect_false(res$cards) | expect_identical(class(plain), ""data.frame"") | expect_false(any(vapply(plain, is.list, logical(1)))) | expect_identical(res$out, normalize_ard(plain)) | expect_identical(res$out$stat, c(2, 21.5, 2, 30.5))","yes"
 "FT-AR029","FR-AR131","part","expect_identical(as.character(with$soc)[1], ""Any TEAE"") | expect_setequal(names(with)[-1], c(...))","yes"
 "FT-AR040","FR-AR131","part","expect_true(all(!is.na(soc$AESOC)))","yes"
 "FT-AR043","FR-AR131","part","expect_true(any(d$AESOC == ""Any TEAE"", na.rm = TRUE))","yes"

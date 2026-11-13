@@ -372,6 +372,67 @@ test_that("FT-AR3016 [FR-AR130]: a plain data frame is read like the cards ARD, 
   expect_identical(normalize_ard(plain)[cols], from_cards[cols])
 })
 
+test_that("FT-AR7001 [FR-AR130]: a plain data frame is read in an R where cards cannot be loaded", {
+  skip_on_cran()
+  rscript <- file.path(R.home("bin"),
+                       if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
+  if (!file.exists(rscript)) skip("no Rscript to start a child R")
+  pkg <- find.package("rtfreporter")
+  if (!file.exists(file.path(pkg, "Meta", "package.rds"))) {
+    skip("rtfreporter is not installed (tests run from source): nothing to give a child R")
+  }
+  if (nzchar(system.file(package = "cards", lib.loc = c(.Library, .Library.site)))) {
+    skip("cards is in R's own library: a child R cannot be kept from it")
+  }
+  # the child's library holds only rtfreporter; its Imports are base packages
+  tmp <- tempfile("ft-ar7001-")
+  lib <- file.path(tmp, "lib")
+  dir.create(lib, recursive = TRUE)
+  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+  expect_true(file.copy(pkg, lib, recursive = TRUE))
+
+  plain <- data.frame(
+    group1 = "TRT", group1_level = c("A", "A", "B", "B"),
+    variable = "AGE", variable_level = NA_character_, context = "summary",
+    stat_name = c("N", "mean", "N", "mean"),
+    stat_label = c("N", "Mean", "N", "Mean"),
+    stat = c(2, 21.5, 2, 30.5), stat_fmt = c("2", "21.5", "2", "30.5"),
+    stringsAsFactors = FALSE)
+  # the input: a plain data frame with the ARD columns, no list column, no cards class
+  expect_true(all(c("context", "stat_name", "stat") %in% names(plain)))
+  expect_false(any(vapply(plain, is.list, logical(1))))
+  expect_identical(class(plain), "data.frame")
+
+  input <- file.path(tmp, "input.rds")
+  output <- file.path(tmp, "output.rds")
+  script <- file.path(tmp, "child.R")
+  saveRDS(plain, input)
+  writeLines(c(
+    "args <- commandArgs(trailingOnly = TRUE)",
+    ".libPaths(args[1])",
+    "cards <- requireNamespace(\"cards\", quietly = TRUE)",
+    "out <- rtfreporter::normalize_ard(readRDS(args[2]))",
+    "saveRDS(list(cards = cards, from = find.package(\"rtfreporter\"), out = out), args[3])"),
+    script)
+  log <- suppressWarnings(system2(
+    rscript, c("--vanilla", shQuote(script), shQuote(lib), shQuote(input), shQuote(output)),
+    stdout = TRUE, stderr = TRUE))
+  expect_true(file.exists(output), info = paste(log, collapse = "\n"))
+  res <- readRDS(output)
+
+  # the child could not load cards, and read rtfreporter from its own library
+  expect_false(res$cards)
+  expect_identical(normalizePath(dirname(res$from)), normalizePath(lib))
+  # the result: the same as in this R, and the expected values
+  expect_identical(res$out, normalize_ard(plain))
+  expect_identical(res$out$TRT, c("A", "A", "B", "B"))
+  expect_identical(res$out$stat_name, c("N", "mean", "N", "mean"))
+  expect_identical(res$out$stat, c(2, 21.5, 2, 30.5))
+  expect_identical(res$out$stat_fmt, c("2", "21.5", "2", "30.5"))
+  expect_identical(unique(res$out$.kind), "continuous")
+  expect_false(any(res$out$.overall))
+})
+
 test_that("FT-AR3017 [FR-AR131]: hierarchical ARD with a separate overall block: arm key filled", {
   skip_if_not_installed("cards")
   adsl <- data.frame(USUBJID = paste0("S", 1:6),
