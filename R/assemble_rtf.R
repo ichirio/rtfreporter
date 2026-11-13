@@ -198,26 +198,6 @@
          character(1L), USE.NAMES = FALSE)
 }
 
-# `toc_page_numbering` was removed (#1049): every page of an assembled file is
-# numbered in one sequence from the first page.  `dots` are the names of what
-# the caller's `...` got (`...names()`); that argument stops with what to do
-# instead, and anything else is refused as an unused argument.
-.check_assemble_dots <- function(dots, fn) {
-  if (!length(dots)) return(invisible(NULL))
-  dots[is.na(dots)] <- ""
-  if ("toc_page_numbering" %in% dots) {
-    stop(sprintf("`%s()`: `toc_page_numbering` was removed.  ", fn),
-         "The pages of an assembled file are numbered in one sequence from ",
-         "the first page (a cover and the table of contents included), and ",
-         "the total counts every page.\n  Drop the `toc_page_numbering` ",
-         "argument.", call. = FALSE)
-  }
-  bad <- ifelse(nzchar(dots), sprintf("`%s`", dots), "an unnamed value")
-  stop(sprintf("`%s()`: unused argument%s %s.", fn,
-               if (length(bad) > 1L) "s" else "", paste(bad, collapse = ", ")),
-       call. = FALSE)
-}
-
 # RTF-escape plain text (no markup, no token replacement).
 .toc_escape <- function(x) {
   if (length(x) == 0L || is.na(x)) return("")
@@ -902,9 +882,6 @@
 #'   `hanging` that is not `TRUE` / `FALSE` / a positive whole number is an
 #'   error.
 #'
-#' @param ... Not used: an argument given here is an error.  The removed
-#'   `toc_page_numbering` stops with a message saying to drop it: the pages
-#'   are numbered as **Page numbering** above says.
 #'
 #' @return Invisibly returns `output_file`.
 #'
@@ -956,9 +933,7 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
                           toc_leader         = c("dot", "none"),
                           bookmark_prefix    = "tfl_",
                           book_page          = NULL,
-                          toc_style          = getOption("rtfreporter.toc_style"),
-                          ...) {
-  .check_assemble_dots(...names(), "assemble_rtf")
+                          toc_style          = getOption("rtfreporter.toc_style")) {
   toc_leader <- match.arg(toc_leader)
   .check_assemble_args(output_file, overwrite, cover, toc_title,
                        bookmark_prefix, book_page)

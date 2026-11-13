@@ -274,7 +274,7 @@ test_that("the removed toc_page_numbering stops, whatever its value (#1049)", {
   for (pn in list("roman", "decimal", "none", NULL)) {
     expect_error(assemble_rtf(c(f1, f2), out, toc = c("A", "B"),
                               toc_page_numbering = pn, overwrite = TRUE),
-                 "`toc_page_numbering` was removed", fixed = TRUE)
+                 "unused argument (toc_page_numbering", fixed = TRUE)
   }
   expect_false(file.exists(out))
 })

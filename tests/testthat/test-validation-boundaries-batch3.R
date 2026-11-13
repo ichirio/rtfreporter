@@ -56,7 +56,7 @@
 #  toc_title      | NA / length 2 / length 0 / a number / NULL | | error "`toc_title` must be a single string" | FR-AS244
 #  toc_leader     | "none" / prefix "d"   |                    | no leader / a dot leader         | FR-AS128
 #  toc_leader     | unknown / NA          |                    | error (match.arg)                | FR-AS129
-#  toc_page_numbering | "roman" / "none" (removed) |           | error "`toc_page_numbering` was removed" | FR-AS271
+#  toc_page_numbering | "roman" / "none" (removed) |           | error "unused argument"          | FR-AS271
 #  bookmark_prefix | "" / "studyX_"       |                    | the bookmark name                | FR-AS133
 #  bookmark_prefix | NA / a space / length 2 / a number / non-ASCII | | error "`bookmark_prefix` must be a single string of letters" | FR-AS244
 #  book_page      | valid                 | "Page {AUTO_PAGE}" | written                          | FR-AS138
@@ -75,7 +75,7 @@
 #  spec_file      | ".txt" / no extension / "" / NA / a number | | error "`spec_file` must end in .xlsx or .csv." | FR-AS154
 #  recursive      | TRUE / FALSE          |                    | three rows / two rows            | FR-AS155
 #  toc_title      | default               |                    | no page-number command (\pgn...) | FR-AS157
-#  toc_page_numbering | "decimal" / "roman", with or without output_file (removed) | | error "`toc_page_numbering` was removed" | FR-AS271
+#  toc_page_numbering | "decimal" with output_file (removed) |  | error "unused argument"          | FR-AS271
 #  ...            | cover / an unknown argument |              | passed on / error "unused argument" | FR-AS158
 #  toc levels     | the table's level 0 / 4 | spec$level       | error "`level` must be a whole number" | FR-AS238
 #  (dir NA / two folders / a number, recursive NA / "yes", spec_file of two
@@ -486,9 +486,9 @@ test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS
     C("toc_leader", "prefix", "d", "ok:tldot", more = list(toc = "auto")),
     E("toc_leader", "unknown", "bogus", ma),
     E("toc_leader", "NA", NA, mn),
-    E("toc_page_numbering", "removed: roman", "roman", "^`assemble_rtf\\(\\)`: `toc_page_numbering` was removed",
+    E("toc_page_numbering", "removed: roman", "roman", "unused argument \\(toc_page_numbering",
       more = list(toc = "auto")),
-    E("toc_page_numbering", "removed: none", "none", "^`assemble_rtf\\(\\)`: `toc_page_numbering` was removed",
+    E("toc_page_numbering", "removed: none", "none", "unused argument \\(toc_page_numbering",
       more = list(toc = "auto")),
     C("bookmark_prefix", "empty string", "", "ok:bkmkstart t14_1_1\\}", more = list(toc = "auto")),
     C("bookmark_prefix", "valid", "studyX_", "ok:bkmkstart studyX_t14_2_1", more = list(toc = "auto")),
@@ -558,10 +558,8 @@ test_that("FT-AS141 [FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS156 FR-AS
     C("toc_title", "default", "Table of Contents", "no:\\\\pgn",
       more = list(output_file = tempfile(fileext = ".rtf"))),
     E("toc_page_numbering", "removed, with output_file", "decimal",
-      "^`assemble_folder\\(\\)`: `toc_page_numbering` was removed",
+      "unused argument \\(toc_page_numbering",
       more = list(output_file = tempfile(fileext = ".rtf"))),
-    E("toc_page_numbering", "removed, without output_file", "roman",
-      "^`assemble_folder\\(\\)`: `toc_page_numbering` was removed"),
     C("cover", "passed on (...)", list(title = "STUDY-EB3"), "ok:STUDY-EB3",
       more = list(output_file = tempfile(fileext = ".rtf"))),
     E("bogus", "an unknown argument (...)", 1, "unused argument",

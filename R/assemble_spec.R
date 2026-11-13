@@ -467,8 +467,6 @@
 #'   The assembled file's pages are numbered as [assemble_rtf()] numbers them
 #'   (its **Page numbering**): one Arabic sequence from the first page, a
 #'   cover and the table of contents included, and the total is all pages.
-#'   `toc_page_numbering`, which was removed, is an error, with or without
-#'   an `output_file`.
 #'
 #' @return Without `output_file`, the table of contents.  With one,
 #'   invisibly, a list with `output` (the assembled file) and `spec` (the
@@ -500,8 +498,6 @@ assemble_folder <- function(dir, output_file = NULL, spec_file = NULL,
                             toc_title = "Table of Contents",
                             toc_leader = "dot",
                             overwrite = FALSE, ...) {
-  .check_assemble_dots(intersect(...names(), "toc_page_numbering"),
-                       "assemble_folder")
   .check_folder_args(dir, spec_file, recursive)
   spec <- .assemble_spec(dir = dir, recursive = recursive)
   # one file is a table of contents, not a book (#862): stop before the

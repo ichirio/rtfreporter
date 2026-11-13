@@ -39,9 +39,7 @@ before any file is read or written.}
 \code{\link[=assemble_rtf]{assemble_rtf()}} (\code{cover}, \code{book_page}, \code{toc_style} ... go in \code{...}).
 The assembled file's pages are numbered as \code{\link[=assemble_rtf]{assemble_rtf()}} numbers them
 (its \strong{Page numbering}): one Arabic sequence from the first page, a
-cover and the table of contents included, and the total is all pages.
-\code{toc_page_numbering}, which was removed, is an error, with or without
-an \code{output_file}.}
+cover and the table of contents included, and the total is all pages.}
 }
 \value{
 Without \code{output_file}, the table of contents.  With one,

@@ -14,8 +14,7 @@ assemble_rtf(
   toc_leader = c("dot", "none"),
   bookmark_prefix = "tfl_",
   book_page = NULL,
-  toc_style = getOption("rtfreporter.toc_style"),
-  ...
+  toc_style = getOption("rtfreporter.toc_style")
 )
 }
 \arguments{
@@ -95,10 +94,6 @@ the document's (that of the first input file).  Another key, a size that
 is not a positive number, a \code{bold} that is not \code{TRUE} / \code{FALSE} or a
 \code{hanging} that is not \code{TRUE} / \code{FALSE} / a positive whole number is an
 error.}
-
-\item{...}{Not used: an argument given here is an error.  The removed
-\code{toc_page_numbering} stops with a message saying to drop it: the pages
-are numbered as \strong{Page numbering} above says.}
 }
 \value{
 Invisibly returns \code{output_file}.

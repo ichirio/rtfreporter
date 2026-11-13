@@ -166,7 +166,7 @@ test_that("FT-AS7203 [FR-AS270]: without a cover the table of contents is page 1
   check(out_folder)
 })
 
-test_that("FT-AS7204 [FR-AS271]: toc_page_numbering, whatever its value, stops assemble_rtf() and assemble_folder() with a message saying it was removed and to drop it; nothing is written", {
+test_that("FT-AS7204 [FR-AS271]: toc_page_numbering, whatever its value, is an unused argument of assemble_rtf(), and of assemble_folder() with an output_file; nothing is written", {
   d <- tempfile("ps")
   o <- tempfile("ps-out")
   dir.create(d)
@@ -174,25 +174,12 @@ test_that("FT-AS7204 [FR-AS271]: toc_page_numbering, whatever its value, stops a
   on.exit(unlink(c(d, o), recursive = TRUE), add = TRUE)
   f <- .ps_inputs(d)
   out <- file.path(o, "book.rtf")
-  sf <- file.path(o, "spec.csv")
-  msg <- function(fn) {
-    paste0("`", fn, "()`: `toc_page_numbering` was removed.  The pages of an ",
-           "assembled file are numbered in one sequence from the first page (a ",
-           "cover and the table of contents included), and the total counts ",
-           "every page.\n  Drop the `toc_page_numbering` argument.")
-  }
   for (pn in list("roman", "decimal", "none", NA)) {
     expect_error(assemble_rtf(f, out, toc = "auto", toc_page_numbering = pn),
-                 msg("assemble_rtf"), fixed = TRUE)
+                 "unused argument (toc_page_numbering", fixed = TRUE)
     expect_error(assemble_folder(d, out, toc_page_numbering = pn),
-                 msg("assemble_folder"), fixed = TRUE)
-    # without an output_file too, before the spec file is written
-    expect_error(assemble_folder(d, spec_file = sf, toc_page_numbering = pn),
-                 msg("assemble_folder"), fixed = TRUE)
+                 "unused argument (toc_page_numbering", fixed = TRUE)
   }
   expect_false(file.exists(out))
-  expect_false(file.exists(sf))
-  # any other argument assemble_rtf() does not have is refused as well
-  expect_error(assemble_rtf(f, out, toc = "auto", toc_numbering = "roman"),
-               "`assemble_rtf()`: unused argument `toc_numbering`.", fixed = TRUE)
+  expect_identical(list.files(o), character(0))
 })
