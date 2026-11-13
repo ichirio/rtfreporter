@@ -678,7 +678,11 @@ with more than one stub column -- e.g. a tfrmt
 \code{row_grp_plan(label_loc = element_row_grp_loc(location = "column"))} layout --
 is read from the table's own \verb{_data} / \verb{_boxhead} slots instead, as
 \code{gt::extract_body()} does not support multiple stub columns; the group and
-label columns then come through as ordinary columns.  A gt table grouped by
+label columns then come through as ordinary columns, each headed as gt
+prints it: by its own stubhead label when the stubhead has one per stub
+column (\code{gt::tab_stubhead()}, or a tfrmt \code{col_plan()} that renames them),
+the first by a single stubhead label and the others empty, and all empty
+when no stubhead is set -- never by the variable name.  A gt table grouped by
 several columns, \code{gt(groupname_col = c("ARM", "SEX"))}, gets one group row
 per combination, named as gt names it: "A - F".)  On top of that body the
 following \emph{metadata} is read:
