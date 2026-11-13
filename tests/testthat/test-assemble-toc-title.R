@@ -157,7 +157,7 @@ test_that("FT-AS4013 [FR-AS267 FR-AS116]: two headings split the entries; a head
                                    heading = c("Efficacy", "Safety", "Safety")))
   p <- .tt_paras(x)
   expect_identical(p[3L], "{\\pard\\b\\fs22 Efficacy\\par}")
-  expect_match(p[4L], "^\\{\\\\pard\\\\li600\\\\fs20")
+  expect_match(p[4L], "^\\{\\\\pard\\\\li600\\\\ri720\\\\keep\\\\fs20")
   expect_identical(p[5L], "{\\pard\\b\\fs22 Safety\\par}")
   expect_false(any(grepl("PAGEREF|tqr", p[c(3L, 5L)])))
 })
@@ -170,9 +170,9 @@ test_that("FT-AS4014 [FR-AS116 FR-AS238]: entries at level 1, 2 and 3 are indent
   x <- .tt_asm(f, toc = data.frame(file = f, label = c("a", "b", "c"),
                                    heading = c("H", NA, NA), level = 1:3))
   e <- .tt_entries(x)
-  expect_match(e[1L], "^\\{\\\\pard\\\\fs20\\\\tqr")
-  expect_match(e[2L], "^\\{\\\\pard\\\\li600\\\\fs20\\\\tqr")
-  expect_match(e[3L], "^\\{\\\\pard\\\\li1200\\\\fs20\\\\tqr")
+  expect_match(e[1L], "^\\{\\\\pard\\\\ri720\\\\keep\\\\fs20\\\\tqr")
+  expect_match(e[2L], "^\\{\\\\pard\\\\li600\\\\ri720\\\\keep\\\\fs20\\\\tqr")
+  expect_match(e[3L], "^\\{\\\\pard\\\\li1200\\\\ri720\\\\keep\\\\fs20\\\\tqr")
   p <- .tt_paras(x)
   expect_identical(p[3L], "{\\pard\\b\\fs22 H\\par}")
   expect_identical(p[1L], "{\\pard\\qc\\b\\fs28 Table of Contents\\par}")
@@ -339,10 +339,10 @@ test_that("FT-AS4026 [FR-AS260]: toc_style sets the size and boldness of the tit
   expect_identical(p[1L], "{\\pard\\qc\\fs32 Table of Contents\\par}")
   expect_identical(p[2L], "{\\pard\\fs12\\par}")
   expect_identical(p[3L], "{\\pard\\fs24 H\\par}")
-  expect_match(p[4L], "^\\{\\\\pard\\\\li600\\\\b\\\\fs18\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(p[4L], "^\\{\\\\pard\\\\li600\\\\ri648\\\\keep\\\\b\\\\fs18\\\\tqr\\\\tldot\\\\tx14112 ")
   # half points
   y <- .tt_asm(f, toc = "auto", toc_style = list(entry = list(size = 10.5)))
-  expect_match(.tt_entries(y)[1L], "^\\{\\\\pard\\\\fs21\\\\tqr")
+  expect_match(.tt_entries(y)[1L], "^\\{\\\\pard\\\\ri756\\\\keep\\\\fs21\\\\tqr")
 })
 
 test_that("FT-AS4027 [FR-AS260]: toc_style is read from options(rtfreporter.toc_style) when not given, and the argument wins", {
@@ -367,10 +367,10 @@ test_that("FT-AS4028 [FR-AS260]: a partial toc_style is merged over the built-in
   expect_identical(p[1L], "{\\pard\\qc\\b\\fs28 Table of Contents\\par}")
   expect_identical(p[2L], "{\\pard\\fs18\\par}")
   expect_identical(p[3L], "{\\pard\\b\\fs22 H\\par}")
-  expect_match(p[4L], "^\\{\\\\pard\\\\li600\\\\b\\\\fs20\\\\tqr")   # bold added, size kept
+  expect_match(p[4L], "^\\{\\\\pard\\\\li600\\\\ri720\\\\keep\\\\b\\\\fs20\\\\tqr")   # bold added, size kept
   p2 <- .tt_paras(.tt_asm(f, toc = tab, toc_style = list(heading = list(size = 13))))
   expect_identical(p2[3L], "{\\pard\\b\\fs26 H\\par}")               # size changed, bold kept
-  expect_match(p2[4L], "^\\{\\\\pard\\\\li600\\\\fs20\\\\tqr")
+  expect_match(p2[4L], "^\\{\\\\pard\\\\li600\\\\ri720\\\\keep\\\\fs20\\\\tqr")
   expect_identical(.tt_paras(.tt_asm(f, toc = tab, toc_style = list()))[1:3],
                    .tt_paras(.tt_asm(f, toc = tab, toc_style = NULL))[1:3])
 })
@@ -486,7 +486,7 @@ test_that("FT-AS4035 [FR-AS264 FR-AS125]: page numbers crossing 9 -> 10 and 99 -
   e <- .tt_entries(x)
   expect_length(e, 6L)
   # the paragraph's tab stop and leader are the same on every entry
-  expect_true(all(grepl("^\\{\\\\pard\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 \\{\\\\field", e)))
+  expect_true(all(grepl("^\\{\\\\pard\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 \\{\\\\field", e)))
   expect_true(all(grepl("\\\\tab\\{\\\\field\\{\\\\\\*\\\\fldinst PAGEREF tfl_t_14_[0-9]_[0-9] \\\\\\\\h\\}\\{\\\\fldrslt [0-9]+\\}\\}\\\\par\\}$", e)))
   # each PAGEREF names its own file's bookmark, and the bookmark is there
   bm <- sub(".*PAGEREF ([^ ]+) .*", "\\1", e)
@@ -499,7 +499,7 @@ test_that("FT-AS4036 [FR-AS264]: the same page numbers with the leader off: the 
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B"), pages = c(9L, 90L))
   e <- .tt_entries(.tt_asm(f, toc = "auto", toc_leader = "none"))
-  expect_true(all(grepl("^\\{\\\\pard\\\\fs20\\\\tqr\\\\tx14112 ", e)))
+  expect_true(all(grepl("^\\{\\\\pard\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tx14112 ", e)))
   expect_false(any(grepl("tldot", e)))
 })
 
@@ -511,10 +511,10 @@ test_that("FT-AS4037 [FR-AS265]: a label too long for a line stays in its one pa
   expect_length(e, 3L)
   lab <- .tt_long_label()
   expect_true(nchar(lab) > 2 * 114)   # more than two lines of Courier New at 10 pt
-  expect_match(e[2L], paste0("^\\{\\\\pard\\\\li600\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 .*",
+  expect_match(e[2L], paste0("^\\{\\\\pard\\\\li600\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 .*",
                              "fldrslt ", substr(lab, 1, 20)), fixed = FALSE)
   expect_true(grepl(lab, e[2L], fixed = TRUE))
-  expect_match(e[3L], "^\\{\\\\pard\\\\li1200\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(e[3L], "^\\{\\\\pard\\\\li1200\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
   # one paragraph each: the hanging indent is the indent of the level (no \fi)
   expect_false(any(grepl("\\\\fi[0-9-]", e)))
   expect_identical(sum(grepl("\\\\par\\}$", e)), 3L)
@@ -621,7 +621,7 @@ test_that("FT-AS4045 [FR-AS269]: by default an entry paragraph carries no \\fi (
   e <- .tt_entries(x)
   expect_length(e, 3L)
   expect_false(any(grepl("\\\\fi[0-9-]", e)))
-  expect_match(e[2L], "^\\{\\\\pard\\\\li600\\\\fs20\\\\tqr")
+  expect_match(e[2L], "^\\{\\\\pard\\\\li600\\\\ri720\\\\keep\\\\fs20\\\\tqr")
   # the explicit default is the same bytes
   y <- .tt_asm(f, toc = .tt_hang_toc(f), toc_style = list(entry = list(hanging = FALSE)))
   expect_identical(y, x)
@@ -638,9 +638,9 @@ test_that("FT-AS4046 [FR-AS269]: hanging = TRUE writes \\li<indent + 720>\\fi-72
   x  <- .tt_asm(f, toc = toc, toc_style = list(entry = list(hanging = TRUE)))
   e <- .tt_entries(x)
   expect_length(e, 3L)
-  expect_match(e[1L], "^\\{\\\\pard\\\\li720\\\\fi-720\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
-  expect_match(e[2L], "^\\{\\\\pard\\\\li1320\\\\fi-720\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
-  expect_match(e[3L], "^\\{\\\\pard\\\\li1920\\\\fi-720\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(e[1L], "^\\{\\\\pard\\\\li720\\\\fi-720\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(e[2L], "^\\{\\\\pard\\\\li1320\\\\fi-720\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(e[3L], "^\\{\\\\pard\\\\li1920\\\\fi-720\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
   # headings (and the title) are as they were
   noent <- function(l) .tt_paras(l)[!grepl("PAGEREF", .tt_paras(l))]
   expect_identical(noent(x), noent(x0))
@@ -653,9 +653,9 @@ test_that("FT-AS4047 [FR-AS269]: hanging = 360 writes \\li<indent + 360>\\fi-360
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B", t_14_3_1 = "C"))
   x <- .tt_asm(f, toc = .tt_hang_toc(f), toc_style = list(entry = list(hanging = 360)))
   e <- .tt_entries(x)
-  expect_match(e[1L], "^\\{\\\\pard\\\\li360\\\\fi-360\\\\fs20\\\\tqr")
-  expect_match(e[2L], "^\\{\\\\pard\\\\li960\\\\fi-360\\\\fs20\\\\tqr")
-  expect_match(e[3L], "^\\{\\\\pard\\\\li1560\\\\fi-360\\\\fs20\\\\tqr")
+  expect_match(e[1L], "^\\{\\\\pard\\\\li360\\\\fi-360\\\\ri720\\\\keep\\\\fs20\\\\tqr")
+  expect_match(e[2L], "^\\{\\\\pard\\\\li960\\\\fi-360\\\\ri720\\\\keep\\\\fs20\\\\tqr")
+  expect_match(e[3L], "^\\{\\\\pard\\\\li1560\\\\fi-360\\\\ri720\\\\keep\\\\fs20\\\\tqr")
 })
 
 test_that("FT-AS4048 [FR-AS269 FR-AS260]: the option rtfreporter.toc_style sets the hanging indent, and the argument wins over it", {
@@ -664,10 +664,10 @@ test_that("FT-AS4048 [FR-AS269 FR-AS260]: the option rtfreporter.toc_style sets 
   old <- options(rtfreporter.toc_style = list(entry = list(hanging = 360)))
   on.exit(options(old), add = TRUE)
   e <- .tt_entries(.tt_asm(f, toc = .tt_hang_toc(f)))
-  expect_match(e[2L], "^\\{\\\\pard\\\\li960\\\\fi-360\\\\fs20\\\\tqr")
+  expect_match(e[2L], "^\\{\\\\pard\\\\li960\\\\fi-360\\\\ri720\\\\keep\\\\fs20\\\\tqr")
   e <- .tt_entries(.tt_asm(f, toc = .tt_hang_toc(f),
                            toc_style = list(entry = list(hanging = TRUE))))
-  expect_match(e[2L], "^\\{\\\\pard\\\\li1320\\\\fi-720\\\\fs20\\\\tqr")
+  expect_match(e[2L], "^\\{\\\\pard\\\\li1320\\\\fi-720\\\\ri720\\\\keep\\\\fs20\\\\tqr")
   e <- .tt_entries(.tt_asm(f, toc = .tt_hang_toc(f),
                            toc_style = list(entry = list(hanging = FALSE))))
   expect_false(any(grepl("\\\\fi[0-9-]", e)))
@@ -734,6 +734,6 @@ test_that("FT-AS4051 [FR-AS269]: the long-label TOC with a hanging indent is reb
   out <- .tt_case_hanging(d)
   expect_identical(.tt_bytes(out), .tt_bytes(fx))
   e <- .tt_entries(readLines(out, warn = FALSE))
-  expect_match(e[2L], "^\\{\\\\pard\\\\li1320\\\\fi-720\\\\fs20")
-  expect_match(e[3L], "^\\{\\\\pard\\\\li1920\\\\fi-720\\\\fs20")
+  expect_match(e[2L], "^\\{\\\\pard\\\\li2480\\\\fi-1880\\\\ri720\\\\keep\\\\fs20")
+  expect_match(e[3L], "^\\{\\\\pard\\\\li3080\\\\fi-1880\\\\ri720\\\\keep\\\\fs20")
 })

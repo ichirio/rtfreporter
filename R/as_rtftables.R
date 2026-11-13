@@ -448,6 +448,18 @@
 #'       body sorted first would be SAS's contract, not R's, so a merely
 #'       interleaved body loses nothing; use `sort_by` when you want an
 #'       order, not to make the pages whole.}
+#'     \item{A row without a BY value}{a row whose `page_by` value is `NA`
+#'       or blank (`""`) is not given a page of its own: it takes the next
+#'       value in the body, or -- at the foot of the body, where there is
+#'       none -- the one before it, and prints on that value's page under
+#'       its title and header.  A body with no value at all is one page,
+#'       named `""`.  This is meant for a stub's label rows (a row without
+#'       its own BY value belongs to the group around it), so a real
+#'       missing value in a data frame lands on a neighbouring value's page.
+#'       To give it a page of its own, fill the value first, e.g.
+#'       `lab$period[is.na(lab$period)] <- "Missing"`.  A listing cut with
+#'       [plan_paginate_rows()] `(page_by = )` does the opposite: a record
+#'       with a blank BY value is a page of its own, named by `na_label`.}
 #'   }
 #'   `page_by` does **not** imply `drop_cols`: name the column there too to
 #'   keep it out of the printed table.  Like `group_col` / `sort_by` /
