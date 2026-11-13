@@ -196,6 +196,25 @@
   if (!length(v)) NA_character_ else paste(v, collapse = " ")
 }
 
+# The headers of the n stub columns, as gt prints them: the stubhead label
+# (`tab_stubhead()`) over the first stub column, or one label per stub
+# column when the stubhead has one for each (gt >= 1.0; tfrmt sets them from
+# a col_plan() that renames the group / label columns); NA where gt prints
+# nothing.  A single label over several stub columns spans them in gt; here
+# it heads the first and the others are left empty.
+.gt_stubhead_labels <- function(sh, n) {
+  out <- rep(NA_character_, n)
+  if (!n || is.null(sh) || is.null(sh$label)) return(out)
+  lab <- sh$label
+  if (is.list(lab)) lab <- lab[[1L]]
+  if (is.null(lab) || !length(lab)) return(out)
+  k <- if (length(lab) == n) seq_len(n) else 1L
+  for (i in k) {
+    out[i] <- .flatten_to_chr(structure(as.character(lab)[i], class = class(lab)))
+  }
+  out
+}
+
 
 # ── Footnote marks on the column labels and on the footnote lines ────────
 #
@@ -914,11 +933,19 @@
 
   # ---- col_header (labels) ---------------------------------------------
   if ("col_header" %in% tokens && !is.null(boxh)) {
+    # A stub column is headed by the stubhead, never by its column label
+    # (gt's default label is the variable name, which gt does not print
+    # there, #1024).  With several stub columns (tfrmt's label_loc =
+    # "column") the k-th one takes the k-th stubhead label.
+    is_stub <- !is.na(bx_idx) &
+      as.character(boxh$type)[bx_idx] %in% "stub"
+    is_stub[body_vars == "::rowname::"] <- TRUE
+    stub_labs <- .gt_stubhead_labels(gt_obj[["_stubhead"]], sum(is_stub))
     labs <- vapply(seq_len(ncol_t), function(j) {
-      if (identical(body_vars[j], "::rowname::")) {
-        sh <- gt_obj[["_stubhead"]]
-        v  <- if (!is.null(sh)) .flatten_to_chr(sh$label) else NA_character_
-        m  <- fmarks$stubhead
+      if (is_stub[j]) {
+        k <- sum(is_stub[seq_len(j)])
+        v <- stub_labs[k]
+        m <- if (k == 1L) fmarks$stubhead
       } else if (!is.na(bx_idx[j])) {
         v <- .flatten_to_chr(boxh$column_label[[bx_idx[j]]])
         m <- fmarks$label[body_vars[j]]

@@ -519,3 +519,123 @@ test_that("FT-TB7305 [FR-TB577 FR-TB115]: each member of a gt_split carries the 
   expect_identical(sum(grepl("Table 9 Summary", rtf, fixed = TRUE)), 2L)
   expect_false(any(grepl("**", rtf, fixed = TRUE)))
 })
+
+# ──────── #1024: a stub column is headed by gt's stubhead, not its variable ───
+
+.t75_dat <- function() {
+  dat <- expand.grid(grp = c("Age", "Weight"), lbl = c("n", "Mean"),
+                     col = c("Placebo", "Active"), stringsAsFactors = FALSE)
+  dat$param <- dat$lbl
+  dat$value <- seq_len(nrow(dat)) * 1.5
+  dat[order(dat$grp, dat$lbl), ]
+}
+
+# A tfrmt table with label_loc = "column": two stub columns, grp and lbl.
+.t75_gt <- function(...) {
+  tf <- tfrmt::tfrmt(
+    group = grp, label = lbl, column = col, param = param, value = value,
+    body_plan = tfrmt::body_plan(tfrmt::frmt_structure(
+      group_val = ".default", label_val = ".default", tfrmt::frmt("xx.x"))),
+    row_grp_plan = tfrmt::row_grp_plan(
+      label_loc = tfrmt::element_row_grp_loc(location = "column")),
+    ...)
+  tfrmt::print_to_gt(tf, .t75_dat())
+}
+
+# The text of gt's stubhead cells (<th id="a::stub...">), as gt prints them.
+.t75_gt_stubhead <- function(g) {
+  html <- as.character(gt::as_raw_html(g, inline_css = FALSE))
+  th <- regmatches(html, gregexpr("<th[^>]*id=\"a::stub[^\"]*\"[^>]*>.*?</th>",
+                                  html))[[1L]]
+  span <- as.integer(sub(".*colspan=\"([0-9]+)\".*", "\\1", th))
+  text <- gsub("<[^>]+>", "", sub("^<th[^>]*>", "", th))
+  list(text = text, colspan = span)
+}
+
+# The RTF header row: the line holding the column labels.
+.t75_header_row <- function(rtf, label) {
+  grep(paste0(label, "\\cell"), rtf, fixed = TRUE, value = TRUE)[1L]
+}
+
+test_that("FT-TB7501 [FR-TB582]: a tfrmt label_loc = \"column\" table with no stubhead: both stub columns are headed empty, as gt prints them, not by the variable name", {
+  skip_if_not_installed("gt")
+  skip_if_not_installed("tfrmt")
+  g <- .t75_gt()
+  # gt prints nothing over the stub columns
+  expect_identical(.t75_gt_stubhead(g)$text, c("", ""))
+  p <- as_rtftables(g)[[1L]]
+  expect_identical(p$col_header, list(c("", "", "Placebo", "Active")))
+  # the column itself keeps its name; only its header is not the name
+  expect_identical(names(p$data), c("rowname", "lbl", "Placebo", "Active"))
+  rtf <- .t71_rtf(g)
+  hdr <- .t75_header_row(rtf, "Placebo")
+  expect_false(grepl(" lbl\\cell", hdr, fixed = TRUE))
+  expect_false(grepl(" grp\\cell", hdr, fixed = TRUE))
+  expect_match(hdr, "\\ql\\li0\\ri0 \\cell\\ql\\li0\\ri0 \\cell\\qc\\li0\\ri0 Placebo",
+               fixed = TRUE)
+})
+
+test_that("FT-TB7502 [FR-TB582]: a tfrmt label_loc = \"column\" table is read from _data / _boxhead, its stub columns as ordinary columns headed by the stubhead as gt prints it", {
+  skip_if_not_installed("gt")
+  skip_if_not_installed("tfrmt")
+  g <- .t75_gt()
+  # more than one stub column, which gt::extract_body() cannot read
+  expect_identical(sum(as.character(g[["_boxhead"]]$type) == "stub"), 2L)
+  expect_error(gt::extract_body(g, output = "html"))
+  p <- as_rtftables(g)[[1L]]
+  # read from _data: the group and label columns as ordinary columns
+  expect_identical(p$data[[1L]], c("Age", "Age", "Weight", "Weight"))
+  expect_identical(p$data[[2L]], c("Mean", "n", "Mean", "n"))
+  expect_identical(p$data[[3L]], c(" 4.5", " 1.5", " 6.0", " 3.0"))
+  # no stubhead: both headed empty, never by the variable name
+  expect_identical(p$col_header, list(c("", "", "Placebo", "Active")))
+  # one stubhead label per stub column (tfrmt's col_plan() renaming them):
+  # each column takes its own, as gt prints them
+  g2 <- .t75_gt(col_plan = tfrmt::col_plan(Parameter = grp, Statistic = lbl,
+                                           Placebo, Active))
+  sh <- .t75_gt_stubhead(g2)
+  expect_identical(sh$text, c("Parameter", "Statistic"))
+  expect_identical(sh$colspan, c(1L, 1L))
+  p2 <- as_rtftables(g2)[[1L]]
+  expect_identical(p2$col_header,
+                   list(c("Parameter", "Statistic", "Placebo", "Active")))
+  expect_match(.t75_header_row(.t71_rtf(g2), "Placebo"),
+               "\\ql\\li0\\ri0 Parameter\\cell\\ql\\li0\\ri0 Statistic\\cell",
+               fixed = TRUE)
+  # one stubhead label (tab_stubhead()): gt prints it once over both stub
+  # columns; it heads the first and the second is empty
+  g3 <- gt::tab_stubhead(g, "Parameter")
+  sh <- .t75_gt_stubhead(g3)
+  expect_identical(sh$text, "Parameter")
+  expect_identical(sh$colspan, 2L)
+  p3 <- as_rtftables(g3)[[1L]]
+  expect_identical(p3$col_header, list(c("Parameter", "", "Placebo", "Active")))
+  hdr <- .t75_header_row(.t71_rtf(g3), "Placebo")
+  expect_match(hdr, "\\ql\\li0\\ri0 Parameter\\cell\\ql\\li0\\ri0 \\cell",
+               fixed = TRUE)
+  expect_false(grepl(" lbl\\cell", hdr, fixed = TRUE))
+})
+
+test_that("FT-TB7503 [FR-TB577]: a gt row_group_as_column table: the stub column is headed by tab_stubhead(), or empty, not by the variable name", {
+  skip_if_not_installed("gt")
+  df <- data.frame(arm = c("A", "A", "B", "B"), stat = c("n", "Mean", "n", "Mean"),
+                   v = c("10", "2.5", "12", "3.1"), stringsAsFactors = FALSE)
+  g <- gt::gt(df, rowname_col = "stat", groupname_col = "arm",
+              row_group_as_column = TRUE)
+  p <- as_rtftables(g)[[1L]]
+  expect_identical(.t75_gt_stubhead(g)$text, "")
+  expect_identical(p$col_header, list(c("", "v")))
+  # the groups are read as group rows, the stub as the first column, indented
+  # by two non-breaking spaces
+  nb <- strrep(intToUtf8(160L), 2L)
+  expect_identical(p$data[[1L]], c("A", paste0(nb, c("n", "Mean")), "B",
+                                   paste0(nb, c("n", "Mean"))))
+  g2 <- gt::tab_stubhead(g, "Statistic")
+  expect_identical(.t75_gt_stubhead(g2)$text, "Statistic")
+  p2 <- as_rtftables(g2)[[1L]]
+  expect_identical(p2$col_header, list(c("Statistic", "v")))
+  hdr <- .t75_header_row(.t71_rtf(g2), "v")
+  expect_match(hdr, "\\ql\\li0\\ri0 Statistic\\cell", fixed = TRUE)
+  expect_false(grepl(" stat\\cell", hdr, fixed = TRUE))
+  expect_false(grepl(" arm\\cell", hdr, fixed = TRUE))
+})
