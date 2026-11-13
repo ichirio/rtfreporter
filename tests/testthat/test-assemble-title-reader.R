@@ -211,7 +211,16 @@ test_that("FT-AS7006 [FR-AS250 FR-AS112]: one level-1 entry per file, read the s
                      lapply(lines, function(x) c(c = x))))
 }
 
-test_that("FT-AS7101 [FR-AS150]: a \"Table N\" line that carries the title keeps it over the centred lines below it (a population, \"Draft\"), for toc = \"auto\", a table with no label and assemble_folder()", {
+# A file of the shape assemble_folder() reads with a running header of the
+# centred cells `cells`, written as RTF (\uN? escapes as given)
+.tr_raw_hdr <- function(path, cells) {
+  rows <- paste0("\\trowd\\pard\\intbl\\qc\\li0\\ri0 ", cells, "\\cell\\row")
+  writeLines(c("{\\rtf1\\ansi", paste0("{\\header ", paste(rows, collapse = " "), "}"),
+               "\\sectd", "BODY", "}"), path)
+  path
+}
+
+test_that("FT-AS7101 [FR-AS150]: the title from a running header: the rest of a \"Table N\" line that carries it, over the centred lines below it (a population, \"Draft\"), for toc = \"auto\", a table with no label and assemble_folder(); else the longest centred cell that is not a <...> subtitle; \\uN? read back", {
   d <- .tr_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   a <- .tr_hdr(d, "t_14_1_1", c("Table 14.1.1 Demographic Characteristics",
@@ -228,6 +237,24 @@ test_that("FT-AS7101 [FR-AS150]: a \"Table N\" line that carries the title keeps
   sp <- assemble_folder(d)
   expect_identical(sp$label[match(files, sp$file)], want)
   expect_identical(sp$table[match(files, sp$file)], c("14.1.1", "14.1.2", "14.1.3"))
+
+  # the number alone on its line: the longest other centred cell, not a <...>
+  # subtitle; \uN? read back (signed / unsigned, a surrogate pair as one
+  # character, a no-break space as a space), on the "Table N" line too
+  d2 <- .tr_dir()
+  on.exit(unlink(d2, recursive = TRUE), add = TRUE)
+  .tr_raw_hdr(file.path(d2, "a.rtf"), c(
+    "Table 14.6.1", "Short title", "<A subtitle that is much longer than the others>",
+    "Longest \\u181?g/mL \\u-10179?\\u-8704? \\u55357?\\u56832? a\\u160?b"))
+  .tr_raw_hdr(file.path(d2, "b.rtf"), c(
+    "Table 14.6.2 Inline \\u181?g/mL\\u160?title",
+    "A population line much longer than the title on the number's line"))
+  sp2 <- assemble_folder(d2)
+  smile <- "\U0001F600"
+  expect_identical(sp2$table, c("14.6.1", "14.6.2"))
+  expect_identical(sp2$label, c(
+    paste0("Table 14.6.1  Longest \u00b5g/mL ", smile, " ", smile, " a b"),
+    "Table 14.6.2  Inline \u00b5g/mL title"))
 })
 
 test_that("FT-AS7102 [FR-AS150]: a \"Table N\" line with the number only takes the longest other centred line, as before", {
