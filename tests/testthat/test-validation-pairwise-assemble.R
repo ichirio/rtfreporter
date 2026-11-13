@@ -16,8 +16,11 @@
 #    number    a file's table number and title come from its running header
 #              when it has a "Table N" line, else from the centred bold lines
 #              of its rtf_titles() block (#843, #845); a header line wins over
-#              the title block; a file with neither (a listing) is labelled
-#              by its file name.  The label is "Table N  <title>".
+#              the title block for the number and the order; a file with
+#              neither (a listing) comes after them.  The label is the
+#              file's title rows joined with two spaces, as toc = "auto"
+#              reads them (#1030); without title rows, the header's
+#              "Table N  <title>".
 #    order     the numbered files by number in natural order (14.1.2 before
 #              14.1.10), then the others by file name, whatever the names.
 #    sections  a file of several sections is one row and one entry, read
@@ -27,8 +30,9 @@
 #              output_file: list(output, spec), invisibly; spec_file: the
 #              table written there as well (.csv), the same rows.
 #    contents  toc = NULL: no contents, no bookmark, no outline paragraph;
-#              "auto": a level-1 entry per file, the first centred bold title
-#              cell, else the file's name; a character vector: level-1
+#              "auto": a level-1 entry per file, its title rows joined, else
+#              its header's "Table N" line, else the file's name (the label
+#              assemble_folder() gives, #1030); a character vector: level-1
 #              entries in that order; a table: its rows (order column, when
 #              given), level 1 / 2 / 3 indented 0 / 600 / 1200 twips, a bold
 #              heading line whenever the heading changes; the path of such a
@@ -62,7 +66,9 @@
 #  t3 (two sections, no titles).
 #    toc                       entries (label, level)            body order
 #    NULL                      none, no bookmark                 t1 t2 t3
-#    "auto"                    Table 14.1.1 1, t2 1, t3 1        t1 t2 t3
+#    "auto"                    Table 14.1.1  Demographics 1,     t1 t2 t3
+#                              Table 14.2.1  Adverse Events 1,
+#                              t3 1
 #    c("L1", "L2", "L3")       L1 1, L2 1, L3 1                  t1 t2 t3
 #    table, levels 1 2 3,      H1; L1 1, L2 2; H2; L3 3          t1 t2 t3
 #      headings H1 H1 H2
@@ -112,15 +118,19 @@
     k <- match(id, .VA_TABLES$id)
     .va_report(file.path(d, files[[id]]), id, .VA_TABLES$num[k], .VA_TABLES$title[k], cs$src, sec)
   }
+  k <- match(ord, .VA_TABLES$id)
+  # the label is the file's title rows (#1030): "Table 9.9.k  Other title"
+  # when the titles and the header both have a number
+  lab <- if (cs$src == "both") paste0("Table 9.9.", k, "  Other title") else
+    paste0("Table ", .VA_TABLES$num[k], "  ", .VA_TABLES$title[k])
   want <- data.frame(file = unname(files[ord]), id = ord,
-                     table = .VA_TABLES$num[match(ord, .VA_TABLES$id)],
-                     label = paste0("Table ", .VA_TABLES$num[match(ord, .VA_TABLES$id)], "  ",
-                                    .VA_TABLES$title[match(ord, .VA_TABLES$id)]),
+                     table = .VA_TABLES$num[k], label = lab,
                      stringsAsFactors = FALSE)
   if (cs$listing == "yes") {
     .va_report(file.path(d, "l-01.rtf"), "L", NA, "Listing of Subjects", cs$src, sec)
     want <- rbind(want, data.frame(file = "l-01.rtf", id = "L", table = NA_character_,
-                                   label = "l-01", stringsAsFactors = FALSE))
+                                   label = "Listing 16.2.1  Listing of Subjects",
+                                   stringsAsFactors = FALSE))
   }
   want
 }
@@ -220,7 +230,7 @@ test_that("FT-AS139 [FR-AS101 FR-AS109 FR-AS111 FR-AS112 FR-AS113 FR-AS115 FR-AS
   reord$order <- c(3L, 1L, 2L)
   kinds <- list(
     null   = list(toc = NULL, files = TRUE, labels = character(0), li = integer(0), heads = character(0), body = c("P", "Q", "R")),
-    auto   = list(toc = "auto", files = TRUE, labels = c("Table 14.1.1", "t2", "t3"), li = c(0L, 0L, 0L), heads = character(0), body = c("P", "Q", "R")),
+    auto   = list(toc = "auto", files = TRUE, labels = c("Table 14.1.1  Demographics", "Table 14.2.1  Adverse Events", "t3"), li = c(0L, 0L, 0L), heads = character(0), body = c("P", "Q", "R")),
     labels = list(toc = c("L1", "L2", "L3"), files = TRUE, labels = c("L1", "L2", "L3"), li = c(0L, 0L, 0L), heads = character(0), body = c("P", "Q", "R")),
     table  = list(toc = tbl, files = FALSE, labels = c("L1", "L2", "L3"), li = c(0L, 600L, 1200L), heads = c("H1", "H2"), body = c("P", "Q", "R")),
     csv    = list(toc = csv, files = FALSE, labels = c("L1", "L2", "L3"), li = c(0L, 600L, 1200L), heads = c("H1", "H2"), body = c("P", "Q", "R")),
