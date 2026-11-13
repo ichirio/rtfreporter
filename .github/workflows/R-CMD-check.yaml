@@ -89,7 +89,7 @@ jobs:
   # dependency at the minimum DESCRIPTION names (`pkg@<minimum>`); the
   # suggested packages with no minimum, and every indirect dependency, come
   # from CRAN as it was on PPM_DATE (a dated Posit Package Manager snapshot,
-  # the first with the newest minimum, tfrmt 0.3.0).  The recommended
+  # the first with the newest minimum, devEMF 4.6).  The recommended
   # environment -- the latest R with the latest packages -- is the matrix's
   # release jobs.  Why each minimum: inst/validation/dependency-minimums.md.
   minimum-environment:
@@ -101,7 +101,7 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
       R_MIN: '4.3'
-      PPM_DATE: '2026-01-25'
+      PPM_DATE: '2026-06-05'
 
     steps:
       - uses: actions/checkout@v4
