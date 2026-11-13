@@ -348,7 +348,9 @@
 #'   Ignored by `"none"` and `"rows"` (which cuts at the positions in
 #'   `split_rows`).  Optional for `"by_value"`: a value's page longer than
 #'   `max_rows` is cut as `"group_force"` cuts, its pages named by the value
-#'   with the `"...n"` tail (`"A...1"`, `"A...2"`).
+#'   with the `"...n"` tail (`"A...1"`, `"A...2"`).  For a `listing` and for
+#'   an rlistings listing, `max_rows` alone switches `split` to
+#'   `"group_safe"` (see `listing`).
 #' @param split_rows Integer vector or `NULL`.  Row **positions** to cut
 #'   before, for `split = "rows"` (required by it; ignored otherwise).
 #'   `split_rows = c(20, 40)` yields pages `1:19`, `20:39`, `40:nrow`.  It is
@@ -360,7 +362,8 @@
 #'   detect groups on, given by name or position (a whole number in
 #'   `1..ncol`; `TRUE`, a fraction or a factor is an error, as in every
 #'   column argument).  `NULL` (default) uses
-#'   **column 1**.  This selects only the *column*; how a group boundary is
+#'   **column 1** (for an rlistings listing, its first key column; see
+#'   `listing`).  This selects only the *column*; how a group boundary is
 #'   found on it is set by `group_by`.
 #'   \describe{
 #'     \item{Naming it}{For gt / gtsummary the body keeps gt's column
@@ -702,6 +705,17 @@
 #'       up and passing `listing` as well is an error.  An rlistings
 #'       `listing_df` is rejected: it is already laid out, and needs no
 #'       `listing` argument.}
+#'     \item{An rlistings listing}{Pages by its first key column instead:
+#'       `split` becomes `"group_safe"` when `max_rows` is set, and a
+#'       group-aware split gets `group_col` on the listing's first key column
+#'       -- found by name among the display columns, wherever
+#'       `listing_dispcols()` puts it -- with `group_by = "filled"`, since
+#'       rlistings prints a key once per run.  A subject's rows then stay on
+#'       one page when they fit; a longer one is cut as `"group_safe"` cuts
+#'       it, the key repeated with `cont_label`.  A listing with no key
+#'       columns groups on column 1.  These are **defaults** too: `split`,
+#'       `group_col` and `group_by` you pass yourself win, and without
+#'       `max_rows` the listing is one page.}
 #'   }
 #' @param stub Row-stub settings, as a [stub_spec()] object -- or, as a
 #'   shorthand for `stub_spec(vars)`, a bare vector of hierarchy columns
@@ -1012,8 +1026,11 @@ as_rtftables.default <- function(x,
     in_names <- names(x)
     out <- list()
     for (i in seq_along(x)) {
-      chunks <- as_rtftables(
-        x[[i]], read_meta = read_meta, max_rows = max_rows, split = split,
+      # An rlistings listing fills in `split` and `group_by` only when the
+      # caller left them out (#1045), so they are left out here too.
+      lst_default <- .is_rlistings_tbl(x[[i]])
+      args <- list(
+        read_meta = read_meta, max_rows = max_rows, split = split,
         split_rows = split_rows, group_col = group_col, group_by = group_by,
         page_by = page_by, sort_by = sort_by, sort_desc = sort_desc,
         cont_label = cont_label, min_group_rows = min_group_rows,
@@ -1028,7 +1045,10 @@ as_rtftables.default <- function(x,
         stub = stub_spec_obj,
         header_sep = header_sep,
         auto_width = auto_width, table_width_twips = table_width_twips,
-        border = border, style = style, ...)
+        border = border, style = style)
+      if (lst_default && !split_given)    args$split    <- NULL
+      if (lst_default && !group_by_given) args$group_by <- NULL
+      chunks <- do.call(as_rtftables, c(list(x[[i]]), args, list(...)))
       if (!is.null(in_names) && nzchar(in_names[i])) {
         base <- in_names[i]
         if (length(chunks) == 1L) {
@@ -1149,6 +1169,23 @@ as_rtftables.default <- function(x,
     cell_styles     <- kw$cell_styles
     titles_block    <- kw$titles_block
     footnotes_block <- kw$footnotes_block
+    # A listing pages by subject (#1045): `max_rows` alone gives a
+    # "group_safe" split on the first key column, so a subject's rows stay
+    # together when they fit -- the default a `listing =` listing has, on
+    # the listing's own key.  rlistings prints a key once per run, so a
+    # group starts at a filled cell.  Defaults only: what the caller set
+    # stays.
+    if (!split_given && !is.function(split) && identical(split, "none") &&
+        !is.null(max_rows)) {
+      split <- "group_safe"
+    }
+    if (is.function(split) || !split %in% c("none", "rows")) {
+      key_pos <- if (is.null(group_col)) .rlistings_first_key_pos(x)
+      if (!is.null(key_pos)) {
+        group_col <- key_pos
+        if (!group_by_given) group_by <- "filled"
+      }
+    }
   } else if (.is_flextable_tbl(x)) {
     tokens          <- .resolve_flextable_tokens(read_meta)
     kw              <- .flextable_to_rtftable_kwargs(x, tokens = tokens)
