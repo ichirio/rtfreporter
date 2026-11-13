@@ -46,8 +46,10 @@
 #'   in it; `TRUE` writes into it, replacing the kit's files of the same name.
 #'
 #' @return The paths of the files written, invisibly.
-#' @seealso The article "Validating rtfreporter in your environment",
-#'   <https://ichirio.github.io/rtfreporter/articles/validation.html>.
+#' @seealso The articles "Validating rtfreporter in your environment",
+#'   <https://ichirio.github.io/rtfreporter/articles/validation.html>, and
+#'   "How rtfreporter is validated",
+#'   <https://ichirio.github.io/rtfreporter/articles/validation-approach.html>.
 #' @export
 #' @examples
 #' kit <- rtfreporter_validation_kit(file.path(tempdir(), "rtfreporter-validation"))

@@ -64,6 +64,8 @@ basename(kit)
 unlink(dirname(kit[1]), recursive = TRUE)
 }
 \seealso{
-The article "Validating rtfreporter in your environment",
-\url{https://ichirio.github.io/rtfreporter/articles/validation.html}.
+The articles "Validating rtfreporter in your environment",
+\url{https://ichirio.github.io/rtfreporter/articles/validation.html}, and
+"How rtfreporter is validated",
+\url{https://ichirio.github.io/rtfreporter/articles/validation-approach.html}.
 }
