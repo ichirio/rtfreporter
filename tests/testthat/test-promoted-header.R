@@ -157,4 +157,21 @@ test_that("FT-TB7603 [FR-TB215]: a named set_col_header() row is a patch; on a g
   sp <- set_col_header(tb, c(Active = "ACT"))$col_header[[1L]]
   expect_identical(.t76_labels(sp), c("Parameter", "Placebo", "ACT"))
   expect_identical(.t76_spans(sp), c("1-2", "3-3", "4-4"))
+  # a named column inside the span renames the whole span
+  sp <- set_col_header(tb, c(lbl = "Term"))$col_header[[1L]]
+  expect_identical(.t76_labels(sp), c("Term", "Placebo", "Active"))
+  expect_identical(.t76_spans(sp), c("1-2", "3-3", "4-4"))
+  # two names on one span stop
+  expect_error(set_col_header(tb, c(stat = "S", lbl = "Term")),
+               "the header cell over columns 1-2 is targeted twice -- name \"stat\" and name \"lbl\"",
+               fixed = TRUE)
+
+  # the header is replaced by the one row: a spanner row above is dropped
+  gs <- gt::tab_spanner(.t76_gt(), "Treatment", columns = c("Placebo", "Active"))
+  ps <- as_rtftables(gs)
+  expect_length(ps[[1L]]$col_header, 2L)
+  hs <- set_col_header(ps, c(Placebo = "PBO"))[[1L]]$col_header
+  expect_length(hs, 1L)
+  expect_identical(.t76_labels(hs[[1L]]), c("", "lbl", "PBO", "Active"))
+  expect_identical(hs[[1L]][[3L]]$border$bottom$style, "single")
 })

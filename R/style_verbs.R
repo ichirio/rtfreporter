@@ -220,8 +220,8 @@
 # When the table's bottom header row is a promoted labels row, the patch is
 # made on those cells: each named column's cell takes the new label and
 # keeps its border, styling and span; the other cells keep their labels.  A
-# cell spanning several columns takes the label of a named column it covers
-# (with two such names, the later one).  The result is the whole new header,
+# cell spanning several columns takes the label of a named column it covers;
+# two names on one cell stop.  The result is the whole new header,
 # that one row, as set_col_header() replaces the whole header.  NULL when this
 # does not apply (any other header or row), so the caller goes on as before
 # (#1041).
@@ -236,12 +236,23 @@
   if (!.is_promoted_row(row)) return(NULL)
   # the same checks (unknown name, a column named twice) as a plain row
   .resolve_named_label_row(header, col_names)
+  hit <- rep(NA_character_, length(row))
   for (i in seq_along(header)) {
     j <- which(col_names == nms[i])
     k <- which(vapply(row, function(cell) {
       j >= as.integer(cell$from) && j <= as.integer(cell$to)
     }, logical(1L)))
-    if (length(k)) row[[k[1L]]]$label <- as.character(header[[i]])
+    if (!length(k)) next
+    k <- k[1L]
+    if (!is.na(hit[k])) {
+      stop(sprintf(paste0(
+        "col_header: the header cell over columns %d-%d is targeted twice ",
+        "-- name \"%s\" and name \"%s\"."),
+        as.integer(row[[k]]$from), as.integer(row[[k]]$to), hit[k], nms[i]),
+        call. = FALSE)
+    }
+    hit[k] <- nms[i]
+    row[[k]]$label <- as.character(header[[i]])
   }
   list(row)
 }
@@ -803,6 +814,14 @@ add_header_row.list <- function(x, ...) {
 #' A label row that **names every entry** is a *patch*: it says which column
 #' each label belongs to, so it may be shorter than the table and the columns
 #' it does not mention keep their own name.
+#'
+#' When the bottom header row is a label row promoted to cells (a gt column
+#' label with a `tab_style()` border, or `style_header(border = )`), the
+#' patch renames only the named columns' cells, each keeping its border and
+#' span, and the other cells keep their labels.  A cell spanning several
+#' columns takes the label of a named column it covers; naming two columns of
+#' one such cell is an error.  As with any row given, the header is replaced
+#' by that one row, so spanning rows above it are dropped.
 #'
 #' ```r
 #' rtf_columns(tbl)                              # row_label  g1  g2  Total
