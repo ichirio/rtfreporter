@@ -62,7 +62,7 @@ test_that("FT-AS129 [FR-AS112 FR-AS150]: a title written by generate_rtfreport()
     f, overwrite = TRUE)
 
   # Readers: the toc = "auto" title and the assemble_folder() text decoder
-  got <- rtfreporter:::.extract_first_title(readLines(f, warn = FALSE))
+  got <- rtfreporter:::.rtf_title_text(readLines(f, warn = FALSE))
   expect_identical(got, ttl)
   dec <- rtfreporter:::.rtf_decode_text
   expect_identical(dec(rtfreporter:::.rtf_escape_unicode_raw(ttl)), ttl)

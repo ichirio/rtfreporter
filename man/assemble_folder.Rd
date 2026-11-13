@@ -48,10 +48,11 @@ table of contents used).
 \description{
 Scans \code{dir} for \code{.rtf} files (natural-sorted, so \code{t2} comes before \code{t10})
 and reads each file's table number and title into a \strong{table of
-contents}: a \code{data.frame} with one row per file.  The number and title
-come from the running header (\code{rtf_header()}) when it has a \code{"Table N"}
-line, otherwise from the title block that \code{\link[=rtf_titles]{rtf_titles()}} writes at the top
-of the body.  With an
+contents}: a \code{data.frame} with one row per file.  The number comes from
+the running header (\code{rtf_header()}) when it has a \code{"Table N"} line,
+otherwise from the title block that \code{\link[=rtf_titles]{rtf_titles()}} writes at the top of
+the body; the label is the file's title, read as
+\code{assemble_rtf(toc = "auto")} reads it.  With an
 \code{output_file} it assembles the deliverable with that table of contents
 (\code{\link[=assemble_rtf]{assemble_rtf()}}); without one it only returns the table, to edit
 (rename labels, fill \code{heading} to group entries, change \code{level}, reorder
@@ -72,7 +73,12 @@ The table has the columns \code{order} (the assembly order), \code{file}, \code{
 (the table number read from the header or the titles, or \code{NA}), \code{heading}
 (a heading
 printed above the entry whenever it changes; \code{NA} = none), \code{label} (the
-entry text, \code{"Table N  <title>"}), \code{level} (the entry's indent, a whole
+entry text: the file's title, read as \code{assemble_rtf(toc = "auto")} reads
+it -- its title rows joined with two spaces, a line break inside a row
+too, as \code{"Table 14.1.1  Safety Population"}; a figure or a listing is
+labelled by its title as a table is; a file with no title rows takes its
+running header's \code{"Table N"} line, and a file with neither, its file
+name without \code{.rtf}), \code{level} (the entry's indent, a whole
 number from 1 to 3, default 2) and \code{pages} (informational).
 }
 \examples{

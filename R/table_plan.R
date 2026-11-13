@@ -3151,7 +3151,11 @@ plan_empty <- function(.plan, text = "No subjects met the criteria.",
 #'     \item{`"none"`}{none: a listing's records follow each other with no
 #'       blank row between them (`blank_row = FALSE`).}
 #'     \item{positions}{an integer vector, a blank row after each given row;
-#'       `0` before the first, `-1` after the last.  A fraction or a
+#'       `0` before the first, `-1` after the last.  The positions count
+#'       rows of the whole body, not of each page: a blank goes after that
+#'       body row on the page it lands on, once, and one after a row that
+#'       ends a page stays at that page's foot (not carried to the next).
+#'       A fraction or a
 #'       position past the body's last row stops at [plan_apply()], naming
 #'       the positions, as `as_rtftables(blank_rows = )` does.}
 #'     \item{a rule}{a [blank_rows_by_change()] or [blank_rows_by_rule()]

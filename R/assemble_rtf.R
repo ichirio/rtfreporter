@@ -316,43 +316,9 @@
 
 # ── TOC normalisation ──────────────────────────────────────────────────────
 
-# Extract the first centred-bold title from rtfreporter's title block (now a
-# content-width table; see `.render_text_block_table()`).  The title is the
-# first single centred-bold cell, emitted before the content; column headers
-# are not bold by default, so they do not match.  Returns NA if not found
-# within the initial scan window (stops at the first picture / figure).
-.extract_first_title <- function(lines) {
-  n_scan <- min(length(lines), 200L)
-  for (i in seq_len(n_scan)) {
-    line <- lines[i]
-    if (grepl("\\\\pict", line, fixed = FALSE)) break
-    # Title cell from .render_text_block_table():
-    #   "...\qc\li0\ri0 \b TEXT\b0 \cell..."
-    m <- regexec("\\\\qc\\\\li[0-9]+\\\\ri[0-9]+\\s+\\\\b\\s+(.+?)\\\\b0", line)
-    g <- regmatches(line, m)[[1L]]
-    if (length(g) == 2L && nzchar(trimws(g[2L]))) {
-      # A page token's field and markup's groups out (.rtf_label_text()),
-      # then reverse the RTF escape: \\ -> \, \{ -> {, \} -> }, \uN? -> char
-      title <- gsub("\\\\\\\\", "\\\\", .rtf_label_text(g[2L]))
-      title <- gsub("\\\\\\{",   "{",   title)
-      title <- gsub("\\\\\\}",   "}",   title)
-      # \uN? -> the character (signed or unsigned N, surrogate pairs joined)
-      title <- .rtf_unicode_decode(title)
-      return(trimws(title))
-    }
-  }
-  NA_character_
-}
-
-# The label a file's TOC entry gets when none is given: the file's title (as
-# `toc = "auto"` reads it), else the file's name without ".rtf".
-.toc_label_from_title <- function(file) {
-  ttl <- .extract_first_title(readLines(file, warn = FALSE))
-  if (is.na(ttl) || !nzchar(ttl)) {
-    ttl <- sub("\\.rtf$", "", basename(file), ignore.case = TRUE)
-  }
-  ttl
-}
+# (A file's title, the label of its entry when none is given, is read by
+# .toc_label_from_title() in R/assemble_spec.R: the one reader of
+# toc = "auto", a table toc row with no label and assemble_folder().)
 
 # Normalise the user-supplied `toc` into a uniform list of:
 #   list(label, level, file_idx (NA = heading), type = "heading"|"entry")
@@ -804,13 +770,19 @@
 #' \describe{
 #'   \item{`NULL` (default)}{no TOC, no bookmarks.  Byte-for-byte the
 #'     pre-v0.0.29 behaviour.}
-#'   \item{`"auto"`}{auto-extract each input file's title (the first
-#'     centred-bold cell of the title block) and use it as a level-1
-#'     TOC entry.  Falls back to the file's basename if no title is
-#'     detected.  The title is read as the file shows it, its tokens filled
-#'     (`{STUDY}`, `{PAGE}`), except that a dynamic page number
+#'   \item{`"auto"`}{each input file's title as a level-1 TOC entry.  The
+#'     title is the file's title rows (the centred bold rows [rtf_titles()]
+#'     writes at the top of the body), read as the file shows them and
+#'     joined into one entry with two spaces between them (`"Table 1"` and
+#'     `"Demographics"` give `"Table 1  Demographics"`); a line break inside
+#'     a row (`"\n"`) is joined the same way, never printed as `\line`.  A
+#'     table, a figure and a listing are each labelled by their title; a
+#'     file with no title rows takes its running header's `"Table N"` line,
+#'     and a file with neither, its file name without `.rtf`.  Its tokens
+#'     are filled (`{STUDY}`, `{PAGE}`), except that a dynamic page number
 #'     (`{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`) and the `{BOOK_PAGE}` slot are
-#'     left out, and markup keeps its text without its formatting.}
+#'     left out, and markup keeps its text without its formatting.
+#'     [assemble_folder()] labels its rows the same way.}
 #'   \item{a character vector of TOC labels}{one per input file -- same as
 #'     `"auto"` but with explicit labels.}
 #'   \item{a table (`data.frame`)}{one row per file, in order, for

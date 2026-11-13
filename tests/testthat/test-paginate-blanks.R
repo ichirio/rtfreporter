@@ -127,3 +127,133 @@ test_that("rtftable(read_attributes = TRUE) picks up blank_row_first + between_g
   tbl <- rtftable(res[[1L]])
   expect_identical(tbl$blank_rows, c(0L, 5L, 10L))
 })
+
+# ──────── #1028: blank_rows positions count rows of the whole body ─────────
+
+# The body rows of each printed page, read from the RTF written: a row's
+# label ("R03"), or "-" for a blank row.
+.t72_rows <- function(pages) {
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
+  generate_rtfreport(rtf_tables(rtf_document(), pages), f, overwrite = TRUE)
+  s <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  lapply(strsplit(s, "\\page", fixed = TRUE)[[1L]], function(pg) {
+    ln <- strsplit(pg, "\n", fixed = TRUE)[[1L]]
+    ln <- ln[startsWith(ln, "\\trowd") & !grepl("Item\\cell", ln, fixed = TRUE)]
+    lab <- grepl("R[0-9]{2}\\\\cell", ln)
+    ifelse(lab, sub("^.*(R[0-9]{2})\\\\cell.*$", "\\1", ln), "-")
+  })
+}
+.t72_body <- function(n = 25L) {
+  data.frame(Item = sprintf("R%02d", seq_len(n)), V = as.character(seq_len(n)),
+             stringsAsFactors = FALSE)
+}
+# Rows `from`..`to` of the body as their labels, with "-" after each of `after`
+.t72_seq <- function(from, to, after = integer(0), before = FALSE) {
+  out <- if (before) "-" else character(0)
+  for (k in from:to) {
+    out <- c(out, sprintf("R%02d", k))
+    if (k %in% after) out <- c(out, "-")
+  }
+  out
+}
+
+test_that("FT-TB7201 [FR-TB139]: blank_rows = c(3, 12) over 10-row pages puts one blank after body row 3 and one after body row 12, and none on a page no position falls on", {
+  d <- .t72_body()
+  want <- list(.t72_seq(1, 10, 3), .t72_seq(11, 20, 12), .t72_seq(21, 25))
+  for (sp in c("group_force", "group_safe")) {
+    p <- as_rtftables(d, blank_rows = c(3, 12), max_rows = 10, split = sp)
+    expect_identical(lapply(p, `[[`, "blank_rows"), list(3L, 2L, NULL), info = sp)
+    expect_identical(.t72_rows(p), want, info = sp)
+  }
+  # the row split, and first_rows, cut elsewhere: the blanks follow the rows
+  p <- as_rtftables(d, blank_rows = c(3, 12), split = "rows", split_rows = c(6, 16))
+  expect_identical(.t72_rows(p),
+                   list(.t72_seq(1, 5, 3), .t72_seq(6, 15, 12), .t72_seq(16, 25)))
+  p <- as_rtftables(d, blank_rows = c(3, 12), max_rows = 10, first_rows = 5,
+                    split = "group_force")
+  expect_identical(lapply(p, `[[`, "blank_rows"), list(3L, 7L, NULL))
+  # BY pages: each partition gets the whole body's positions that fall in it
+  g <- data.frame(G = rep(c("A", "B", "C"), c(8L, 8L, 9L)), Item = d$Item,
+                  stringsAsFactors = FALSE)
+  p <- as_rtftables(g, page_by = "G", blank_rows = c(3, 12), drop_cols = "G")
+  expect_identical(unname(lapply(p, `[[`, "blank_rows")), list(3L, 4L, NULL))
+  # plan_blanks(where = ) passes the positions through unchanged
+  p <- plan_apply(table_plan(d) |>
+                    plan_paginate_rows(max_rows = 10, split = "group_force") |>
+                    plan_blanks(where = c(3, 12)))
+  expect_identical(lapply(p, `[[`, "blank_rows"), list(3L, 2L, NULL))
+})
+
+test_that("FT-TB7202 [FR-TB139]: blank_rows 0 is before the body's first row and -1 after its last, not on every page", {
+  d <- .t72_body()
+  p <- as_rtftables(d, blank_rows = c(0, -1), max_rows = 10, split = "group_force")
+  expect_identical(lapply(p, `[[`, "blank_rows"), list(0L, NULL, 5L))
+  expect_identical(.t72_rows(p), list(.t72_seq(1, 10, before = TRUE),
+                                      .t72_seq(11, 20), .t72_seq(21, 25, 25)))
+  # BY pages: 0 on the first partition, -1 on the last
+  g <- data.frame(G = rep(c("A", "B", "C"), c(8L, 8L, 9L)), Item = d$Item,
+                  stringsAsFactors = FALSE)
+  p <- as_rtftables(g, page_by = "G", blank_rows = c(0, -1), drop_cols = "G")
+  expect_identical(unname(lapply(p, `[[`, "blank_rows")), list(0L, NULL, 9L))
+})
+
+test_that("FT-TB7203 [FR-TB139]: a blank after the row that ends a page stays at that page's foot and is not carried to the next page's top", {
+  d <- .t72_body()
+  p <- as_rtftables(d, blank_rows = 10, max_rows = 10, split = "group_force")
+  expect_identical(lapply(p, `[[`, "blank_rows"), list(10L, NULL, NULL))
+  r <- .t72_rows(p)
+  expect_identical(r[[1L]], .t72_seq(1, 10, 10))
+  expect_identical(r[[2L]][1L], "R11")
+  # with count_blank_rows = TRUE the blank takes a row: page 1 is full with
+  # rows 1..10, so it is dropped, not carried, and no continuation row comes
+  p <- as_rtftables(d, blank_rows = 10, max_rows = 10, split = "group_force",
+                    count_blank_rows = TRUE)
+  expect_identical(lapply(p, `[[`, "blank_rows"), list(NULL, NULL, NULL))
+  expect_identical(.t72_rows(p),
+                   list(.t72_seq(1, 10), .t72_seq(11, 20), .t72_seq(21, 25)))
+})
+
+test_that("FT-TB7204 [FR-TB139]: a set_blank_rows() attribute on the whole data frame names rows of the whole body", {
+  d <- set_blank_rows(.t72_body(), blank_rows = c(3, 12))
+  expect_identical(attr(d, "rtf_blank_rows"), c(3L, 12L))
+  p <- as_rtftables(d, max_rows = 10, split = "group_force")
+  expect_identical(lapply(p, `[[`, "blank_rows"), list(3L, 2L, NULL))
+  expect_identical(.t72_rows(p), list(.t72_seq(1, 10, 3), .t72_seq(11, 20, 12),
+                                      .t72_seq(21, 25)))
+  # counted, too
+  p <- as_rtftables(d, max_rows = 10, split = "group_force", count_blank_rows = TRUE)
+  expect_identical(lapply(p, `[[`, "blank_rows"), list(3L, 3L, NULL))
+  expect_identical(.t72_rows(p), list(.t72_seq(1, 9, 3), .t72_seq(10, 18, 12),
+                                      .t72_seq(19, 25)))
+})
+
+test_that("FT-TB7205 [FR-IX324 FR-TB142]: count_blank_rows = TRUE with blank_rows = c(0, 3) keeps position 0 at the top of page 1 and counts both blanks", {
+  d <- .t72_body()
+  p <- as_rtftables(d, blank_rows = c(0, 3), max_rows = 10, split = "group_force",
+                    count_blank_rows = TRUE)
+  expect_identical(lapply(p, `[[`, "blank_rows"), list(c(0L, 3L), NULL, NULL))
+  r <- .t72_rows(p)
+  expect_identical(r, list(.t72_seq(1, 8, 3, before = TRUE), .t72_seq(9, 18),
+                           .t72_seq(19, 25)))
+  # every page prints max_rows rows at most; page 1 holds the two blanks
+  expect_true(all(lengths(r) <= 10L))
+  expect_identical(length(r[[1L]]), 10L)
+  # no room for position 0 beside the first group (groups of three, three rows
+  # a page): it is dropped, and no page holds only a blank row
+  g <- data.frame(G = rep(c("A", "B", "C"), each = 3L), N = as.character(1:9),
+                  stringsAsFactors = FALSE)
+  p <- as_rtftables(g, split = "group_safe", max_rows = 3, group_col = "G",
+                    blank_rows = c(0, 3), count_blank_rows = TRUE)
+  expect_identical(unname(vapply(p, function(x) nrow(x$data), 1L)), c(3L, 3L, 3L))
+  expect_identical(lapply(p, `[[`, "blank_rows"), list(NULL, NULL, NULL))
+})
+
+test_that("FT-TB7206 [FR-TB139]: a page that no position falls on gets no blank row", {
+  d <- .t72_body(30L)
+  p <- as_rtftables(d, blank_rows = c(2, 25), max_rows = 10, split = "group_force")
+  expect_identical(lapply(p, `[[`, "blank_rows"), list(2L, NULL, 5L))
+  r <- .t72_rows(p)
+  expect_false("-" %in% r[[2L]])
+  expect_identical(r[[2L]], .t72_seq(11, 20))
+})

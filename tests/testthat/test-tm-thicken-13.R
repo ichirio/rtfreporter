@@ -189,6 +189,16 @@ test_that("FT-IX6803 [FR-IX324]: with count_blank_rows a separator blank never l
   # position is kept (budget 7: B and C on one page, the separator after row 3)
   mixed <- pages(list("between_groups", 6), 7L)
   expect_identical(blanks(mixed), list(3L, NULL))
+  # the explicit positions count rows of the whole body (#1028): 0 takes a row
+  # at the top of page 1 only, and a blank after the last row of a full page is
+  # dropped, not carried to the top of the next (budget 4: the blank, then A)
+  top <- pages(c(0, 3), 5L)
+  expect_identical(blanks(top), list(c(0L, 3L), NULL, NULL))
+  expect_true(all(total(top) <= 5L))
+  full <- as_rtftables(d, split = "group_force", max_rows = 4, group_col = "G",
+                       blank_rows = c(0, 3), count_blank_rows = TRUE)
+  expect_identical(unname(rows(full)), c(3L, 3L, 3L))
+  expect_identical(blanks(full), list(0L, NULL, NULL))
 })
 
 .t13_ds_rows <- function(txt) {

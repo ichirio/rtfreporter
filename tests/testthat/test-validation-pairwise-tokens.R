@@ -15,7 +15,7 @@
 #  code (R/generate_rtfreport.R .substitute_page_tokens(),
 #  .substitute_run_tokens(), .hf_row_empty(); R/user_tokens.R;
 #  R/assemble_rtf.R .retotal_numpages(), .fill_book_page_slots(),
-#  .extract_first_title(); R/assemble_spec.R .rtf_table_label()):
+#  R/assemble_spec.R .rtf_title_text(), .rtf_table_label()):
 #
 #    tokens   the package's own are those of rtf_text_tokens(): {PAGE} and
 #             {TOTAL_PAGES} (numbers written into the file), {AUTO_PAGE}
@@ -422,7 +422,7 @@ test_that("FT-AS147 [FR-AS138 FR-AS140 FR-AS141 FR-IX111 FR-IX384 FR-AS250]: pai
       labels <- regmatches(txt, gregexpr("HYPERLINK \\\\\\\\l \"[^\"]*\"\\}\\{\\\\fldrslt [^}]*\\}", txt))[[1L]]
       labels <- sub("^.*\\\\fldrslt ", "", sub("\\}$", "", labels))
       want_lab <- vapply(1:2, function(k) .tk_label(cs$token, cs$where, k), "")
-      if (cs$assemble == "folder") want_lab <- sub(" Ages", "  Ages", want_lab, fixed = TRUE)
+      # (assemble_folder() labels as toc = "auto" does, the title as written: #1030)
       expect_identical(labels, want_lab, info = info)
       expect_false(grepl("\\\\chpgn|\\\\field|rtfreporterbookpage", paste(labels, collapse = " ")))
     }

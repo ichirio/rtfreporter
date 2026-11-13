@@ -188,9 +188,9 @@
 #'   Per-column alignment        \tab yes \tab yes \tab yes \tab yes \cr
 #'   Spanning headers            \tab yes \tab yes \tab yes \tab yes \cr
 #'   Column widths               \tab yes (px/pct) \tab -- \tab -- \tab -- \cr
-#'   Title + subtitle            \tab yes \tab yes \tab yes (caption) \tab yes (caption) \cr
+#'   Title + subtitle            \tab yes (caption too) \tab yes \tab yes (caption) \tab yes (caption) \cr
 #'   Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab yes (`add_footnote()` rows) \cr
-#'   In-cell footnote marks      \tab yes (superscript) \tab yes (superscript) \tab as text \tab -- \cr
+#'   In-cell footnote marks      \tab yes (superscript, labels and footnote lines too) \tab yes (superscript) \tab as text \tab -- \cr
 #'   Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab group rows, no indent \tab as typed, no indent \cr
 #'   `tab_style()` cell styles   \tab yes (see below) \tab -- \tab -- \tab -- \cr
 #' }
@@ -207,6 +207,24 @@
 #' fonts and sizes, header text colour, and gt's **theme** borders
 #' (`tab_options()`) -- those describe gt's own default look; rtfreporter's
 #' `border` presets govern the frame instead.
+#'
+#' **A spanner is aligned as its source prints it**, not after the columns
+#' under it: gt and gtsummary (and tfrmt, through gt) centre it, unless
+#' `tab_style(cell_text(align = ), locations = cells_column_spanners())` sets
+#' it (with the `"styles"` token); rtables / tern centre it; flextable takes
+#' the alignment of its first header cell (`align(part = "header")`); huxtable
+#' the `align()` of its first cell (`"."`, decimal alignment, as right).  A
+#' spanner you write yourself ([col_cell()], [set_col_header()],
+#' `plan_col_header()`, or one rebuilt from a data frame's names with
+#' `header_sep`) takes its leftmost column's header alignment unless
+#' `col_cell(align = )` is given.
+#'
+#' A gt caption (`gt::tab_caption()`, and so gtsummary's `modify_caption()`)
+#' is the first row of the page title, above the `tab_header()` title and
+#' subtitle, as gt prints it; on a `gt_group` / `gt_split` each member's own
+#' caption is read.  It is read with the `"titles"` token, so titles you give
+#' yourself (`rtf_tables(titles = )`, [rtf_titles()]) replace it as they
+#' replace the gt title.
 #'
 #' For flextable the *displayed* text is read (header labels set via
 #' `set_header_labels()` and `colformat_*()` formatting included), not the raw
@@ -227,8 +245,9 @@
 #' **Not carried** (RTF cannot reproduce these, or they belong to the
 #' source's own theme): cell background colours / fills, font and size
 #' styling, gt theme borders (`tab_options()`), header text colour, and
-#' Markdown formatting inside labels or titles (a `gt::html()` label is read
-#' as its text, a `<br>` as a line break).  For a plain `data.frame` / tibble two pieces of
+#' Markdown formatting inside labels, titles or a caption (its bold markers
+#' go: `**Table 9** Summary` is read as `Table 9 Summary`; a
+#' `gt::html()` label is read as its text, a `<br>` as a line break).  For a plain `data.frame` / tibble two pieces of
 #' metadata are read: column `label` attributes become header labels (the
 #' `"labels"` token, see `read_meta`), and delimited column names are
 #' reconstructed into a spanning header (see `header_sep`); everything else
@@ -251,7 +270,12 @@
 #'   The tokens:
 #'   \describe{
 #'     \item{gt / gtsummary}{`"col_header"`, `"alignment"`, `"spanning"`,
-#'       `"widths"`, `"titles"`, `"footnotes"`, `"styles"` (explicit
+#'       `"widths"`, `"titles"`, `"footnotes"`, `"footnote_marks"` (the
+#'       footnote marks gt prints on the column labels, spanning headers,
+#'       title, subtitle and row-group labels, as `^{N}` after the text, and
+#'       each footnote line starting with its
+#'       mark, `^{N}` then the note, in gt's order; the marks in the body
+#'       cells are always written), `"styles"` (explicit
 #'       `tab_style()` borders and text styles; see *What is carried*).}
 #'     \item{rtables / tern}{`"col_header"`, `"alignment"`, `"spanning"`,
 #'       `"titles"`, `"footnotes"`, `"footnote_marks"` (the indentation is
@@ -464,8 +488,17 @@
 #'       row (e.g. `c(0, 5, -1)`).  A position is a whole number in
 #'       `-1..nrow` of the whole body (after `stub`, before pagination): a
 #'       fraction, `NA`, or a position past the body's last row (or below
-#'       `-1`) stops, naming the positions.  On a page shorter than `k`, a
-#'       position `k` within the body puts no blank on that page.}
+#'       `-1`) stops, naming the positions.  The positions count rows of
+#'       the whole body, not of each page: `c(3, 12)` puts one blank after
+#'       body row 3 and one after body row 12, once each, on the pages those
+#'       rows land on, and a page that no position falls on gets none.  `0`
+#'       is before the body's first row (top of page 1) and `-1` after its
+#'       last (foot of the last page).  A blank after a row that ends a page
+#'       stays at the foot of that page; it is not carried to the top of the
+#'       next one.  Under `count_blank_rows = TRUE` the blank takes a row of
+#'       the page, so where its page has no room for it (its row fills the
+#'       page to `max_rows`, or `0` does not fit beside the first group) it
+#'       is dropped, not carried over.}
 #'     \item{`"between_groups"`}{a blank at every group transition on `group_col`,
 #'       using this call's `group_by` detection (auto / indent / value / filled).}
 #'     \item{a [blank_rows_by_change()] object}{insert a blank whenever the group
@@ -526,8 +559,12 @@
 #'   }
 #'   Under `TRUE` the blank positions resolved from `blank_rows` (and from any
 #'   `rtf_blank_rows` attribute already on the input) are materialised before
-#'   the split and re-attached per page afterwards, with a leading blank
-#'   suppressed at the top of each page.
+#'   the split and re-attached per page afterwards.  A separator blank is
+#'   never left at a page's top or foot; an integer position is the whole
+#'   body's, so `0` takes a row at the top of page 1 only, and a position
+#'   that the cut leaves at the top of a later page (it follows the previous
+#'   page's last row) is dropped rather than carried over; no page is made
+#'   of blank rows alone.
 #' @param cell_format Optional cell re-formatter applied column-by-column to
 #'   the body **before** pagination, for monospaced alignment.
 #'   \describe{
@@ -1222,8 +1259,8 @@ as_rtftables.default <- function(x,
 
     # ---- blank_rows positions: whole numbers within the body (#853) -----
     # Checked once on the whole body, before pagination: a position past its
-    # last row reaches no page.  Within the body it is "after row k of each
-    # page", so a page shorter than k simply has none.
+    # last row reaches no page.  Within the body it is "after body row k",
+    # placed on the page that row lands on (#1028).
     # With no `blank_rows`, the positions an rtf_blank_rows attribute on the
     # input names (set_blank_rows()) are the ones placed.
     if (is.null(blank_rows)) {

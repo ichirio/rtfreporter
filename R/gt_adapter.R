@@ -33,7 +33,7 @@
 # Metadata tokens controllable through `read_meta = c(...)`.  `read_meta = TRUE`
 # reads them all; `FALSE` reads none (the clean body is always produced).
 .GT_META_TOKENS <- c("col_header", "alignment", "spanning", "widths",
-                     "titles", "footnotes", "styles")
+                     "titles", "footnotes", "footnote_marks", "styles")
 
 
 # ── Detection ────────────────────────────────────────────────────────────
@@ -146,12 +146,20 @@
   v
 }
 
-# Title + subtitle (+ preheader) as a character vector for the page title.
-.extract_titles <- function(gt_obj) {
+# Caption + title + subtitle (+ preheader) as a character vector for the
+# page title.  The caption (`tab_caption()`, gtsummary's `modify_caption()`)
+# comes first, as gt prints it above the header (#1029); its markdown bold
+# markers go, as for the other gt texts.  `marks` (from .gt_footnote_marks())
+# puts gt's footnote mark after the title and the subtitle.
+.extract_titles <- function(gt_obj, marks = NULL) {
+  cap <- .flatten_to_chr(.gt_option(gt_obj, "table_caption", NULL))
   heading <- gt_obj[["_heading"]]
-  if (is.null(heading)) return(NULL)
-  rows <- c(.flatten_to_chr(heading$title),
-            .flatten_to_chr(heading$subtitle),
+  if (is.null(heading)) heading <- list()
+  ttl <- .flatten_to_chr(heading$title)
+  sub <- .flatten_to_chr(heading$subtitle)
+  if (!is.na(ttl)) ttl <- .gt_add_mark(ttl, marks$title)
+  if (!is.na(sub)) sub <- .gt_add_mark(sub, marks$subtitle)
+  rows <- c(cap, ttl, sub,
             .flatten_to_chr(heading$preheader))
   rows <- rows[!is.na(rows)]
   if (!length(rows)) return(NULL)
@@ -174,15 +182,227 @@
 .extract_footnote_texts <- function(gt_obj) {
   fn <- gt_obj[["_footnotes"]]
   if (is.null(fn) || !nrow(fn)) return(NULL)
-  out <- vapply(fn$footnotes, function(ft) {
-    if (is.null(ft) || !length(ft)) return(NA_character_)
-    v <- vapply(seq_along(ft), function(i) .flatten_to_chr(ft[[i]]), character(1L))
-    v <- v[!is.na(v)]
-    if (!length(v)) NA_character_ else paste(v, collapse = " ")
-  }, character(1L))
+  out <- vapply(fn$footnotes, .gt_footnote_text, character(1L))
   out <- unique(out[!is.na(out)])
   if (!length(out)) return(NULL)
   unname(out)
+}
+
+# One `_footnotes$footnotes` entry -> its text (NA when it has none).
+.gt_footnote_text <- function(ft) {
+  if (is.null(ft) || !length(ft)) return(NA_character_)
+  v <- vapply(seq_along(ft), function(i) .flatten_to_chr(ft[[i]]), character(1L))
+  v <- v[!is.na(v)]
+  if (!length(v)) NA_character_ else paste(v, collapse = " ")
+}
+
+
+# ── Footnote marks on the column labels and on the footnote lines ────────
+#
+#  gt numbers its footnote marks when it renders the table: the places a
+#  footnote is attached are put in reading order -- title, subtitle,
+#  stubhead, spanners (top level first), column labels, then the body (row
+#  by row in render order, stub first) -- each distinct footnote text takes
+#  the next number in that order, and the number goes through the
+#  `footnotes.marks` option (numbers, letters, symbols).  A label with more
+#  than one footnote carries the marks joined by ",".  The footer prints
+#  each (mark, text) once, the notes with no location first (option
+#  `footnotes.order`: "marks_last", the default; "marks_first";
+#  "preserve_order" keeps the order they were added in, unsorted).
+#  extract_body() gives the body marks already numbered; the label marks and
+#  the footnote lines are numbered here the same way from the object's slots
+#  (list access only, as the rest of this adapter -- no gt internals).
+#  read_meta token: "footnote_marks".
+
+# A value of gt's `_options` table (the default when it is not there).
+.gt_option <- function(gt_obj, name, default) {
+  o <- gt_obj[["_options"]]
+  if (!is.data.frame(o) || !all(c("parameter", "value") %in% names(o))) {
+    return(default)
+  }
+  i <- match(name, o$parameter)
+  if (is.na(i)) return(default)
+  v <- o$value[[i]]
+  if (is.null(v) || !length(v)) default else v
+}
+
+# Footnote numbers -> marks, by the `footnotes.marks` option: "numbers",
+# "letters", "LETTERS", "standard", "extended" or the marks themselves; past
+# the end of a set the marks double ("**", "aa").
+.gt_mark_symbols <- function(id, marks) {
+  if (identical(marks, "numbers")) return(as.character(id))
+  # "*", dagger, double dagger, section (+ double bar, pilcrow)
+  symbols <- c("*", intToUtf8(c(0x2020L, 0x2021L, 0xA7L, 0x2016L, 0xB6L),
+                              multiple = TRUE))
+  set <- if (identical(marks, "LETTERS")) LETTERS
+         else if (identical(marks, "letters")) letters
+         else if (identical(marks, "standard")) symbols[1:4]
+         else if (identical(marks, "extended")) symbols
+         else as.character(marks)
+  times <- (id - 1L) %/% length(set) + 1L
+  val   <- set[(id - 1L) %% length(set) + 1L]
+  vapply(seq_along(id), function(i) strrep(val[i], times[i]), character(1L))
+}
+
+# A mark dressed as the `footnotes.spec_ref` / `footnotes.spec_ftr` option
+# asks ("." after, "(" / "[" before, ")" / "]" after), as gt prints it, and
+# written as ^{mark} superscript markup when the spec has "^" (the default),
+# as plain text when it does not -- as extract_body() gives the body marks.
+.gt_mark_spec <- function(mark, spec) {
+  spec <- if (is.character(spec) && length(spec)) spec[[1L]] else "^i"
+  if (grepl(".", spec, fixed = TRUE)) mark <- paste0(mark, ".")
+  if (grepl("(", spec, fixed = TRUE)) mark <- paste0("(", mark)
+  if (grepl("[", spec, fixed = TRUE)) mark <- paste0("[", mark)
+  if (grepl(")", spec, fixed = TRUE)) mark <- paste0(mark, ")")
+  if (grepl("]", spec, fixed = TRUE)) mark <- paste0(mark, "]")
+  if (grepl("^", spec, fixed = TRUE)) paste0("^{", mark, "}") else mark
+}
+
+# gt's footnote marks for one gt_tbl: list(label = marks by column var,
+# spanner = by spanner id, stubhead / title / subtitle = mark or NULL,
+# group = by row-group id, lines = the footnote
+# lines, each "^{mark} text" or the bare text of a note with no location, in
+# the order gt prints them).  NULL when the table has no footnotes.
+.gt_footnote_marks <- function(gt_obj) {
+  fn <- gt_obj[["_footnotes"]]
+  if (!is.data.frame(fn) || !nrow(fn)) return(NULL)
+  boxh <- gt_obj[["_boxhead"]]
+  vars <- as.character(boxh$var)
+  type <- as.character(boxh$type)
+  default_vars <- vars[type %in% "default"]
+  stub_vars    <- vars[type %in% "stub"]
+
+  loc    <- as.character(fn$locname)
+  col    <- as.character(fn$colname)
+  grp    <- as.character(fn$grpname)
+  locnum <- as.numeric(fn$locnum)
+  rownum <- as.numeric(fn$rownum)
+  colnum <- rep(NA_real_, nrow(fn))
+  text   <- vapply(fn$footnotes, .gt_footnote_text, character(1L))
+
+  # the places gt leaves out: hidden columns, an absent title / subtitle,
+  # a row group that is not there
+  heading <- gt_obj[["_heading"]]
+  keep <- (!loc %in% c("data", "columns_columns") | col %in% default_vars) &
+          (is.na(col) | col %in% c(default_vars, stub_vars)) & !is.na(text)
+  if (is.na(.flatten_to_chr(heading$title)))    keep <- keep & loc != "title"
+  if (is.na(.flatten_to_chr(heading$subtitle))) keep <- keep & loc != "subtitle"
+  keep <- keep & (loc != "row_groups" |
+                  grp %in% as.character(gt_obj[["_row_groups"]]))
+
+  # body places in render order
+  n_data <- nrow(gt_obj[["_data"]] %||% data.frame())
+  rmap <- .gt_body_row_map(gt_obj, n_data) %||% seq_len(n_data)
+  gid  <- as.character(gt_obj[["_stub_df"]]$group_id)
+  group_rows <- function(g) {
+    r <- which(gid %in% g)
+    r <- r[r <= length(rmap)]
+    if (length(r)) rmap[r] else NA_real_
+  }
+  for (i in which(keep)) {
+    if (loc[i] %in% c("data", "stub")) {
+      rownum[i] <- if (!is.na(rownum[i]) && rownum[i] >= 1 &&
+                       rownum[i] <= length(rmap)) rmap[rownum[i]] else NA_real_
+      colnum[i] <- if (loc[i] == "data") match(col[i], default_vars)
+                   else if (is.na(col[i]) || !col[i] %in% stub_vars) 0
+                   else -(length(stub_vars) - match(col[i], stub_vars) + 1)
+    } else if (loc[i] == "row_groups") {
+      rownum[i] <- min(group_rows(grp[i])) - 0.1
+      colnum[i] <- 1
+      if (is.na(rownum[i])) keep[i] <- FALSE
+    } else if (loc[i] == "summary_cells") {
+      rownum[i] <- rownum[i] / 100 + max(group_rows(grp[i]))
+      colnum[i] <- match(col[i], default_vars, nomatch = 0L)
+    } else if (locnum[i] %in% 6) {
+      colnum[i] <- match(col[i], default_vars, nomatch = 0L)
+    } else if (loc[i] == "columns_columns") {
+      rownum[i] <- -1
+      colnum[i] <- match(col[i], default_vars)
+    }
+  }
+  # spanners: a level above the labels (the top one first), at the first
+  # visible column under it; a spanner with no visible column is not printed
+  spans <- gt_obj[["_spanners"]]
+  sp <- which(keep & loc == "columns_groups")
+  for (i in sp) {
+    k <- if (is.data.frame(spans) && nrow(spans))
+      match(grp[i], as.character(spans$spanner_id)) else NA_integer_
+    pos <- if (is.na(k)) integer(0)
+           else match(as.character(spans$vars[[k]]), default_vars)
+    pos <- pos[!is.na(pos)]
+    if (!length(pos)) {
+      keep[i] <- FALSE
+    } else {
+      rownum[i] <- -(as.numeric(spans$spanner_level[[k]]) + 1)
+      colnum[i] <- min(pos)
+    }
+  }
+
+  # gt's working order before it sorts (and its numbering order under
+  # "preserve_order"): the other places, then the body, row groups and
+  # summaries, then the column labels, then the spanners
+  stage <- ifelse(loc %in% c("data", "stub"), 1,
+           ifelse(loc == "row_groups", 2,
+           ifelse(loc == "summary_cells", 3,
+           ifelse(locnum %in% 6, 4,
+           ifelse(loc == "columns_columns", 5,
+           ifelse(loc == "columns_groups", 6, 0))))))
+  idx <- which(keep)
+  if (!length(idx)) return(NULL)
+  idx <- idx[order(stage[idx], idx)]
+  order_opt <- .gt_option(gt_obj, "footnotes_order", "marks_last")
+  if (!identical(order_opt, "preserve_order")) {
+    idx <- idx[order(locnum[idx], rownum[idx], colnum[idx], seq_along(idx),
+                     na.last = TRUE)]
+  }
+  placed <- idx[loc[idx] != "none"]
+  ids <- match(text[placed], unique(text[placed]))
+  mark <- rep(NA_character_, length(loc))
+  if (length(placed)) {
+    mark[placed] <- .gt_mark_symbols(
+      ids, .gt_option(gt_obj, "footnotes_marks", "numbers"))
+  }
+
+  # marks on a label / spanner: all of its marks, sorted, joined by ","
+  joined <- function(at, key) {
+    rows <- placed[loc[placed] == at]
+    if (!length(rows)) return(character(0))
+    keys <- unique(key[rows])
+    out <- vapply(keys, function(k) {
+      .gt_mark_spec(paste(sort(mark[rows[key[rows] == k]]), collapse = ","),
+                    .gt_option(gt_obj, "footnotes_spec_ref", "^i"))
+    }, character(1L))
+    stats::setNames(out, keys)
+  }
+  one <- function(at) {
+    m <- joined(at, rep(at, length(loc)))
+    if (length(m)) unname(m[[1L]])
+  }
+
+  # the lines: no-location notes first (or last), each (mark, text) once
+  none <- idx[loc[idx] == "none"]
+  rows <- if (identical(order_opt, "preserve_order")) sort(idx)
+          else if (identical(order_opt, "marks_first")) c(placed, none)
+          else c(none, placed)
+  rows <- rows[!duplicated(paste(mark[rows], text[rows], sep = "\r"))]
+  ftr  <- .gt_option(gt_obj, "footnotes_spec_ftr", "^i")
+  lines <- ifelse(is.na(mark[rows]), text[rows],
+                  paste0(.gt_mark_spec(mark[rows], ftr), " ", text[rows]))
+
+  list(label    = joined("columns_columns", col),
+       spanner  = joined("columns_groups", grp),
+       stubhead = one("stubhead"),
+       title    = one("title"),
+       subtitle = one("subtitle"),
+       group    = joined("row_groups", grp),
+       lines    = unname(lines))
+}
+
+# `label` with gt's footnote mark(s) `m` (already ^{...} markup) after it,
+# unchanged when there is no mark.
+.gt_add_mark <- function(label, m) {
+  if (is.null(m) || !length(m) || is.na(m) || !nzchar(m)) return(label)
+  paste0(label, m)
 }
 
 # Convert one gt column_width entry to list(kind, value).
@@ -263,7 +483,8 @@
 # `body_vars` -- the column ids returned by extract_body(), in render order --
 # as the position reference.  Non-contiguous or fully-hidden spanners are
 # skipped.  Returns list() when there are none.
-.extract_spanners_body <- function(gt_obj, body_vars, spanner_styles = NULL) {
+.extract_spanners_body <- function(gt_obj, body_vars, spanner_styles = NULL,
+                                   spanner_marks = NULL) {
   spans <- gt_obj[["_spanners"]]
   if (is.null(spans) || !nrow(spans)) return(list())
   levels_desc <- sort(unique(as.integer(spans$spanner_level)), decreasing = TRUE)
@@ -279,15 +500,23 @@
       pos <- if (length(idx) == 1L) idx else c(min(idx), max(idx))
       label <- .flatten_to_chr(spans_lv$spanner_label[[j]])
       if (is.na(label)) label <- ""
+      # gt's footnote mark(s) on this spanner ("footnote_marks" token)
+      sid <- as.character(spans_lv$spanner_id[[j]])
+      if (sid %in% names(spanner_marks)) {
+        label <- .gt_add_mark(label, spanner_marks[[sid]])
+      }
       # Explicit tab_style() declarations on this spanner ("styles" token):
       # borders and bold/italic/underline/align ride on the cell itself.
+      # gt centres a spanner unless tab_style(cell_text(align = )) says
+      # otherwise, so the cell is centred, not left to take its first
+      # column's header alignment (#1023).
       s <- if (!is.null(spanner_styles))
         spanner_styles[[as.character(spans_lv$spanner_id[[j]])]]
       cells[[length(cells) + 1L]] <- if (is.null(s)) {
-        col_cell(pos = pos, label = label)
+        col_cell(pos = pos, label = label, align = "center")
       } else {
         col_cell(pos = pos, label = label,
-                 align     = s$text$align,
+                 align     = s$text$align %||% "center",
                  bold      = isTRUE(s$text$bold),
                  italic    = isTRUE(s$text$italic),
                  underline = isTRUE(s$text$underline),
@@ -680,16 +909,24 @@
     }
   }, integer(1L))
 
+  # ---- footnote marks on the labels and lines (gt's numbering) ----------
+  fmarks <- if ("footnote_marks" %in% tokens) .gt_footnote_marks(gt_obj)
+
   # ---- col_header (labels) ---------------------------------------------
   if ("col_header" %in% tokens && !is.null(boxh)) {
     labs <- vapply(seq_len(ncol_t), function(j) {
       if (identical(body_vars[j], "::rowname::")) {
         sh <- gt_obj[["_stubhead"]]
         v  <- if (!is.null(sh)) .flatten_to_chr(sh$label) else NA_character_
+        m  <- fmarks$stubhead
       } else if (!is.na(bx_idx[j])) {
         v <- .flatten_to_chr(boxh$column_label[[bx_idx[j]]])
-      } else v <- NA_character_
-      if (is.na(v)) "" else v
+        m <- fmarks$label[body_vars[j]]
+      } else {
+        v <- NA_character_
+        m <- NULL
+      }
+      .gt_add_mark(if (is.na(v)) "" else v, unname(m))
     }, character(1L))
     out$col_header <- labs
   }
@@ -726,7 +963,8 @@
   # ---- spanning -> stacked col_header ----------------------------------
   if ("spanning" %in% tokens) {
     span_rows <- .extract_spanners_body(gt_obj, body_vars,
-                                        spanner_styles = sty$spanner)
+                                        spanner_styles = sty$spanner,
+                                        spanner_marks = fmarks$spanner)
     if (length(span_rows)) {
       bottom <- out$col_header %||% names(df)
       out$col_header <- c(span_rows, list(bottom))
@@ -852,16 +1090,21 @@
 
   # ---- titles / footnotes (page-level blocks) --------------------------
   if ("titles" %in% tokens) {
-    tt <- .extract_titles(gt_obj)
+    tt <- .extract_titles(gt_obj, marks = fmarks)
     if (!is.null(tt)) out$titles_block <- tt
   }
   if ("footnotes" %in% tokens) {
-    fn <- c(.extract_footnote_texts(gt_obj), .extract_source_notes(gt_obj))
+    # with "footnote_marks", each line starts with its mark, in gt's order
+    notes <- if (!is.null(fmarks)) fmarks$lines else .extract_footnote_texts(gt_obj)
+    fn <- c(notes, .extract_source_notes(gt_obj))
     fn <- fn[!is.na(fn) & nzchar(fn)]
     if (length(fn)) out$footnotes_block <- fn
   }
 
-  if (!is.null(group_of_row)) out <- .gt_interleave_groups(out, group_of_row)
+  if (!is.null(group_of_row)) {
+    out <- .gt_interleave_groups(out, group_of_row,
+                                 group_marks = fmarks$group)
+  }
   out
 }
 
@@ -870,7 +1113,9 @@
 # group (#650).  The body is in gt's render order already (a group's rows
 # together), so a heading goes wherever the group changes; a row of no group
 # (NA) gets none.  The per-row cell styles move with their rows.
-.gt_interleave_groups <- function(out, group_of_row) {
+# `group_marks` (by group id, "footnote_marks" token) puts gt's footnote
+# mark after a heading's label.
+.gt_interleave_groups <- function(out, group_of_row, group_marks = NULL) {
   df <- out$data
   n  <- nrow(df)
   if (!n || length(group_of_row) != n) return(out)
@@ -880,7 +1125,9 @@
   if (!length(starts)) return(out)
   heading <- df[rep(1L, length(starts)), , drop = FALSE]
   heading[] <- lapply(heading, function(col) rep("", length(starts)))
-  heading[[1L]] <- g[starts]
+  heading[[1L]] <- vapply(g[starts], function(id) {
+    .gt_add_mark(id, if (id %in% names(group_marks)) group_marks[[id]])
+  }, character(1L), USE.NAMES = FALSE)
   # each row's place once the headings are in: one more for every heading
   # at or above it
   pos <- seq_len(n) + findInterval(seq_len(n), starts)

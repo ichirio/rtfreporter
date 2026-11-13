@@ -76,7 +76,12 @@ error, for every source.
 The tokens:
 \describe{
 \item{gt / gtsummary}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
-\code{"widths"}, \code{"titles"}, \code{"footnotes"}, \code{"styles"} (explicit
+\code{"widths"}, \code{"titles"}, \code{"footnotes"}, \code{"footnote_marks"} (the
+footnote marks gt prints on the column labels, spanning headers,
+title, subtitle and row-group labels, as \verb{^\{N\}} after the text, and
+each footnote line starting with its
+mark, \verb{^\{N\}} then the note, in gt's order; the marks in the body
+cells are always written), \code{"styles"} (explicit
 \code{tab_style()} borders and text styles; see \emph{What is carried}).}
 \item{rtables / tern}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
 \code{"titles"}, \code{"footnotes"}, \code{"footnote_marks"} (the indentation is
@@ -310,8 +315,17 @@ given data-row index; \code{0} = before the first row, \code{-1} = after the las
 row (e.g. \code{c(0, 5, -1)}).  A position is a whole number in
 \verb{-1..nrow} of the whole body (after \code{stub}, before pagination): a
 fraction, \code{NA}, or a position past the body's last row (or below
-\code{-1}) stops, naming the positions.  On a page shorter than \code{k}, a
-position \code{k} within the body puts no blank on that page.}
+\code{-1}) stops, naming the positions.  The positions count rows of
+the whole body, not of each page: \code{c(3, 12)} puts one blank after
+body row 3 and one after body row 12, once each, on the pages those
+rows land on, and a page that no position falls on gets none.  \code{0}
+is before the body's first row (top of page 1) and \code{-1} after its
+last (foot of the last page).  A blank after a row that ends a page
+stays at the foot of that page; it is not carried to the top of the
+next one.  Under \code{count_blank_rows = TRUE} the blank takes a row of
+the page, so where its page has no room for it (its row fills the
+page to \code{max_rows}, or \code{0} does not fit beside the first group) it
+is dropped, not carried over.}
 \item{\code{"between_groups"}}{a blank at every group transition on \code{group_col},
 using this call's \code{group_by} detection (auto / indent / value / filled).}
 \item{a \code{\link[=blank_rows_by_change]{blank_rows_by_change()}} object}{insert a blank whenever the group
@@ -351,8 +365,12 @@ groups, so the printed page can be taller than \code{max_rows}.}
 }
 Under \code{TRUE} the blank positions resolved from \code{blank_rows} (and from any
 \code{rtf_blank_rows} attribute already on the input) are materialised before
-the split and re-attached per page afterwards, with a leading blank
-suppressed at the top of each page.}
+the split and re-attached per page afterwards.  A separator blank is
+never left at a page's top or foot; an integer position is the whole
+body's, so \code{0} takes a row at the top of page 1 only, and a position
+that the cut leaves at the top of a later page (it follows the previous
+page's last row) is dropped rather than carried over; no page is made
+of blank rows alone.}
 
 \item{align_count_pct}{The cell alignment to apply before pagination.
 \describe{
@@ -671,9 +689,9 @@ Column (leaf) labels        \tab yes \tab yes \tab yes \tab yes \cr
 Per-column alignment        \tab yes \tab yes \tab yes \tab yes \cr
 Spanning headers            \tab yes \tab yes \tab yes \tab yes \cr
 Column widths               \tab yes (px/pct) \tab -- \tab -- \tab -- \cr
-Title + subtitle            \tab yes \tab yes \tab yes (caption) \tab yes (caption) \cr
+Title + subtitle            \tab yes (caption too) \tab yes \tab yes (caption) \tab yes (caption) \cr
 Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab yes (\code{add_footnote()} rows) \cr
-In-cell footnote marks      \tab yes (superscript) \tab yes (superscript) \tab as text \tab -- \cr
+In-cell footnote marks      \tab yes (superscript, labels and footnote lines too) \tab yes (superscript) \tab as text \tab -- \cr
 Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab group rows, no indent \tab as typed, no indent \cr
 \code{tab_style()} cell styles   \tab yes (see below) \tab -- \tab -- \tab -- \cr
 }
@@ -690,6 +708,24 @@ first, verbs win per side / per field.  \emph{Not} carried: \code{cell_fill()},
 fonts and sizes, header text colour, and gt's \strong{theme} borders
 (\code{tab_options()}) -- those describe gt's own default look; rtfreporter's
 \code{border} presets govern the frame instead.
+
+\strong{A spanner is aligned as its source prints it}, not after the columns
+under it: gt and gtsummary (and tfrmt, through gt) centre it, unless
+\code{tab_style(cell_text(align = ), locations = cells_column_spanners())} sets
+it (with the \code{"styles"} token); rtables / tern centre it; flextable takes
+the alignment of its first header cell (\code{align(part = "header")}); huxtable
+the \code{align()} of its first cell (\code{"."}, decimal alignment, as right).  A
+spanner you write yourself (\code{\link[=col_cell]{col_cell()}}, \code{\link[=set_col_header]{set_col_header()}},
+\code{plan_col_header()}, or one rebuilt from a data frame's names with
+\code{header_sep}) takes its leftmost column's header alignment unless
+\code{col_cell(align = )} is given.
+
+A gt caption (\code{gt::tab_caption()}, and so gtsummary's \code{modify_caption()})
+is the first row of the page title, above the \code{tab_header()} title and
+subtitle, as gt prints it; on a \code{gt_group} / \code{gt_split} each member's own
+caption is read.  It is read with the \code{"titles"} token, so titles you give
+yourself (\code{rtf_tables(titles = )}, \code{\link[=rtf_titles]{rtf_titles()}}) replace it as they
+replace the gt title.
 
 For flextable the \emph{displayed} text is read (header labels set via
 \code{set_header_labels()} and \verb{colformat_*()} formatting included), not the raw
@@ -710,8 +746,9 @@ so there is no indent).
 \strong{Not carried} (RTF cannot reproduce these, or they belong to the
 source's own theme): cell background colours / fills, font and size
 styling, gt theme borders (\code{tab_options()}), header text colour, and
-Markdown formatting inside labels or titles (a \code{gt::html()} label is read
-as its text, a \verb{<br>} as a line break).  For a plain \code{data.frame} / tibble two pieces of
+Markdown formatting inside labels, titles or a caption (its bold markers
+go: \verb{**Table 9** Summary} is read as \verb{Table 9 Summary}; a
+\code{gt::html()} label is read as its text, a \verb{<br>} as a line break).  For a plain \code{data.frame} / tibble two pieces of
 metadata are read: column \code{label} attributes become header labels (the
 \code{"labels"} token, see \code{read_meta}), and delimited column names are
 reconstructed into a spanning header (see \code{header_sep}); everything else

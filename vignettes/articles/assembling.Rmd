@@ -101,7 +101,8 @@ f2 <- make("Table 14.2.1 Adverse Events",  tempfile(fileext = ".rtf"))
 ## A table of contents from the titles: `toc = "auto"`
 
 `toc = "auto"` builds one TOC entry per file, taking each label from the file's
-first title:
+title: its title rows as the file shows them, joined with two spaces
+(`"Table 14.1.1"` and `"Demographics"` give `"Table 14.1.1  Demographics"`):
 
 ```{r assemble-auto, fold = "open"}
 pkg <- tempfile(fileext = ".rtf")

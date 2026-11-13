@@ -358,6 +358,19 @@ test_that("FT-TB5215 [FR-TB139]: blank_rows takes positions, between_groups, a s
   x <- d
   attr(x, "rtf_blank_rows") <- 3L
   expect_identical(as_rtftables(x)[[1L]]$blank_rows, 3L)
+  # the positions count rows of the whole body, not of each page (#1028):
+  # pages of rows 1-2, 3-4 and 5.  0 tops page 1 only and -1 ends the last
+  # page only; after body row 2, the end of page 1, stays at that page's foot
+  # and is not carried to page 2, which no position falls on; after body
+  # row 3 is after the first row of page 2, once
+  pg <- function(x, ...) {
+    lapply(as_rtftables(x, max_rows = 2, split = "group_force", ...), `[[`, "blank_rows")
+  }
+  expect_identical(pg(d, blank_rows = c(0, 2, -1)), list(c(0L, 2L), NULL, 1L))
+  expect_identical(pg(d, blank_rows = 3), list(NULL, 1L, NULL))
+  # an attribute's positions likewise
+  attr(x, "rtf_blank_rows") <- c(0L, 2L, 5L)
+  expect_identical(pg(x), list(c(0L, 2L), NULL, 1L))
 })
 
 test_that("FT-TB5216 [FR-TB143]: align_count_pct is off by default, TRUE is the count_pct format, a name or function acts as cell_format", {

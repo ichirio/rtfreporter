@@ -820,7 +820,7 @@ test_that("FT-TB6118 [FR-TB192]: rtf_tables() given a gt or gtsummary table, alo
   expect_error(rtf_tables(rtf_document(), g, read_gt = TRUE), "unused argument")
 })
 
-test_that("FT-TB6119 [FR-TB577]: from a gt_tbl or gtsummary table as_rtftables() reads the labels, alignment, spanners, widths (px and pct), title and subtitle, source notes and the in-cell footnote marks", {
+test_that("FT-TB6119 [FR-TB577]: from a gt_tbl or gtsummary table as_rtftables() reads the labels, alignment, spanners, widths (px and pct), caption, title and subtitle, source notes and the in-cell footnote marks", {
   skip_if_not_installed("gt")
   skip_if_not_installed("gtsummary")
   g <- gt::gt(data.frame(a = c("x", "y"), b = c(1.5, 2.5), c = c(3, 4)))
@@ -828,6 +828,7 @@ test_that("FT-TB6119 [FR-TB577]: from a gt_tbl or gtsummary table as_rtftables()
   g <- gt::cols_align(g, "right", columns = c)
   g <- gt::tab_spanner(g, "Sp", columns = c(b, c))
   g <- gt::tab_header(g, title = "TT", subtitle = "SS")
+  g <- gt::tab_caption(g, "CAP")
   g <- gt::tab_source_note(g, "SN")
   g <- gt::tab_footnote(g, "FN1", locations = gt::cells_body(columns = b, rows = 1))
   px <- gt::cols_width(g, a ~ gt::px(60), b ~ gt::px(120), c ~ gt::px(180))
@@ -839,23 +840,25 @@ test_that("FT-TB6119 [FR-TB577]: from a gt_tbl or gtsummary table as_rtftables()
   expect_identical(vapply(p$col_header[[1L]], function(z) z$label, ""), c("", "Sp"))
   expect_identical(p$column_widths_twips, c(900L, 1800L, 2700L))            # px * 15: 60, 120, 180
   expect_null(p$col_rel_width)
-  expect_identical(attr(p, "rtf_titles"), c("TT", "SS"))                    # the title and subtitle
-  expect_identical(attr(p, "rtf_footnotes"), c("FN1", "SN"))                # the note, then the source note
+  expect_identical(attr(p, "rtf_titles"), c("CAP", "TT", "SS"))             # the caption, then the title and subtitle
+  expect_identical(attr(p, "rtf_footnotes"), c("^{1} FN1", "SN"))           # the note with its mark, then the source note
   expect_identical(.t11_plain(p$data$b), c("^{1} 1.5", "2.5"))                          # the mark as ^{N}
   # pct widths go to col_rel_width
   pc <- as_rtftables(gt::cols_width(g, a ~ gt::pct(20), b ~ gt::pct(30), c ~ gt::pct(50)))[[1L]]
   expect_identical(pc$col_rel_width, c(20, 30, 50))
   expect_null(pc$column_widths_twips)
-  # a gtsummary table: labels, alignment, spanner, footnote text
+  # a gtsummary table: labels, alignment, spanner, footnote text, caption
   gs <- gtsummary::modify_spanning_header(
     gtsummary::modify_footnote(
       gtsummary::modify_column_alignment(.t11_gts(), columns = stat_1, align = "right"), label = "Foot L"),
     c(stat_1, stat_2) ~ "Trt")
+  gs <- gtsummary::modify_caption(gs, "**Table 9** Summary")
   s <- as_rtftables(gs)[[1L]]
-  expect_identical(s$col_header[[2L]], c("Characteristic", "Drug A  \nN = 98", "Drug B  \nN = 102"))
+  expect_identical(attr(s, "rtf_titles"), "Table 9 Summary")                # the caption, its ** markers dropped
+  expect_identical(s$col_header[[2L]], c("Characteristic^{1}", "Drug A  \nN = 98^{2}", "Drug B  \nN = 102^{2}"))
   expect_identical(s$col_spec[[2L]]$align, "right")
   expect_identical(vapply(s$col_header[[1L]], function(z) z$label, ""), c("", "Trt"))
-  expect_true("Foot L" %in% attr(s, "rtf_footnotes"))
+  expect_true("^{1} Foot L" %in% attr(s, "rtf_footnotes"))
 })
 
 test_that("FT-TB6120 [FR-TB578]: explicit gt::tab_style() declarations are carried (borders, bold, italic, underline, align on spanners, labels, body and stub cells); a label border promotes the label row; the verbs override; transparent theme borders are not carried", {
