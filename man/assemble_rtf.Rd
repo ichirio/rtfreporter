@@ -12,7 +12,6 @@ assemble_rtf(
   toc = NULL,
   toc_title = "Table of Contents",
   toc_leader = c("dot", "none"),
-  toc_page_numbering = c("none", "roman", "decimal"),
   bookmark_prefix = "tfl_",
   book_page = NULL,
   toc_style = getOption("rtfreporter.toc_style")
@@ -51,9 +50,6 @@ that is none of them stays as text.  The same goes for the text of a
 \item{toc_leader}{\code{"dot"} (default) draws a dotted leader between
 each TOC entry and its page number; \code{"none"} leaves whitespace.}
 
-\item{toc_page_numbering}{\code{"none"} (default) / \code{"roman"} /
-\code{"decimal"}.  See \strong{Page numbering} above.}
-
 \item{bookmark_prefix}{String prepended to every auto-generated
 bookmark name (default \code{"tfl_"}): letters, digits and \verb{_} only, as a
 bookmark name allows; \code{""} = none.  Helps avoid clashes if you
@@ -72,7 +68,11 @@ and renders it empty, keeping the row's height.  This argument
 supplies the content when the book is built, so filling it cannot
 shift anything.}
 \item{What to give}{Typically \code{"Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"}.  The total resolves to the \strong{book's} page
-count, which is what the deliverable could not know on its own.}
+count, which is what the deliverable could not know on its own.
+Both follow \strong{Page numbering} above: the page is counted from the
+book's first page, a cover and the table of contents included, and
+the total is all of its pages (the first table after a cover and a
+one-page table of contents of a 9-page book reads \verb{Page 3 of 9}).}
 \item{Refused}{The static \code{{PAGE}} / \code{{TOTAL_PAGES}} are rejected: the
 slot sits in one band shared by every page of a section, so a
 single substitution cannot give each page its own number.}
@@ -109,10 +109,13 @@ header (font / colour tables, page settings) is taken from the
 Page-number fields work correctly across the assembled document
 provided the header/footer text uses dynamic tokens:
 \itemize{
-\item \code{\{AUTO_PAGE\}} -- per-page number rendered by the RTF viewer.
-\item \code{\{AUTO_TOTAL_PAGES\}} -- total page count rendered by the
-viewer across all assembled files.
+\item \code{\{AUTO_PAGE\}} -- per-page number rendered by the RTF viewer,
+counted from the assembled file's first page.
+\item \code{\{AUTO_TOTAL_PAGES\}} -- the assembled file's total page count,
+a cover and the table of contents included.
 }
+
+See \strong{Page numbering} below.
 
 Static tokens (\code{\{TOTAL_PAGES\}}) reflect only the page count
 of the individual source file and will be wrong in the assembled
@@ -185,21 +188,21 @@ calculated by the viewer when the file opens.
 
 \section{Page numbering}{
 
-\code{toc_page_numbering} controls how the TOC pages are numbered (a cover
-page keeps the document's Arabic numbering):
+Every page of the assembled file is numbered in one Arabic sequence from
+its first page, and the total is the count of all its pages.  The cover,
+when there is one, is page 1; the table of contents' pages come next, then
+the input files' pages, with no restart anywhere.  With a cover, a
+one-page table of contents and 7 pages of tables, the pages read 1 of 9
+(the cover), 2 of 9 (the table of contents), 3 of 9 (the first table)
+... 9 of 9; without the cover, 1 of 8 (the table of contents), 2 of 8
+(the first table) ... 8 of 8.
 
-\describe{
-\item{\code{"none"} (default)}{Arabic numbering flows continuously from
-the first page; if the source files use \code{\{AUTO_PAGE\}} the
-TOC counts as page 1, 2, ...}
-\item{\code{"roman"}}{TOC pages use lowercase Roman numerals (\code{i}, \code{ii},
-...); body pages restart at \code{1}.}
-\item{\code{"decimal"}}{TOC pages use Arabic numerals starting at \code{1}, and
-the body continues from them (with a one-page TOC the first table is
-page 2).  A cover page before the TOC is not counted.}
-}
-
-\code{\link[=assemble_folder]{assemble_folder()}} defaults to \code{"decimal"}.
+The inputs' \code{\{AUTO_PAGE\}} / \code{\{AUTO_TOTAL_PAGES\}}, the
+\code{book_page} text and the page numbers the table of contents shows all
+follow this sequence.  The file is written with the total already in
+place (every \code{NUMPAGES} field's cached value is the count of all pages)
+and with each table of contents entry's cached page number, so a viewer
+that does not refresh fields shows them too.
 }
 
 \examples{
@@ -223,7 +226,7 @@ assemble_rtf(c(a, b), out, overwrite = TRUE)
 # Auto-TOC: one entry per file, label extracted from each title
 assemble_rtf(c(a, b), out, toc = "auto", overwrite = TRUE)
 
-# Multi-level TOC with section headings + cover page + Roman TOC pages
+# Multi-level TOC with section headings + cover page (pages 1, 2, 3, 4)
 assemble_rtf(
   input_files = c(a, b),
   output_file = out,
@@ -239,8 +242,7 @@ assemble_rtf(
     heading = c("DEMOGRAPHICS", "SAFETY ANALYSES"),
     label   = c("Table 14.1.1 Demographics", "Table 14.2.1 Adverse Events")
   ),
-  toc_page_numbering = "roman",
-  overwrite           = TRUE
+  overwrite = TRUE
 )
 
 }

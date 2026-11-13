@@ -11,7 +11,6 @@ assemble_folder(
   recursive = FALSE,
   toc_title = "Table of Contents",
   toc_leader = "dot",
-  toc_page_numbering = "decimal",
   overwrite = FALSE,
   ...
 )
@@ -36,9 +35,14 @@ before any file is read or written.}
 \item{recursive}{Recurse into sub-directories when scanning?  \code{TRUE} or
 \code{FALSE} (default); another value is an error.}
 
-\item{toc_title, toc_leader, toc_page_numbering, overwrite, ...}{Passed through
-to \code{\link[=assemble_rtf]{assemble_rtf()}}; \code{toc_page_numbering} defaults to \code{"decimal"} here
-(\code{"none"} in \code{\link[=assemble_rtf]{assemble_rtf()}}).}
+\item{toc_title, toc_leader, overwrite, ...}{Passed through to
+\code{\link[=assemble_rtf]{assemble_rtf()}} (\code{cover}, \code{book_page}, \code{toc_style} ... go in \code{...}).
+An argument in \code{...} that \code{\link[=assemble_rtf]{assemble_rtf()}} does not take, or one without
+a name, is an error ("unused argument"), with or without an
+\code{output_file}, checked before any file is read or written.
+The assembled file's pages are numbered as \code{\link[=assemble_rtf]{assemble_rtf()}} numbers them
+(its \strong{Page numbering}): one Arabic sequence from the first page, a
+cover and the table of contents included, and the total is all pages.}
 }
 \value{
 Without \code{output_file}, the table of contents.  With one,

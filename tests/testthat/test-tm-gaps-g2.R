@@ -156,13 +156,13 @@ test_that("FT-AS3004 [FR-AS110]: NULL, NA and empty cover fields (and an NA line
   expect_false(any(grepl("HYPERLINK", l, fixed = TRUE)))
 })
 
-test_that("FT-AS3005 [FR-AS111]: toc = NULL with toc_page_numbering = \"none\" and cover = NULL is byte for byte the plain concatenation", {
+test_that("FT-AS3005 [FR-AS111]: toc = NULL with cover = NULL is byte for byte the plain concatenation", {
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f1 <- .g2_fake(file.path(d, "a.rtf"), "A", pre = "PRE-A")
   f2 <- .g2_fake(file.path(d, "b.rtf"), "B", pre = "PRE-B")
   out <- file.path(d, "out.rtf")
-  assemble_rtf(c(f1, f2), out, toc = NULL, toc_page_numbering = "none", cover = NULL)
+  assemble_rtf(c(f1, f2), out, toc = NULL, cover = NULL)
   ref <- file.path(d, "ref.rtf")
   writeLines(c("{\\rtf1\\ansi", "PRE-A", "\\sectd", "BODY-A", "\\sect",
                "\\sectd", "BODY-B", "}"), ref)
@@ -515,7 +515,7 @@ test_that("FT-AS3017 [FR-AS154]: an .xlsx spec_file without writexl stops with i
   expect_false(file.exists(file.path(d, "toc.txt")))
 })
 
-test_that("FT-AS3018 [FR-AS157]: assemble_folder() defaults to the title Table of Contents, a dot leader, decimal page numbering and overwrite = FALSE", {
+test_that("FT-AS3018 [FR-AS157]: assemble_folder() defaults to the title Table of Contents, a dot leader, no page-number command and overwrite = FALSE", {
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   .g2_demo(file.path(d, "a.rtf"), "Table 1 A")
@@ -526,17 +526,16 @@ test_that("FT-AS3018 [FR-AS157]: assemble_folder() defaults to the title Table o
   l <- .g2_lines(out)
   expect_true("{\\pard\\qc\\b\\fs28 Table of Contents\\par}" %in% l)
   expect_true(any(grepl("\\tqr\\tldot\\tx14112", l, fixed = TRUE)))
-  expect_true("\\sectd\\sbkpage\\lndscpsxn\\pgnrestart\\pgndec" %in% l)
+  expect_true("\\sectd\\sbkpage\\lndscpsxn" %in% l)
+  expect_false(any(grepl("\\pgn", l, fixed = TRUE)))
   expect_error(assemble_folder(d, out), "already exists")
 
   # the arguments are those of assemble_rtf(): a given value is used
   out2 <- file.path(w, "out2.rtf")
-  assemble_folder(d, out2, toc_title = "Contents", toc_leader = "none",
-                  toc_page_numbering = "roman")
+  assemble_folder(d, out2, toc_title = "Contents", toc_leader = "none")
   l2 <- .g2_lines(out2)
   expect_true("{\\pard\\qc\\b\\fs28 Contents\\par}" %in% l2)
   expect_false(any(grepl("\\tldot", l2, fixed = TRUE)))
-  expect_true("\\sectd\\sbkpage\\lndscpsxn\\pgnrestart\\pgnlcrm" %in% l2)
   # overwrite = TRUE replaces the file
   expect_no_error(assemble_folder(d, out, overwrite = TRUE))
 })

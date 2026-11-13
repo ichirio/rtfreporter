@@ -10,8 +10,9 @@
 #   * `cover  = list(...)`                cover page section at the very front
 #   * `toc    = c(...) / "auto" / list()` clickable Table of Contents with
 #                                          per-source-file bookmarks
-#   * `toc_page_numbering = "roman"`      i, ii, iii on TOC pages; body
-#                                          restarts at 1
+#   * page numbers                        one Arabic run from the first
+#                                          page (cover and TOC included);
+#                                          the total is every page (#1049)
 # ============================================================================
 
 
@@ -195,16 +196,6 @@
   vapply(lines,
          function(l) gsub(pattern, paste0("\\1", as.integer(total_pages), "\\2"), l),
          character(1L), USE.NAMES = FALSE)
-}
-
-# Inject a `\pgnrestart\pgndec` right after the first \sectd, so the body
-# pages restart at 1 when the preceding TOC used Roman numbering.
-.insert_pgnrestart <- function(content) {
-  sectd_idx <- which(trimws(content) == "\\sectd")[1L]
-  if (is.na(sectd_idx)) return(content)
-  c(content[1L:sectd_idx], "\\pgnrestart\\pgndec",
-    if (sectd_idx < length(content)) content[(sectd_idx + 1L):length(content)]
-    else character(0))
 }
 
 # RTF-escape plain text (no markup, no token replacement).
@@ -645,36 +636,27 @@
   1L + if (m[1L] == -1L) 0L else length(m)
 }
 
-# Render the TOC section.  page_numbering = "roman" inserts \pgnlcrm
-# (Roman lowercase) so TOC pages are i, ii, iii.  The caller is
-# responsible for inserting \pgnrestart\pgndec on the next body section.
+# Render the TOC section.  It writes no page-number command: its pages carry
+# on the document's one Arabic sequence (#1049).
 .build_toc_section <- function(toc_entries, bookmarks, toc_title,
                                 toc_leader = c("dot", "none"),
-                                page_numbering = c("none", "roman", "decimal"),
                                 entry_pages = NULL, title_rtf = NULL,
                                 toc_style = NULL) {
   if (is.null(title_rtf)) title_rtf <- .toc_title_rtf(toc_title)
   style <- .toc_style(toc_style)
-  toc_leader     <- match.arg(toc_leader)
-  page_numbering <- match.arg(page_numbering)
+  toc_leader <- match.arg(toc_leader)
   leader_cmd <- if (toc_leader == "dot") "\\tldot" else ""
   # The page numbers sit on a right tab at the right margin: the TOC
   # section's text width (#967).
   tab_pos <- .TOC_TEXT_W
 
   # Section preamble.  \sbkpage forces a new page at the start; landscape +
-  # rtfreporter-default margins.  \pgnlcrm switches to Roman lowercase
-  # numbering for the TOC pages themselves; \pgnrestart anchors at 1.
-  pg_cmd <- switch(page_numbering,
-    roman   = "\\pgnrestart\\pgnlcrm",
-    decimal = "\\pgnrestart\\pgndec",
-    none    = ""
-  )
+  # rtfreporter-default margins.
   # Every paragraph below is wrapped in `{ ... }` so character format
   # state (\fs / \b) cannot leak across paragraph boundaries into the
   # following body content.  See v0.0.33 bug fix.
   lines <- c(
-    paste0("\\sectd\\sbkpage\\lndscpsxn", pg_cmd),
+    "\\sectd\\sbkpage\\lndscpsxn",
     paste0("\\pgwsxn", .TOC_PAGE_W, "\\pghsxn", .TOC_PAGE_H),
     paste0("\\marglsxn", .TOC_MARGIN_LR, "\\margrsxn", .TOC_MARGIN_LR,
            "\\margtsxn1296\\margbsxn1296"),
@@ -741,9 +723,12 @@
 #' Page-number fields work correctly across the assembled document
 #' provided the header/footer text uses dynamic tokens:
 #'
-#' * \code{\{AUTO_PAGE\}} -- per-page number rendered by the RTF viewer.
-#' * \code{\{AUTO_TOTAL_PAGES\}} -- total page count rendered by the
-#'   viewer across all assembled files.
+#' * \code{\{AUTO_PAGE\}} -- per-page number rendered by the RTF viewer,
+#'   counted from the assembled file's first page.
+#' * \code{\{AUTO_TOTAL_PAGES\}} -- the assembled file's total page count,
+#'   a cover and the table of contents included.
+#'
+#' See **Page numbering** below.
 #'
 #' Static tokens (\code{\{TOTAL_PAGES\}}) reflect only the page count
 #' of the individual source file and will be wrong in the assembled
@@ -811,21 +796,21 @@
 #' calculated by the viewer when the file opens.
 #'
 #' @section Page numbering:
-#' `toc_page_numbering` controls how the TOC pages are numbered (a cover
-#' page keeps the document's Arabic numbering):
+#' Every page of the assembled file is numbered in one Arabic sequence from
+#' its first page, and the total is the count of all its pages.  The cover,
+#' when there is one, is page 1; the table of contents' pages come next, then
+#' the input files' pages, with no restart anywhere.  With a cover, a
+#' one-page table of contents and 7 pages of tables, the pages read 1 of 9
+#' (the cover), 2 of 9 (the table of contents), 3 of 9 (the first table)
+#' ... 9 of 9; without the cover, 1 of 8 (the table of contents), 2 of 8
+#' (the first table) ... 8 of 8.
 #'
-#' \describe{
-#'   \item{`"none"` (default)}{Arabic numbering flows continuously from
-#'     the first page; if the source files use \code{\{AUTO_PAGE\}} the
-#'     TOC counts as page 1, 2, ...}
-#'   \item{`"roman"`}{TOC pages use lowercase Roman numerals (`i`, `ii`,
-#'     ...); body pages restart at `1`.}
-#'   \item{`"decimal"`}{TOC pages use Arabic numerals starting at `1`, and
-#'     the body continues from them (with a one-page TOC the first table is
-#'     page 2).  A cover page before the TOC is not counted.}
-#' }
-#'
-#' [assemble_folder()] defaults to `"decimal"`.
+#' The inputs' \code{\{AUTO_PAGE\}} / \code{\{AUTO_TOTAL_PAGES\}}, the
+#' `book_page` text and the page numbers the table of contents shows all
+#' follow this sequence.  The file is written with the total already in
+#' place (every `NUMPAGES` field's cached value is the count of all pages)
+#' and with each table of contents entry's cached page number, so a viewer
+#' that does not refresh fields shows them too.
 #'
 #' @param input_files Character vector of paths to RTF files to combine
 #'   (at least 2).  May be left out when `toc` is a table (or its path):
@@ -852,8 +837,6 @@
 #'   `heading` of a table `toc`.  Default `"Table of Contents"`.
 #' @param toc_leader `"dot"` (default) draws a dotted leader between
 #'   each TOC entry and its page number; `"none"` leaves whitespace.
-#' @param toc_page_numbering `"none"` (default) / `"roman"` /
-#'   `"decimal"`.  See **Page numbering** above.
 #' @param bookmark_prefix String prepended to every auto-generated
 #'   bookmark name (default `"tfl_"`): letters, digits and `_` only, as a
 #'   bookmark name allows; `""` = none.  Helps avoid clashes if you
@@ -873,7 +856,11 @@
 #'       shift anything.}
 #'     \item{What to give}{Typically `"Page {AUTO_PAGE} of
 #'       {AUTO_TOTAL_PAGES}"`.  The total resolves to the **book's** page
-#'       count, which is what the deliverable could not know on its own.}
+#'       count, which is what the deliverable could not know on its own.
+#'       Both follow **Page numbering** above: the page is counted from the
+#'       book's first page, a cover and the table of contents included, and
+#'       the total is all of its pages (the first table after a cover and a
+#'       one-page table of contents of a 9-page book reads `Page 3 of 9`).}
 #'     \item{Refused}{The static `{PAGE}` / `{TOTAL_PAGES}` are rejected: the
 #'       slot sits in one band shared by every page of a section, so a
 #'       single substitution cannot give each page its own number.}
@@ -894,6 +881,7 @@
 #'   is not a positive number, a `bold` that is not `TRUE` / `FALSE` or a
 #'   `hanging` that is not `TRUE` / `FALSE` / a positive whole number is an
 #'   error.
+#'
 #'
 #' @return Invisibly returns `output_file`.
 #'
@@ -918,7 +906,7 @@
 #' # Auto-TOC: one entry per file, label extracted from each title
 #' assemble_rtf(c(a, b), out, toc = "auto", overwrite = TRUE)
 #'
-#' # Multi-level TOC with section headings + cover page + Roman TOC pages
+#' # Multi-level TOC with section headings + cover page (pages 1, 2, 3, 4)
 #' assemble_rtf(
 #'   input_files = c(a, b),
 #'   output_file = out,
@@ -934,8 +922,7 @@
 #'     heading = c("DEMOGRAPHICS", "SAFETY ANALYSES"),
 #'     label   = c("Table 14.1.1 Demographics", "Table 14.2.1 Adverse Events")
 #'   ),
-#'   toc_page_numbering = "roman",
-#'   overwrite           = TRUE
+#'   overwrite = TRUE
 #' )
 #'
 #' @export
@@ -944,12 +931,10 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
                           toc                = NULL,
                           toc_title          = "Table of Contents",
                           toc_leader         = c("dot", "none"),
-                          toc_page_numbering = c("none", "roman", "decimal"),
                           bookmark_prefix    = "tfl_",
                           book_page          = NULL,
                           toc_style          = getOption("rtfreporter.toc_style")) {
-  toc_leader         <- match.arg(toc_leader)
-  toc_page_numbering <- match.arg(toc_page_numbering)
+  toc_leader <- match.arg(toc_leader)
   .check_assemble_args(output_file, overwrite, cover, toc_title,
                        bookmark_prefix, book_page)
   toc_style <- .toc_style(toc_style)
@@ -1028,7 +1013,8 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
   # the TOC's cached page numbers (the viewer refreshes them to the live value
   # via the PAGEREF fields).  `.count_rtf_pages()` knows how a file's pages are
   # spelled, so the start page of file i = front-matter pages + 1 + pages in
-  # files 1..i-1.
+  # files 1..i-1: the pages are one sequence from the first, a cover and the
+  # TOC's own pages included (#815, #1049).
   entry_pages <- NULL
   title_rtf   <- if (use_toc) .toc_title_rtf(toc_title)
   toc_pages   <- if (use_toc) {
@@ -1037,12 +1023,7 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
   if (use_toc) {
     npages <- vapply(input_files, function(f)
       .count_rtf_pages(readLines(f, warn = FALSE)), integer(1L))
-    # The cached numbers follow the numbering the pages show (#815).
-    front <- switch(toc_page_numbering,
-      roman   = 0L,            # body restarts at 1 (front matter is i, ii)
-      decimal = toc_pages,     # TOC restarts at 1 after any cover; body runs on
-      none    = (if (use_cover) 1L else 0L) + toc_pages  # all continuous
-    )
+    front <- (if (use_cover) 1L else 0L) + toc_pages
     entry_pages <- as.integer(front + 1L + cumsum(c(0L, npages[-length(npages)])))
   }
 
@@ -1068,18 +1049,13 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
         front_matter,
         .build_toc_section(toc_entries, bookmarks, toc_title,
                            toc_leader = toc_leader,
-                           page_numbering = toc_page_numbering,
                            entry_pages = entry_pages, title_rtf = title_rtf,
                            toc_style = toc_style)
       )
     }
 
-    # Roman front matter restarts the body at decimal page 1.  Decimal TOC
-    # numbering is continuous, so the body must NOT restart (the TOC is page 1
-    # and the first table starts on page 2).
-    if (use_toc && toc_page_numbering == "roman") {
-      tail_lines <- .insert_pgnrestart(tail_lines)
-    }
+    # No page-number command anywhere: the body runs on from the front matter
+    # (#1049).
     if (use_toc) {
       tail_lines <- .insert_bookmark(tail_lines, bookmarks[1L],
                                       outline_label = file_outline_labels[[1L]])

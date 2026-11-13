@@ -439,7 +439,7 @@ test_that("FT-AS4032 [FR-AS262]: with the default toc_title and toc_style the TO
   f <- f[match(c("t_14_1_1", "t_14_2_1", "l_16_1_1"), sub("[.]rtf$", "", basename(f)))]
   toc$file <- f
   out2 <- file.path(d, "again.rtf")
-  assemble_rtf(f, out2, cover = .tt_cover, toc = toc, toc_page_numbering = "roman",
+  assemble_rtf(f, out2, cover = .tt_cover, toc = toc,
                toc_title = c(c = "Table of Contents"), toc_style = list())
   expect_identical(.tt_bytes(out2), .tt_bytes(out))
 })
@@ -543,59 +543,41 @@ test_that("FT-AS4038 [FR-AS263 FR-AS125]: a TOC of two pages is split where the 
   pages <- rtfreporter:::.toc_entry_pages(toc)
   expect_identical(max(pages), 2L)
   expect_identical(which(diff(pages) == 1L) + 1L, 35L)   # the heading is the 35th item
-  # roman TOC pages: the body restarts at 1, so the first file starts on 1
-  expect_identical(.tt_pages(x)[1L], 1L)
-  expect_true(any(x == "\\sectd\\sbkpage\\lndscpsxn\\pgnrestart\\pgnlcrm"))
+  # the pages run on from the two TOC pages: the first file starts on page 3,
+  # and no page-number command is written (#1049)
+  expect_identical(.tt_pages(x)[1L], 3L)
+  expect_false(any(grepl("pgnlcrm|pgnrestart|pgndec", x)))
 })
 
-test_that("FT-AS4039 [FR-AS263 FR-AS130 FR-AS131 FR-AS132]: the page numbering of a two-page TOC: none, roman and decimal write their control words and cached numbers", {
+test_that("FT-AS4039 [FR-AS263 FR-AS130]: the page numbering of a two-page TOC: no page-number command, and the cached numbers count the TOC pages", {
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B"), pages = c(2L, 1L))
   n <- 40L
   toc <- data.frame(file = f[rep_len(1:2, n)], label = sprintf("Entry %02d", seq_len(n)))
-  run <- function(pn) .tt_asm(f, toc = toc, toc_page_numbering = pn)
-  none <- run("none"); roman <- run("roman"); dec <- run("decimal")
-  for (x in list(none, roman, dec)) {
-    expect_length(grep("\\\\pagebb", x), 1L)           # two TOC pages
-  }
-  expect_true(any(none == "\\sectd\\sbkpage\\lndscpsxn"))
-  expect_true(any(roman == "\\sectd\\sbkpage\\lndscpsxn\\pgnrestart\\pgnlcrm"))
-  expect_true(any(dec == "\\sectd\\sbkpage\\lndscpsxn\\pgnrestart\\pgndec"))
-  expect_false(any(grepl("pgnlcrm|pgnrestart", none)))
-  # the body: only a roman TOC restarts it
-  expect_identical(sum(roman == "\\pgnrestart\\pgndec"), 1L)
-  expect_identical(sum(dec == "\\pgnrestart\\pgndec"), 0L)
-  # cached numbers: TOC pages first for none and decimal (2 pages), the
-  # body from 1 after a roman one; the first file is 2 pages
-  firsts <- function(x) .tt_pages(x)[c(1L, 2L)]
-  expect_identical(firsts(none),  c(3L, 5L))
-  expect_identical(firsts(dec),   c(3L, 5L))
-  expect_identical(firsts(roman), c(1L, 3L))
+  x <- .tt_asm(f, toc = toc)
+  expect_length(grep("\\\\pagebb", x), 1L)           # two TOC pages
+  expect_true(any(x == "\\sectd\\sbkpage\\lndscpsxn"))
+  expect_false(any(grepl("pgnlcrm|pgnrestart|pgndec", x)))
+  # cached numbers: the 2 TOC pages first; the first file is 2 pages
+  expect_identical(.tt_pages(x)[c(1L, 2L)], c(3L, 5L))
 })
 
-test_that("FT-AS4040 [FR-AS266 FR-AS109 FR-AS131]: with a cover the sections run cover, TOC, body, and the TOC's cached page numbers count the cover and the TOC pages", {
+test_that("FT-AS4040 [FR-AS266 FR-AS109]: with a cover the sections run cover, TOC, body, and the TOC's cached page numbers count the cover and the TOC pages", {
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   f <- .tt_inputs(d, c(t_14_1_1 = "Table 14.1.1 A", t_14_2_1 = "Table 14.2.1 B",
                        t_14_3_1 = "Table 14.3.1 C"), pages = c(2L, 1L, 3L))
-  for (pn in c("none", "roman", "decimal")) {
-    x <- .tt_asm(f, cover = .tt_cover, toc = "auto", toc_page_numbering = pn)
-    sect <- which(x == "\\sect")
-    expect_length(sect, 4L)   # cover | TOC | file 1 | file 2 | file 3
-    expect_true(any(grepl("\\\\fs44 Study XYZ-101", x[seq_len(sect[1L])])))
-    toc <- x[(sect[1L] + 1L):sect[2L]]
-    expect_true(any(grepl("\\\\fs28 Table of Contents", toc)))
-    expect_false(any(grepl("\\\\fs28 Table of Contents|\\\\fs44", x[(sect[2L] + 1L):length(x)])))
-    expect_true(any(grepl("Table 14\\.1\\.1 A", x[(sect[2L] + 1L):length(x)])))
-    # the cover keeps the document's numbering: no numbering command in it
-    expect_false(any(grepl("pgnlcrm|pgnrestart", x[seq_len(sect[1L])])))
-    pages <- .tt_pages(x)
-    # cover 1 + TOC 1 page; files of 2, 1 and 3 pages
-    want <- switch(pn, none = 3L, roman = 1L, decimal = 2L) + c(0L, 2L, 3L)
-    expect_identical(pages, want, label = pn)
-  }
-  r <- .tt_asm(f, cover = .tt_cover, toc = "auto", toc_page_numbering = "roman")
-  expect_true(any(r == "\\sectd\\sbkpage\\lndscpsxn\\pgnrestart\\pgnlcrm"))
-  expect_identical(sum(r == "\\pgnrestart\\pgndec"), 1L)
+  x <- .tt_asm(f, cover = .tt_cover, toc = "auto")
+  sect <- which(x == "\\sect")
+  expect_length(sect, 4L)   # cover | TOC | file 1 | file 2 | file 3
+  expect_true(any(grepl("\\\\fs44 Study XYZ-101", x[seq_len(sect[1L])])))
+  toc <- x[(sect[1L] + 1L):sect[2L]]
+  expect_true(any(grepl("\\\\fs28 Table of Contents", toc)))
+  expect_false(any(grepl("\\\\fs28 Table of Contents|\\\\fs44", x[(sect[2L] + 1L):length(x)])))
+  expect_true(any(grepl("Table 14\\.1\\.1 A", x[(sect[2L] + 1L):length(x)])))
+  # one sequence from the cover: no numbering command anywhere
+  expect_false(any(grepl("pgnlcrm|pgnrestart|pgndec", x)))
+  # cover 1 + TOC 1 page; files of 2, 1 and 3 pages
+  expect_identical(.tt_pages(x), 3L + c(0L, 2L, 3L))
 })
 
 # -- the pending-human fixtures ---------------------------------------------------
