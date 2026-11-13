@@ -1515,7 +1515,8 @@ test_that("FT-TB6050 [FR-TB631]: in a huxtable only the header_rows() from the f
   p2 <- as_rtftables(sp)[[1L]]
   expect_length(p2$col_header, 2L)
   expect_identical(p2$col_header[[1L]], list(list(from = 1L, to = 1L, label = ""),
-                                             list(from = 2L, to = 3L, label = "Stats")))
+                                             list(from = 2L, to = 3L, label = "Stats",
+                                                  align = "left")))
   expect_identical(p2$col_header[[2L]], c("Param", "Mean", "SD"))
   expect_identical(p2$data$V1, c("Age", "Weight", "Height"))
 })

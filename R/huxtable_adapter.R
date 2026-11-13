@@ -170,6 +170,7 @@
     cspan <- huxtable::colspan(x)
     # the upper rows keep the text of a covered cell for the segment reading
     cc_up <- .huxtable_display_matrix(x)
+    hal   <- as.matrix(huxtable::align(x))
     # Header rows above the leaf row become spanning rows.
     for (h in hdr_idx[-length(hdr_idx)]) {
       # `.rtables_header_segments()` is the shared span-vector -> segments
@@ -177,9 +178,11 @@
       # by the jump) is read the same way as the rtables/flextable encodings.
       segs  <- .rtables_header_segments(.huxtable_trim_header(cc_up[h, ]),
                                      as.integer(cspan[h, ]))
+      # each spanner aligned as huxtable prints it: its first cell's align()
+      # ("." -- decimal alignment -- as on the body: right)
       cells <- lapply(segs, function(sg) {
-        pos <- if (sg$from == sg$to) sg$from else c(sg$from, sg$to)
-        col_cell(pos = pos, label = sg$label)
+        a <- as.character(hal[h, sg$from])
+        .span_segment_cell(sg, if (identical(a, ".")) "right" else a)
       })
       span_rows[[length(span_rows) + 1L]] <- cells
     }

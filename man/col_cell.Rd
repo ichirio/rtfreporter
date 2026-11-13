@@ -31,7 +31,9 @@ ranges) happens when the header is attached to a table.
 \item{label}{Character scalar.  Cell text; may be \code{""}.}
 
 \item{align}{Optional \code{"left"}, \code{"center"}, or \code{"right"}.  \code{NULL}
-(default) inherits the leftmost covered column's \code{header_align}.}
+(default) inherits the leftmost covered column's \code{header_align}.
+(A spanner \code{\link[=as_rtftables]{as_rtftables()}} reads from a table object is aligned as its
+source prints it -- centred for gt -- see \emph{What is carried} there.)}
 
 \item{bold, italic, underline}{Logical.  Default \code{FALSE}.}
 

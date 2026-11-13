@@ -1556,7 +1556,7 @@ test_that("FT-TB3294 [FR-TB631]: two huxtable header rows are the spanner row an
   expect_length(p$col_header, 2L)
   expect_identical(p$col_header[[1L]],
                    list(list(from = 1L, to = 1L, label = ""),
-                        list(from = 2L, to = 3L, label = "Group")))
+                        list(from = 2L, to = 3L, label = "Group", align = "left")))
   expect_identical(p$col_header[[2L]], c("Param", "Mean", "SD"))
   expect_identical(p$data$V1, c("Age", "Wt"))
 })

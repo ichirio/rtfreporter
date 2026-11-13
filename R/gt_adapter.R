@@ -507,13 +507,16 @@
       }
       # Explicit tab_style() declarations on this spanner ("styles" token):
       # borders and bold/italic/underline/align ride on the cell itself.
+      # gt centres a spanner unless tab_style(cell_text(align = )) says
+      # otherwise, so the cell is centred, not left to take its first
+      # column's header alignment (#1023).
       s <- if (!is.null(spanner_styles))
         spanner_styles[[as.character(spans_lv$spanner_id[[j]])]]
       cells[[length(cells) + 1L]] <- if (is.null(s)) {
-        col_cell(pos = pos, label = label)
+        col_cell(pos = pos, label = label, align = "center")
       } else {
         col_cell(pos = pos, label = label,
-                 align     = s$text$align,
+                 align     = s$text$align %||% "center",
                  bold      = isTRUE(s$text$bold),
                  italic    = isTRUE(s$text$italic),
                  underline = isTRUE(s$text$underline),

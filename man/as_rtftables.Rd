@@ -709,6 +709,17 @@ fonts and sizes, header text colour, and gt's \strong{theme} borders
 (\code{tab_options()}) -- those describe gt's own default look; rtfreporter's
 \code{border} presets govern the frame instead.
 
+\strong{A spanner is aligned as its source prints it}, not after the columns
+under it: gt and gtsummary (and tfrmt, through gt) centre it, unless
+\code{tab_style(cell_text(align = ), locations = cells_column_spanners())} sets
+it (with the \code{"styles"} token); rtables / tern centre it; flextable takes
+the alignment of its first header cell (\code{align(part = "header")}); huxtable
+the \code{align()} of its first cell (\code{"."}, decimal alignment, as right).  A
+spanner you write yourself (\code{\link[=col_cell]{col_cell()}}, \code{\link[=set_col_header]{set_col_header()}},
+\code{plan_col_header()}, or one rebuilt from a data frame's names with
+\code{header_sep}) takes its leftmost column's header alignment unless
+\code{col_cell(align = )} is given.
+
 A gt caption (\code{gt::tab_caption()}, and so gtsummary's \code{modify_caption()})
 is the first row of the page title, above the \code{tab_header()} title and
 subtitle, as gt prints it; on a \code{gt_group} / \code{gt_split} each member's own

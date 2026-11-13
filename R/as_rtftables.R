@@ -208,6 +208,17 @@
 #' (`tab_options()`) -- those describe gt's own default look; rtfreporter's
 #' `border` presets govern the frame instead.
 #'
+#' **A spanner is aligned as its source prints it**, not after the columns
+#' under it: gt and gtsummary (and tfrmt, through gt) centre it, unless
+#' `tab_style(cell_text(align = ), locations = cells_column_spanners())` sets
+#' it (with the `"styles"` token); rtables / tern centre it; flextable takes
+#' the alignment of its first header cell (`align(part = "header")`); huxtable
+#' the `align()` of its first cell (`"."`, decimal alignment, as right).  A
+#' spanner you write yourself ([col_cell()], [set_col_header()],
+#' `plan_col_header()`, or one rebuilt from a data frame's names with
+#' `header_sep`) takes its leftmost column's header alignment unless
+#' `col_cell(align = )` is given.
+#'
 #' A gt caption (`gt::tab_caption()`, and so gtsummary's `modify_caption()`)
 #' is the first row of the page title, above the `tab_header()` title and
 #' subtitle, as gt prints it; on a `gt_group` / `gt_split` each member's own
