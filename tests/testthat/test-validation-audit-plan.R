@@ -308,14 +308,16 @@ test_that("FT-PL942 [FR-PL933]: plan_sort() on a listing sorts the records, a le
   expect_identical(lst("USUBJID", "-AETERM"), c("Nausea", "Headache", "Fatigue"))
 })
 
-test_that("FT-PL943 [FR-PL934]: plan_blanks(where = 0) puts a blank row before the first row of each page", {
+test_that("FT-PL943 [FR-PL934]: plan_blanks(where = 0) puts a blank row before the body's first row, at the top of the first page only", {
   t4 <- data.frame(A = letters[1:4], B = 1:4)
   expect_identical(as.integer(plan_apply(table_plan(t4) |> plan_blanks(where = c(0, 2)))[[1L]]$blank_rows),
                    c(0L, 2L))
   pages <- plan_apply(table_plan(t4) |> plan_paginate_rows(max_rows = 2, split = "group_force") |>
                         plan_blanks(where = 0))
   expect_length(pages, 2L)
-  for (pg in pages) expect_identical(as.integer(pg$blank_rows), 0L)
+  # the positions count rows of the whole body (#1028): page 2 opens with none
+  expect_identical(as.integer(pages[[1L]]$blank_rows), 0L)
+  expect_null(pages[[2L]]$blank_rows)
 })
 
 test_that("FT-PL944 [FR-PL935]: plan_blanks(first = FALSE) takes away the blank row a multiline listing puts at the top", {

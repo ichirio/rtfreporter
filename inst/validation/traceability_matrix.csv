@@ -600,7 +600,7 @@
 "test-paginate-page-by.R","an inner by_value is the OUTER axis, and names the pages alone","FT-TB291","FR-IX321"
 "test-paginate-page-by.R","an unknown page_by column is an error","FT-TB292","FR-TB133"
 "test-paginate-page-by.R","auto_title prints the heading without the tail","FT-TB293","FR-TB132"
-"test-paginate-page-by.R","blank_rows positions are resolved per partition","FT-TB294","FR-TB139"
+"test-paginate-page-by.R","blank_rows positions count rows of the whole body, not of each partition","FT-TB294","FR-TB139"
 "test-paginate-page-by.R","every axis order is expressible","FT-TB295","FR-TB279"
 "test-paginate-page-by.R","group_col defaults to the first column outside page_by","FT-TB296","FR-IX321"
 "test-paginate-page-by.R","group_col is the OUTER level under split = by_value + a stub","FT-TB297","FR-IX320"

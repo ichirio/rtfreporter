@@ -477,8 +477,17 @@
 #'       row (e.g. `c(0, 5, -1)`).  A position is a whole number in
 #'       `-1..nrow` of the whole body (after `stub`, before pagination): a
 #'       fraction, `NA`, or a position past the body's last row (or below
-#'       `-1`) stops, naming the positions.  On a page shorter than `k`, a
-#'       position `k` within the body puts no blank on that page.}
+#'       `-1`) stops, naming the positions.  The positions count rows of
+#'       the whole body, not of each page: `c(3, 12)` puts one blank after
+#'       body row 3 and one after body row 12, once each, on the pages those
+#'       rows land on, and a page that no position falls on gets none.  `0`
+#'       is before the body's first row (top of page 1) and `-1` after its
+#'       last (foot of the last page).  A blank after a row that ends a page
+#'       stays at the foot of that page; it is not carried to the top of the
+#'       next one.  Under `count_blank_rows = TRUE` the blank takes a row of
+#'       the page, so where its page has no room for it (its row fills the
+#'       page to `max_rows`, or `0` does not fit beside the first group) it
+#'       is dropped, not carried over.}
 #'     \item{`"between_groups"`}{a blank at every group transition on `group_col`,
 #'       using this call's `group_by` detection (auto / indent / value / filled).}
 #'     \item{a [blank_rows_by_change()] object}{insert a blank whenever the group
@@ -539,8 +548,12 @@
 #'   }
 #'   Under `TRUE` the blank positions resolved from `blank_rows` (and from any
 #'   `rtf_blank_rows` attribute already on the input) are materialised before
-#'   the split and re-attached per page afterwards, with a leading blank
-#'   suppressed at the top of each page.
+#'   the split and re-attached per page afterwards.  A separator blank is
+#'   never left at a page's top or foot; an integer position is the whole
+#'   body's, so `0` takes a row at the top of page 1 only, and a position
+#'   that the cut leaves at the top of a later page (it follows the previous
+#'   page's last row) is dropped rather than carried over; no page is made
+#'   of blank rows alone.
 #' @param cell_format Optional cell re-formatter applied column-by-column to
 #'   the body **before** pagination, for monospaced alignment.
 #'   \describe{
@@ -1235,8 +1248,8 @@ as_rtftables.default <- function(x,
 
     # ---- blank_rows positions: whole numbers within the body (#853) -----
     # Checked once on the whole body, before pagination: a position past its
-    # last row reaches no page.  Within the body it is "after row k of each
-    # page", so a page shorter than k simply has none.
+    # last row reaches no page.  Within the body it is "after body row k",
+    # placed on the page that row lands on (#1028).
     # With no `blank_rows`, the positions an rtf_blank_rows attribute on the
     # input names (set_blank_rows()) are the ones placed.
     if (is.null(blank_rows)) {

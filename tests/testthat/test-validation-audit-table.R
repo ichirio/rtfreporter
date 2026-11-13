@@ -96,7 +96,7 @@
 #   sort_by / sort_desc; guards; applied first              | FR-TB134-136, FR-IX323 | FT-TB359, FT-TB362, FT-TB370, FT-TB361
 #   cont_label / min_group_rows                             | FR-TB137/138| FT-TB110, FT-TB118
 #   blank_rows; guards                                      | FR-TB139/140| FT-TB058, FT-TB306
-#   blank_rows -1: after each page's last row (fixed here)  | FR-TB139    | FT-TB754
+#   blank_rows -1: after the body's last row (fixed here)   | FR-TB139    | FT-TB754
 #   blank_row_first / blank_row_end / count_blank_rows      | FR-TB141/142, FR-IX324 | FT-TB115, FT-TB112, FT-TB119
 #   align_count_pct / cell_format; precedence; guards       | FR-TB143-146, FR-IX316 | FT-TB013, FT-TB062, FT-TB071
 #   na: where, not missing, NaN / Inf, order; guards        | FR-TB147-149| FT-TB072, FT-TB172, FT-TB073
@@ -516,12 +516,13 @@ test_that("FT-TB726 [FR-TB576]: a dropped group_col still names by_value pages, 
   expect_true(grepl("(Cont.)", p[[2L]]$data$grp[1L], fixed = TRUE))
 })
 
-test_that("FT-TB754 [FR-TB139]: as_rtftables(blank_rows = -1) puts a blank after the last row of every page", {
-  # -1 used to be dropped as a negative position (fixed in this audit)
+test_that("FT-TB754 [FR-TB139]: as_rtftables(blank_rows = -1) puts a blank after the body's last row, on the last page", {
+  # -1 used to be dropped as a negative position (fixed in this audit); it is
+  # the whole body's last row, not each page's (#1028)
   df <- data.frame(x = sprintf("r%d", 1:5))
   expect_identical(as_rtftables(df, blank_rows = c(0, -1))[[1L]]$blank_rows, c(0L, 5L))
   p <- as_rtftables(df, split = "rows", split_rows = 4, blank_rows = -1)
-  expect_identical(lapply(p, function(x) x$blank_rows), list(3L, 2L))
+  expect_identical(lapply(p, function(x) x$blank_rows), list(NULL, 2L))
   s <- .at_one(p[[2L]])
   expect_match(.at_rows(s)[grep("r5\\cell", .at_rows(s), fixed = TRUE) + 1L],
                "\\cell\\row", fixed = TRUE)
