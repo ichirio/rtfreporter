@@ -27,6 +27,16 @@ with: \code{"auto"} (factory), \code{"ragg"} or \code{"png"}.  The default follo
 given as paths are embedded as they are, whatever it says.}
 }
 
+One is the document's font:
+\describe{
+\item{\code{rtfreporter.font}}{The default of \code{rtf_document(font_table = )}
+and of every \verb{font =} (factory \code{"Courier New"}).  A family name that
+is not ASCII, such as a Japanese one, is written in the font table as
+Word writes it: in its East Asian code page with the matching
+\verb{\\fcharset}, and with its Latin name in \verb{\\falt} for common
+families (see \emph{Font names that are not ASCII} in \code{\link[=rtf_document]{rtf_document()}}).}
+}
+
 One is about the table of contents of \code{\link[=assemble_rtf]{assemble_rtf()}}:
 \describe{
 \item{\code{rtfreporter.toc_style}}{The size and boldness of its text, the

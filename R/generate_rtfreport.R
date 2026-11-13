@@ -2798,7 +2798,8 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
 
   lines <- c(
     .font_header_rtf(doc_cmd$rtf_header_open, font_index_map),
-    .build_font_table_rtf(doc_fonts),
+    .build_font_table_rtf(
+      doc_fonts, attr(font_index_map, "charsets", exact = TRUE)[["east_asian"]]),
     color_table_str,
     .cmd_fmt(doc_cmd$page_settings_template, list(
       width_twips           = page_defaults$width_twips,
