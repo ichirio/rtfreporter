@@ -414,3 +414,27 @@ test_that(".resolve_page_axes fills and validates on its own", {
   expect_identical(f(c("cols", "rows", "group")),
                    c("cols", "rows", "group"))
 })
+
+test_that("FT-TB7901 [FR-IX415]: a table row whose BY value is NA or blank takes the next value's page, else the one before", {
+  pg_of <- function(p) {
+    pg <- as_rtftables(data.frame(PARAM = p, V = seq_along(p),
+                                  stringsAsFactors = FALSE),
+                       page_by = "PARAM")
+    list(names = names(pg), v = unname(lapply(pg, function(x) x$data$V)))
+  }
+  # a run of NA and "" between two values goes with the one after it
+  a <- pg_of(c("ALT", "ALT", NA, NA, "", "", "AST", "AST"))
+  expect_identical(a$names, c("ALT", "AST"))
+  expect_identical(a$v, list(1:2, 3:8))
+  # leading blanks take the first value; trailing blanks the last one
+  b <- pg_of(c(NA, "", "ALT", "ALT", "AST", NA, ""))
+  expect_identical(b$names, c("ALT", "AST"))
+  expect_identical(b$v, list(1:4, 5:7))
+  # no value at all: one page, named ""
+  d <- pg_of(c(NA, NA, ""))
+  expect_identical(d$names, "")
+  expect_identical(d$v, list(1:3))
+  # filled first, the row has a page of its own
+  e <- pg_of(c("ALT", "ALT", "Missing", "AST"))
+  expect_identical(e$names, c("ALT", "Missing", "AST"))
+})
