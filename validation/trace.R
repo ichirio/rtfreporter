@@ -297,15 +297,27 @@ env_stale <- if (is.null(envs)) character() else
   envs$environment[!envs$rtfreporter %in% this_version]
 env_complete <- all(n_env >= expected_env)
 env_ok <- env_complete && !length(env_failing) && !length(env_stale)
+# the commit and date each record was made at: a local record is made by hand
+# before the release and may be of an earlier commit of the same version
+this_commit <- tryCatch(system2("git", c("rev-parse", "--short", "HEAD"), stdout = TRUE),
+                        error = function(e) "unknown")
+short_sha <- function(x) ifelse(is.na(x) | !nzchar(x), "--", substr(x, 1L, 7L))
+env_other_commit <- if (is.null(envs) || is.null(envs$commit)) character() else
+  envs$environment[short_sha(envs$commit) != substr(this_commit, 1L, 7L)]
 env_lines <- if (is.null(envs)) {
   "No environment's record was gathered in this run (the CI run of the release gathers them)."
 } else c(
-  "| Environment | CI / local | OS | R | rtfreporter | Main dependencies | R CMD check | Tests |",
+  "| Environment | CI / local | OS | R | rtfreporter (commit, date of the record) | Main dependencies | R CMD check | Tests |",
   "|---|---|---|---|---|---|---|---|",
-  sprintf("| %s | %s | %s | %s | %s | %s | %s | %s |", envs$environment, envs$source, envs$os,
-          sub("^R version ", "", envs$r), envs$rtfreporter, envs$main_deps,
+  sprintf("| %s | %s | %s | %s | %s (%s, %s) | %s | %s | %s |", envs$environment, envs$source, envs$os,
+          sub("^R version ", "", envs$r), envs$rtfreporter,
+          short_sha(envs$commit), ifelse(is.na(envs$date), "--", substr(envs$date, 1L, 10L)),
+          envs$main_deps,
           ifelse(is.na(envs$check) | !nzchar(envs$check), "--", envs$check),
-          ifelse(is.na(envs$tests), "no log", gsub("|", "/", envs$tests, fixed = TRUE))))
+          ifelse(is.na(envs$tests), "no log", gsub("|", "/", envs$tests, fixed = TRUE))),
+  if (length(env_other_commit)) c("", sprintf(
+    "Recorded at another commit than this report's (%s): %s. Such a record is of this version but not of this code; its test count can differ from this commit's.",
+    substr(this_commit, 1L, 7L), paste(env_other_commit, collapse = "; "))))
 
 # ---- the Quality Report -----------------------------------------------------
 # one decimal, floored: 416 of 418 is 99.5%, and 100% only when all
@@ -438,7 +450,8 @@ env_for <- function(supported) {
   # the recommended environment: the CI jobs of the latest R, "(R release)"
   min_env <- grepl("minimum environment", envs$environment, fixed = TRUE)
   rec_env <- envs$source == "ci" & grepl("(R release)", envs$environment, fixed = TRUE)
-  os_is <- function(re) which(grepl(re, envs$os))
+  # (the plan asks for a CI job on each system; a local run does not count for it)
+  os_is <- function(re) which(grepl(re, envs$os) & envs$source == "ci")
   if (grepl("^The minimum environment", supported)) {
     list(list(label = NULL, idx = which(min_env & is_min)))
   } else if (grepl("^The recommended environment", supported)) {
@@ -498,10 +511,18 @@ sug_lines <- if (is.null(pk)) "No environment's list of package versions was gat
     sprintf("| %s | %s | %s | %s | %s |", sug_pkg[k], if (nzchar(sug_min[k])) sug_min[k] else "--",
             m[["low"]], m[["high"]], if (length(gone)) cell(paste(gone, collapse = "; ")) else "")
   }, ""))
+# run at exactly its minimum in some environment; and the environments that ran a
+# version older than the minimum (a record made before the minimum was raised)
 at_min <- if (is.null(pk)) NA_integer_ else sum(vapply(seq_along(sug_pkg), function(k) {
-  m <- min_run(sug_pkg[k])
-  nzchar(sug_min[k]) && m[["low"]] != "--" && numeric_version(m[["low"]]) <= numeric_version(sug_min[k])
+  v <- pk$version[pk$package == sug_pkg[k] & !is.na(pk$version)]
+  nzchar(sug_min[k]) && length(v) &&
+    any(numeric_version(v) == numeric_version(sug_min[k]))
 }, NA))
+below_min <- if (is.null(pk)) character() else unlist(lapply(which(nzchar(sug_min)), function(k) {
+  x <- pk[pk$package == sug_pkg[k] & !is.na(pk$version), , drop = FALSE]
+  x <- x[numeric_version(x$version) < numeric_version(sug_min[k]), , drop = FALSE]
+  if (nrow(x)) sprintf("%s %s (minimum %s) in %s", sug_pkg[k], x$version, sug_min[k], x$environment)
+}))
 sup_lines <- c(
   sprintf("What the package says it supports, read from DESCRIPTION: R (>= %s); %s; %d suggested packages, %d with a minimum version.",
           r_min[1L],
@@ -523,7 +544,9 @@ sup_lines <- c(
   sug_lines,
   if (!is.na(at_min)) c("", sprintf("%d of the %d suggested packages with a minimum version were run at that minimum in at least one environment%s.",
                                     at_min, sum(nzchar(sug_min)),
-                                    if (at_min < sum(nzchar(sug_min))) "; the others ran only with a newer version" else "")),
+                                    if (at_min < sum(nzchar(sug_min))) "; the others ran only with another version" else "")),
+  if (length(below_min)) c("", sprintf("**Run with a version older than DESCRIPTION's minimum** (a record made before the minimum was raised): %s.",
+                                       paste(below_min, collapse = "; "))),
   "",
   "What is not tested, and the risk accepted (the Quality Plan, the *environment strategy*):",
   "",
@@ -532,12 +555,12 @@ sm <- c(
   sprintf("# rtfreporter %s: Quality Report", utils::packageVersion("rtfreporter")),
   "",
   if (!is.null(draft)) c(sprintf("**%s**", draft), ""),
-  "Against the Quality Plan (inst/validation/quality-plan.md).",
+  sprintf("Against the Quality Plan: inst/validation/quality-plan.md as in commit %s.", this_commit),
   "",
-  sprintf("Version: %s. Date: %s. Commit: %s. Scope: %s.", utils::packageVersion("rtfreporter"),
-          format(Sys.Date()),
-          tryCatch(system2("git", c("rev-parse", "--short", "HEAD"), stdout = TRUE),
-                   error = function(e) "unknown"), paste(scope, collapse = ", ")),
+  sprintf("Version: %s. Tag: %s. Date: %s. Commit: %s. Scope: %s.", utils::packageVersion("rtfreporter"),
+          if (is.null(draft) && nzchar(Sys.getenv("GITHUB_REF_NAME"))) Sys.getenv("GITHUB_REF_NAME") else
+            "none (a DRAFT)",
+          format(Sys.Date()), this_commit, paste(scope, collapse = ", ")),
   "",
   "## Results",
   "",
@@ -592,9 +615,9 @@ sm <- c(
   "",
   "## Conclusion",
   "",
-  "What assures the quality, in order:",
+  "What assures the quality, in order, against the acceptance criteria of the Quality Plan (section 4):",
   "",
-  sprintf("1. **Environments.** %s",
+  sprintf("1. **Environments** (criterion 3). %s",
           if (env_ok) {
             sprintf("The same tests pass on every environment of the Quality Plan (%d: %d in CI, where R CMD check succeeds too, and %d local); environments.txt holds each one's sessionInfo and tests' log.",
                     nrow(envs), n_env[["ci"]], n_env[["local"]])
@@ -607,7 +630,7 @@ sm <- c(
                     if (length(env_failing)) paste0("; failing: ", paste(env_failing, collapse = "; ")) else "",
                     if (length(env_stale)) paste0("; of another version: ", paste(env_stale, collapse = "; ")) else "")
           }),
-  sprintf("2. **Tests.** %s",
+  sprintf("2. **Tests** (criteria 1 and 2). %s",
           if (length(failing)) {
             sprintf("**The tests of %d requirement(s) fail**: %s.", length(failing),
                     paste(failing, collapse = ", "))
@@ -624,8 +647,8 @@ sm <- c(
                       sprintf("Of the %d with no test, not every one is assessed and accepted (Deviations).", n_dev)
                     })
           }),
-  "3. **Process.** Responsibilities are as the Quality Plan says (section 7): the development team evaluates each issue; the developer making a change adds its tests and requirements and runs the tests; the maintainer reviews and approves a contributor's pull request, and merges a change into the release branch only after all tests, of the change and for regression, have passed in all CI environments. GitHub keeps that record (the issues, the pull requests, the CI runs); it is referred to, not copied.",
-  "4. **Other measures.** Line coverage (Attachments, at the end of this report) and the arguments the tests give (functions.csv) are secondary: aids that show where to look, not evidence of a requirement met.",
+  "3. **Process** (criterion 4). Responsibilities are as the Quality Plan says (section 7): the development team evaluates each issue; the developer making a change adds its tests and requirements and runs the tests; the maintainer reviews and approves a contributor's pull request, and merges a change into the release branch only after all tests, of the change and for regression, have passed in all CI environments. GitHub keeps that record (the issues, the pull requests, the CI runs); it is referred to, not copied.",
+  "4. **Other measures** (not criteria). Line coverage (Attachments, at the end of this report) and the arguments the tests give (functions.csv) are secondary: aids that show where to look, not evidence of a requirement met.",
   "",
   if (is.null(draft) && ready) {
     "Taken together, the package is **validation-ready**: it can be audited against these records. (No third-party audit has been made.)"
@@ -646,7 +669,7 @@ sm <- c(
   "- **ft.csv**: one row a functional test: its FT ID, file, name and the requirements it checks. Read it by test.",
   "- **functions.csv**: one row a function in scope: its leaf requirements by type, how many have a test, its arguments, those a requirement names, those a test gives and those no requirement names. Read it for a function's depth (an aid).",
   "- **candidates.csv**: the tests that call a function in scope but are not mapped: what to read next. Never counted.",
-  "- **environments.txt**: one part an environment of the table above: its full sessionInfo() (every package's version) and testthat's log. Read it for what, exactly, the tests ran with.",
+  "- **environments.txt**: one part an environment of the table above: its sessionInfo() (R, the OS, the locale), the version of every package DESCRIPTION names (Imports and Suggests; NA where one is not installed) and testthat's log. Read it for what, exactly, the tests ran with.",
   "- **Line coverage** (Attachments, at the end of this report): the share of the package's lines the tests run, by file, floored to one decimal. An aid, not evidence of a requirement met.")
 writeLines(enc2utf8(sm), file.path(out, "quality-report.md"), useBytes = TRUE)
 cat(sprintf("FR %d, FT %d, ready %s%s, written to %s\n", nrow(tl), nrow(map), ready,
