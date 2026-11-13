@@ -21,7 +21,7 @@ test_that("FT-AS118 [FR-AS106]: a cover or contents before a first file with no 
                "File 1 has no \\sectd; cannot insert cover / TOC.", fixed = TRUE)
 })
 
-test_that("FT-AS119 [FR-AS123 FR-AS124 FR-AS129]: a toc of a kind assemble_rtf() does not read, and a toc_leader or toc_page_numbering not listed, are refused", {
+test_that("FT-AS119 [FR-AS123 FR-AS124 FR-AS129]: a toc of a kind assemble_rtf() does not read, and a toc_leader not listed, are refused", {
   f <- c(.as_rtf("Table 14.1.1"), .as_rtf("Table 14.2.1"))
   out <- tempfile(fileext = ".rtf")
   on.exit(unlink(c(f, out)), add = TRUE)
@@ -36,8 +36,6 @@ test_that("FT-AS119 [FR-AS123 FR-AS124 FR-AS129]: a toc of a kind assemble_rtf()
     expect_error(assemble_rtf(f, out, toc = bad, overwrite = TRUE), msg, fixed = TRUE)
   }
   expect_error(assemble_rtf(f, out, toc = "auto", toc_leader = "dash", overwrite = TRUE),
-               "'arg' should be one of", fixed = TRUE)
-  expect_error(assemble_rtf(f, out, toc = "auto", toc_page_numbering = "greek", overwrite = TRUE),
                "'arg' should be one of", fixed = TRUE)
 })
 

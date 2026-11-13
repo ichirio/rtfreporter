@@ -41,7 +41,7 @@ test_that("the retotal counts the front matter", {
   out <- tempfile(fileext = ".rtf")
   on.exit(unlink(c(f1, f2, out)), add = TRUE)
   assemble_rtf(c(f1, f2), out, overwrite = TRUE,
-               toc = c("T1", "T2"), toc_page_numbering = "decimal")
+               toc = c("T1", "T2"))
   expect_identical(unique(.np_caches(out)), "6")   # 3 + 2 + the TOC page
 })
 

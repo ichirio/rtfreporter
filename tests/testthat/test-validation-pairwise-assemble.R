@@ -40,8 +40,8 @@
 #              file's first section; the body is in the entries' order.
 #    cover     a cover page (its title \fs44) before the contents; none
 #              without cover.
-#    numbering toc_page_numbering "none" no \pgnrestart, "roman" two,
-#              "decimal" one (the numbers themselves: FT-AS126, FT-AS127).
+#    numbering one sequence from the first page: no \pgn command (the
+#              numbers themselves: FT-AS126, FT-AS127).
 #
 #  (A) FT-AS138, pairwise, assemble_folder().  Three numbered files (Table
 #  14.2.1, 14.1.10, 14.1.2) and maybe a listing.  Factors and levels:
@@ -51,14 +51,13 @@
 #    sections  1, 2 (a second section with a header of its own)
 #    names     agree (the file names in number order), reversed
 #    cover     no, yes
-#    numbering none, roman, decimal
 #    output    out, out + spec_file, spec_file only, neither
 #    toc_title default, "Contents of the Example Pharma tables"
-#  1152 combinations; .allpairs() picks the rows covering every pair.
+#  384 combinations; .allpairs() picks the rows covering every pair.
 #  Oracle: the table (files in order, table, label, level 2, pages); with an
 #  output, the entries' labels and bookmarks in that order, the bodies in
 #  that order, every section header, the cover, the contents title, the
-#  \pgnrestart count; the spec file's rows.  FR-AS148 FR-AS149 FR-AS150
+#  absence of a \pgn command; the spec file's rows.  FR-AS148 FR-AS149 FR-AS150
 #  FR-AS151 FR-AS152 FR-AS153 FR-AS157 FR-AS158 FR-AS242 FR-AS243.
 #
 #  (B) FT-AS139, decision table, assemble_rtf().  Inputs: t1 (titles "Table
@@ -146,7 +145,7 @@
   sec <- as.integer(cs$sections)
   out <- if (cs$output %in% c("out", "both")) file.path(root, paste0("book-", cs$i, ".rtf"))
   sf <- if (cs$output %in% c("spec", "both")) file.path(root, paste0("spec-", cs$i, ".csv"))
-  args <- list(d, output_file = out, spec_file = sf, toc_page_numbering = cs$numbering)
+  args <- list(d, output_file = out, spec_file = sf)
   if (cs$cover == "yes") args$cover <- list(title = "Example Pharma STUDY-01 Tables")
   if (cs$toc_title == "custom") args$toc_title <- "Contents of the Example Pharma tables"
   res <- do.call(assemble_folder, args)
@@ -180,18 +179,17 @@
   if (grepl("\\fs44 Example Pharma STUDY-01 Tables", x, fixed = TRUE) != (cs$cover == "yes")) bad <- c(bad, "cover")
   tt <- if (cs$toc_title == "custom") "Contents of the Example Pharma tables" else "Table of Contents"
   if (!grepl(paste0("\\b\\fs28 ", tt, "\\par"), x, fixed = TRUE)) bad <- c(bad, "toc title")
-  n_pgn <- c(none = 0L, roman = 2L, decimal = 1L)[[cs$numbering]]
-  if (length(.va_tok(x, "\\\\pgnrestart")) != n_pgn) bad <- c(bad, "numbering")
+  if (length(.va_tok(x, "\\\\pgn[a-z]+"))) bad <- c(bad, "numbering")
   bad
 }
 
-test_that("FT-AS138 [FR-AS148 FR-AS149 FR-AS150 FR-AS151 FR-AS152 FR-AS153 FR-AS157 FR-AS158 FR-AS242 FR-AS243]: pairwise -- assemble_folder(): number source x listing x sections x names x cover x numbering x output x toc_title", {
+test_that("FT-AS138 [FR-AS148 FR-AS149 FR-AS150 FR-AS151 FR-AS152 FR-AS153 FR-AS157 FR-AS158 FR-AS242 FR-AS243]: pairwise -- assemble_folder(): number source x listing x sections x names x cover x output x toc_title", {
   cand <- expand.grid(src = c("header", "titles", "both"), listing = c("no", "yes"),
                       sections = c("1", "2"), names = c("agree", "reversed"),
-                      cover = c("no", "yes"), numbering = c("none", "roman", "decimal"),
+                      cover = c("no", "yes"),
                       output = c("out", "both", "spec", "none"),
                       toc_title = c("default", "custom"), stringsAsFactors = FALSE)
-  expect_identical(nrow(cand), 1152L)
+  expect_identical(nrow(cand), 384L)
   ap <- .allpairs(cand)
   expect_setequal(ap$covered, ap$need)
   expect_lt(nrow(ap$rows), 20L)

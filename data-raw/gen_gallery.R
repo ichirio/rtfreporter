@@ -111,8 +111,7 @@ assemble_rtf(
     label   = c("Table 14.1.1  Demographic Characteristics",
                 "Table 14.3.1.1  Treatment-Emergent Adverse Events by SOC and PT",
                 "Table 14.3.5.1  Vital Signs by Visit",
-                "Listing 16.2.7.2  Severe Treatment-Emergent Adverse Events")),
-  toc_page_numbering = "roman")
+                "Listing 16.2.7.2  Severe Treatment-Emergent Adverse Events")))
 setwd(old)
 env <- if (.Platform$OS.type == "unix") "LD_LIBRARY_PATH=" else character()
 system2(soffice, c("--headless", "--convert-to", "pdf", "--outdir", shQuote(asm),

@@ -99,8 +99,9 @@
                   date = "2026-11-12", version = "v1.0",
                   meta = c("Confidential", "Prepared by Example Pharma"))
 
-# defaults, a cover, a table with headings, roman TOC pages (the fixture is
-# written by the code before toc_title / toc_style / label-from-title existed)
+# defaults, a cover, a table with headings (the fixture is written by the
+# code before toc_title / toc_style / label-from-title existed; since #1049
+# its pages run in one sequence from the cover)
 .tt_case_baseline <- function(dir, asm = assemble_rtf) {
   f <- .tt_inputs(dir, c(t_14_1_1 = "Table 14.1.1 Demographics",
                          t_14_2_1 = "Table 14.2.1 Adverse Events",
@@ -111,7 +112,7 @@
                               "Listing 16.1.1 Adverse events"),
                     level = c(2L, 2L, 3L))
   out <- file.path(dir, "assembled.rtf")
-  asm(f, out, cover = .tt_cover, toc = toc, toc_page_numbering = "roman")
+  asm(f, out, cover = .tt_cover, toc = toc)
   out
 }
 
@@ -148,8 +149,7 @@
   out
 }
 
-# a TOC of two pages: a heading that would close page 1 goes over to page 2;
-# roman TOC numbering
+# a TOC of two pages: a heading that would close page 1 goes over to page 2
 .tt_case_multipage <- function(dir) {
   f <- .tt_inputs(dir, c(t_14_1_1 = "Table 14.1.1 Demographics",
                          t_14_2_1 = "Table 14.2.1 Adverse Events",
@@ -160,19 +160,20 @@
                     heading = c(rep(NA, 34L), "Safety", rep(NA, n - 35L)),
                     level = 2L)
   out <- file.path(dir, "assembled.rtf")
-  assemble_rtf(f, out, toc = toc, toc_page_numbering = "roman")
+  assemble_rtf(f, out, toc = toc)
   out
 }
 
-# a cover, then the TOC, then the body; roman TOC numbering
+# a cover, then the TOC, then the body (the name is the fixture's, written
+# when the TOC was numbered in Roman; since #1049 the pages run in one
+# sequence from the cover)
 .tt_case_coverroman <- function(dir) {
   f <- .tt_inputs(dir, c(t_14_1_1 = "Table 14.1.1 Demographics",
                          t_14_2_1 = "Table 14.2.1 Adverse Events",
                          t_14_3_1 = "Table 14.3.1 Laboratory"),
                   pages = c(2L, 1L, 3L))
   out <- file.path(dir, "assembled.rtf")
-  assemble_rtf(f, out, cover = .tt_cover, toc = "auto",
-               toc_page_numbering = "roman")
+  assemble_rtf(f, out, cover = .tt_cover, toc = "auto")
   out
 }
 

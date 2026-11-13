@@ -874,41 +874,31 @@ test_that("FT-AS6203 [FR-AS260]: toc_style sets size and boldness of the title, 
   expect_gt(length(grep("\\\\pagebb", big)), 0L)
 })
 
-test_that("FT-AS6204 [FR-AS263]: a TOC too long for a page is split where the estimate says, \\pagebb before the first entry of each further page, a heading that would close a page goes on with its entry; the cached page numbers of the body count the TOC pages; none writes no command, roman \\pgnrestart\\pgnlcrm and restarts the body, decimal \\pgnrestart\\pgndec", {
+test_that("FT-AS6204 [FR-AS263]: a TOC too long for a page is split where the estimate says, \\pagebb before the first entry of each further page, a heading that would close a page goes on with its entry; the cached page numbers of the body count the TOC pages; the TOC pages carry on the one sequence: no page-number command", {
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B"), pages = c(2L, 1L))
   # 34 entries, then a heading, then 6 entries: the heading would be the 35th line (the last of page 1)
   n <- 40L
   toc <- data.frame(file = f[rep_len(1:2, n)], label = sprintf("Entry %02d", seq_len(n)),
                     heading = c(rep(NA, 34L), "Safety", rep(NA, n - 35L)))
-  run <- function(pn) .tt_asm(f, toc = toc, toc_page_numbering = pn)
-  none <- run("none"); roman <- run("roman"); dec <- run("decimal")
-  for (x in list(none, roman, dec)) {
-    p <- .tt_paras(x)
-    pb <- grep("\\\\pagebb", p)
-    expect_length(pb, 1L)                                          # two TOC pages: one break
-    expect_identical(p[pb], "{\\pard\\pagebb\\b\\fs22 Safety\\par}")  # the heading goes to page 2 with its entry
-    expect_match(p[pb + 1L], "Entry 35")
-    expect_identical(sum(grepl("PAGEREF", p[seq_len(pb - 1L)])), 34L)  # page 1 holds the 34 entries
-  }
+  x <- .tt_asm(f, toc = toc)
+  p <- .tt_paras(x)
+  pb <- grep("\\\\pagebb", p)
+  expect_length(pb, 1L)                                          # two TOC pages: one break
+  expect_identical(p[pb], "{\\pard\\pagebb\\b\\fs22 Safety\\par}")  # the heading goes to page 2 with its entry
+  expect_match(p[pb + 1L], "Entry 35")
+  expect_identical(sum(grepl("PAGEREF", p[seq_len(pb - 1L)])), 34L)  # page 1 holds the 34 entries
   # without a heading near the end: the break is before the 36th entry (35 lines a page)
   plain <- .tt_paras(.tt_asm(f, toc = toc[, c("file", "label")]))
   pb <- grep("\\\\pagebb", plain)
   expect_length(pb, 1L)
   expect_match(plain[pb], "^\\{\\\\pard\\\\pagebb")
   expect_match(plain[pb], "Entry 36")
-  # the numbering control words of the TOC section
-  expect_true(any(none == "\\sectd\\sbkpage\\lndscpsxn"))
-  expect_false(any(grepl("pgnlcrm|pgnrestart", none)))
-  expect_true(any(roman == "\\sectd\\sbkpage\\lndscpsxn\\pgnrestart\\pgnlcrm"))
-  expect_true(any(dec == "\\sectd\\sbkpage\\lndscpsxn\\pgnrestart\\pgndec"))
-  expect_identical(sum(roman == "\\pgnrestart\\pgndec"), 1L)       # only roman restarts the body
-  expect_identical(sum(dec == "\\pgnrestart\\pgndec"), 0L)
+  # the TOC section writes no numbering control word, nor does the body
+  expect_true(any(x == "\\sectd\\sbkpage\\lndscpsxn"))
+  expect_false(any(grepl("pgnlcrm|pgnrestart|pgndec", x)))
   # the cached numbers: 2 TOC pages, then the first file (2 pages) and the second
-  firsts <- function(x) .tt_pages(x)[1:2]
-  expect_identical(firsts(none), c(3L, 5L))
-  expect_identical(firsts(dec), c(3L, 5L))
-  expect_identical(firsts(roman), c(1L, 3L))
+  expect_identical(.tt_pages(x)[1:2], c(3L, 5L))
 })
 
 test_that("FT-AS6205 [FR-AS265]: a label too long for a line stays in its one paragraph with its level's indent, the right tab and the leader, no hanging indent by default; the estimate counts the lines it wraps to at Courier New's width beside the indent and the page number", {

@@ -389,7 +389,6 @@
 .assemble_from_spec <- function(spec, output_file,
                                 toc_title = "Table of Contents",
                                 toc_leader = "dot",
-                                toc_page_numbering = "decimal",
                                 overwrite = FALSE, ...) {
   if (is.character(spec) && length(spec) == 1L) spec <- .read_spec(spec)
   if (!is.data.frame(spec) || !"file" %in% names(spec)) {
@@ -404,8 +403,7 @@
   }
   toc <- .spec_to_toc(spec)
   assemble_rtf(spec$file, output_file, overwrite = overwrite, toc = toc,
-               toc_title = toc_title, toc_leader = toc_leader,
-               toc_page_numbering = toc_page_numbering, ...)
+               toc_title = toc_title, toc_leader = toc_leader, ...)
 }
 
 
@@ -460,9 +458,13 @@
 #'   before any file is read or written.
 #' @param recursive Recurse into sub-directories when scanning?  `TRUE` or
 #'   `FALSE` (default); another value is an error.
-#' @param toc_title,toc_leader,toc_page_numbering,overwrite,... Passed through
-#'   to [assemble_rtf()]; `toc_page_numbering` defaults to `"decimal"` here
-#'   (`"none"` in [assemble_rtf()]).
+#' @param toc_title,toc_leader,overwrite,... Passed through to
+#'   [assemble_rtf()] (`cover`, `book_page`, `toc_style` ... go in `...`).
+#'   The assembled file's pages are numbered as [assemble_rtf()] numbers them
+#'   (its **Page numbering**): one Arabic sequence from the first page, a
+#'   cover and the table of contents included, and the total is all pages.
+#'   `toc_page_numbering`, which was removed, is an error, with or without
+#'   an `output_file`.
 #'
 #' @return Without `output_file`, the table of contents.  With one,
 #'   invisibly, a list with `output` (the assembled file) and `spec` (the
@@ -493,8 +495,9 @@ assemble_folder <- function(dir, output_file = NULL, spec_file = NULL,
                             recursive = FALSE,
                             toc_title = "Table of Contents",
                             toc_leader = "dot",
-                            toc_page_numbering = "decimal",
                             overwrite = FALSE, ...) {
+  .check_assemble_dots(intersect(...names(), "toc_page_numbering"),
+                       "assemble_folder")
   .check_folder_args(dir, spec_file, recursive)
   spec <- .assemble_spec(dir = dir, recursive = recursive)
   # one file is a table of contents, not a book (#862): stop before the
@@ -507,7 +510,6 @@ assemble_folder <- function(dir, output_file = NULL, spec_file = NULL,
   if (is.null(output_file)) return(spec)
   .assemble_from_spec(spec, output_file, toc_title = toc_title,
                      toc_leader = toc_leader,
-                     toc_page_numbering = toc_page_numbering,
                      overwrite = overwrite, ...)
   invisible(list(output = output_file, spec = spec))
 }
