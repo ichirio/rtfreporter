@@ -101,6 +101,14 @@ A label row that \strong{names every entry} is a \emph{patch}: it says which col
 each label belongs to, so it may be shorter than the table and the columns
 it does not mention keep their own name.
 
+When the bottom header row is a label row promoted to cells (a gt column
+label with a \code{tab_style()} border, or \code{style_header(border = )}), the
+patch renames only the named columns' cells, each keeping its border and
+span, and the other cells keep their labels.  A cell spanning several
+columns takes the label of a named column it covers; naming two columns of
+one such cell is an error.  As with any row given, the header is replaced
+by that one row, so spanning rows above it are dropped.
+
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{rtf_columns(tbl)                              # row_label  g1  g2  Total
 tbl |> set_col_header(c(g1 = "Low", g2 = "High"))
 #>                                            # row_label Low High Total
