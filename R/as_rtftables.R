@@ -154,7 +154,9 @@
 #' Supported inputs: `gt_tbl`, `gt_group` (gt's multi-table container from
 #' [gt::gt_group()] / [gt::gt_split()] -- and what tfrmt's `print_to_gt()`
 #' returns when the spec has a `page_plan`; expanded to one page set per
-#' member table), gtsummary tables (including a `tbl_split` container from
+#' member table; a style on a cell of a row-split member,
+#' `gt::gt_split(row_every_n = )`, needs gt 1.4.0 or later, as older gt
+#' stops on it), gtsummary tables (including a `tbl_split` container from
 #' `gtsummary::tbl_split_by_rows()` / `tbl_split_by_columns()`, likewise
 #' expanded member by member), rtables/tern `VTableTree`
 #' tables, rlistings `listing_df` listings,

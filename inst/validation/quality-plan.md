@@ -216,11 +216,23 @@ Report states the figure from the release's run.
 ### The environment strategy
 
 Section 5 lists the environments.  They are chosen to stand for the range
-the package supports:
+the package supports.  The two ends of that range each have their own
+environment:
+
+- **the minimum environment**: R at the minimum `DESCRIPTION` names
+  (`Depends: R (>= 4.3)`) and every direct dependency at the minimum
+  `DESCRIPTION` names for it.  A suggested package with no minimum, and
+  every indirect dependency (what the dependencies need in turn), come from
+  CRAN as it was on one date: a dated snapshot of the Posit Package Manager,
+  the first date on which every minimum had been released.  It adds no
+  condition beyond `DESCRIPTION`; it is CRAN as a user could have found it
+  that day.  The date is recorded in `inst/validation/dependency-minimums.md`;
+- **the recommended environment**: the latest R with the latest packages.
 
 | Supported | Stands for it | Why that is enough |
 |---|---|---|
-| The lowest R: `Depends: R (>= 4.2)` in `DESCRIPTION` | Ubuntu, R 4.2 | It is the oldest R the package says it works on, so the use of a newer R feature fails here. |
+| The minimum environment: R and every dependency at the minimum `DESCRIPTION` names | Ubuntu, R 4.3, each direct dependency at its minimum, the rest from CRAN as on the snapshot date (the CI job *minimum environment*) | The use of an R feature or a dependency's feature newer than its minimum fails here. |
+| The recommended environment: the latest R with the latest packages | Ubuntu, Windows and macOS, R release, with the newest packages | A new version of R or of a dependency that breaks the package shows here. |
 | The R versions in use now | Ubuntu, R oldrel-1 and release; Windows and macOS, release; the local R 4.4.2 and 4.6.1 | Between them they run the current and the previous release of R. |
 | The next R | Ubuntu, R devel | A change in R that will break the package shows here first. |
 | Windows, macOS and Linux | Windows, macOS and Ubuntu, each with at least one CI job | Each system is run, with the tests and R CMD check. |
@@ -228,20 +240,25 @@ the package supports:
 The package imports only packages that ship with R (`DESCRIPTION`), so
 there is no range of imported versions to cover.  The suggested packages
 (`cards`, `gt`, `rtables`, `ggplot2`, `devEMF` and others) are used where a
-function adapts to them, and by the tests that need them.
+function adapts to them, and by the tests that need them.  Each minimum in
+`DESCRIPTION` is the first version that has every function and argument the
+package and its tests use; `inst/validation/dependency-minimums.md` gives,
+for each package, what needs which version and where that is recorded.  So
+the two ends of each range are tested: the minimums, in the minimum
+environment, and the latest versions, in the recommended environment (and
+the other jobs and the local runs, which also install the newest versions
+their R allows).  When a test fails in the minimum environment, the minimum
+is raised; when a dependency cannot be installed there on R's minimum, R's
+minimum is raised, and the table says which package forced it.
 
 What is not tested, and the risk accepted:
 
-- **A suggested package absent.**  Only the R 4.2 job runs with
-  `force-suggests` false, and it leaves out `tern` and `devEMF` where they
-  cannot be installed on that R.  The other jobs have the suggested packages
+- **A suggested package absent.**  Every job has the suggested packages
   installed.  A test that needs one is skipped when it is absent
   (`skip_if_not_installed()`).  The risk is a failure on a system without
   one that no job shows.
-- **Older versions of the suggested packages.**  The jobs install the
-  newest versions the job's R allows, not the minimum `DESCRIPTION` names
-  (`cards (>= 0.7.0)`, `gt (>= 0.11.1)` and others).  The risk is a failure
-  with a package at its minimum.
+- **Versions between the minimum and the latest** of R or of a dependency,
+  and a mix of them other than the two ends tested.
 - **Other versions of an operating system**, other architectures, and other
   locales than those of the CI images and the maintainers' PC.
 - **Another RTF reader.**  The tests compare the RTF text.  They do not open
@@ -298,8 +315,11 @@ maintainers' own; no third-party audit is made.
 ## 5. Environments
 
 - **CI** (6): the R-CMD-check workflow's matrix -- Ubuntu (R devel,
-  release, oldrel-1, 4.2), macOS (release), Windows (release) -- at the
-  release's commit; the tests and R CMD check.
+  release, oldrel-1), macOS (release), Windows (release); the release jobs
+  are the recommended environment -- and its job *minimum environment*
+  (Ubuntu, R 4.3, every dependency at the minimum `DESCRIPTION` names, the
+  rest from CRAN as on the snapshot date), at the release's commit; the
+  tests and R CMD check.
 - **Local** (2): the maintainers' PC, two versions of R (now 4.4.2 and
   4.6.1), the tests run by hand with `validation/env.R` before the release;
   the records are committed in `validation/env-local/`.
@@ -313,6 +333,21 @@ maintainers' own; no third-party audit is made.
 
 What GitHub already records -- issues, pull requests, the CI runs, the
 releases -- is referred to, not copied.
+
+### When a dependency changes
+
+A new version of a package rtfreporter uses (an import, a suggested
+package, or R) is followed by a release of rtfreporter in one of two ways:
+
+- when rtfreporter can follow it and still work with the versions it
+  supported before (the minimums in `DESCRIPTION` stay), it is a **minor
+  version**;
+- when it cannot, and that new version of the dependency must be required
+  (a minimum in `DESCRIPTION` is raised for it), it is a **major version**.
+
+The minimums and why each is what it is are in
+`inst/validation/dependency-minimums.md`; a release that raises one says so
+there and in `NEWS.md`.
 
 ## 7. Roles and responsibilities
 

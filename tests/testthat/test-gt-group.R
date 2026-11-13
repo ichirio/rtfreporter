@@ -126,7 +126,8 @@ test_that("a tfrmt page_plan render (gt_group) converts page by page", {
 # ── row-split members (#1005) ─────────────────────────────────────────────────
 
 test_that("FT-TB6601 [FR-TB115]: a row-split gt_group member gives its own rows", {
-  skip_if_not_installed("gt")
+  # gt < 1.4.0 stops on a cell style in a row-split member (its reorder_styles)
+  skip_if_not_installed("gt", "1.4.0")
   d4 <- data.frame(a = as.character(1:4), b = letters[1:4],
                    x = c(1.234, 2.345, 3.456, 4.567), stringsAsFactors = FALSE)
   # the reproduction: page 2 holds rows 3 and 4, not empty cells
