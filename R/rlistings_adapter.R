@@ -80,3 +80,21 @@
   .mpf_to_rtftable_kwargs(x, tokens = tokens,
                           what = "an rlistings listing")
 }
+
+
+# ── The column a listing pages on ────────────────────────────────────────────
+
+# Where the listing's first key column is in the body the reader above
+# returns, or NULL when there is none (#1045).  The body's columns are the
+# display columns in their display order, renamed V1, V2, ..., so the key is
+# found by its name among the display columns: a key that
+# `listing_dispcols<-` moved, or a column it dropped, still finds the right
+# one.  NULL leaves `group_col` at its own default (column 1).
+.rlistings_first_key_pos <- function(x) {
+  if (!requireNamespace("rlistings", quietly = TRUE)) return(NULL)
+  keys <- tryCatch(rlistings::get_keycols(x), error = function(e) NULL)
+  disp <- tryCatch(rlistings::listing_dispcols(x), error = function(e) NULL)
+  if (!length(keys) || !length(disp)) return(NULL)
+  j <- match(keys[[1L]], disp)
+  if (is.na(j)) NULL else j
+}

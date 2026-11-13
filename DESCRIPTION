@@ -2,11 +2,12 @@ Package: rtfreporter
 Type: Package
 Title: Clinical RTF Reporting Toolkit for Tables, Listings and Figures
 Version: 0.8.2.9100
-Authors@R:
+Authors@R: c(
     person(given  = "Yoichi",
            family = "Masui",
            email  = "ichi.r.pro@gmail.com",
-           role   = c("aut", "cre", "cph"))
+           role   = c("aut", "cph")),
+    person("Shoichi", "Fujita", email = "shoichi.fujita@takeda.com", role = "cre"))
 Description: A standalone toolkit for generating Rich Text Format (RTF)
     reports used in clinical trial deliverables -- Tables, Listings and
     Figures (TFLs). Provides a functional, pipe-friendly API to compose
@@ -24,7 +25,7 @@ BugReports: https://github.com/ichirio/rtfreporter/issues
 Encoding: UTF-8
 Language: en-GB
 Depends:
-    R (>= 4.2)
+    R (>= 4.3)
 Imports:
     grDevices,
     grid,
@@ -37,30 +38,32 @@ Suggests:
     ggplot2,
     magrittr,
     ragg,
-    devEMF,
-    testthat (>= 3.0.0),
+    devEMF (>= 4.6),
+    testthat (>= 3.1.7),
     tibble,
-    gt (>= 0.11.1),
-    gtsummary (>= 1.7.0),
-    formatters (>= 0.5.0),
-    rtables (>= 0.6.0),
-    rlistings (>= 0.2.0),
-    tern,
-    tfrmt,
+    gt (>= 1.1.0),
+    gtsummary (>= 2.3.0),
+    formatters (>= 0.5.5),
+    rtables (>= 0.6.6),
+    rlistings (>= 0.2.7),
+    tern (>= 0.9.0),
+    tfrmt (>= 0.3.0),
     tidyr,
     cards (>= 0.7.0),
     forcats,
     labelled,
-    random.cdisc.data,
     pharmaverseadam,
     writexl,
-    readxl,
-    flextable (>= 0.9.0),
-    huxtable (>= 5.0.0),
-    rstudioapi,
+    readxl (>= 1.2.0),
+    flextable (>= 0.9.5),
+    huxtable (>= 5.4.0),
+    rstudioapi (>= 0.11),
     dplyr,
-    cardx,
-    broom (>= 1.0.8)
+    cardx (>= 0.2.3),
+    broom (>= 1.0.8),
+    gtable,
+    lattice,
+    patchwork
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)

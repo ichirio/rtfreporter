@@ -63,10 +63,6 @@
 #'   keys, or `NULL` (default) to use the option / factory defaults (landscape
 #'   Letter, 0.75" top/bottom and 0.75" left/right margins). An omitted key falls
 #'   back to the corresponding `rtfreporter.*` option (see [rtfreporter_options()]).
-#' @param default_format **Deprecated**: use `style = rtf_style()`.  An
-#'   [rtf_default_format()] object or a named list of its keys still works:
-#'   it maps onto the shared level of [rtf_style()], beneath any `style`
-#'   given, and warns once a session.
 #' @param watermark A diagonal word drawn behind the page body on every page:
 #'   an [rtf_watermark()] object, a bare string (`watermark = "DRAFT"` uses the
 #'   defaults), or `NULL` (default) for none. A section can override it by
@@ -129,9 +125,32 @@
 #' `rtf_document(font_table = list(list(name = c(latin = "Times New Roman",
 #' east_asian = "MS Mincho"))), font_lang = c(east_asian = "ja"))`.
 #'
+#' @section Font names that are not ASCII:
+#' A family name with characters outside ASCII (Yu Mincho written in
+#' Japanese, say) is written in the font table as Word writes
+#' it, so that Word reads the same family for the Latin and the East Asian
+#' text: in the bytes of its East Asian code page, each as `\'xx`, with the
+#' matching `\fcharset` -- Japanese 128 (code page 932), Simplified Chinese
+#' 134 (936), Traditional Chinese 136 (950), Korean 129 (949).  The character
+#' set is:
+#'
+#' * a common family's own: Yu Mincho, Yu Gothic, MS Mincho, MS Gothic, MS
+#'   PMincho, MS PGothic and Meiryo are Japanese; SimSun and SimHei
+#'   Simplified Chinese; PMingLiU and Microsoft JhengHei Traditional
+#'   Chinese; Malgun Gothic and Batang Korean.  Their Latin name follows in
+#'   `{\*\falt Yu Mincho}`.
+#' * else Japanese for a name with kana, Korean for one with Hangul;
+#' * else (Han characters only) the `east_asian` language of `font_lang` when
+#'   it is one of these and writes the name, then the first of Japanese,
+#'   Simplified Chinese, Traditional Chinese and Korean that writes it.
+#'
+#' A slot tagged by `font_lang` keeps its language's character set when that
+#' code page writes the name.  A name none of these code pages can write keeps
+#' the `\uN?` form, and an ASCII name is written as it always was.
+#'
 #' @return An `rtf_document` S3 object: a list with `document` (the
 #'   settings given here: `font_table`, `font_lang`, `color_table`, `page`,
-#'   `default_format`, `style`, `watermark`, `program`, `program_fallback`,
+#'   `style`, `watermark`, `program`, `program_fallback`,
 #'   `tokens` and `file`),
 #'   `contents` (filled by [rtf_tables()] / [rtf_figures()]: one block per
 #'   content, each with its own title and footnote; [rtf_layout()] shows how
@@ -167,7 +186,7 @@
 #'
 #' @export
 rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
-                         default_format = NULL, watermark = NULL,
+                         watermark = NULL,
                          program = NULL, tokens = NULL,
                          program_fallback = NULL, font_lang = NULL,
                          style = NULL, file = NULL) {
@@ -188,8 +207,6 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
   .check_style_arg(style, "rtf_document")
   .check_color_table(color_table)
   .check_font_table_arg(font_table)
-  .check_default_format_arg(default_format)
-  if (!is.null(default_format)) .warn_default_format()
   # Default clinical trial page used when none is supplied.  A *partial* `page`
   # is kept as given; any key left out (orientation, dimensions, margins) is
   # resolved to its default at render time -- including inferring the
@@ -224,7 +241,6 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
         font_lang = font_lang,
         color_table = color_table,
         page = page,
-        default_format = default_format,
         style = style,
         watermark = .normalize_watermark(watermark),
         program = program,
@@ -277,16 +293,6 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
     stop("`orientation` must be \"landscape\" or \"portrait\".", call. = FALSE)
   }
   invisible(page)
-}
-
-# `default_format` (deprecated): an rtf_default_format() or a named list of
-# its keys.  A string used to stop with "second argument must be a list".
-.check_default_format_arg <- function(x) {
-  if (!is.null(x) && !is.list(x)) {
-    stop("`default_format` must be an rtf_default_format() object or a ",
-         "named list of its settings.", call. = FALSE)
-  }
-  invisible(x)
 }
 
 # `color_table`: "#RRGGBB" colours.  "red" or NA used to be kept and written
@@ -354,9 +360,6 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
 #' @param color_table Optional colour table; replaces the current one.
 #' @param page New page geometry, **merged per key** onto the current page: an
 #'   [rtf_page()] object, or a named list with the same keys (see [rtf_page()]).
-#' @param default_format **Deprecated**: use `style = rtf_style()`.  Still
-#'   merged per key onto the current one, and mapped onto the shared level of
-#'   [rtf_style()] beneath any `style`; warns once a session.
 #' @param style An [rtf_style()], **merged key by key** over the document's
 #'   style: a key it sets wins, the others stay.
 #' @param watermark New page watermark: an [rtf_watermark()] object, a bare
@@ -382,7 +385,7 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
 #'
 #' @export
 rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
-                       default_format = NULL, watermark = NULL,
+                       watermark = NULL,
                        font_lang = NULL, style = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
@@ -394,7 +397,6 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
   # Whole-object replacements.
   .check_font_table_arg(font_table)
   .check_color_table(color_table)
-  .check_default_format_arg(default_format)
   if (!is.null(font_table)) {
     doc_copy$document$font_table <- .check_font_table(font_table)
   }
@@ -409,11 +411,6 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
   .check_page_arg(page)
   if (!is.null(page)) {
     doc_copy$document$page <- .merge_list(doc_copy$document$page, page)
-  }
-  if (!is.null(default_format)) {
-    .warn_default_format()
-    doc_copy$document$default_format <-
-      .merge_list(doc_copy$document$default_format, default_format)
   }
   .check_style_arg(style, "rtf_config")
   if (!is.null(style)) {
@@ -733,10 +730,17 @@ rtf_tables <- function(doc, tables,
     stop("rtf_tables(): `cont_title` is one line of text, or NULL.", call. = FALSE)
   }
 
+  # A page's own title / footnote block border (plan_titles(border = ),
+  # plan_footnotes(border = )): it stays with the page's content and wins
+  # over the document's (rtf_titles(border = ), rtf_style())
+  borders <- function(at) lapply(tables, function(t) attr(t, at, exact = TRUE))
+
   # Each page a block, with its title, footnote and placement (R/blocks.R)
   .rtf_add_blocks(doc, tables, titles, footnotes, page_break = page_break,
                   space_before = space_before, cont_title = cont_title,
-                  sections = sections)
+                  sections = sections,
+                  title_borders = borders("rtf_titles_border"),
+                  footnote_borders = borders("rtf_footnotes_border"))
 }
 
 # A title block with one row more at its end: the rows it has (a character
@@ -977,9 +981,18 @@ rtf_figures <- function(doc, figures,
 #' same width as the content; title rows default to centred + bold.  A row's
 #' `row_height_twips` is that row's height, over the block's
 #' `row_height_twips`; it applies to the table form
-#' (`rtf_style(title_format = "table")`), as the block's does.
+#' (`rtf_style(title_format = "table")`), as the block's does.  So does a
+#' row's `border`: the text form draws none, ignores one you set, and warns.
 #'
 #' @param doc An rtf_document object.
+#' @param border `NULL` (default) for no rule, or an [rtf_border()] for the
+#'   title block as a whole, read as [rtf_footnotes()]'s is: `top` above
+#'   the first row, `bottom` below the last row, `inside_h` between rows,
+#'   `left` / `right` on the outer edges of every row.  A row's own
+#'   `border` is merged side by side over it, so the sides the row sets
+#'   win.  It is drawn in the table form
+#'   (`rtf_style(title_format = "table")`); the text form ignores it and
+#'   warns.
 #' @param titles A list of length = number of contents, or length 1 (common).
 #'   A page's heading (`rtf_tables(auto_title = TRUE)`, a plan's
 #'   `plan_paginate_group(heading_at = "title")`) is not replaced: it
@@ -1025,7 +1038,7 @@ rtf_figures <- function(doc, figures,
 #' @export
 rtf_titles <- function(doc, titles, font_size_half_points = NULL,
                        row_height_twips = NULL, markup = NULL, font = NULL,
-                       align = NULL) {
+                       align = NULL, border = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
@@ -1073,6 +1086,13 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
   st <- .element_style(font_size_half_points, row_height_twips, markup,
                        align, verb = "rtf_titles")
   if (!is.null(font)) st$font <- .check_font(font, "rtf_titles(font)")
+  if (!is.null(border)) {
+    if (!inherits(border, "rtf_border")) {
+      stop("`rtf_titles(border = )` must be NULL or an rtf_border() object.",
+           call. = FALSE)
+    }
+    st$border <- border
+  }
   if (length(st)) doc_copy$title_style <- st
   doc_copy
 }
@@ -1083,7 +1103,9 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #' figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string,
 #' a named vector `c(l = , c = , r = )`, or the page footer's row list
 #' `list(columns = , row_height_twips = )`, whose `row_height_twips` is that
-#' row's height over the block's).
+#' row's height over the block's; it takes `border =` and, as a band row
+#' does, `bold =`, `italic =` and `underline =` (each `TRUE` or `FALSE`)
+#' for every cell of the row).
 #' Footnote rows default to left-aligned and draw no rule unless `border`
 #' (or a row's own `border`) asks for one. `NULL` per element
 #' suppresses the footnote for that content.
@@ -1095,8 +1117,15 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #'   left / centre / right -- the same row model [rtf_footer()] uses. A bare
 #'   string lands in whichever slot `align` selects.
 #' @param border `NULL` (default) for **no rule** -- unlike the page footer,
-#'   the footnote draws none unless asked. An [rtf_border()] puts one on the
-#'   first row, e.g. `border = rtf_border(top = TRUE)`.
+#'   the footnote draws none unless asked.  An [rtf_border()] is the border
+#'   of the block as a whole, read as [rtf_footer()]'s is: `top` above the
+#'   first row, `bottom` below the last row, `inside_h` between rows, `left`
+#'   / `right` on the outer edges of every row, `inside_v` between the cells
+#'   of a row; e.g. `border = rtf_border(top = TRUE)` for a separator rule
+#'   above the block.  A row given as a list may carry its own `border =`
+#'   (`list(columns = , border = )`), merged side by side over the block's.  It is drawn only with
+#'   `rtf_style(footnote_format = "table")` (the default); the text form
+#'   ignores it and warns.
 #' @param font_size_half_points,row_height_twips,markup,align,font Style for
 #'   this block, over the document's [rtf_style()] (its section, then its
 #'   shared level).

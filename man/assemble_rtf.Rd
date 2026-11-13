@@ -12,9 +12,9 @@ assemble_rtf(
   toc = NULL,
   toc_title = "Table of Contents",
   toc_leader = c("dot", "none"),
-  toc_page_numbering = c("none", "roman", "decimal"),
   bookmark_prefix = "tfl_",
-  book_page = NULL
+  book_page = NULL,
+  toc_style = getOption("rtfreporter.toc_style")
 )
 }
 \arguments{
@@ -33,18 +33,22 @@ for a cover page.  \code{NULL} (default) = no cover page.}
 
 \item{toc}{Table-of-Contents specification.  \code{NULL} (default) =
 no TOC, no bookmarks; \code{"auto"} = auto-extract titles; a
-character vector = one label per input file; a table (columns \code{file},
-\code{label}, \code{heading}, \code{level}) or the path of one (\code{.xlsx} / \code{.csv}) =
-multi-level layout.  See \strong{Table of Contents} above.}
+character vector = one label per input file; a table (column \code{file},
+and optionally \code{label}, \code{heading}, \code{level}) or the path of one (\code{.xlsx} /
+\code{.csv}) = multi-level layout.  See \strong{Table of Contents} above.}
 
-\item{toc_title}{Centred bold title rendered on the TOC page, a single
-string (\code{""} = an empty title line).  Default \code{"Table of Contents"}.}
+\item{toc_title}{Bold title rendered on the TOC page, a single
+string (\code{""} = an empty title line).  Named \code{l}, \code{c} or \code{r} as a header
+cell is, it is aligned left, centre or right (\code{c(l = "Contents")});
+unnamed it is centred.  \code{"\\n"} is a line break in the
+title, and the tokens of \code{\link[=rtf_text_tokens]{rtf_text_tokens()}} that need no page are filled
+as in a title: the session's own tokens
+(\code{options(rtfreporter.tokens = )}), \code{{DATETIME}}, \code{{PROGRAM}}.  A token
+that is none of them stays as text.  The same goes for the text of a
+\code{heading} of a table \code{toc}.  Default \code{"Table of Contents"}.}
 
 \item{toc_leader}{\code{"dot"} (default) draws a dotted leader between
 each TOC entry and its page number; \code{"none"} leaves whitespace.}
-
-\item{toc_page_numbering}{\code{"none"} (default) / \code{"roman"} /
-\code{"decimal"}.  See \strong{Page numbering} above.}
 
 \item{bookmark_prefix}{String prepended to every auto-generated
 bookmark name (default \code{"tfl_"}): letters, digits and \verb{_} only, as a
@@ -64,11 +68,32 @@ and renders it empty, keeping the row's height.  This argument
 supplies the content when the book is built, so filling it cannot
 shift anything.}
 \item{What to give}{Typically \code{"Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"}.  The total resolves to the \strong{book's} page
-count, which is what the deliverable could not know on its own.}
+count, which is what the deliverable could not know on its own.
+Both follow \strong{Page numbering} above: the page is counted from the
+book's first page, a cover and the table of contents included, and
+the total is all of its pages (the first table after a cover and a
+one-page table of contents of a 9-page book reads \verb{Page 3 of 9}).}
 \item{Refused}{The static \code{{PAGE}} / \code{{TOTAL_PAGES}} are rejected: the
 slot sits in one band shared by every page of a section, so a
 single substitution cannot give each page its own number.}
 }}
+
+\item{toc_style}{The size and boldness of the TOC's text: \code{NULL} (the
+built-in sizes) or a list with the keys \code{title}, \code{heading} and \code{entry},
+each \verb{list(size = <points>, bold = TRUE/FALSE)}, and \code{gap}
+(\code{list(size = )}: the blank line below the title).  A list is merged over
+the built-in values key by key, so \code{list(entry = list(size = 9))} changes
+the entries' size only.  Built in: title 14 pt bold, heading 11 pt bold,
+entry 10 pt, gap 9 pt.  A size is a positive number of points, whole or
+half (\code{10.5}).  \code{entry} also takes \code{hanging}: \code{FALSE} (default) writes each
+entry's wrapped lines at the indent of its first line; \code{TRUE} lines them
+up where the title starts, after the number (see \strong{Table of Contents}),
+and a positive whole number of twips hangs them that far in, the label
+written whole (\code{list(entry = list(hanging = 360))}).  Headings are not affected.  Default \code{getOption("rtfreporter.toc_style")}.  The font is
+the document's (that of the first input file).  Another key, a size that
+is not a positive number, a \code{bold} that is not \code{TRUE} / \code{FALSE} or a
+\code{hanging} that is not \code{TRUE} / \code{FALSE} / a positive whole number is an
+error.}
 }
 \value{
 Invisibly returns \code{output_file}.
@@ -84,10 +109,13 @@ header (font / colour tables, page settings) is taken from the
 Page-number fields work correctly across the assembled document
 provided the header/footer text uses dynamic tokens:
 \itemize{
-\item \code{\{AUTO_PAGE\}} -- per-page number rendered by the RTF viewer.
-\item \code{\{AUTO_TOTAL_PAGES\}} -- total page count rendered by the
-viewer across all assembled files.
+\item \code{\{AUTO_PAGE\}} -- per-page number rendered by the RTF viewer,
+counted from the assembled file's first page.
+\item \code{\{AUTO_TOTAL_PAGES\}} -- the assembled file's total page count,
+a cover and the table of contents included.
 }
+
+See \strong{Page numbering} below.
 
 Static tokens (\code{\{TOTAL_PAGES\}}) reflect only the page count
 of the individual source file and will be wrong in the assembled
@@ -117,20 +145,35 @@ Any field that is \code{NULL}, \code{NA} or empty is skipped, as is an \code{NA}
 \describe{
 \item{\code{NULL} (default)}{no TOC, no bookmarks.  Byte-for-byte the
 pre-v0.0.29 behaviour.}
-\item{\code{"auto"}}{auto-extract each input file's title (the first
-centred-bold cell of the title block) and use it as a level-1
-TOC entry.  Falls back to the file's basename if no title is
-detected.  The title is read as the file shows it, its tokens filled
-(\code{{STUDY}}, \code{{PAGE}}), except that a dynamic page number
+\item{\code{"auto"}}{each input file's title as a level-1 TOC entry.  The
+title is the file's title rows (the centred bold rows \code{\link[=rtf_titles]{rtf_titles()}}
+writes at the top of the body), read as the file shows them and
+joined into one entry with two spaces between them (\code{"Table 1"} and
+\code{"Demographics"} give \code{"Table 1  Demographics"}); a line break inside
+a row (\code{"\\n"}) is joined the same way, never printed as \verb{\\line}.  A
+table, a figure and a listing are each labelled by their title; a
+file with no title rows takes its running header's \code{"Table N"} line
+(\code{"Table 14.1.1  Demographic Characteristics"}: the title written
+after the number on that line, whatever centred lines follow it, a
+population line for one; a line with the number only takes the
+longest other centred line that is not a \verb{<...>} subtitle), and a
+file with neither, its file name without \code{.rtf}.  A file gets one
+entry however many pages it has: a file whose titles change from
+page to page (\code{"Summary of {PARAM}"} with \code{page_by}) is labelled by
+its first page's title.  Its tokens
+are filled (\code{{STUDY}}, \code{{PAGE}}), except that a dynamic page number
 (\code{{AUTO_PAGE}}, \code{{AUTO_TOTAL_PAGES}}) and the \code{{BOOK_PAGE}} slot are
-left out, and markup keeps its text without its formatting.}
+left out, and markup keeps its text without its formatting.
+\code{\link[=assemble_folder]{assemble_folder()}} labels its rows the same way.}
 \item{a character vector of TOC labels}{one per input file -- same as
 \code{"auto"} but with explicit labels.}
 \item{a table (\code{data.frame})}{one row per file, in order, for
-multi-level (chapter / table) layouts: \code{file} (the path), \code{label} (the
-entry text), and optionally \code{heading} (a heading printed above the
-row's entry whenever it changes; \code{NA} = none), \code{level} (the entry's
-indent, a whole number from 1 to 3, default 2) and \code{order}.  \code{\link[=assemble_folder]{assemble_folder()}} makes one from a
+multi-level (chapter / table) layouts: \code{file} (the path), and
+optionally \code{label} (the entry text; a row with no \code{label}, or an \code{NA}
+one, takes its file's title, read as \code{"auto"} reads it), \code{heading} (a
+heading printed above the row's entry whenever it changes; \code{NA} =
+none), \code{level} (the entry's indent, a whole number from 1 to 3,
+default 2) and \code{order}.  \code{\link[=assemble_folder]{assemble_folder()}} makes one from a
 folder, ready to edit.  \code{input_files} can then be left out: the
 table's \code{file} column is used.}
 \item{the path of such a table}{an \code{.xlsx} or \code{.csv} file, e.g. the one
@@ -141,25 +184,53 @@ Each TOC entry is an RTF \code{HYPERLINK} field; clicking it in
 Word / Pages jumps to a per-source-file bookmark.  Each row also
 has a \code{PAGEREF} field so the page number next to the entry is
 calculated by the viewer when the file opens.
+
+The page number stands on a right tab at the right margin.  A label too
+long for one line wraps before the page-number column, never into it: each
+entry has a right indent (\verb{\\ri}) of the column's width plus a gap, six
+characters at the entry's font size (four digits and two spaces; more when
+a page number has more digits), 720 twips (0.5 in) at the default 10 pt.
+The page number and its leader stay on the label's last line, at the
+margin.  Every level has it, with or without a hanging indent; headings do
+not.  An entry is also kept on one page (\verb{\\keep}): Word never splits it
+across two TOC pages.
+
+With a hanging indent (\code{toc_style = list(entry = list(hanging = TRUE))})
+an entry is its number, a tab and its title (\code{"Table 14.3.2"}, then
+\code{"Summary of ..."}), and the title's wrapped lines start where its first
+line does, after the number.  The hang is the width of the widest number
+in the TOC and a gap of 1 em at the entry's size: a character is 0.6 em
+in Courier New (exact) and is taken as 0.75 em in any other font (a
+generous estimate: a wrong one leaves a little too much room).  Two more
+tab stops follow the hang, 2 and 4 em after it, so a number wider than
+the hang puts its title at the next of them, never at the page number's
+tab.  With \code{"auto"} and \code{\link[=assemble_folder]{assemble_folder()}} the
+number is the one the file's title is read with (\code{"Table 14.1.1"}); a
+label given as text is split when it starts with \code{Table}, \code{Figure} or
+\code{Listing} and a number (\verb{14.3.2}, \verb{14.3.2.1}, \verb{14.1.1a}).  A label that
+does not split is written whole, its wrapped lines at the same hang; when
+no label splits the hang is 720 twips.  A whole number of twips
+(\code{hanging = 360}) is the hang as given, and each label is written whole,
+its wrapped lines that far in.
 }
 
 \section{Page numbering}{
 
-\code{toc_page_numbering} controls how the TOC pages are numbered (a cover
-page keeps the document's Arabic numbering):
+Every page of the assembled file is numbered in one Arabic sequence from
+its first page, and the total is the count of all its pages.  The cover,
+when there is one, is page 1; the table of contents' pages come next, then
+the input files' pages, with no restart anywhere.  With a cover, a
+one-page table of contents and 7 pages of tables, the pages read 1 of 9
+(the cover), 2 of 9 (the table of contents), 3 of 9 (the first table)
+... 9 of 9; without the cover, 1 of 8 (the table of contents), 2 of 8
+(the first table) ... 8 of 8.
 
-\describe{
-\item{\code{"none"} (default)}{Arabic numbering flows continuously from
-the first page; if the source files use \code{\{AUTO_PAGE\}} the
-TOC counts as page 1, 2, ...}
-\item{\code{"roman"}}{TOC pages use lowercase Roman numerals (\code{i}, \code{ii},
-...); body pages restart at \code{1}.}
-\item{\code{"decimal"}}{TOC pages use Arabic numerals starting at \code{1}, and
-the body continues from them (with a one-page TOC the first table is
-page 2).  A cover page before the TOC is not counted.}
-}
-
-\code{\link[=assemble_folder]{assemble_folder()}} defaults to \code{"decimal"}.
+The inputs' \code{\{AUTO_PAGE\}} / \code{\{AUTO_TOTAL_PAGES\}}, the
+\code{book_page} text and the page numbers the table of contents shows all
+follow this sequence.  The file is written with the total already in
+place (every \code{NUMPAGES} field's cached value is the count of all pages)
+and with each table of contents entry's cached page number, so a viewer
+that does not refresh fields shows them too.
 }
 
 \examples{
@@ -183,7 +254,7 @@ assemble_rtf(c(a, b), out, overwrite = TRUE)
 # Auto-TOC: one entry per file, label extracted from each title
 assemble_rtf(c(a, b), out, toc = "auto", overwrite = TRUE)
 
-# Multi-level TOC with section headings + cover page + Roman TOC pages
+# Multi-level TOC with section headings + cover page (pages 1, 2, 3, 4)
 assemble_rtf(
   input_files = c(a, b),
   output_file = out,
@@ -199,8 +270,7 @@ assemble_rtf(
     heading = c("DEMOGRAPHICS", "SAFETY ANALYSES"),
     label   = c("Table 14.1.1 Demographics", "Table 14.2.1 Adverse Events")
   ),
-  toc_page_numbering = "roman",
-  overwrite           = TRUE
+  overwrite = TRUE
 )
 
 }

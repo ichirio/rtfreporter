@@ -230,7 +230,7 @@ restate it. What is carried:
 | Per-column alignment | yes | yes | yes | yes |
 | Spanning headers | yes | yes | yes | yes |
 | Column widths | yes (px/pct) | -- | -- | -- |
-| Title + subtitle | yes | yes | yes (caption) | yes (caption) |
+| Title + subtitle | yes (caption too) | yes | yes (caption) | yes (caption) |
 | Footnotes / source notes | yes | yes | yes (footer) | yes (`add_footnote()` rows) |
 | In-cell footnote marks | yes (superscript) | yes (superscript) | as text | -- |
 | Row-group rows + indent | yes (rendered) | yes (rendered) | group rows, no indent | as typed, no indent |
@@ -267,8 +267,8 @@ reconstructed into a spanning header (see `header_sep`); everything else
 - `FALSE` -- use only the rendered body (ignore labels / titles / notes).
 - a **character vector of tokens** -- selective opt-in, e.g.
   `c("col_header", "alignment")`. Tokens for gt/gtsummary: `"col_header"`,
-  `"alignment"`, `"spanning"`, `"widths"`, `"titles"`, `"footnotes"`. For
-  rtables/tern: `"col_header"`, `"alignment"`, `"spanning"`, `"titles"`,
+  `"alignment"`, `"spanning"`, `"widths"`, `"titles"`, `"footnotes"`,
+  `"footnote_marks"`. For rtables/tern: `"col_header"`, `"alignment"`, `"spanning"`, `"titles"`,
   `"footnotes"`, `"indent"`, `"footnote_marks"`. For flextable:
   `"col_header"`, `"alignment"`, `"spanning"`, `"titles"`, `"footnotes"`. For
   huxtable: `"col_header"`, `"alignment"`, `"spanning"`, `"titles"`,

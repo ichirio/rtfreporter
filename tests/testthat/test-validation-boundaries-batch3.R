@@ -48,15 +48,15 @@
 #  toc (table)    | level 1 (min) / 3 (max) | 1 / 3            | written; level 3 indented 1200   | FR-AS116 FR-AS238
 #  toc (table)    | level 0 / 4 / 2.5 / -1 / Inf |             | error "`level` must be a whole number from 1 to 3" | FR-AS238
 #  toc (table)    | level NA              | NA                 | the default, 2 (indent 600)      | FR-AS115
-#  toc (table)    | an NA label           | c(NA, "y")         | error "`label` must be a single string, not NA" | FR-AS246
-#  toc (table)    | no label column / 0 rows / a missing file |  | error (FR-AS118 / FR-AS102 / FR-AS119) | FR-AS102 FR-AS118 FR-AS119
+#  toc (table)    | an NA label           | c(NA, "y")         | the file's title as its label    | FR-AS258
+#  toc (table)    | no label column       |                    | the titles as labels             | FR-AS258
+#  toc (table)    | no file column / 0 rows / a missing file |  | error (FR-AS118 / FR-AS102 / FR-AS119) | FR-AS102 FR-AS118 FR-AS119
 #  toc (path)     | a .csv that is not there / a .txt |        | error "`toc` file not found" / "must end in .xlsx or .csv" | FR-AS117 FR-AS246
 #  toc_title      | valid / "" / non-ASCII / long |            | written                          | FR-AS127
 #  toc_title      | NA / length 2 / length 0 / a number / NULL | | error "`toc_title` must be a single string" | FR-AS244
 #  toc_leader     | "none" / prefix "d"   |                    | no leader / a dot leader         | FR-AS128
 #  toc_leader     | unknown / NA          |                    | error (match.arg)                | FR-AS129
-#  toc_page_numbering | "roman" / prefix "rom" |               | \pgnlcrm                         | FR-AS131
-#  toc_page_numbering | another case / "" / NA / length 2 |    | error (match.arg)                | FR-AS129
+#  toc_page_numbering | "roman" / "none" (removed) |           | error "unused argument"          | FR-AS271
 #  bookmark_prefix | "" / "studyX_"       |                    | the bookmark name                | FR-AS133
 #  bookmark_prefix | NA / a space / length 2 / a number / non-ASCII | | error "`bookmark_prefix` must be a single string of letters" | FR-AS244
 #  book_page      | valid                 | "Page {AUTO_PAGE}" | written                          | FR-AS138
@@ -74,7 +74,8 @@
 #  spec_file      | ".csv" / ".CSV"       |                    | written                          | FR-AS153
 #  spec_file      | ".txt" / no extension / "" / NA / a number | | error "`spec_file` must end in .xlsx or .csv." | FR-AS154
 #  recursive      | TRUE / FALSE          |                    | three rows / two rows            | FR-AS155
-#  toc_page_numbering | default / "roman" / unknown |          | decimal / \pgnlcrm / error       | FR-AS157 FR-AS129
+#  toc_title      | default               |                    | no page-number command (\pgn...) | FR-AS157
+#  toc_page_numbering | "decimal" with output_file (removed) |  | error "unused argument"          | FR-AS271
 #  ...            | cover / an unknown argument |              | passed on / error "unused argument" | FR-AS158
 #  toc levels     | the table's level 0 / 4 | spec$level       | error "`level` must be a whole number" | FR-AS238
 #  (dir NA / two folders / a number, recursive NA / "yes", spec_file of two
@@ -385,7 +386,7 @@
 }
 .eb3_read <- function(f) paste(readLines(f, warn = FALSE), collapse = "\n")
 
-test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS110 FR-AS112 FR-AS114 FR-AS115 FR-AS116 FR-AS117 FR-AS118 FR-AS119 FR-AS124 FR-AS127 FR-AS128 FR-AS129 FR-AS131 FR-AS133 FR-AS134 FR-AS138 FR-AS139 FR-AS238 FR-AS244 FR-AS245 FR-AS246]: assemble_rtf(): equivalence classes and boundaries of its arguments", {
+test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS110 FR-AS112 FR-AS114 FR-AS115 FR-AS116 FR-AS118 FR-AS119 FR-AS124 FR-AS127 FR-AS128 FR-AS129 FR-AS133 FR-AS134 FR-AS139 FR-AS238 FR-AS244 FR-AS245 FR-AS246 FR-AS258 FR-AS271]: assemble_rtf(): equivalence classes and boundaries of its arguments", {
   C <- .eb3_case
   E <- .eb3_err
   f <- .eb3_files()
@@ -461,10 +462,12 @@ test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS
     E("toc", "table, level 2.5", tab(level = 2.5), lvl),
     E("toc", "table, level -1", tab(level = -1), lvl),
     E("toc", "table, level Inf", tab(level = Inf), lvl),
-    E("toc", "table, an NA label", data.frame(file = f, label = c(NA, "y")),
-      "^A TOC entry's `label` must be a single string, not NA"),
-    E("toc", "table without label", data.frame(file = f),
-      "^A table of contents needs the columns `file` and `label`"),
+    C("toc", "table, an NA label (read from the file's title)", data.frame(file = f, label = c(NA, "y")),
+      "ok:fldrslt Table 14\\.1\\.1"),
+    C("toc", "table without label (read from the titles)", data.frame(file = f),
+      "ok:fldrslt Table 14\\.2\\.1"),
+    E("toc", "table without file", data.frame(label = c("a", "b")),
+      "^A table of contents needs the column `file`"),
     E("toc", "table of 0 rows", data.frame(file = character(), label = character()), two),
     E("toc", "table naming a missing file", data.frame(file = c(a, "zz.rtf"), label = c("x", "y")),
       "^The table of contents names missing file"),
@@ -483,12 +486,10 @@ test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS
     C("toc_leader", "prefix", "d", "ok:tldot", more = list(toc = "auto")),
     E("toc_leader", "unknown", "bogus", ma),
     E("toc_leader", "NA", NA, mn),
-    C("toc_page_numbering", "roman", "roman", "ok:pgnlcrm", more = list(toc = "auto")),
-    C("toc_page_numbering", "prefix", "rom", "ok:pgnlcrm", more = list(toc = "auto")),
-    E("toc_page_numbering", "another case", "Roman", ma),
-    E("toc_page_numbering", "empty string", "", ma),
-    E("toc_page_numbering", "NA", NA, mn),
-    E("toc_page_numbering", "length 2", c("none", "roman"), "^'arg' must be of length 1"),
+    E("toc_page_numbering", "removed: roman", "roman", "unused argument \\(toc_page_numbering",
+      more = list(toc = "auto")),
+    E("toc_page_numbering", "removed: none", "none", "unused argument \\(toc_page_numbering",
+      more = list(toc = "auto")),
     C("bookmark_prefix", "empty string", "", "ok:bkmkstart t14_1_1\\}", more = list(toc = "auto")),
     C("bookmark_prefix", "valid", "studyX_", "ok:bkmkstart studyX_t14_2_1", more = list(toc = "auto")),
     E("bookmark_prefix", "NA", NA_character_, bp),
@@ -513,7 +514,7 @@ test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS
   })
 })
 
-test_that("FT-AS141 [FR-AS129 FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS156 FR-AS157 FR-AS158 FR-AS238]: assemble_folder(): equivalence classes and boundaries of its arguments", {
+test_that("FT-AS141 [FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS156 FR-AS157 FR-AS158 FR-AS238 FR-AS271]: assemble_folder(): equivalence classes and boundaries of its arguments", {
   C <- .eb3_case
   E <- .eb3_err
   O <- .eb3_obj
@@ -554,11 +555,10 @@ test_that("FT-AS141 [FR-AS129 FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS
     E("spec_file", "a number", 1, sf),
     O("recursive", "TRUE", TRUE, nrows(3), more = list(dir = top)),
     O("recursive", "FALSE (default)", FALSE, nrows(2), more = list(dir = top)),
-    C("toc_page_numbering", "default (decimal)", "decimal", "no:pgnlcrm",
+    C("toc_title", "default", "Table of Contents", "no:\\\\pgn",
       more = list(output_file = tempfile(fileext = ".rtf"))),
-    C("toc_page_numbering", "roman", "roman", "ok:pgnlcrm",
-      more = list(output_file = tempfile(fileext = ".rtf"))),
-    E("toc_page_numbering", "unknown", "bogus", "^'arg' should be one of",
+    E("toc_page_numbering", "removed, with output_file", "decimal",
+      "unused argument \\(toc_page_numbering",
       more = list(output_file = tempfile(fileext = ".rtf"))),
     C("cover", "passed on (...)", list(title = "STUDY-EB3"), "ok:STUDY-EB3",
       more = list(output_file = tempfile(fileext = ".rtf"))),
@@ -585,7 +585,7 @@ test_that("FT-AS141 [FR-AS129 FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS
                       AETERM = c("Headache", "Nausea and vomiting", NA),
                       stringsAsFactors = FALSE)
 
-test_that("FT-LS154 [FR-LS115 FR-LS143 FR-LS144 FR-LS145 FR-LS146 FR-LS151 FR-LS152 FR-LS153 FR-LS154 FR-LS155 FR-LS156 FR-LS158 FR-LS159 FR-LS160 FR-LS161 FR-LS162 FR-LS163 FR-LS164 FR-LS165 FR-LS251]: listing_col(): equivalence classes and boundaries of its arguments", {
+test_that("FT-LS154 [FR-LS115 FR-LS143 FR-LS144 FR-LS145 FR-LS146 FR-LS151 FR-LS152 FR-LS153 FR-LS154 FR-LS158 FR-LS159 FR-LS160 FR-LS161 FR-LS162 FR-LS163 FR-LS164 FR-LS165 FR-LS251]: listing_col(): equivalence classes and boundaries of its arguments", {
   C <- .eb3_case
   E <- .eb3_err
   O <- .eb3_obj
@@ -787,7 +787,7 @@ test_that("FT-LS156 [FR-LS101 FR-LS102 FR-LS109 FR-LS112 FR-LS113 FR-LS114]: bui
   })
 })
 
-test_that("FT-LS157 [FR-LS205 FR-LS206 FR-LS212 FR-LS213 FR-LS214 FR-LS216 FR-LS217 FR-LS218 FR-LS219 FR-LS220 FR-LS224 FR-LS225 FR-LS226 FR-LS227 FR-LS228 FR-LS229 FR-LS230 FR-LS232 FR-LS252]: fit_listing_widths(): equivalence classes and boundaries of its arguments", {
+test_that("FT-LS157 [FR-LS205 FR-LS206 FR-LS212 FR-LS214 FR-LS216 FR-LS217 FR-LS219 FR-LS224 FR-LS225 FR-LS226 FR-LS227 FR-LS228 FR-LS229 FR-LS230 FR-LS232 FR-LS252]: fit_listing_widths(): equivalence classes and boundaries of its arguments", {
   E <- .eb3_err
   O <- .eb3_obj
   spec <- listing_spec(list(listing_col(c("USUBJID", "AGE")), listing_col("AETERM")))
@@ -919,7 +919,7 @@ test_that("FT-LS158 [FR-LS170 FR-LS172 FR-LS174 FR-LS175 FR-LS176 FR-LS177 FR-LS
   .eb3_run(cases, function(args, obj) do.call(listing_wrap, args))
 })
 
-test_that("FT-LS159 [FR-LS233 FR-LS234 FR-LS235 FR-LS236 FR-LS238 FR-LS239]: collapse_repeats(): equivalence classes and boundaries of its arguments", {
+test_that("FT-LS159 [FR-LS233 FR-LS235 FR-LS236 FR-LS238 FR-LS239]: collapse_repeats(): equivalence classes and boundaries of its arguments", {
   E <- .eb3_err
   O <- .eb3_obj
   tb <- rtftable(data.frame(A = c("x", "x", "y"), B = c("1", "1", "2")))
@@ -1009,7 +1009,7 @@ test_that("FT-AR107 [FR-AR119 FR-AR121 FR-AR126]: normalize_ard(): equivalence c
   })
 })
 
-test_that("FT-AR108 [FR-AR156 FR-AR157 FR-AR158 FR-AR180 FR-AR183 FR-AR197 FR-AR209 FR-AR247 FR-AR250 FR-AR253]: widen_ard(): equivalence classes and boundaries of na, label and stat_groups", {
+test_that("FT-AR108 [FR-AR156 FR-AR157 FR-AR158 FR-AR180 FR-AR197 FR-AR209 FR-AR247 FR-AR250 FR-AR253]: widen_ard(): equivalence classes and boundaries of na, label and stat_groups", {
   E <- .eb3_err
   O <- .eb3_obj
   d <- normalize_ard(.eb3_ard)
@@ -1060,7 +1060,7 @@ test_that("FT-AR108 [FR-AR156 FR-AR157 FR-AR158 FR-AR180 FR-AR183 FR-AR197 FR-AR
   })
 })
 
-test_that("FT-AR109 [FR-AR213 FR-AR215 FR-AR216 FR-AR218 FR-AR219 FR-AR220 FR-AR221 FR-AR224 FR-AR225 FR-AR239 FR-AR251]: pull_ard(): equivalence classes and boundaries of its arguments", {
+test_that("FT-AR109 [FR-AR213 FR-AR216 FR-AR218 FR-AR219 FR-AR220 FR-AR221 FR-AR224 FR-AR225 FR-AR239 FR-AR251]: pull_ard(): equivalence classes and boundaries of its arguments", {
   E <- .eb3_err
   O <- .eb3_obj
   is <- function(v) function(x) identical(x, v)
@@ -1388,7 +1388,7 @@ test_that("FT-PL973 [FR-PL265 FR-PL275 FR-PL276]: plan_total(): equivalence clas
     E("label", "length 2", c("a", "b"), lb),
     E("label", "a number", 1, lb),
     E("label", "length 0", character(0), lb),
-    E("label", "NULL", NULL, lb),
+    O("label", "NULL (left out: the default)", NULL, hd("Placebo", "Active", "Total")),
     O("position", "first", "first", hd("Total", "Placebo", "Active")),
     O("position", "prefix", "f", hd("Total", "Placebo", "Active")),
     E("position", "another case", "First", "^'arg' should be one of"),
@@ -1429,7 +1429,7 @@ test_that("FT-PL974 [FR-PL310 FR-PL311 FR-PL960]: plan_sort(): equivalence class
   .eb3_run(cases, function(args, obj) .eb3_pages(plan_sort, args))
 })
 
-test_that("FT-PL975 [FR-PL142 FR-PL143 FR-PL144 FR-PL145 FR-PL146 FR-PL150 FR-PL151 FR-PL152 FR-PL960]: plan_filter(): equivalence classes and boundaries of any, parents and by", {
+test_that("FT-PL975 [FR-PL142 FR-PL143 FR-PL150 FR-PL151 FR-PL152 FR-PL960]: plan_filter(): equivalence classes and boundaries of any, parents and by", {
   E <- .eb3_err
   O <- .eb3_obj
   an <- "^plan_filter\\(any = \\) is TRUE"
@@ -1456,7 +1456,7 @@ test_that("FT-PL975 [FR-PL142 FR-PL143 FR-PL144 FR-PL145 FR-PL146 FR-PL150 FR-PL
   })
 })
 
-test_that("FT-PL976 [FR-PL157 FR-PL158 FR-PL159 FR-PL160 FR-PL166 FR-PL167 FR-PL176 FR-PL179]: plan_columns(): equivalence classes and boundaries of widths, auto_width and sep", {
+test_that("FT-PL976 [FR-PL157 FR-PL158 FR-PL159 FR-PL160 FR-PL176 FR-PL179]: plan_columns(): equivalence classes and boundaries of widths, auto_width and sep", {
   E <- .eb3_err
   O <- .eb3_obj
   aw <- "^`auto_width` must be TRUE or FALSE"
@@ -1507,7 +1507,7 @@ test_that("FT-PL977 [FR-PL945]: plan_append(): equivalence classes and boundarie
   })
 })
 
-test_that("FT-PL978 [FR-PL387 FR-PL388 FR-PL392]: plan_col_header(): equivalence classes and boundaries of span, header_sep and col_header_align", {
+test_that("FT-PL978 [FR-PL392]: plan_col_header(): equivalence classes and boundaries of span, header_sep and col_header_align", {
   E <- .eb3_err
   O <- .eb3_obj
   ln <- list(lines = list(c(group = "", label = "", .values = "Treatment")))
@@ -1538,7 +1538,7 @@ test_that("FT-PL978 [FR-PL387 FR-PL388 FR-PL392]: plan_col_header(): equivalence
   .eb3_run(cases, function(args, obj) .eb3_pages(plan_col_header, args))
 })
 
-test_that("FT-PL979 [FR-PL256 FR-PL262]: plan_levels(): equivalence classes and boundaries of .drop_empty", {
+test_that("FT-PL979 [FR-PL262]: plan_levels(): equivalence classes and boundaries of .drop_empty", {
   E <- .eb3_err
   O <- .eb3_obj
   de <- "^plan_levels\\(.drop_empty = \\) takes variable names"

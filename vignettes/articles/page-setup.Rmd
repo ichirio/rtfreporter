@@ -120,9 +120,7 @@ client-specific font (`rtf_config(font_table = list(list(name = "Arial")))`)
 from one composed report.
 
 Both functions take the same parameters: `page`, `font_table`,
-`color_table`, and `style`, covered below. (`default_format =` and
-`rtf_default_format()` are deprecated: `rtf_style()` holds everything they
-did, and they will be removed in 0.9.)
+`color_table`, and `style`, covered below.
 
 
 ## Page geometry -- `page`
@@ -316,6 +314,10 @@ configurable per table via `cell_padding_left_twips` / `cell_padding_right_twips
 and above / below the text via `cell_padding_top_twips` /
 `cell_padding_bottom_twips` (written into each cell's definition; `0`, the
 default, writes nothing).
+
+Row height, cell padding, vertical alignment and font size apply to the whole
+table (the body, and the header for its own settings); they are not set per
+row or per cell.
 
 ### Document-wide row height / padding
 

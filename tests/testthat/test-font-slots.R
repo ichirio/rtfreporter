@@ -1,9 +1,5 @@
 # Fonts per script slot (latin / east_asian / complex / hansi) and font_lang.
 
-# rtf_default_format() / default_format = are deprecated (#804): these tests
-# check what they still do, not the warning (test-rtf-style.R does).
-silence_deprecation("rtf_default_format")
-
 .run_slots <- function(doc) {
   d <- tempfile("font-slots-")
   dir.create(d)
@@ -28,7 +24,7 @@ silence_deprecation("rtf_default_format")
   df <- data.frame(a = c("x", "\u65e5\u672c\u8a9e"), b = c("1", "caf\u00e9"),
                    stringsAsFactors = FALSE)
   rtf_document(watermark = wm,
-               default_format = rtf_default_format(title_format = tf)) |>
+               style = rtf_style(title_format = tf)) |>
     rtf_section(page = 1, secinfo = list(
       header = rtf_header(rows = list(c(l = "HDR \u65e5", r = "Page {PAGE}")),
                           font = hfont),
@@ -163,7 +159,7 @@ test_that("a title, in either format, carries the slot words", {
   for (tf in c("text", "table")) {
     l <- .run_slots(
       rtf_document(font_lang = c(east_asian = "ja"),
-                   default_format = rtf_default_format(title_format = tf)) |>
+                   style = rtf_style(title_format = tf)) |>
         rtf_tables(rtftable(.ja_df(), border = "tfl")) |>
         rtf_titles(list("\u8868 14.1"), font = .ja))
     expect_match(.line_of(l, "\\u-30616? 14.1"), .ja_run, fixed = TRUE)

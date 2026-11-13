@@ -292,3 +292,350 @@ test_that("gt row groups are heading rows, their rows indented under them (#650)
   plain <- as_rtftable(gt::gt(ae[c("PT", "Placebo")]))
   expect_identical(plain$data$PT, ae$PT)
 })
+
+# ── footnote marks on the labels and the footnote lines (#1020) ──────────────
+
+# The RTF of `x` (gt / gtsummary) through as_rtftables() + generate_rtfreport().
+.t71_rtf <- function(x, ...) {
+  d <- tempfile("t71_")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  f <- file.path(d, "t71.rtf")
+  generate_rtfreport(rtf_tables(rtf_document(), as_rtftables(x, ...)), f,
+                     overwrite = TRUE)
+  readLines(f, warn = FALSE)
+}
+
+test_that("FT-TB7101 [FR-TB577]: gt's footnote marks on a column label, a spanner and a body cell, and the footnote lines starting with their marks in gt's order", {
+  skip_if_not_installed("gt")
+  df <- data.frame(subj = sprintf("S%02d", 1:4), age = c(34, 45, 40, 51),
+                   sex = c("F", "M", "F", "M"), stringsAsFactors = FALSE)
+  g <- gt::gt(df) |>
+    gt::tab_spanner("Demo", columns = c(age, sex)) |>
+    gt::tab_footnote("Imputed.", locations = gt::cells_body(columns = age, rows = 2)) |>
+    gt::tab_footnote("Age at consent.", locations = gt::cells_column_labels(age)) |>
+    gt::tab_footnote("Spanner note.", locations = gt::cells_column_spanners("Demo")) |>
+    gt::tab_footnote("General note.")
+  p <- as_rtftables(g)[[1L]]
+  # gt numbers spanner (1), label (2), body (3); the note without a place
+  # comes first, unmarked, as gt prints it
+  expect_identical(p$col_header[[1L]][[2L]]$label, "Demo^{1}")
+  expect_identical(p$col_header[[2L]], c("subj", "age^{2}", "sex"))
+  expect_identical(p$data$age[2L], "^{3}\u00a045")
+  expect_identical(attr(p, "rtf_footnotes"),
+                   c("General note.", "^{1} Spanner note.",
+                     "^{2} Age at consent.", "^{3} Imputed."))
+  rtf <- .t71_rtf(g)
+  expect_true(any(grepl("Demo{\\super 1}\\cell", rtf, fixed = TRUE)))
+  expect_true(any(grepl("age{\\super 2}\\cell", rtf, fixed = TRUE)))
+  expect_true(any(grepl("{\\super 3}\\u160?45\\cell", rtf, fixed = TRUE)))
+  notes <- grep("note\\.|consent\\.|Imputed\\.", rtf, value = TRUE)
+  expect_identical(sub("^.*\\\\ri0 (.*)\\\\cell\\\\row$", "\\1", notes),
+                   c("General note.", "{\\super 1} Spanner note.",
+                     "{\\super 2} Age at consent.", "{\\super 3} Imputed."))
+  # two notes on one label: the marks joined, as gt prints "a,b"
+  g2 <- gt::gt(df) |>
+    gt::tab_options(footnotes.marks = "letters") |>
+    gt::tab_footnote("A", locations = gt::cells_column_labels(c(age, sex))) |>
+    gt::tab_footnote("B", locations = gt::cells_column_labels(age))
+  p2 <- as_rtftables(g2)[[1L]]
+  expect_identical(p2$col_header, list(c("subj", "age^{a,b}", "sex^{a}")))
+  expect_identical(attr(p2, "rtf_footnotes"), c("^{a} A", "^{b} B"))
+})
+
+test_that("FT-TB7102 [FR-TB577]: a gtsummary tbl_summary(by = ) header carries its footnote mark after N = n, and the note line starts with it", {
+  skip_if_not_installed("gt")
+  skip_if_not_installed("gtsummary")
+  ts <- gtsummary::tbl_summary(gtsummary::trial[c("trt", "age", "grade")],
+                               by = "trt")
+  p <- as_rtftables(ts)[[1L]]
+  expect_identical(p$col_header,
+                   list(c("Characteristic", "Drug A  \nN = 98^{1}", "Drug B  \nN = 102^{1}")))
+  expect_identical(attr(p, "rtf_footnotes"), "^{1} Median (Q1, Q3); n (%)")
+  rtf <- .t71_rtf(ts)
+  expect_true(any(grepl("Drug A  \\line N = 98{\\super 1}\\cell", rtf, fixed = TRUE)))
+  expect_true(any(grepl("{\\super 1} Median (Q1, Q3); n (%)\\cell", rtf, fixed = TRUE)))
+})
+
+test_that("FT-TB7104 [FR-TB577]: gt's footnote marks on the title, the subtitle and a row-group label match their footnote lines", {
+  skip_if_not_installed("gt")
+  df <- data.frame(grp = c("A", "A", "B", "B"), subj = sprintf("S%02d", 1:4),
+                   age = c(34, 45, 40, 51), stringsAsFactors = FALSE)
+  g <- gt::gt(df, groupname_col = "grp", rowname_col = "subj") |>
+    gt::tab_header("Title T", "Sub S") |>
+    gt::tab_footnote("Grp B.", locations = gt::cells_row_groups("B")) |>
+    gt::tab_footnote("Ttl.", locations = gt::cells_title("title")) |>
+    gt::tab_footnote("Sub.", locations = gt::cells_title("subtitle")) |>
+    gt::tab_footnote("Cell 1.", locations = gt::cells_body(columns = age, rows = 1))
+  p <- as_rtftables(g)[[1L]]
+  # gt numbers title (1), subtitle (2), body row 1 (3), group B (4)
+  expect_identical(attr(p, "rtf_titles"), c("Title T^{1}", "Sub S^{2}"))
+  nb2 <- strrep(intToUtf8(160L), 2L)
+  expect_identical(p$data[[1L]],
+                   c("A", paste0(nb2, c("S01", "S02")), "B^{4}", paste0(nb2, c("S03", "S04"))))
+  expect_identical(attr(p, "rtf_footnotes"),
+                   c("^{1} Ttl.", "^{2} Sub.", "^{3} Cell 1.", "^{4} Grp B."))
+  rtf <- .t71_rtf(g)
+  expect_true(any(grepl("Title T{\\super 1}", rtf, fixed = TRUE)))
+  expect_true(any(grepl("Sub S{\\super 2}", rtf, fixed = TRUE)))
+  expect_true(any(grepl("B{\\super 4}\\cell", rtf, fixed = TRUE)))
+  expect_true(any(grepl("{\\super 4} Grp B.", rtf, fixed = TRUE)))
+  # the same as gt prints them
+  h <- as.character(gt::as_raw_html(g, inline_css = FALSE))
+  sup <- function(x) {
+    regmatches(h, regexpr(paste0(x, "<span[^>]*><sup>[^<]*</sup>"), h))
+  }
+  expect_match(sup("Title T"), "<sup>1</sup>", fixed = TRUE)
+  expect_match(sup("Sub S"), "<sup>2</sup>", fixed = TRUE)
+  expect_match(sup("B"), "<sup>4</sup>", fixed = TRUE)
+  # without "footnote_marks" the title and group rows stay bare
+  q <- as_rtftables(g, read_meta = c("titles", "footnotes"))[[1L]]
+  expect_identical(attr(q, "rtf_titles"), c("Title T", "Sub S"))
+  expect_identical(q$data[[1L]][4L], "B")
+})
+
+test_that("FT-TB7103 [FR-TB577 FR-TB118]: read_meta without \"footnote_marks\" writes neither the label marks nor the line marks", {
+  skip_if_not_installed("gt")
+  df <- data.frame(subj = sprintf("S%02d", 1:4), age = c(34, 45, 40, 51),
+                   stringsAsFactors = FALSE)
+  g <- gt::gt(df) |>
+    gt::tab_spanner("Demo", columns = age) |>
+    gt::tab_footnote("Imputed.", locations = gt::cells_body(columns = age, rows = 2)) |>
+    gt::tab_footnote("Age at consent.", locations = gt::cells_column_labels(age)) |>
+    gt::tab_footnote("Spanner note.", locations = gt::cells_column_spanners("Demo"))
+  p <- as_rtftables(g, read_meta = c("col_header", "spanning", "footnotes"))[[1L]]
+  expect_identical(p$col_header[[1L]][[2L]]$label, "Demo")
+  expect_identical(p$col_header[[2L]], c("subj", "age"))
+  expect_identical(attr(p, "rtf_footnotes"),
+                   c("Imputed.", "Age at consent.", "Spanner note."))
+  rtf <- .t71_rtf(g, read_meta = c("col_header", "spanning", "footnotes"))
+  expect_false(any(grepl("Demo{\\super", rtf, fixed = TRUE)))
+  expect_false(any(grepl("age{\\super", rtf, fixed = TRUE)))
+  expect_false(any(grepl("\\{\\\\super [0-9]\\} (Imputed|Age at|Spanner)", rtf)))
+  # the token alone, with the labels and the notes read
+  q <- as_rtftables(g, read_meta = c("col_header", "spanning", "footnotes",
+                                     "footnote_marks"))[[1L]]
+  expect_identical(q$col_header[[2L]], c("subj", "age^{2}"))
+  expect_identical(attr(q, "rtf_footnotes"),
+                   c("^{1} Spanner note.", "^{2} Age at consent.", "^{3} Imputed."))
+})
+
+# ── a tab_caption() / modify_caption() caption is the title (#1029) ──────────
+
+# The RTF of a document, through generate_rtfreport().
+.t73_rtf <- function(doc) {
+  d <- tempfile("t73_")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  f <- file.path(d, "t73.rtf")
+  generate_rtfreport(doc, f, overwrite = TRUE)
+  readLines(f, warn = FALSE)
+}
+
+# The first line of `rtf` holding `txt` (NA: none).
+.t73_at <- function(rtf, txt) {
+  i <- which(grepl(txt, rtf, fixed = TRUE))
+  if (length(i)) i[[1L]] else NA_integer_
+}
+
+test_that("FT-TB7301 [FR-TB577]: a gt tab_caption() caption is the page title", {
+  skip_if_not_installed("gt")
+  g <- gt::gt(data.frame(A = 1:2)) |> gt::tab_caption("Table 9 Summary")
+  p <- as_rtftables(g)
+  expect_identical(attr(p[[1L]], "rtf_titles"), "Table 9 Summary")
+  rtf <- .t73_rtf(rtf_tables(rtf_document(), p))
+  expect_false(is.na(.t73_at(rtf, "Table 9 Summary")))
+  # above the table's header row
+  expect_lt(.t73_at(rtf, "Table 9 Summary"), .t73_at(rtf, "A\\cell"))
+  # without the "titles" token it is not read
+  q <- as_rtftables(g, read_meta = c("col_header", "footnotes"))
+  expect_null(attr(q[[1L]], "rtf_titles"))
+})
+
+test_that("FT-TB7302 [FR-TB577]: a gtsummary modify_caption() caption is the title, its markdown ** markers dropped", {
+  skip_if_not_installed("gt")
+  skip_if_not_installed("gtsummary")
+  ts <- gtsummary::tbl_summary(gtsummary::trial[c("trt", "age")], by = "trt") |>
+    gtsummary::modify_caption("**Table 9** Summary")
+  p <- as_rtftables(ts)
+  expect_identical(attr(p[[1L]], "rtf_titles"), "Table 9 Summary")
+  rtf <- .t73_rtf(rtf_tables(rtf_document(), p))
+  expect_false(is.na(.t73_at(rtf, "Table 9 Summary")))
+  expect_false(any(grepl("**", rtf, fixed = TRUE)))
+})
+
+test_that("FT-TB7303 [FR-TB577]: a caption with a tab_header() title and subtitle: the caption first, then the title, then the subtitle, as gt prints them", {
+  skip_if_not_installed("gt")
+  g <- gt::gt(data.frame(A = 1:2)) |>
+    gt::tab_header("Title T", "Sub S") |>
+    gt::tab_caption("Cap C") |>
+    gt::tab_footnote("Ttl.", locations = gt::cells_title("title"))
+  p <- as_rtftables(g)[[1L]]
+  # the title's footnote mark stays where #1020 writes it
+  expect_identical(attr(p, "rtf_titles"), c("Cap C", "Title T^{1}", "Sub S"))
+  rtf <- .t73_rtf(rtf_tables(rtf_document(), list(p)))
+  at <- vapply(c("Cap C", "Title T{\\super 1}", "Sub S"),
+               function(t) .t73_at(rtf, t), integer(1L))
+  expect_false(anyNA(at))
+  expect_true(all(diff(at) > 0L))
+  # gt prints the caption above the header too
+  h <- as.character(gt::as_raw_html(g, inline_css = FALSE))
+  expect_lt(regexpr("Cap C", h, fixed = TRUE), regexpr("Title T", h, fixed = TRUE))
+})
+
+test_that("FT-TB7304 [FR-TB577 FR-TB174]: titles the user gives win, and the caption is not written, as for the gt title", {
+  skip_if_not_installed("gt")
+  g <- gt::gt(data.frame(A = 1:2)) |>
+    gt::tab_header("Title T") |>
+    gt::tab_caption("Cap C")
+  # rtf_tables(titles = )
+  rtf <- .t73_rtf(rtf_tables(rtf_document(), as_rtftables(g),
+                             titles = list("Mine M")))
+  expect_false(is.na(.t73_at(rtf, "Mine M")))
+  expect_true(is.na(.t73_at(rtf, "Cap C")))
+  expect_true(is.na(.t73_at(rtf, "Title T")))
+  # rtf_titles()
+  doc <- rtf_titles(rtf_tables(rtf_document(), as_rtftables(g)), "Ours O")
+  rtf <- .t73_rtf(doc)
+  expect_false(is.na(.t73_at(rtf, "Ours O")))
+  expect_true(is.na(.t73_at(rtf, "Cap C")))
+  expect_true(is.na(.t73_at(rtf, "Title T")))
+  # none given: the caption and the title are the page's
+  rtf <- .t73_rtf(rtf_tables(rtf_document(), as_rtftables(g)))
+  expect_lt(.t73_at(rtf, "Cap C"), .t73_at(rtf, "Title T"))
+})
+
+test_that("FT-TB7305 [FR-TB577 FR-TB115]: each member of a gt_split carries the caption, read the same way", {
+  skip_if_not_installed("gt")
+  g <- gt::gt(data.frame(A = 1:4)) |>
+    gt::tab_header("Title T") |>
+    gt::tab_caption(gt::md("**Table 9** Summary"))
+  pages <- as_rtftables(gt::gt_split(g, row_every_n = 2))
+  expect_length(pages, 2L)
+  for (p in pages) {
+    expect_identical(attr(p, "rtf_titles"), c("Table 9 Summary", "Title T"))
+  }
+  rtf <- .t73_rtf(rtf_tables(rtf_document(), pages))
+  expect_identical(sum(grepl("Table 9 Summary", rtf, fixed = TRUE)), 2L)
+  expect_false(any(grepl("**", rtf, fixed = TRUE)))
+})
+
+# ──────── #1024: a stub column is headed by gt's stubhead, not its variable ───
+
+.t75_dat <- function() {
+  dat <- expand.grid(grp = c("Age", "Weight"), lbl = c("n", "Mean"),
+                     col = c("Placebo", "Active"), stringsAsFactors = FALSE)
+  dat$param <- dat$lbl
+  dat$value <- seq_len(nrow(dat)) * 1.5
+  dat[order(dat$grp, dat$lbl), ]
+}
+
+# A tfrmt table with label_loc = "column": two stub columns, grp and lbl.
+.t75_gt <- function(...) {
+  tf <- tfrmt::tfrmt(
+    group = grp, label = lbl, column = col, param = param, value = value,
+    body_plan = tfrmt::body_plan(tfrmt::frmt_structure(
+      group_val = ".default", label_val = ".default", tfrmt::frmt("xx.x"))),
+    row_grp_plan = tfrmt::row_grp_plan(
+      label_loc = tfrmt::element_row_grp_loc(location = "column")),
+    ...)
+  tfrmt::print_to_gt(tf, .t75_dat())
+}
+
+# The text of gt's stubhead cells (<th id="a::stub...">), as gt prints them.
+.t75_gt_stubhead <- function(g) {
+  html <- as.character(gt::as_raw_html(g, inline_css = FALSE))
+  th <- regmatches(html, gregexpr("<th[^>]*id=\"a::stub[^\"]*\"[^>]*>.*?</th>",
+                                  html))[[1L]]
+  span <- as.integer(sub(".*colspan=\"([0-9]+)\".*", "\\1", th))
+  text <- gsub("<[^>]+>", "", sub("^<th[^>]*>", "", th))
+  list(text = text, colspan = span)
+}
+
+# The RTF header row: the line holding the column labels.
+.t75_header_row <- function(rtf, label) {
+  grep(paste0(label, "\\cell"), rtf, fixed = TRUE, value = TRUE)[1L]
+}
+
+test_that("FT-TB7501 [FR-TB582]: a tfrmt label_loc = \"column\" table with no stubhead: both stub columns are headed empty, as gt prints them, not by the variable name", {
+  skip_if_not_installed("gt")
+  skip_if_not_installed("tfrmt")
+  g <- .t75_gt()
+  # gt prints nothing over the stub columns
+  expect_identical(.t75_gt_stubhead(g)$text, c("", ""))
+  p <- as_rtftables(g)[[1L]]
+  expect_identical(p$col_header, list(c("", "", "Placebo", "Active")))
+  # the column itself keeps its name; only its header is not the name
+  expect_identical(names(p$data), c("rowname", "lbl", "Placebo", "Active"))
+  rtf <- .t71_rtf(g)
+  hdr <- .t75_header_row(rtf, "Placebo")
+  expect_false(grepl(" lbl\\cell", hdr, fixed = TRUE))
+  expect_false(grepl(" grp\\cell", hdr, fixed = TRUE))
+  expect_match(hdr, "\\ql\\li0\\ri0 \\cell\\ql\\li0\\ri0 \\cell\\qc\\li0\\ri0 Placebo",
+               fixed = TRUE)
+})
+
+test_that("FT-TB7502 [FR-TB582]: a tfrmt label_loc = \"column\" table is read from _data / _boxhead, its stub columns as ordinary columns headed by the stubhead as gt prints it", {
+  skip_if_not_installed("gt")
+  skip_if_not_installed("tfrmt")
+  g <- .t75_gt()
+  # more than one stub column, which gt::extract_body() cannot read
+  expect_identical(sum(as.character(g[["_boxhead"]]$type) == "stub"), 2L)
+  expect_error(gt::extract_body(g, output = "html"))
+  p <- as_rtftables(g)[[1L]]
+  # read from _data: the group and label columns as ordinary columns
+  expect_identical(p$data[[1L]], c("Age", "Age", "Weight", "Weight"))
+  expect_identical(p$data[[2L]], c("Mean", "n", "Mean", "n"))
+  expect_identical(p$data[[3L]], c(" 4.5", " 1.5", " 6.0", " 3.0"))
+  # no stubhead: both headed empty, never by the variable name
+  expect_identical(p$col_header, list(c("", "", "Placebo", "Active")))
+  # one stubhead label per stub column (tfrmt's col_plan() renaming them):
+  # each column takes its own, as gt prints them
+  g2 <- .t75_gt(col_plan = tfrmt::col_plan(Parameter = grp, Statistic = lbl,
+                                           Placebo, Active))
+  sh <- .t75_gt_stubhead(g2)
+  expect_identical(sh$text, c("Parameter", "Statistic"))
+  expect_identical(sh$colspan, c(1L, 1L))
+  p2 <- as_rtftables(g2)[[1L]]
+  expect_identical(p2$col_header,
+                   list(c("Parameter", "Statistic", "Placebo", "Active")))
+  expect_match(.t75_header_row(.t71_rtf(g2), "Placebo"),
+               "\\ql\\li0\\ri0 Parameter\\cell\\ql\\li0\\ri0 Statistic\\cell",
+               fixed = TRUE)
+  # one stubhead label (tab_stubhead()): gt prints it once over both stub
+  # columns; it heads the first and the second is empty
+  g3 <- gt::tab_stubhead(g, "Parameter")
+  sh <- .t75_gt_stubhead(g3)
+  expect_identical(sh$text, "Parameter")
+  expect_identical(sh$colspan, 2L)
+  p3 <- as_rtftables(g3)[[1L]]
+  expect_identical(p3$col_header, list(c("Parameter", "", "Placebo", "Active")))
+  hdr <- .t75_header_row(.t71_rtf(g3), "Placebo")
+  expect_match(hdr, "\\ql\\li0\\ri0 Parameter\\cell\\ql\\li0\\ri0 \\cell",
+               fixed = TRUE)
+  expect_false(grepl(" lbl\\cell", hdr, fixed = TRUE))
+})
+
+test_that("FT-TB7503 [FR-TB577]: a gt row_group_as_column table: the stub column is headed by tab_stubhead(), or empty, not by the variable name", {
+  skip_if_not_installed("gt")
+  df <- data.frame(arm = c("A", "A", "B", "B"), stat = c("n", "Mean", "n", "Mean"),
+                   v = c("10", "2.5", "12", "3.1"), stringsAsFactors = FALSE)
+  g <- gt::gt(df, rowname_col = "stat", groupname_col = "arm",
+              row_group_as_column = TRUE)
+  p <- as_rtftables(g)[[1L]]
+  expect_identical(.t75_gt_stubhead(g)$text, "")
+  expect_identical(p$col_header, list(c("", "v")))
+  # the groups are read as group rows, the stub as the first column, indented
+  # by two non-breaking spaces
+  nb <- strrep(intToUtf8(160L), 2L)
+  expect_identical(p$data[[1L]], c("A", paste0(nb, c("n", "Mean")), "B",
+                                   paste0(nb, c("n", "Mean"))))
+  g2 <- gt::tab_stubhead(g, "Statistic")
+  expect_identical(.t75_gt_stubhead(g2)$text, "Statistic")
+  p2 <- as_rtftables(g2)[[1L]]
+  expect_identical(p2$col_header, list(c("Statistic", "v")))
+  hdr <- .t75_header_row(.t71_rtf(g2), "v")
+  expect_match(hdr, "\\ql\\li0\\ri0 Statistic\\cell", fixed = TRUE)
+  expect_false(grepl(" stat\\cell", hdr, fixed = TRUE))
+  expect_false(grepl(" arm\\cell", hdr, fixed = TRUE))
+})

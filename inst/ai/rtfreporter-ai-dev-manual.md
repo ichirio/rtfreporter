@@ -277,9 +277,9 @@ values. The single source of truth is `.rtfreporter_factory_defaults()` in
 `R/defaults.R`. Resolution order: explicit argument → option → factory
 default. Do not add a second defaults mechanism.
 
-**Deprecation.** `.deprecated_exports` in `R/rtf_border.R` lists what is on
-the way out; `.deprecate_once()` warns once per session. Deprecate in a minor,
-remove only in a major.
+**Deprecation.** `.deprecate_once()` (in `R/rtf_border.R`) warns once per
+session. Deprecate in a minor, remove only in a major.  (Nothing is deprecated
+in 0.9.0: it removed the lot, #788 and #975.)
 
 ---
 
@@ -630,7 +630,8 @@ for the detail — this section deliberately does not copy it.
   *Requirements, tests and regression* (every
   behaviour change needs a requirement in `inst/validation/requirements.csv`
   and a test named with its FT id (or an existing test mapped in
-  `inst/validation/test_map.csv`), a deviation with its reason in
+  `inst/validation/traceability_matrix.csv`, each mapping checked in
+  `inst/validation/traceability_review.csv`), a deviation with its reason in
   `inst/validation/deviations.csv` where a test is not possible, and
   `validation/trace.R` and the three `test-validation*.R` tests passing; see
   *Quality assurance* in `CONTRIBUTING.md`), the *Checklist* (tests, roxygen + committed

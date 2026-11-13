@@ -3,11 +3,7 @@
 # empty / one-row / one-column edges that no other file exercised.  Nothing
 # here reads the network or draws random numbers.
 
-# rtf_default_format() / default_format = are deprecated (#804): these tests
-# check what they still do, not the warning (test-rtf-style.R does).
-silence_deprecation("rtf_default_format")
-
-# ── page, default format, watermark: validation and print methods ──────────
+# ── page, watermark: validation and print methods ──────────
 
 test_that("rtf_page() rejects a malformed paper_size and prints its geometry", {
   expect_error(rtf_page(paper_size = c("A4", "letter")),
@@ -24,36 +20,6 @@ test_that("rtf_page() rejects a malformed paper_size and prints its geometry", {
   expect_output(expect_identical(print(p), p), "<rtf_page>")
   out <- capture.output(print(p))
   expect_match(out[2], "margins \\(in\\): top 1,")
-})
-
-test_that("rtf_default_format() rejects negative twips and prints its settings", {
-  for (nm in c("row_height_twips", "cell_padding_left_twips",
-               "cell_padding_right_twips")) {
-    args <- stats::setNames(list(-1), nm)
-    expect_error(do.call(rtf_default_format, args),
-                 sprintf("`%s` must be a single non-negative integer", nm),
-                 info = nm)
-    args <- stats::setNames(list(c(1, 2)), nm)
-    expect_error(do.call(rtf_default_format, args), nm, info = nm)
-    args <- stats::setNames(list(NA_real_), nm)
-    expect_error(do.call(rtf_default_format, args), nm, info = nm)
-  }
-  expect_error(rtf_default_format(font_size_half_points = 0),
-               "`font_size_half_points` must be a single positive integer")
-  expect_error(rtf_default_format(font_size_half_points = NA_real_),
-               "`font_size_half_points` must be a single positive integer")
-
-  f <- rtf_default_format(font_size_half_points = 16L, row_height_twips = 300)
-  out <- capture.output(res <- print(f))
-  expect_identical(res, f)
-  expect_match(out[1], "<rtf_default_format>")
-  expect_match(out[2], "font 16 half-points; row height 300; padding L/R")
-  expect_match(out[3], "markup \\[")
-  # unset row height / padding are said as "auto" / 0
-  out0 <- capture.output(print(rtf_default_format(row_height_twips = NULL,
-                                                  cell_padding_left_twips = NULL,
-                                                  cell_padding_right_twips = NULL)))
-  expect_match(out0[2], "row height auto; padding L/R 0/0 twips")
 })
 
 test_that("rtf_watermark() validates every argument and prints a summary", {
@@ -619,8 +585,9 @@ test_that("assemble_rtf(toc = ) checks the table before it assembles", {
   gone <- toc; gone$file[1] <- file.path(dir, "gone.rtf")
   expect_error(assemble_rtf(toc = gone, output_file = out),
                "names missing file\\(s\\):")
-  expect_error(assemble_rtf(toc = toc[, c("file", "table")], output_file = out),
-               "needs the columns `file` and `label`")
+  expect_error(assemble_rtf(toc = toc[, setdiff(names(toc), "file"), drop = FALSE], output_file = out),
+               "needs the column `file`")
+  expect_false(file.exists(out))
 
   got <- assemble_rtf(toc = toc, output_file = out)
   expect_identical(got, out)
@@ -1257,8 +1224,9 @@ test_that("plan_cell_style() explains a where that cannot work", {
                "plan_cell_style\\(where = \\) is a one-sided formula over the table's columns")
   expect_error(plan_cell_style(p, header = TRUE, where = ~ label == "n", bold = TRUE),
                "plan_cell_style\\(header = TRUE\\) styles the column header, which has no rows")
-  expect_error(plan_cell_style(p, where = ~ label == "n", border = rtf_border(bottom = TRUE)),
-               "takes bold, italic, underline, align, indent_twips, color and background; a border is set on whole columns")
+  # a border with a condition goes on the body cells of those rows
+  expect_s3_class(plan_cell_style(p, where = ~ label == "n", border = rtf_border(bottom = TRUE)),
+                  "table_plan")
 })
 
 test_that("plan_columns(widths = ) must cover every printed column", {

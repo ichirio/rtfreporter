@@ -17,7 +17,7 @@
 #              paths are returned, invisibly.
 #    matrix    build_user_matrix.R reads urs.csv, uat_cases.csv and (when
 #              present) requirements.csv from kit_dir and leaves
-#              m (one row a (UR, FR) pair, in user_traceability.csv) and
+#              m (one row a (UR, FR) pair, in user_traceability_matrix.csv) and
 #              by_ur (one row a UR); a pair's uat_ids are the cases that
 #              name both, its uat_results their results ("not run" when
 #              blank); with requirements.csv each pair has fr_statement and
@@ -55,7 +55,7 @@
 #  every valid pair) and .allpairs() picks the rows covering every pair.
 #  Oracle: the (UR, FR) pairs of m against urs.csv, fr_status per FR,
 #  uat_ids and uat_results of the added URs, every UR's status, the two
-#  messages, the columns of m, user_traceability.csv as m.
+#  messages, the columns of m, user_traceability_matrix.csv as m.
 #  FR-AS229 FR-AS249.
 # ---------------------------------------------------------------------------
 
@@ -103,7 +103,7 @@ test_that("FT-AS145 [FR-AS229 FR-AS230 FR-AS232]: validation kit decision table 
     if (cs$state == "earlier_kit") {
       rtfreporter_validation_kit(d)
       writeLines("\"id\",\"statement\",\"priority\",\"fr_ids\"", file.path(d, "urs.csv"))
-      writeLines("mine", file.path(d, "user_traceability.csv"))
+      writeLines("mine", file.path(d, "user_traceability_matrix.csv"))
     }
     before <- sort(list.files(d))
     refused <- cs$state %in% c("user_file", "earlier_kit") && !cs$overwrite
@@ -122,7 +122,7 @@ test_that("FT-AS145 [FR-AS229 FR-AS230 FR-AS232]: validation kit decision table 
       expect_setequal(basename(vis$value), kit)
       expect_identical(vis$value, file.path(normalizePath(d, winslash = "/"), basename(vis$value)),
                        label = lab)
-      keep <- switch(cs$state, user_file = "notes.txt", earlier_kit = "user_traceability.csv",
+      keep <- switch(cs$state, user_file = "notes.txt", earlier_kit = "user_traceability_matrix.csv",
                      character())
       expect_setequal(list.files(d), c(kit, keep))
       expect_identical(readBin(file.path(d, "urs.csv"), "raw", 1e6), shipped_urs, label = lab)
@@ -246,11 +246,11 @@ test_that("FT-AS146 [FR-AS249]: validation kit pairwise -- build_user_matrix.R o
     }
 
     # the files written
-    csv <- .vk_read(d, "user_traceability.csv")
+    csv <- .vk_read(d, "user_traceability_matrix.csv")
     mm <- m
     mm[] <- lapply(mm, function(v) ifelse(is.na(v) | v == "", NA_character_, v))
     expect_identical(csv, mm, label = lab)
-    expect_true(file.exists(file.path(d, "user_traceability.xlsx")), label = lab)
+    expect_true(file.exists(file.path(d, "user_traceability_matrix.xlsx")), label = lab)
     unlink(d, recursive = TRUE)
   }
 })

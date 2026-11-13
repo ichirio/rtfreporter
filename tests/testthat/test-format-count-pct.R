@@ -270,3 +270,22 @@ test_that("fmt_count_pct() refuses a fractional count (#765)", {
   expect_error(fmt_count_pct(5.7, 0.5), "whole numbers")
   expect_no_error(fmt_count_pct(c(5, NA), c(0.5, NA)))
 })
+
+test_that("FT-FM110 [FR-FM200]: the count_pct alignment keeps the percent's own decimals", {
+  nb <- "\u00a0"
+  df <- data.frame(l = c("a", "b", "c", "d"),
+                   v = c("14 (16%)", "8 (9.3%)", "40 (48.8%)", "1 (6.25%)"),
+                   stringsAsFactors = FALSE)
+  got <- as_rtftables(df, align_count_pct = TRUE)[[1L]]$data$v
+  # a source with one decimal: fmt_count_pct()'s text, as before
+  expect_identical(got[3L], fmt_count_pct(40, 48.8, pct_unit = "percent", pct_sign = TRUE))
+  expect_identical(got[2L], fmt_count_pct(8, 9.3, pct_unit = "percent", pct_sign = TRUE))
+  # "16%" stays 16, not 16.0, padded to the same width
+  want <- sub("(16.0%", paste0("(", nb, nb, "16%"),
+              fmt_count_pct(14, 16, pct_unit = "percent", pct_sign = TRUE), fixed = TRUE)
+  expect_identical(got[1L], want)
+  expect_false(grepl("16.0", got[1L], fixed = TRUE))
+  expect_identical(nchar(got[1L]), nchar(got[3L]))
+  # two decimals are kept too
+  expect_match(got[4L], "(6.25%)", fixed = TRUE)
+})

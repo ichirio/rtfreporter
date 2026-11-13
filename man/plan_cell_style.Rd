@@ -16,18 +16,23 @@ plan_cell_style(
   background = NULL,
   border = NULL,
   underline = NULL,
-  indent_twips = NULL
+  indent_twips = NULL,
+  row = NULL
 )
 }
 \arguments{
 \item{.plan}{A \code{\link[=table_plan]{table_plan()}}.}
 
 \item{cols}{The columns styled, by name (\code{.values} for every value
-column); left out, every column.}
+column); left out, every column.  With \code{cols} and no \code{where}, a
+\code{border} is the header cells' border; for a body column's border write
+\code{where = ~ TRUE} (or a condition).}
 
-\item{header}{\code{TRUE} styles the column header (\code{\link[=style_header]{style_header()}}) instead
-of the body; it takes \code{bold}, \code{italic}, \code{underline}, \code{align} and
-\code{border}, and no \code{where}.}
+\item{header}{\code{TRUE} styles the column header instead of the body; it
+takes \code{bold}, \code{italic}, \code{underline}, \code{align} and \code{border}
+(\code{\link[=style_header]{style_header()}}), \code{color} and \code{background} (the columns' header text
+colour and fill, \code{\link[=style_cols]{style_cols()}}'s \code{header_color} and
+\code{header_background}), and no \code{where} or \code{indent_twips}.}
 
 \item{where}{A one-sided formula over the table's columns choosing the
 rows, \code{where = ~ is.na(label)}; the attributes given apply there and
@@ -46,11 +51,35 @@ table's columns, \code{NA} leaving the column default alone: \code{bold = ~ is.n
 }
 A formula sees the printed rows only with \code{plan_stub(before = TRUE)}.}
 
-\item{border}{A column's border, an \code{\link[=rtf_border]{rtf_border()}}: on whole columns or
-the header, not with \code{where}.}
+\item{border}{An \code{\link[=rtf_border]{rtf_border()}}. Where it is drawn depends on how the
+cells are chosen:
+\describe{
+\item{\code{cols} and no \code{where}}{the border goes on the columns' \strong{header
+cells} only (\code{\link[=style_cols]{style_cols()}}'s \code{border}).  This call warns about
+that once a session.  For a border on a column's body cells, write
+\code{where = ~ TRUE}, or a condition.}
+\item{\code{where}}{the border goes on the body cells of the rows the
+condition holds for, over \code{cols} or every column.  It is merged
+side by side over the row's own rules, as
+\code{\link[=style_body]{style_body()}}\verb{(border = )} does.}
+\item{a one-sided formula}{gives one border a row: a list of
+\code{\link[=rtf_border]{rtf_border()}} objects, or \code{NULL} for no border, as in \code{border = ~ ifelse(is.na(label), list(rtf_border(bottom = TRUE)), list(NULL))}.
+A single \code{\link[=rtf_border]{rtf_border()}} applies to every row.}
+\item{\code{header = TRUE}}{the header cells.}
+}
+On a page's last row, the table's own last-row rule
+(\code{\link[=plan_style]{plan_style()}}'s \code{border_last_row}) wins side by side over a body
+border given here, as it does over \code{border_group}.}
 
 \item{indent_twips}{The left indent of the cells' text,
 \code{\link[=style_cols]{style_cols()}}'s \code{indent_twips} (not on the header).}
+
+\item{row}{With \code{header = TRUE}, the header rows styled, 1 being the top
+row (\code{\link[=style_header]{style_header()}}'s \code{row}): \code{row = 1} is a spanning row over the
+labels, the last row the column labels.  Left out, every header row.
+It takes \code{bold}, \code{italic}, \code{underline}, \code{align} and \code{border}; the
+header's \code{color} and \code{background} belong to the columns, on every
+label row, so they are given in a call without \code{row}.}
 }
 \value{
 The plan, with one more layer.
@@ -81,12 +110,37 @@ pages[[1]]$col_spec[[3]]$bold
 pages <- table_plan(tbl) |>
   plan_col_header(rtf_col_header(c("Parameter", "Placebo", "Active"))) |>
   plan_cell_style(header = TRUE, bold = TRUE) |>
+  plan_cell_style(header = TRUE, color = "#1F3864",
+                  background = "#D9E2F3") |>
   plan_cell_style(cols = c("Placebo", "Active"), align = "center") |>
   plan_cell_style(where = ~ Parameter == "Subjects", italic = TRUE) |>
   plan_cell_style(color = list(
     Active = ~ ifelse(startsWith(Parameter, "Female"), "#CC0000", NA))) |>
   plan_apply()
 pages[[1]]
+
+# A two-row header: only the spanning row (row 1) in italics
+pages <- table_plan(tbl) |>
+  plan_col_header(rtf_col_header(
+    list(col_cell(1, ""), col_cell(c(2, 3), "Treatment")),
+    c("Parameter", "Placebo", "Active"))) |>
+  plan_cell_style(header = TRUE, row = 1, italic = TRUE) |>
+  plan_apply()
+pages[[1]]$col_header[[1]][[2]]$italic
+
+# A body border: a rule under the "Subjects" row
+pages <- table_plan(tbl) |>
+  plan_cell_style(where = ~ Parameter == "Subjects",
+                  border = rtf_border(bottom = TRUE)) |>
+  plan_apply()
+pages[[1]]$cell_styles[[1]]$border[[2]]
+
+# A rule right of the Parameter column on every body row: where = ~ TRUE
+# (with `cols` alone, the border would go on the header cell)
+pages <- table_plan(tbl) |>
+  plan_cell_style(cols = "Parameter", where = ~ TRUE,
+                  border = rtf_border(right = TRUE)) |>
+  plan_apply()
 }
 \seealso{
 \link{plan_verbs} for every verb; \code{\link[=plan_style]{plan_style()}} for the whole

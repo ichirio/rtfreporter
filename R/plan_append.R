@@ -67,6 +67,9 @@
 #'   not defined by a group that is missing), or `"skip"` (that page has no
 #'   rows of this part).
 #' @section Parts:
+#' Each `plan_append()` call adds a part of its own, below the ones added
+#' before it; a later call does not replace an earlier one.
+#'
 #' `plan_append(part)` lays another plan's rows under this plan's.  The
 #' first plan (the **parent**) is an ordinary table with its column axis
 #' and header; a **part** (the child) is an ordinary plan too, written as
@@ -273,7 +276,7 @@ plan_append <- function(.plan, part, name = NULL, absent = c("error", "skip")) {
   parent$cache <- new.env(parent = emptyenv())
   pg <- .plan_merge(.plan_of(parent, "pages"))$page_by
   pg <- if (is.null(pg)) character() else as.character(pg)
-  stub <- .plan_merge(.plan_of(parent, "stub"))
+  stub <- .plan_resolve(parent, "stub")
   lbl <- stub$name %||% "label"
   indent <- stub$indent %||% 4L
   parts <- c(list(list(plan = parent, name = "part1", absent = "error", first = TRUE)),
@@ -392,7 +395,7 @@ plan_append <- function(.plan, part, name = NULL, absent = c("error", "skip")) {
     })
   tbl <- as.data.frame(tbl, stringsAsFactors = FALSE)
   # fold the row keys and the label into one label column
-  own <- .plan_merge(.plan_of(l$plan, "stub"))
+  own <- .plan_resolve(l$plan, "stub")
   keys <- own$vars %||% c(.plan_row_keys(p), .plan_label_name(p))
   keys <- setdiff(intersect(keys, names(tbl)), c(pg, .plan_hidden_by_verb(p), .plan_hidden(p, tbl)))
   gone <- setdiff(c(.plan_hidden_by_verb(p), .plan_hidden(p, tbl)), c(pg, keys))

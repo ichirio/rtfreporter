@@ -57,9 +57,19 @@ page-sized data.frame and only need to add blank rows -- no
 pagination required.
 }
 \details{
-\code{\link[=as_rtftables]{as_rtftables()}} calls this function on every page it produces, so
-the behaviour here defines what its \code{blank_rows}, \code{blank_row_first}
-and \code{blank_row_end} arguments do.
+The positions count rows of \code{data} as a whole.  Given to
+\code{\link[=as_rtftables]{as_rtftables()}} with \code{blank_rows} left \code{NULL}, a data frame that
+carries the attribute keeps that meaning across the pages: position
+\code{k} is a blank after row \code{k} of the whole data frame, on the page that
+row lands on (once, and at the foot of that page when the row ends it,
+not carried to the top of the next); \code{0} is before the first row and
+the last row's position after the last.  A page that no position falls
+on gets no blank.
+
+\code{\link[=as_rtftables]{as_rtftables()}} calls this function on every page it produces for
+the separator rules (\code{"between_groups"}, \code{\link[=blank_rows_by_change]{blank_rows_by_change()}},
+\code{\link[=blank_rows_by_rule]{blank_rows_by_rule()}}) and for \code{blank_row_first} and \code{blank_row_end};
+its integer positions are the whole body's, as above.
 }
 \examples{
 df <- data.frame(
@@ -76,6 +86,6 @@ attr(out, "rtf_blank_rows")
 
 }
 \seealso{
-\code{\link[=as_rtftables]{as_rtftables()}} for the per-page version; \code{\link[=rtftable]{rtftable()}}
+\code{\link[=as_rtftables]{as_rtftables()}} for the paginated version; \code{\link[=rtftable]{rtftable()}}
 (\code{read_attributes = TRUE}) which consumes the attribute.
 }

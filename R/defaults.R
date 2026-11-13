@@ -82,7 +82,11 @@
     rtfreporter.rounding                 = "r",
     # The pipe plan_template() writes: "|>" or "%>%".  NULL asks RStudio's
     # own preference (insert_native_pipe_operator), then falls back to %>%.
-    rtfreporter.ard_pipe                 = NULL
+    rtfreporter.ard_pipe                 = NULL,
+    # The sizes / bold of the table of contents text assemble_rtf() writes: a
+    # list of title / heading / entry / gap, each list(size = , bold = ).
+    # NULL = the built-in sizes (14 / 11 / 10 pt, a 9 pt blank line).
+    rtfreporter.toc_style                = NULL
   )
 }
 
@@ -108,6 +112,29 @@
 #'     `ggplot2::ggsave()`: ragg (`ragg::agg_png()`) when it is installed,
 #'     `grDevices::png()` otherwise; `"png"` pins the base device.  Files
 #'     given as paths are embedded as they are, whatever it says.}
+#' }
+#'
+#' One is the document's font:
+#' \describe{
+#'   \item{`rtfreporter.font`}{The default of `rtf_document(font_table = )`
+#'     and of every `font =` (factory `"Courier New"`).  A family name that
+#'     is not ASCII, such as a Japanese one, is written in the font table as
+#'     Word writes it: in its East Asian code page with the matching
+#'     `\fcharset`, and with its Latin name in `\falt` for common
+#'     families (see *Font names that are not ASCII* in [rtf_document()]).}
+#' }
+#'
+#' One is about the table of contents of [assemble_rtf()]:
+#' \describe{
+#'   \item{`rtfreporter.toc_style`}{The size and boldness of its text, the
+#'     default of `assemble_rtf(toc_style = )`: a list with the keys `title`,
+#'     `heading` and `entry` (each `list(size = <points>, bold = TRUE/FALSE)`)
+#'     and `gap` (`list(size = )`, the blank line below the title), merged over
+#'     the built-in values key by key (factory `NULL`: title 14 pt bold,
+#'     heading 11 pt bold, entry 10 pt, gap 9 pt).  `entry` also takes
+#'     `hanging` (`FALSE`, `TRUE` for the title's wrapped lines lined up after
+#'     its number, or a positive whole number of twips): a hanging indent for
+#'     an entry's wrapped lines.}
 #' }
 #'
 #' @return A named list of resolved default values.

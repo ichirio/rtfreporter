@@ -238,6 +238,36 @@
   pick(out) %||% pick(ref) %||% sp$flat
 }
 
+# An entry of `labels` named by a row key is matched against that key's
+# values.  When it names none of them but names values of ANOTHER key of the
+# table, it was aimed at the wrong key (a grade under a hierarchy's level
+# key, a SOC under the PT key): say so, with the keys that hold them.  An
+# entry that matches nothing anywhere is left alone -- a dictionary kept for
+# many tables does not apply to every one.
+.ard_label_misaimed <- function(labels, r, long, keys) {
+  sp <- .ard_labels_split(labels)$scopes
+  k <- c(r$out, r$ref)
+  k <- k[!is.na(k) & k %in% names(sp)]
+  if (!length(k)) return(invisible(NULL))
+  codes <- names(sp[[k[1L]]])
+  if (!length(codes) || any(codes %in% as.character(long[[r$out]]))) {
+    return(invisible(NULL))
+  }
+  for (o in setdiff(keys, r$out)) {
+    hit <- intersect(codes, as.character(long[[o]]))
+    if (length(hit)) {
+      .ard_stop(sprintf(paste0(
+        "`labels$%s` names %s, which does not occur in '%s'.\n",
+        "  It occurs in '%s': an entry of `labels` is matched against the ",
+        "values of the key it is named by,\n  so name it `labels$%s`.  ",
+        "The keys of this table: %s."),
+        k[1L], paste(sQuote(utils::head(hit, 3L)), collapse = ", "), r$out,
+        o, o, paste(keys, collapse = ", ")))
+    }
+  }
+  invisible(NULL)
+}
+
 .ard_check_named <- function(x, arg) {
   if (is.null(x) || !length(x)) return(invisible(TRUE))
   nms <- names(x)
@@ -1420,9 +1450,12 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
   }
   out <- cand[[1L]]
   # `levels` is a named list, as in widen_ard(); a plain vector is not read
-  ord <- if (!is.list(levels)) .ard_key_order(d, cols, key) else {
-    lv <- levels[[cols[1L]]] %||% levels[[1L]]
-    c(intersect(lv, names(out)), setdiff(names(out), lv))
+  # the values `levels` does not name follow in the data's order, as in
+  # widen_ard(), not in split()'s sorted order (#992)
+  ord <- .ard_key_order(d, cols, key)
+  if (is.list(levels)) {
+    lv  <- levels[[cols[1L]]] %||% levels[[1L]]
+    ord <- c(intersect(lv, names(out)), setdiff(ord, lv))
   }
   out[intersect(ord, names(out))]
 }
@@ -1628,14 +1661,21 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
   ignored <- NULL
   total_n <- NULL
   if (length(drop_contexts)) {
-    gone <- d[d$context %in% drop_contexts, , drop = FALSE]
+    # a total BY GROUP (cards::ard_strata(.by = TRT01A, .f = ~ ard_total_n(.x)))
+    # is each column's population, the number a header's {n} reads first:
+    # it stays, as a sentinel row keyed by the group (no cell of the body)
+    g1 <- if ("group1" %in% names(d)) {
+      as.character(.ard_unlist_col(d[["group1"]]))
+    } else rep(NA_character_, nrow(d))
+    by_group <- d$context %in% "total_n" & !is.na(g1)
+    gone <- d[d$context %in% drop_contexts & !by_group, , drop = FALSE]
     ignored <- .ard_ignored_bind(
       ignored, .ard_tally(gone, "not a table statistic"))
     # The row goes, the NUMBER stays: `..ard_total_n..` is not a table
     # statistic, but it is the denominator a column header asks for,
     # and dropping it is no reason to lose it.
     total_n <- .ard_total_n_value(gone)
-    d <- d[!d$context %in% drop_contexts, , drop = FALSE]
+    d <- d[!d$context %in% drop_contexts | by_group, , drop = FALSE]
   }
 
   # cards' own formatter, when available and not already applied
@@ -1819,7 +1859,8 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
     d <- d[!own, , drop = FALSE]
     own <- rep(FALSE, nrow(d))
   }
-  d$.key_own <- own
+  # (a total by group kept above: the header's, no cell either)
+  d$.key_own <- own | d$variable %in% "..ard_total_n.."
 
   # A key column holds ONE variable, so the order its factor declared can
   # ride on the column itself -- unlike `variable_level`, where every
@@ -2643,6 +2684,9 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     is_f <- vapply(parts, inherits, logical(1), "formula")
     if (any(is_f)) {
       lab_chain <- .ard_chain(parts, one_sided = TRUE)
+      # a plain string in the chain names the source column, so where it
+      # stands the row keeps that column's label, not the string as text
+      lab_chain[!is_f] <- list(list(cond = NULL, env = NULL, tpl = "{.label}"))
       plain <- parts[!is_f]
       label <- if (length(plain)) stats::setNames(
         as.character(unlist(plain)),
@@ -2940,13 +2984,15 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   }
 
   # recode + factorise the row keys
+  keys_shown <- c(rowname_cols, label_out)
   for (r in rowrefs) {
+    .ard_label_misaimed(labels, r, long, keys_shown)
     v <- recode(long[[r$out]], r$ref, r$out)
     lab <- .ard_labels_for(labels, r$ref, r$out)
     lv <- lev_for(r)
     if (!is.null(lv)) {
       long[[r$out]] <- .ard_as_factor(v, recode(lv, r$ref, r$out))
-    } else if (!is.null(lab) && any(as.character(long[[r$out]]) != v)) {
+    } else if (!is.null(lab) && any(as.character(long[[r$out]]) != v, na.rm = TRUE)) {
       # recoded: its values in the data's order, as text (a label sets no
       # order -- `levels` does)
       long[[r$out]] <- .ard_as_factor(v, recode(.ard_first_seen(

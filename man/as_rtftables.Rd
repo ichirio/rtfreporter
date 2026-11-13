@@ -76,10 +76,16 @@ error, for every source.
 The tokens:
 \describe{
 \item{gt / gtsummary}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
-\code{"widths"}, \code{"titles"}, \code{"footnotes"}, \code{"styles"} (explicit
+\code{"widths"}, \code{"titles"}, \code{"footnotes"}, \code{"footnote_marks"} (the
+footnote marks gt prints on the column labels, spanning headers,
+title, subtitle and row-group labels, as \verb{^\{N\}} after the text, and
+each footnote line starting with its
+mark, \verb{^\{N\}} then the note, in gt's order; the marks in the body
+cells are always written), \code{"styles"} (explicit
 \code{tab_style()} borders and text styles; see \emph{What is carried}).}
 \item{rtables / tern}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
-\code{"titles"}, \code{"footnotes"}, \code{"indent"}, \code{"footnote_marks"};
+\code{"titles"}, \code{"footnotes"}, \code{"footnote_marks"} (the indentation is
+always written into the labels);
 \strong{rlistings takes the same tokens}, because the two share one
 \code{MatrixPrintForm} reader.}
 \item{flextable}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
@@ -89,9 +95,11 @@ The tokens:
 \item{data.frame / tibble}{The single token \code{"labels"}: a column's
 \code{label} attribute (the haven / labelled / xportr convention) is
 used as its header label (columns without one keep their name).
-Unknown tokens are \emph{ignored} for data.frames -- a \code{list()} mixing
-table objects and data.frames shares one \code{read_meta}, so adapter
-tokens must not error on the data.frame elements.}
+Tokens that only another source reads are \emph{skipped} for data.frames
+(and every other source skips the data.frame's \code{"labels"}) -- a
+\code{list()} mixing table objects and data.frames shares one
+\code{read_meta}, so a token must not error on the elements that do not
+read it.  A token that no source reads (a typo) is an error.}
 }}
 
 \item{max_rows}{A positive whole number, or \code{NULL}; anything else is an
@@ -102,7 +110,9 @@ setting for fixed-size pages} -- \code{max_rows = 25} gives pages of 25 rows.
 Ignored by \code{"none"} and \code{"rows"} (which cuts at the positions in
 \code{split_rows}).  Optional for \code{"by_value"}: a value's page longer than
 \code{max_rows} is cut as \code{"group_force"} cuts, its pages named by the value
-with the \code{"...n"} tail (\code{"A...1"}, \code{"A...2"}).}
+with the \code{"...n"} tail (\code{"A...1"}, \code{"A...2"}).  For a \code{listing} and for
+an rlistings listing, \code{max_rows} alone switches \code{split} to
+\code{"group_safe"} (see \code{listing}).}
 
 \item{split}{How to break the body into pages. A strategy name (a unique
 prefix such as \code{"group_s"} is enough; another value is an error):
@@ -155,7 +165,8 @@ group-aware splits (\code{"group_safe"}, \code{"group_force"}, \code{"by_value"}
 detect groups on, given by name or position (a whole number in
 \verb{1..ncol}; \code{TRUE}, a fraction or a factor is an error, as in every
 column argument).  \code{NULL} (default) uses
-\strong{column 1}.  This selects only the \emph{column}; how a group boundary is
+\strong{column 1} (for an rlistings listing, its first key column; see
+\code{listing}).  This selects only the \emph{column}; how a group boundary is
 found on it is set by \code{group_by}.
 \describe{
 \item{Naming it}{For gt / gtsummary the body keeps gt's column
@@ -243,6 +254,18 @@ keep the order the body had -- inside a page and between pages.
 body sorted first would be SAS's contract, not R's, so a merely
 interleaved body loses nothing; use \code{sort_by} when you want an
 order, not to make the pages whole.}
+\item{A row without a BY value}{a row whose \code{page_by} value is \code{NA}
+or blank (\code{""}) is not given a page of its own: it takes the next
+value in the body, or -- at the foot of the body, where there is
+none -- the one before it, and prints on that value's page under
+its title and header.  A body with no value at all is one page,
+named \code{""}.  This is meant for a stub's label rows (a row without
+its own BY value belongs to the group around it), so a real
+missing value in a data frame lands on a neighbouring value's page.
+To give it a page of its own, fill the value first, e.g.
+\code{lab$period[is.na(lab$period)] <- "Missing"}.  A listing cut with
+\code{\link[=plan_paginate_rows]{plan_paginate_rows()}} \verb{(page_by = )} does the opposite: a record
+with a blank BY value is a page of its own, named by \code{na_label}.}
 }
 \code{page_by} does \strong{not} imply \code{drop_cols}: name the column there too to
 keep it out of the printed table.  Like \code{group_col} / \code{sort_by} /
@@ -307,8 +330,17 @@ given data-row index; \code{0} = before the first row, \code{-1} = after the las
 row (e.g. \code{c(0, 5, -1)}).  A position is a whole number in
 \verb{-1..nrow} of the whole body (after \code{stub}, before pagination): a
 fraction, \code{NA}, or a position past the body's last row (or below
-\code{-1}) stops, naming the positions.  On a page shorter than \code{k}, a
-position \code{k} within the body puts no blank on that page.}
+\code{-1}) stops, naming the positions.  The positions count rows of
+the whole body, not of each page: \code{c(3, 12)} puts one blank after
+body row 3 and one after body row 12, once each, on the pages those
+rows land on, and a page that no position falls on gets none.  \code{0}
+is before the body's first row (top of page 1) and \code{-1} after its
+last (foot of the last page).  A blank after a row that ends a page
+stays at the foot of that page; it is not carried to the top of the
+next one.  Under \code{count_blank_rows = TRUE} the blank takes a row of
+the page, so where its page has no room for it (its row fills the
+page to \code{max_rows}, or \code{0} does not fit beside the first group) it
+is dropped, not carried over.}
 \item{\code{"between_groups"}}{a blank at every group transition on \code{group_col},
 using this call's \code{group_by} detection (auto / indent / value / filled).}
 \item{a \code{\link[=blank_rows_by_change]{blank_rows_by_change()}} object}{insert a blank whenever the group
@@ -348,8 +380,12 @@ groups, so the printed page can be taller than \code{max_rows}.}
 }
 Under \code{TRUE} the blank positions resolved from \code{blank_rows} (and from any
 \code{rtf_blank_rows} attribute already on the input) are materialised before
-the split and re-attached per page afterwards, with a leading blank
-suppressed at the top of each page.}
+the split and re-attached per page afterwards.  A separator blank is
+never left at a page's top or foot; an integer position is the whole
+body's, so \code{0} takes a row at the top of page 1 only, and a position
+that the cut leaves at the top of a later page (it follows the previous
+page's last row) is dropped rather than carried over; no page is made
+of blank rows alone.}
 
 \item{align_count_pct}{The cell alignment to apply before pagination.
 \describe{
@@ -491,6 +527,17 @@ argument you pass yourself is never overridden.}
 up and passing \code{listing} as well is an error.  An rlistings
 \code{listing_df} is rejected: it is already laid out, and needs no
 \code{listing} argument.}
+\item{An rlistings listing}{Pages by its first key column instead:
+\code{split} becomes \code{"group_safe"} when \code{max_rows} is set, and a
+group-aware split gets \code{group_col} on the listing's first key column
+-- found by name among the display columns, wherever
+\code{listing_dispcols()} puts it -- with \code{group_by = "filled"}, since
+rlistings prints a key once per run.  A subject's rows then stay on
+one page when they fit; a longer one is cut as \code{"group_safe"} cuts
+it, the key repeated with \code{cont_label}.  A listing with no key
+columns groups on column 1.  These are \strong{defaults} too: \code{split},
+\code{group_col} and \code{group_by} you pass yourself win, and without
+\code{max_rows} the listing is one page.}
 }}
 
 \item{stub}{Row-stub settings, as a \code{\link[=stub_spec]{stub_spec()}} object -- or, as a
@@ -633,7 +680,9 @@ rtftable as the attributes \code{rtf_titles} / \code{rtf_footnotes}, which
 Supported inputs: \code{gt_tbl}, \code{gt_group} (gt's multi-table container from
 \code{\link[gt:gt_group]{gt::gt_group()}} / \code{\link[gt:gt_split]{gt::gt_split()}} -- and what tfrmt's \code{print_to_gt()}
 returns when the spec has a \code{page_plan}; expanded to one page set per
-member table), gtsummary tables (including a \code{tbl_split} container from
+member table; a style on a cell of a row-split member,
+\code{gt::gt_split(row_every_n = )}, needs gt 1.4.0 or later, as older gt
+stops on it), gtsummary tables (including a \code{tbl_split} container from
 \code{gtsummary::tbl_split_by_rows()} / \code{tbl_split_by_columns()}, likewise
 expanded member by member), rtables/tern \code{VTableTree}
 tables, rlistings \code{listing_df} listings,
@@ -657,7 +706,11 @@ with more than one stub column -- e.g. a tfrmt
 \code{row_grp_plan(label_loc = element_row_grp_loc(location = "column"))} layout --
 is read from the table's own \verb{_data} / \verb{_boxhead} slots instead, as
 \code{gt::extract_body()} does not support multiple stub columns; the group and
-label columns then come through as ordinary columns.  A gt table grouped by
+label columns then come through as ordinary columns, each headed as gt
+prints it: by its own stubhead label when the stubhead has one per stub
+column (\code{gt::tab_stubhead()}, or a tfrmt \code{col_plan()} that renames them),
+the first by a single stubhead label and the others empty, and all empty
+when no stubhead is set -- never by the variable name.  A gt table grouped by
 several columns, \code{gt(groupname_col = c("ARM", "SEX"))}, gets one group row
 per combination, named as gt names it: "A - F".)  On top of that body the
 following \emph{metadata} is read:
@@ -668,9 +721,9 @@ Column (leaf) labels        \tab yes \tab yes \tab yes \tab yes \cr
 Per-column alignment        \tab yes \tab yes \tab yes \tab yes \cr
 Spanning headers            \tab yes \tab yes \tab yes \tab yes \cr
 Column widths               \tab yes (px/pct) \tab -- \tab -- \tab -- \cr
-Title + subtitle            \tab yes \tab yes \tab yes (caption) \tab yes (caption) \cr
+Title + subtitle            \tab yes (caption too) \tab yes \tab yes (caption) \tab yes (caption) \cr
 Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab yes (\code{add_footnote()} rows) \cr
-In-cell footnote marks      \tab yes (superscript) \tab yes (superscript) \tab as text \tab -- \cr
+In-cell footnote marks      \tab yes (superscript, labels and footnote lines too) \tab yes (superscript) \tab as text \tab -- \cr
 Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab group rows, no indent \tab as typed, no indent \cr
 \code{tab_style()} cell styles   \tab yes (see below) \tab -- \tab -- \tab -- \cr
 }
@@ -687,6 +740,24 @@ first, verbs win per side / per field.  \emph{Not} carried: \code{cell_fill()},
 fonts and sizes, header text colour, and gt's \strong{theme} borders
 (\code{tab_options()}) -- those describe gt's own default look; rtfreporter's
 \code{border} presets govern the frame instead.
+
+\strong{A spanner is aligned as its source prints it}, not after the columns
+under it: gt and gtsummary (and tfrmt, through gt) centre it, unless
+\code{tab_style(cell_text(align = ), locations = cells_column_spanners())} sets
+it (with the \code{"styles"} token); rtables / tern centre it; flextable takes
+the alignment of its first header cell (\code{align(part = "header")}); huxtable
+the \code{align()} of its first cell (\code{"."}, decimal alignment, as right).  A
+spanner you write yourself (\code{\link[=col_cell]{col_cell()}}, \code{\link[=set_col_header]{set_col_header()}},
+\code{plan_col_header()}, or one rebuilt from a data frame's names with
+\code{header_sep}) takes its leftmost column's header alignment unless
+\code{col_cell(align = )} is given.
+
+A gt caption (\code{gt::tab_caption()}, and so gtsummary's \code{modify_caption()})
+is the first row of the page title, above the \code{tab_header()} title and
+subtitle, as gt prints it; on a \code{gt_group} / \code{gt_split} each member's own
+caption is read.  It is read with the \code{"titles"} token, so titles you give
+yourself (\code{rtf_tables(titles = )}, \code{\link[=rtf_titles]{rtf_titles()}}) replace it as they
+replace the gt title.
 
 For flextable the \emph{displayed} text is read (header labels set via
 \code{set_header_labels()} and \verb{colformat_*()} formatting included), not the raw
@@ -707,8 +778,9 @@ so there is no indent).
 \strong{Not carried} (RTF cannot reproduce these, or they belong to the
 source's own theme): cell background colours / fills, font and size
 styling, gt theme borders (\code{tab_options()}), header text colour, and
-Markdown formatting inside labels or titles (a \code{gt::html()} label is read
-as its text, a \verb{<br>} as a line break).  For a plain \code{data.frame} / tibble two pieces of
+Markdown formatting inside labels, titles or a caption (its bold markers
+go: \verb{**Table 9** Summary} is read as \verb{Table 9 Summary}; a
+\code{gt::html()} label is read as its text, a \verb{<br>} as a line break).  For a plain \code{data.frame} / tibble two pieces of
 metadata are read: column \code{label} attributes become header labels (the
 \code{"labels"} token, see \code{read_meta}), and delimited column names are
 reconstructed into a spanning header (see \code{header_sep}); everything else

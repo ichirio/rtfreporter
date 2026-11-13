@@ -93,6 +93,21 @@
   segs
 }
 
+# One segment of a spanning header row -> a col_cell() aligned as the source
+# prints it (#1023).  `align` is the source's alignment of the segment's first
+# cell; a value the RTF has no counterpart for is centred.  A cell with no
+# text prints nothing, so it keeps the default (its column's header_align).
+.span_segment_cell <- function(sg, align) {
+  pos <- if (sg$from == sg$to) sg$from else c(sg$from, sg$to)
+  lab <- sg$label
+  if (is.na(lab) || !nzchar(lab)) return(col_cell(pos = pos, label = lab))
+  align <- as.character(align %||% "")
+  if (length(align) != 1L || !align %in% c("left", "center", "right")) {
+    align <- "center"
+  }
+  col_cell(pos = pos, label = lab, align = align)
+}
+
 
 # ── Central mapping: MatrixPrintForm + tokens -> rtftable kwargs ─────────────
 
@@ -153,11 +168,12 @@
 
   span_rows <- list()
   if (want_spanned && nlh >= 2L) {
+    # each spanner aligned as the table prints it (rtables centres them)
+    haligns <- formatters::mf_aligns(mf)
     for (h in seq_len(nlh - 1L)) {
       segs <- .rtables_header_segments(strings[h, ], spans[h, ])
       cells <- lapply(segs, function(sg) {
-        pos <- if (sg$from == sg$to) sg$from else c(sg$from, sg$to)
-        col_cell(pos = pos, label = sg$label)
+        .span_segment_cell(sg, haligns[h, sg$from])
       })
       span_rows[[length(span_rows) + 1L]] <- cells
     }

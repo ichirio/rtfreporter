@@ -10,8 +10,9 @@
 #   * `cover  = list(...)`                cover page section at the very front
 #   * `toc    = c(...) / "auto" / list()` clickable Table of Contents with
 #                                          per-source-file bookmarks
-#   * `toc_page_numbering = "roman"`      i, ii, iii on TOC pages; body
-#                                          restarts at 1
+#   * page numbers                        one Arabic run from the first
+#                                          page (cover and TOC included);
+#                                          the total is every page (#1049)
 # ============================================================================
 
 
@@ -197,16 +198,6 @@
          character(1L), USE.NAMES = FALSE)
 }
 
-# Inject a `\pgnrestart\pgndec` right after the first \sectd, so the body
-# pages restart at 1 when the preceding TOC used Roman numbering.
-.insert_pgnrestart <- function(content) {
-  sectd_idx <- which(trimws(content) == "\\sectd")[1L]
-  if (is.na(sectd_idx)) return(content)
-  c(content[1L:sectd_idx], "\\pgnrestart\\pgndec",
-    if (sectd_idx < length(content)) content[(sectd_idx + 1L):length(content)]
-    else character(0))
-}
-
 # RTF-escape plain text (no markup, no token replacement).
 .toc_escape <- function(x) {
   if (length(x) == 0L || is.na(x)) return("")
@@ -245,6 +236,8 @@
   if (!one_string(toc_title)) {
     stop("`toc_title` must be a single string.", call. = FALSE)
   }
+  # (named l / c / r as a header cell is: the title's alignment)
+  if (!is.null(names(toc_title))) .check_hf_row_names(list(toc_title), "assemble_rtf")
   if (!one_string(bookmark_prefix) ||
       !grepl("^[A-Za-z0-9_]*$", bookmark_prefix)) {
     stop("`bookmark_prefix` must be a single string of letters, digits ",
@@ -297,7 +290,9 @@
   )
 }
 
-.toc_entry <- function(label, file = NULL, level = 2L) {
+# (`number`: the "Table N" the file's title reader found, NULL when none, for
+# the hanging style's split of the label, .toc_split_label())
+.toc_entry <- function(label, file = NULL, level = 2L, number = NULL) {
   .check_toc_level(level, 3L, "toc_entry")
   if (length(label) != 1L || is.na(label)) {
     stop("A TOC entry's `label` must be a single string, not NA.",
@@ -306,7 +301,8 @@
   structure(
     list(label = as.character(label)[1L],
          file  = file,
-         level = as.integer(level)),
+         level = as.integer(level),
+         number = number),
     class = "rtf_toc_entry"
   )
 }
@@ -314,33 +310,9 @@
 
 # ── TOC normalisation ──────────────────────────────────────────────────────
 
-# Extract the first centred-bold title from rtfreporter's title block (now a
-# content-width table; see `.render_text_block_table()`).  The title is the
-# first single centred-bold cell, emitted before the content; column headers
-# are not bold by default, so they do not match.  Returns NA if not found
-# within the initial scan window (stops at the first picture / figure).
-.extract_first_title <- function(lines) {
-  n_scan <- min(length(lines), 200L)
-  for (i in seq_len(n_scan)) {
-    line <- lines[i]
-    if (grepl("\\\\pict", line, fixed = FALSE)) break
-    # Title cell from .render_text_block_table():
-    #   "...\qc\li0\ri0 \b TEXT\b0 \cell..."
-    m <- regexec("\\\\qc\\\\li[0-9]+\\\\ri[0-9]+\\s+\\\\b\\s+(.+?)\\\\b0", line)
-    g <- regmatches(line, m)[[1L]]
-    if (length(g) == 2L && nzchar(trimws(g[2L]))) {
-      # A page token's field and markup's groups out (.rtf_label_text()),
-      # then reverse the RTF escape: \\ -> \, \{ -> {, \} -> }, \uN? -> char
-      title <- gsub("\\\\\\\\", "\\\\", .rtf_label_text(g[2L]))
-      title <- gsub("\\\\\\{",   "{",   title)
-      title <- gsub("\\\\\\}",   "}",   title)
-      # \uN? -> the character (signed or unsigned N, surrogate pairs joined)
-      title <- .rtf_unicode_decode(title)
-      return(trimws(title))
-    }
-  }
-  NA_character_
-}
+# (A file's title, the label of its entry when none is given, is read by
+# .toc_label_from_title() in R/assemble_spec.R: the one reader of
+# toc = "auto", a table toc row with no label and assemble_folder().)
 
 # Normalise the user-supplied `toc` into a uniform list of:
 #   list(label, level, file_idx (NA = heading), type = "heading"|"entry")
@@ -353,11 +325,9 @@
   # "auto" -> extract title from each input file
   if (is.character(toc) && length(toc) == 1L && toc == "auto") {
     out <- lapply(seq_along(input_files), function(i) {
-      ttl <- .extract_first_title(readLines(input_files[i], warn = FALSE))
-      if (is.na(ttl) || !nzchar(ttl)) {
-        ttl <- sub("\\.rtf$", "", basename(input_files[i]), ignore.case = TRUE)
-      }
-      list(label = ttl, level = 1L, file_idx = i, type = "entry")
+      info <- .rtf_table_label(input_files[i])
+      list(label = info$label, level = 1L, file_idx = i, type = "entry",
+           number = .toc_number_of(info$table))
     })
     return(out)
   }
@@ -410,7 +380,7 @@
         }
         used <<- c(used, fi)
         return(list(label = e$label, level = e$level,
-                    file_idx = fi, type = "entry"))
+                    file_idx = fi, type = "entry", number = e$number))
       }
       stop("`toc` must be \"auto\", a character vector of labels, a table (data.frame) or the path of one.",
            call. = FALSE)
@@ -426,6 +396,14 @@
 
 # ── Cover-page rendering ───────────────────────────────────────────────────
 
+# The cover and TOC sections' page: landscape letter with 0.6 in left and
+# right margins.  Its text width, 14112 twips, is where the TOC's page numbers
+# end and where its labels wrap (#967).
+.TOC_PAGE_W    <- 15840L
+.TOC_PAGE_H    <- 12240L
+.TOC_MARGIN_LR <- 864L
+.TOC_TEXT_W    <- .TOC_PAGE_W - 2L * .TOC_MARGIN_LR
+
 .build_cover_section <- function(cover) {
   if (is.null(cover)) return(character())
 
@@ -434,8 +412,9 @@
   # v0.0.33) was leaking font-size-0 into following content.
   blocks <- c(
     "\\sectd\\sbkpage\\lndscpsxn",
-    "\\pgwsxn15840\\pghsxn12240",
-    "\\marglsxn864\\margrsxn864\\margtsxn1296\\margbsxn1296",
+    paste0("\\pgwsxn", .TOC_PAGE_W, "\\pghsxn", .TOC_PAGE_H),
+    paste0("\\marglsxn", .TOC_MARGIN_LR, "\\margrsxn", .TOC_MARGIN_LR,
+           "\\margtsxn1296\\margbsxn1296"),
     # Push content vertically to roughly the upper third of the page
     "{\\pard\\fs18\\par}{\\pard\\fs18\\par}{\\pard\\fs18\\par}"
   )
@@ -492,19 +471,33 @@
 # its indent and page number, and a page is filled to 90% only, so the page
 # breaks are the TOC's own (\pagebb) and its page count is known for the
 # cached page numbers.  A heading last on a page goes over with what it heads.
-.toc_entry_pages <- function(toc_entries) {
+# The title takes `title_lines` lines (default 1: a title of one line; a "\n"
+# in it adds a line); the sizes are those of `style` (.toc_style(): 14 pt
+# title, 9 pt blank line, 11 pt heading, 10 pt entry by default).
+# With a hanging indent an entry whose label splits into a number and a title
+# (.toc_split_label()) has its title, every line of it, at the hang: its lines
+# are the title's, `hang` twips narrower.  `em` is the TOC font's character
+# width in ems (.toc_font_em()).
+.toc_entry_pages <- function(toc_entries, title_lines = 1L,
+                             style = .toc_style(NULL), em = 0.6) {
   if (!length(toc_entries)) return(integer(0))
   room <- 0.9 * (12240 - 2 * 1296)
   line <- function(hp) 1.15 * hp * 10               # half-points -> twips
-  char <- .char_width_in("courier_new", 10) * 1440  # a 10 pt character, twips
-  used <- line(28) + line(18)                       # the title, the blank
+  used <- title_lines * line(.toc_hp(style$title)) + line(.toc_hp(style$gap))
   page <- 1L
   out  <- integer(length(toc_entries))
+  hang_all <- .toc_hang(toc_entries, style$entry, em)
   for (i in seq_along(toc_entries)) {
     e  <- toc_entries[[i]]
-    hp <- if (identical(e$type, "heading")) 22 else 20
-    width <- 14400 - .toc_indent_for_level(e$level) - 720
-    n  <- max(1, ceiling(nchar(e$label %||% "") * char * hp / 20 / width))
+    hp <- .toc_hp(if (identical(e$type, "heading")) style$heading else style$entry)
+    hang <- if (identical(e$type, "heading")) 0L else hang_all
+    ri <- if (identical(e$type, "heading")) 720L else .toc_entry_ri(hp)
+    sp <- if (hang > 0L && isTRUE(style$entry$hanging)) .toc_split_label(e$label, e$number)
+    n  <- if (!is.null(sp)) {
+      .toc_label_lines(sp[["title"]], e$level, hp, 0L, ri + hang)
+    } else {
+      .toc_label_lines(e$label, e$level, hp, hang, ri)
+    }
     h  <- n * line(hp)
     if (used + h > room && used > 0) {
       page <- page + 1L
@@ -521,52 +514,263 @@
   out
 }
 
-# Render the TOC section.  page_numbering = "roman" inserts \pgnlcrm
-# (Roman lowercase) so TOC pages are i, ii, iii.  The caller is
-# responsible for inserting \pgnrestart\pgndec on the next body section.
+# An entry's right indent in twips (#1056): the page-number column (the
+# widest cached page number, at least 4 digits) and a gap of 2 characters, at
+# Courier New's width at `hp` half-points (no font's digits are wider), so a
+# long label wraps before the column where the page numbers stand.  720 at
+# the default 10 pt up to page 9999.
+.toc_entry_ri <- function(hp, digits = 4L) {
+  char <- 0.6 * hp * 10                    # Courier New: 0.6 em, in twips
+  as.integer(round((max(4L, digits) + 2L) * char))
+}
+
+# A label as a number and a title, for the hanging style: c(number = ,
+# title = ), or NULL when it does not split.  `number` is what the file's
+# title reader found ("Table 14.1.1", toc = "auto" and assemble_folder()):
+# the label splits after it when it starts with it.  Else a label that starts
+# with Table, Figure or Listing and a number ("14.3.2", "14.3.2.1", "14.1.1a")
+# splits after the number.  Either way the title is what follows, without the
+# spaces before it, and is not empty.
+.toc_split_label <- function(label, number = NULL) {
+  if (is.null(label) || is.na(label)) return(NULL)
+  if (length(number) == 1L && !is.na(number) && nzchar(number) &&
+      startsWith(label, number)) {
+    rest <- substring(label, nchar(number) + 1L)
+    if (grepl("^\\s+\\S", rest)) {
+      return(c(number = number, title = sub("^\\s+", "", rest)))
+    }
+  }
+  rx <- "^((?:Table|Figure|Listing)\\s+[0-9][0-9A-Za-z.-]*)\\s+(\\S.*)$"
+  m  <- regmatches(label, regexec(rx, label, perl = TRUE))[[1L]]
+  if (length(m) != 3L) return(NULL)
+  c(number = m[2L], title = m[3L])
+}
+
+# The width of a character of the TOC's font in ems, for the hanging style's
+# number column: 0.6 for Courier New (or Courier), exact; 0.75 for any other
+# font, a generous estimate (wider than the digits, capitals and lower case of
+# the usual proportional fonts), so a wrong guess leaves a little too much
+# room, not too little.  The font is the document's: that of the first
+# input's \deff.
+.toc_font_em <- function(lines) {
+  head <- paste(lines[seq_len(min(20L, length(lines)))], collapse = " ")
+  deff <- regmatches(head, regexec("\\\\deff([0-9]+)", head))[[1L]]
+  f    <- if (length(deff) == 2L) deff[2L] else "0"
+  rx   <- paste0("\\{\\\\f", f, "(?![0-9])[^ ;}]* ([^;}]*);")
+  name <- regmatches(head, regexec(rx, head, perl = TRUE))[[1L]]
+  if (length(name) == 2L && grepl("^Courier", trimws(name[2L]))) 0.6 else 0.75
+}
+
+# The hanging indent of the TOC's entries in twips: 0 when off (FALSE); a
+# number of twips when given; for TRUE the widest number of the entries that
+# split (.toc_split_label()) at `em` ems a character, and a gap of 1 em, at
+# the entry size; 720 when no entry splits.
+.toc_hang <- function(toc_entries, item, em = 0.6) {
+  h <- .toc_hanging(item)
+  if (!isTRUE(item$hanging)) return(h)
+  nums <- unlist(lapply(toc_entries, function(e) {
+    if (identical(e$type, "heading")) return(NULL)
+    .toc_split_label(e$label, e$number)[["number"]]
+  }))
+  if (!length(nums)) return(720L)
+  pt <- item$size
+  as.integer(ceiling(max(nchar(nums)) * em * pt * 20 + pt * 20))
+}
+
+# The lines a label takes at `hp` half-points: it wraps at Courier New's width
+# beside its level's indent and the page-number column (`ri` twips: an entry's
+# right indent, .toc_entry_ri(); 720 for a heading); the lines after the first
+# have `hang` twips less width (a hanging indent).
+.toc_label_lines <- function(label, level, hp, hang = 0L, ri = 720L) {
+  char  <- .char_width_in("courier_new", 10) * 1440  # a 10 pt character, twips
+  width <- .TOC_TEXT_W - .toc_indent_for_level(level) - ri
+  len   <- nchar(label %||% "")
+  n <- max(1, ceiling(len * char * hp / 20 / width))
+  if (hang > 0L && n > 1) {
+    first <- floor(width * 20 / (char * hp))
+    rest  <- max(1, floor((width - hang) * 20 / (char * hp)))
+    n <- max(n, 1 + ceiling(max(0, len - first) / rest))
+  }
+  n
+}
+
+# -- The TOC's text styles (assemble_rtf(toc_style = )) ----------------------
+
+# Today's sizes: the title 14 pt bold, a heading 11 pt bold, an entry 10 pt,
+# and the blank line below the title 9 pt (`gap`, a size only).
+.TOC_STYLE_DEFAULT <- list(
+  title   = list(size = 14, bold = TRUE),
+  heading = list(size = 11, bold = TRUE),
+  entry   = list(size = 10, bold = FALSE, hanging = FALSE),
+  gap     = list(size = 9)
+)
+
+# A style item's size in half-points (the `\fs` unit)
+.toc_hp <- function(item) as.integer(round(item$size * 2))
+
+# An entry's hanging indent in twips: 0 when off (FALSE), 720 for TRUE, else
+# the number of twips given.
+.toc_hanging <- function(item) {
+  h <- item$hanging
+  if (isTRUE(h)) 720L else if (is.numeric(h)) as.integer(h) else 0L
+}
+
+# `toc_style` (NULL, or a list of list(size = , bold = ) by title / heading /
+# entry / gap) merged over the defaults, key by key; anything else an error.
+.toc_style <- function(x = NULL, where = "toc_style") {
+  out <- .TOC_STYLE_DEFAULT
+  if (is.null(x)) return(out)
+  keys <- names(out)
+  if (!is.list(x) || is.data.frame(x) ||
+      (length(x) && (is.null(names(x)) || any(!nzchar(names(x)))))) {
+    stop("`", where, "` must be NULL or a list with the keys ",
+         paste(keys, collapse = ", "), ", e.g. list(title = list(size = 12)).",
+         call. = FALSE)
+  }
+  bad <- setdiff(names(x), keys)
+  if (length(bad)) {
+    stop("`", where, "` has unknown key(s) ", paste0("'", bad, "'", collapse = ", "),
+         "; the keys are ", paste(keys, collapse = ", "), ".", call. = FALSE)
+  }
+  for (k in names(x)) {
+    v <- x[[k]]
+    w <- sprintf("`%s$%s`", where, k)
+    fields <- names(out[[k]])
+    if (!is.list(v) || (length(v) && (is.null(names(v)) || any(!nzchar(names(v)))))) {
+      stop(w, " must be a list with ", paste(fields, collapse = " and "),
+           ", e.g. list(size = 12).", call. = FALSE)
+    }
+    if (!is.null(v$hanging)) {
+      hg <- v$hanging
+      ok <- (is.logical(hg) && length(hg) == 1L && !is.na(hg)) ||
+        (is.numeric(hg) && length(hg) == 1L && is.finite(hg) && hg > 0 &&
+           hg == round(hg))
+      if (!ok) {
+        stop(sprintf("`%s$%s$hanging`", where, k), " must be TRUE, FALSE or a ",
+             "positive whole number of twips (720 is TRUE).", call. = FALSE)
+      }
+      out[[k]]$hanging <- if (is.numeric(hg)) as.integer(hg) else hg
+    }
+    badf <- setdiff(names(v), fields)
+    if (length(badf)) {
+      stop(w, " has unknown key(s) ", paste0("'", badf, "'", collapse = ", "),
+           "; it takes ", paste(fields, collapse = ", "), ".", call. = FALSE)
+    }
+    if (!is.null(v$size)) {
+      s <- v$size
+      if (!is.numeric(s) || length(s) != 1L || is.na(s) || !is.finite(s) ||
+          s <= 0 || s * 2 != round(s * 2)) {
+        stop(sprintf("`%s$%s$size`", where, k), " must be a positive number of points, whole or half ",
+             "(10, 10.5).", call. = FALSE)
+      }
+      out[[k]]$size <- as.numeric(s)
+    }
+    if (!is.null(v$bold)) {
+      if (!is.logical(v$bold) || length(v$bold) != 1L || is.na(v$bold)) {
+        stop(sprintf("`%s$%s$bold`", where, k), " must be TRUE or FALSE.", call. = FALSE)
+      }
+      out[[k]]$bold <- v$bold
+    }
+  }
+  out
+}
+
+# The control words of a styled paragraph: `\b` (when bold) and `\fs<n>`
+.toc_char_cmd <- function(item) {
+  paste0(if (isTRUE(item$bold)) "\\b" else "", "\\fs", .toc_hp(item))
+}
+
+# The title's alignment: named l / c / r as a header cell is; centred when
+# unnamed.
+.toc_title_align <- function(toc_title) {
+  switch(names(toc_title)[1L] %||% "c", l = "\\ql", r = "\\qr", "\\qc")
+}
+
+# The TOC title as RTF text, filled as a page's title is: "\n" becomes a line
+# break, and the tokens are filled (the session's own tokens,
+# options(rtfreporter.tokens); {DATETIME}, {PROGRAM}; {AUTO_PAGE} ...).  A
+# token that is not one stays as text, as in a title.  The page tokens that
+# need a page ({PAGE}, {TOTAL_PAGES}) are not filled: the title is on no page
+# of its own.  A heading's text is filled the same way.
+.toc_title_rtf <- function(toc_title) {
+  toc_title <- unname(toc_title)
+  .run_ctx$tokens <- .user_tokens()
+  # {PROGRAM}: the session's options(rtfreporter.program) first, as for a
+  # page; else found when the token needs it
+  .run_ctx$program <- .resolve_program()
+  on.exit({
+    .run_ctx$program <- NULL
+    .run_ctx$program_done <- NULL
+    .run_ctx$time <- NULL
+    .run_ctx$tokens <- NULL
+  }, add = TRUE)
+  .substitute_page_tokens(.rtf_escape(toc_title))
+}
+
+# The lines a rendered TOC title takes: one, and one more per line break (a
+# `\line` that is not an escaped backslash followed by "line").
+.toc_title_lines <- function(title_rtf) {
+  rx <- "(?<!\\\\)(?:\\\\\\\\)*\\\\line(?![A-Za-z])"
+  m  <- gregexpr(rx, title_rtf, perl = TRUE)[[1L]]
+  1L + if (m[1L] == -1L) 0L else length(m)
+}
+
+# Render the TOC section.  It writes no page-number command: its pages carry
+# on the document's one Arabic sequence (#1049).
 .build_toc_section <- function(toc_entries, bookmarks, toc_title,
                                 toc_leader = c("dot", "none"),
-                                page_numbering = c("none", "roman", "decimal"),
-                                entry_pages = NULL) {
-  toc_leader     <- match.arg(toc_leader)
-  page_numbering <- match.arg(page_numbering)
+                                entry_pages = NULL, title_rtf = NULL,
+                                toc_style = NULL, em = 0.6) {
+  if (is.null(title_rtf)) title_rtf <- .toc_title_rtf(toc_title)
+  style <- .toc_style(toc_style)
+  toc_leader <- match.arg(toc_leader)
   leader_cmd <- if (toc_leader == "dot") "\\tldot" else ""
-  # Right tab at 14400 twips (10 inches) -- landscape letter writable area.
-  tab_pos <- 14400L
+  # The page numbers sit on a right tab at the right margin: the TOC
+  # section's text width (#967).
+  tab_pos <- .TOC_TEXT_W
+  # An entry's right indent: a long label wraps before the page-number column
+  # (#1056); the page number stays on the tab at the margin, on the last line.
+  # \keep: Word never splits an entry across two TOC pages.
+  digits <- if (length(entry_pages) && any(!is.na(entry_pages))) {
+    nchar(as.character(max(entry_pages, na.rm = TRUE)))
+  } else 1L
+  ri_cmd <- sprintf("\\ri%d\\keep", .toc_entry_ri(.toc_hp(style$entry), digits))
 
   # Section preamble.  \sbkpage forces a new page at the start; landscape +
-  # rtfreporter-default margins.  \pgnlcrm switches to Roman lowercase
-  # numbering for the TOC pages themselves; \pgnrestart anchors at 1.
-  pg_cmd <- switch(page_numbering,
-    roman   = "\\pgnrestart\\pgnlcrm",
-    decimal = "\\pgnrestart\\pgndec",
-    none    = ""
-  )
+  # rtfreporter-default margins.
   # Every paragraph below is wrapped in `{ ... }` so character format
   # state (\fs / \b) cannot leak across paragraph boundaries into the
   # following body content.  See v0.0.33 bug fix.
   lines <- c(
-    paste0("\\sectd\\sbkpage\\lndscpsxn", pg_cmd),
-    "\\pgwsxn15840\\pghsxn12240",
-    "\\marglsxn864\\margrsxn864\\margtsxn1296\\margbsxn1296",
-    sprintf("{\\pard\\qc\\b\\fs28 %s\\par}",
-            .toc_escape(toc_title)),
-    "{\\pard\\fs18\\par}"
+    "\\sectd\\sbkpage\\lndscpsxn",
+    paste0("\\pgwsxn", .TOC_PAGE_W, "\\pghsxn", .TOC_PAGE_H),
+    paste0("\\marglsxn", .TOC_MARGIN_LR, "\\margrsxn", .TOC_MARGIN_LR,
+           "\\margtsxn1296\\margbsxn1296"),
+    sprintf("{\\pard%s%s %s\\par}", .toc_title_align(toc_title),
+            .toc_char_cmd(style$title), title_rtf),
+    sprintf("{\\pard%s\\par}", .toc_char_cmd(style$gap))
   )
 
-  on_page <- .toc_entry_pages(toc_entries)
+  on_page <- .toc_entry_pages(toc_entries, .toc_title_lines(title_rtf), style, em)
+  # The hanging style: one hang for every entry (.toc_hang())
+  hang_all <- .toc_hang(toc_entries, style$entry, em)
   for (k in seq_along(toc_entries)) {
     e          <- toc_entries[[k]]
     indent     <- .toc_indent_for_level(e$level)
     indent_cmd <- if (indent > 0L) sprintf("\\li%d", indent) else ""
+    hang <- if (e$type == "heading") 0L else hang_all
+    if (hang > 0L) indent_cmd <- sprintf("\\li%d\\fi-%d", indent + hang, hang)
+    # (with the hang: a label that splits is its number, a tab to the hang,
+    # and its title, whose lines all start at the hang)
+    sp <- if (hang > 0L && isTRUE(style$entry$hanging)) .toc_split_label(e$label, e$number)
     # (the first entry of each later TOC page starts that page)
     if (k > 1L && on_page[k] > on_page[k - 1L]) indent_cmd <- paste0("\\pagebb", indent_cmd)
 
     if (e$type == "heading") {
       # Heading -- bold, no leader, no page number.
       lines <- c(lines,
-        sprintf("{\\pard%s\\b\\fs22 %s\\par}",
-                indent_cmd, .toc_escape(e$label))
+        sprintf("{\\pard%s%s %s\\par}", indent_cmd,
+                .toc_char_cmd(style$heading), .toc_title_rtf(e$label))
       )
       next
     }
@@ -577,19 +781,29 @@
     # update it to the live value on field refresh.
     bm  <- bookmarks[e$file_idx]
     txt <- .toc_escape(e$label)
+    tabs <- ""
+    if (!is.null(sp)) {
+      txt  <- paste0(.toc_escape(sp[["number"]]), "\\tab ", .toc_escape(sp[["title"]]))
+      # the stop at the hang, and two more 2 and 4 em after it: a number
+      # wider than the hang tabs to the next of them, never to the page
+      # number's right tab (Word has no default stops left of the last one)
+      em_tw <- as.integer(round(style$entry$size * 20))
+      tabs  <- paste(sprintf("\\tx%d", indent + hang + c(0L, 2L, 4L) * em_tw), collapse = "")
+    }
     pg  <- if (!is.null(entry_pages) && e$file_idx <= length(entry_pages) &&
                !is.na(entry_pages[e$file_idx])) {
       as.integer(entry_pages[e$file_idx])
     } else 1L
     line <- sprintf(
-      paste0("{\\pard%s\\fs20\\tqr%s\\tx%d ",
+      paste0("{\\pard%s%s%s%s\\tqr%s\\tx%d ",
              "{\\field{\\*\\fldinst HYPERLINK \\\\l \"%s\"}",
              "{\\fldrslt %s}}",
              "\\tab",
              "{\\field{\\*\\fldinst PAGEREF %s \\\\h}",
              "{\\fldrslt %d}}",
              "\\par}"),
-      indent_cmd, leader_cmd, tab_pos, bm, txt, bm, pg
+      indent_cmd, ri_cmd, .toc_char_cmd(style$entry), tabs, leader_cmd, tab_pos,
+      bm, txt, bm, pg
     )
     lines <- c(lines, line)
   }
@@ -610,9 +824,12 @@
 #' Page-number fields work correctly across the assembled document
 #' provided the header/footer text uses dynamic tokens:
 #'
-#' * \code{\{AUTO_PAGE\}} -- per-page number rendered by the RTF viewer.
-#' * \code{\{AUTO_TOTAL_PAGES\}} -- total page count rendered by the
-#'   viewer across all assembled files.
+#' * \code{\{AUTO_PAGE\}} -- per-page number rendered by the RTF viewer,
+#'   counted from the assembled file's first page.
+#' * \code{\{AUTO_TOTAL_PAGES\}} -- the assembled file's total page count,
+#'   a cover and the table of contents included.
+#'
+#' See **Page numbering** below.
 #'
 #' Static tokens (\code{\{TOTAL_PAGES\}}) reflect only the page count
 #' of the individual source file and will be wrong in the assembled
@@ -639,20 +856,35 @@
 #' \describe{
 #'   \item{`NULL` (default)}{no TOC, no bookmarks.  Byte-for-byte the
 #'     pre-v0.0.29 behaviour.}
-#'   \item{`"auto"`}{auto-extract each input file's title (the first
-#'     centred-bold cell of the title block) and use it as a level-1
-#'     TOC entry.  Falls back to the file's basename if no title is
-#'     detected.  The title is read as the file shows it, its tokens filled
-#'     (`{STUDY}`, `{PAGE}`), except that a dynamic page number
+#'   \item{`"auto"`}{each input file's title as a level-1 TOC entry.  The
+#'     title is the file's title rows (the centred bold rows [rtf_titles()]
+#'     writes at the top of the body), read as the file shows them and
+#'     joined into one entry with two spaces between them (`"Table 1"` and
+#'     `"Demographics"` give `"Table 1  Demographics"`); a line break inside
+#'     a row (`"\n"`) is joined the same way, never printed as `\line`.  A
+#'     table, a figure and a listing are each labelled by their title; a
+#'     file with no title rows takes its running header's `"Table N"` line
+#'     (`"Table 14.1.1  Demographic Characteristics"`: the title written
+#'     after the number on that line, whatever centred lines follow it, a
+#'     population line for one; a line with the number only takes the
+#'     longest other centred line that is not a `<...>` subtitle), and a
+#'     file with neither, its file name without `.rtf`.  A file gets one
+#'     entry however many pages it has: a file whose titles change from
+#'     page to page (`"Summary of {PARAM}"` with `page_by`) is labelled by
+#'     its first page's title.  Its tokens
+#'     are filled (`{STUDY}`, `{PAGE}`), except that a dynamic page number
 #'     (`{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`) and the `{BOOK_PAGE}` slot are
-#'     left out, and markup keeps its text without its formatting.}
+#'     left out, and markup keeps its text without its formatting.
+#'     [assemble_folder()] labels its rows the same way.}
 #'   \item{a character vector of TOC labels}{one per input file -- same as
 #'     `"auto"` but with explicit labels.}
 #'   \item{a table (`data.frame`)}{one row per file, in order, for
-#'     multi-level (chapter / table) layouts: `file` (the path), `label` (the
-#'     entry text), and optionally `heading` (a heading printed above the
-#'     row's entry whenever it changes; `NA` = none), `level` (the entry's
-#'     indent, a whole number from 1 to 3, default 2) and `order`.  [assemble_folder()] makes one from a
+#'     multi-level (chapter / table) layouts: `file` (the path), and
+#'     optionally `label` (the entry text; a row with no `label`, or an `NA`
+#'     one, takes its file's title, read as `"auto"` reads it), `heading` (a
+#'     heading printed above the row's entry whenever it changes; `NA` =
+#'     none), `level` (the entry's indent, a whole number from 1 to 3,
+#'     default 2) and `order`.  [assemble_folder()] makes one from a
 #'     folder, ready to edit.  `input_files` can then be left out: the
 #'     table's `file` column is used.}
 #'   \item{the path of such a table}{an `.xlsx` or `.csv` file, e.g. the one
@@ -664,22 +896,50 @@
 #' has a `PAGEREF` field so the page number next to the entry is
 #' calculated by the viewer when the file opens.
 #'
+#' The page number stands on a right tab at the right margin.  A label too
+#' long for one line wraps before the page-number column, never into it: each
+#' entry has a right indent (`\ri`) of the column's width plus a gap, six
+#' characters at the entry's font size (four digits and two spaces; more when
+#' a page number has more digits), 720 twips (0.5 in) at the default 10 pt.
+#' The page number and its leader stay on the label's last line, at the
+#' margin.  Every level has it, with or without a hanging indent; headings do
+#' not.  An entry is also kept on one page (`\keep`): Word never splits it
+#' across two TOC pages.
+#'
+#' With a hanging indent (`toc_style = list(entry = list(hanging = TRUE))`)
+#' an entry is its number, a tab and its title (`"Table 14.3.2"`, then
+#' `"Summary of ..."`), and the title's wrapped lines start where its first
+#' line does, after the number.  The hang is the width of the widest number
+#' in the TOC and a gap of 1 em at the entry's size: a character is 0.6 em
+#' in Courier New (exact) and is taken as 0.75 em in any other font (a
+#' generous estimate: a wrong one leaves a little too much room).  Two more
+#' tab stops follow the hang, 2 and 4 em after it, so a number wider than
+#' the hang puts its title at the next of them, never at the page number's
+#' tab.  With `"auto"` and [assemble_folder()] the
+#' number is the one the file's title is read with (`"Table 14.1.1"`); a
+#' label given as text is split when it starts with `Table`, `Figure` or
+#' `Listing` and a number (`14.3.2`, `14.3.2.1`, `14.1.1a`).  A label that
+#' does not split is written whole, its wrapped lines at the same hang; when
+#' no label splits the hang is 720 twips.  A whole number of twips
+#' (`hanging = 360`) is the hang as given, and each label is written whole,
+#' its wrapped lines that far in.
+#'
 #' @section Page numbering:
-#' `toc_page_numbering` controls how the TOC pages are numbered (a cover
-#' page keeps the document's Arabic numbering):
+#' Every page of the assembled file is numbered in one Arabic sequence from
+#' its first page, and the total is the count of all its pages.  The cover,
+#' when there is one, is page 1; the table of contents' pages come next, then
+#' the input files' pages, with no restart anywhere.  With a cover, a
+#' one-page table of contents and 7 pages of tables, the pages read 1 of 9
+#' (the cover), 2 of 9 (the table of contents), 3 of 9 (the first table)
+#' ... 9 of 9; without the cover, 1 of 8 (the table of contents), 2 of 8
+#' (the first table) ... 8 of 8.
 #'
-#' \describe{
-#'   \item{`"none"` (default)}{Arabic numbering flows continuously from
-#'     the first page; if the source files use \code{\{AUTO_PAGE\}} the
-#'     TOC counts as page 1, 2, ...}
-#'   \item{`"roman"`}{TOC pages use lowercase Roman numerals (`i`, `ii`,
-#'     ...); body pages restart at `1`.}
-#'   \item{`"decimal"`}{TOC pages use Arabic numerals starting at `1`, and
-#'     the body continues from them (with a one-page TOC the first table is
-#'     page 2).  A cover page before the TOC is not counted.}
-#' }
-#'
-#' [assemble_folder()] defaults to `"decimal"`.
+#' The inputs' \code{\{AUTO_PAGE\}} / \code{\{AUTO_TOTAL_PAGES\}}, the
+#' `book_page` text and the page numbers the table of contents shows all
+#' follow this sequence.  The file is written with the total already in
+#' place (every `NUMPAGES` field's cached value is the count of all pages)
+#' and with each table of contents entry's cached page number, so a viewer
+#' that does not refresh fields shows them too.
 #'
 #' @param input_files Character vector of paths to RTF files to combine
 #'   (at least 2).  May be left out when `toc` is a table (or its path):
@@ -692,15 +952,20 @@
 #'   for a cover page.  `NULL` (default) = no cover page.
 #' @param toc Table-of-Contents specification.  `NULL` (default) =
 #'   no TOC, no bookmarks; `"auto"` = auto-extract titles; a
-#'   character vector = one label per input file; a table (columns `file`,
-#'   `label`, `heading`, `level`) or the path of one (`.xlsx` / `.csv`) =
-#'   multi-level layout.  See **Table of Contents** above.
-#' @param toc_title Centred bold title rendered on the TOC page, a single
-#'   string (`""` = an empty title line).  Default `"Table of Contents"`.
+#'   character vector = one label per input file; a table (column `file`,
+#'   and optionally `label`, `heading`, `level`) or the path of one (`.xlsx` /
+#'   `.csv`) = multi-level layout.  See **Table of Contents** above.
+#' @param toc_title Bold title rendered on the TOC page, a single
+#'   string (`""` = an empty title line).  Named `l`, `c` or `r` as a header
+#'   cell is, it is aligned left, centre or right (`c(l = "Contents")`);
+#'   unnamed it is centred.  `"\n"` is a line break in the
+#'   title, and the tokens of [rtf_text_tokens()] that need no page are filled
+#'   as in a title: the session's own tokens
+#'   (`options(rtfreporter.tokens = )`), `{DATETIME}`, `{PROGRAM}`.  A token
+#'   that is none of them stays as text.  The same goes for the text of a
+#'   `heading` of a table `toc`.  Default `"Table of Contents"`.
 #' @param toc_leader `"dot"` (default) draws a dotted leader between
 #'   each TOC entry and its page number; `"none"` leaves whitespace.
-#' @param toc_page_numbering `"none"` (default) / `"roman"` /
-#'   `"decimal"`.  See **Page numbering** above.
 #' @param bookmark_prefix String prepended to every auto-generated
 #'   bookmark name (default `"tfl_"`): letters, digits and `_` only, as a
 #'   bookmark name allows; `""` = none.  Helps avoid clashes if you
@@ -720,11 +985,32 @@
 #'       shift anything.}
 #'     \item{What to give}{Typically `"Page {AUTO_PAGE} of
 #'       {AUTO_TOTAL_PAGES}"`.  The total resolves to the **book's** page
-#'       count, which is what the deliverable could not know on its own.}
+#'       count, which is what the deliverable could not know on its own.
+#'       Both follow **Page numbering** above: the page is counted from the
+#'       book's first page, a cover and the table of contents included, and
+#'       the total is all of its pages (the first table after a cover and a
+#'       one-page table of contents of a 9-page book reads `Page 3 of 9`).}
 #'     \item{Refused}{The static `{PAGE}` / `{TOTAL_PAGES}` are rejected: the
 #'       slot sits in one band shared by every page of a section, so a
 #'       single substitution cannot give each page its own number.}
 #'   }
+#' @param toc_style The size and boldness of the TOC's text: `NULL` (the
+#'   built-in sizes) or a list with the keys `title`, `heading` and `entry`,
+#'   each `list(size = <points>, bold = TRUE/FALSE)`, and `gap`
+#'   (`list(size = )`: the blank line below the title).  A list is merged over
+#'   the built-in values key by key, so `list(entry = list(size = 9))` changes
+#'   the entries' size only.  Built in: title 14 pt bold, heading 11 pt bold,
+#'   entry 10 pt, gap 9 pt.  A size is a positive number of points, whole or
+#'   half (`10.5`).  `entry` also takes `hanging`: `FALSE` (default) writes each
+#'   entry's wrapped lines at the indent of its first line; `TRUE` lines them
+#'   up where the title starts, after the number (see **Table of Contents**),
+#'   and a positive whole number of twips hangs them that far in, the label
+#'   written whole (`list(entry = list(hanging = 360))`).  Headings are not affected.  Default `getOption("rtfreporter.toc_style")`.  The font is
+#'   the document's (that of the first input file).  Another key, a size that
+#'   is not a positive number, a `bold` that is not `TRUE` / `FALSE` or a
+#'   `hanging` that is not `TRUE` / `FALSE` / a positive whole number is an
+#'   error.
+#'
 #'
 #' @return Invisibly returns `output_file`.
 #'
@@ -749,7 +1035,7 @@
 #' # Auto-TOC: one entry per file, label extracted from each title
 #' assemble_rtf(c(a, b), out, toc = "auto", overwrite = TRUE)
 #'
-#' # Multi-level TOC with section headings + cover page + Roman TOC pages
+#' # Multi-level TOC with section headings + cover page (pages 1, 2, 3, 4)
 #' assemble_rtf(
 #'   input_files = c(a, b),
 #'   output_file = out,
@@ -765,8 +1051,7 @@
 #'     heading = c("DEMOGRAPHICS", "SAFETY ANALYSES"),
 #'     label   = c("Table 14.1.1 Demographics", "Table 14.2.1 Adverse Events")
 #'   ),
-#'   toc_page_numbering = "roman",
-#'   overwrite           = TRUE
+#'   overwrite = TRUE
 #' )
 #'
 #' @export
@@ -775,13 +1060,13 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
                           toc                = NULL,
                           toc_title          = "Table of Contents",
                           toc_leader         = c("dot", "none"),
-                          toc_page_numbering = c("none", "roman", "decimal"),
                           bookmark_prefix    = "tfl_",
-                          book_page          = NULL) {
-  toc_leader         <- match.arg(toc_leader)
-  toc_page_numbering <- match.arg(toc_page_numbering)
+                          book_page          = NULL,
+                          toc_style          = getOption("rtfreporter.toc_style")) {
+  toc_leader <- match.arg(toc_leader)
   .check_assemble_args(output_file, overwrite, cover, toc_title,
                        bookmark_prefix, book_page)
+  toc_style <- .toc_style(toc_style)
 
   # A table of contents given as a table, or as the path of one: its rows in
   # `order`, and its files when `input_files` is left out.
@@ -857,18 +1142,20 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
   # the TOC's cached page numbers (the viewer refreshes them to the live value
   # via the PAGEREF fields).  `.count_rtf_pages()` knows how a file's pages are
   # spelled, so the start page of file i = front-matter pages + 1 + pages in
-  # files 1..i-1.
+  # files 1..i-1: the pages are one sequence from the first, a cover and the
+  # TOC's own pages included (#815, #1049).
   entry_pages <- NULL
-  toc_pages   <- if (use_toc) max(1L, .toc_entry_pages(toc_entries)) else 0L
+  title_rtf   <- if (use_toc) .toc_title_rtf(toc_title)
+  # (the TOC's font, the document's, for the hanging style's number column)
+  toc_em      <- if (use_toc) .toc_font_em(readLines(input_files[1L], n = 20L, warn = FALSE))
+  toc_pages   <- if (use_toc) {
+    max(1L, .toc_entry_pages(toc_entries, .toc_title_lines(title_rtf), toc_style,
+                             toc_em))
+  } else 0L
   if (use_toc) {
     npages <- vapply(input_files, function(f)
       .count_rtf_pages(readLines(f, warn = FALSE)), integer(1L))
-    # The cached numbers follow the numbering the pages show (#815).
-    front <- switch(toc_page_numbering,
-      roman   = 0L,            # body restarts at 1 (front matter is i, ii)
-      decimal = toc_pages,     # TOC restarts at 1 after any cover; body runs on
-      none    = (if (use_cover) 1L else 0L) + toc_pages  # all continuous
-    )
+    front <- (if (use_cover) 1L else 0L) + toc_pages
     entry_pages <- as.integer(front + 1L + cumsum(c(0L, npages[-length(npages)])))
   }
 
@@ -894,17 +1181,13 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
         front_matter,
         .build_toc_section(toc_entries, bookmarks, toc_title,
                            toc_leader = toc_leader,
-                           page_numbering = toc_page_numbering,
-                           entry_pages = entry_pages)
+                           entry_pages = entry_pages, title_rtf = title_rtf,
+                           toc_style = toc_style, em = toc_em)
       )
     }
 
-    # Roman front matter restarts the body at decimal page 1.  Decimal TOC
-    # numbering is continuous, so the body must NOT restart (the TOC is page 1
-    # and the first table starts on page 2).
-    if (use_toc && toc_page_numbering == "roman") {
-      tail_lines <- .insert_pgnrestart(tail_lines)
-    }
+    # No page-number command anywhere: the body runs on from the front matter
+    # (#1049).
     if (use_toc) {
       tail_lines <- .insert_bookmark(tail_lines, bookmarks[1L],
                                       outline_label = file_outline_labels[[1L]])

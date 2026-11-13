@@ -39,7 +39,8 @@
 
 | Document | Version / date | Conclusion |
 |---|---|---|
-| rtfreporter Quality Report (`quality-report-<tag>.pdf`) | `<x.y.z>`, `<date>` | `<validation-ready / ...>` |
+| rtfreporter Quality Report (`quality-report-<tag>.pdf`, from the GitHub release, not a DRAFT) | `<x.y.z>`, `<date>` | `<validation-ready / ...>` |
+| Its supported environments, and the tested ones that stand for them: is ours one of them? | `<x.y.z>` | `<yes: which / no: what we ran ourselves>` |
 | Its deviations relevant to our URs | `<none / list the FR ids and our assessment>` | |
 
 ## 5. UAT results
@@ -54,7 +55,7 @@
 | URs with no case | `<0>` |
 
 The full results are in `uat_cases.csv`; the Traceability Matrix (URS -> FR
--> UAT) is `user_traceability.xlsx`, version `<date>`.
+-> UAT) is `user_traceability_matrix.xlsx`, version `<date>`.
 
 ## 6. Deviations
 
@@ -74,8 +75,9 @@ The system may be released for production use from `<date>`.
 ## 8. Attachments
 
 - Validation Plan `<VP-RTF-001>`
-- `urs.csv`, `uat_cases.csv` (with results), `user_traceability.xlsx`
+- `urs.csv`, `uat_cases.csv` (with results), `user_traceability_matrix.xlsx`
 - Installation and test logs, sessionInfo
 - rtfreporter `<x.y.z>` Quality Report and its attachments (from the GitHub
-  release: `quality-report-<tag>.pdf`, `traceability-<tag>.xlsx`,
-  `environments-<tag>.txt`)
+  release: `quality-report-<tag>.pdf`, `traceability_matrix-<tag>.xlsx`,
+  `environments-<tag>.txt`, and `test-log-<tag>.txt` if you cite the tests'
+  results)

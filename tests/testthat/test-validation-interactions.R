@@ -368,7 +368,7 @@ test_that("FT-IX030 [FR-IX379]: in widen_ard(sort = ), a column of the result wi
   expect_identical(w("-label"), c("M", "F"))
 })
 
-test_that("FT-IX031 [FR-IX385]: assemble_folder() numbers the contents in decimal by default, where assemble_rtf() writes no numbering", {
+test_that("FT-IX031 [FR-IX385]: assemble_folder() numbers the pages as assemble_rtf() does: no numbering command from either, the same cached numbers", {
   d <- tempfile("ix-asm-")
   o <- tempfile("ix-out-")
   dir.create(d)
@@ -386,16 +386,20 @@ test_that("FT-IX031 [FR-IX385]: assemble_folder() numbers the contents in decima
   }
   out_folder <- file.path(o, "folder.rtf")
   out_rtf    <- file.path(o, "rtf.rtf")
+  cached <- function(f) {
+    txt  <- paste(readLines(f, warn = FALSE), collapse = "\n")
+    hits <- regmatches(txt, gregexpr("PAGEREF.{1,60}?fldrslt [0-9]+", txt))[[1L]]
+    as.integer(sub(".*fldrslt ([0-9]+)$", "\\1", hits))
+  }
   assemble_folder(d, out_folder)
   assemble_rtf(files, out_rtf, toc = c("Table 14.1.1", "Table 14.1.2"))
-  expect_identical(pgn(out_folder), c("\\pgnrestart", "\\pgndec"))
+  expect_identical(pgn(out_folder), character(0))
   expect_identical(pgn(out_rtf), character(0))
-  # the defaults are the only difference: given alike, they agree
-  out_none <- file.path(o, "none.rtf")
-  assemble_folder(d, out_none, toc_page_numbering = "none")
-  expect_identical(pgn(out_none), character(0))
-  expect_identical(formals(assemble_folder)$toc_page_numbering, "decimal")
-  expect_identical(eval(formals(assemble_rtf)$toc_page_numbering)[[1L]], "none")
+  expect_identical(cached(out_folder), c(2L, 3L))
+  expect_identical(cached(out_rtf), c(2L, 3L))
+  # neither takes a numbering argument any more
+  expect_false("toc_page_numbering" %in% names(formals(assemble_folder)))
+  expect_false("toc_page_numbering" %in% names(formals(assemble_rtf)))
 })
 
 test_that("FT-IX032 [FR-IX387]: rtfplot(width_twips = ) alone derives the height from the image, height_twips alone the width; both are used as given", {
@@ -419,7 +423,7 @@ test_that("FT-IX033 [FR-IX391]: rtf_figures(width_twips = , height_twips = , ali
   expect_identical(p$q, c("\\qr{", "\\ql{"))
 })
 
-test_that("FT-IX034 [FR-IX383]: the page numbers cached in the contents follow its numbering, a cover not counted when the contents restart at 1", {
+test_that("FT-IX034 [FR-IX383]: the page numbers cached in the contents follow the one sequence from the first page, a cover counted", {
   d <- tempfile("ix-cov-")
   o <- tempfile("ix-cov-out-")
   dir.create(d)
@@ -442,19 +446,13 @@ test_that("FT-IX034 [FR-IX383]: the page numbers cached in the contents follow i
     assemble_rtf(files, out, toc = c("Table 14.2.1", "Table 14.2.2"), ...)
     cached(out)
   }
-  # decimal: the contents restart at 1 after the cover, so the cover is not counted
-  expect_identical(run("dec-cover.rtf", cover = cover, toc_page_numbering = "decimal"), c(2L, 3L))
-  expect_identical(run("dec.rtf", toc_page_numbering = "decimal"), c(2L, 3L))
-  # none: one Arabic run from the cover on, so the cover is page 1
-  expect_identical(run("none-cover.rtf", cover = cover), c(3L, 4L))
-  expect_identical(run("none.rtf"), c(2L, 3L))
-  # roman: the body restarts at 1 whatever comes before it
-  expect_identical(run("roman-cover.rtf", cover = cover, toc_page_numbering = "roman"), c(1L, 2L))
-  # assemble_folder() takes "decimal" by default
+  # one Arabic run from the first page: a cover is page 1, the contents next
+  expect_identical(run("cover.rtf", cover = cover), c(3L, 4L))
+  expect_identical(run("plain.rtf"), c(2L, 3L))
+  # assemble_folder() counts the same way
   out_folder <- file.path(o, "folder.rtf")
   assemble_folder(d, out_folder, cover = cover)
-  expect_identical(cached(out_folder), c(2L, 3L))
+  expect_identical(cached(out_folder), c(3L, 4L))
   txt <- paste(readLines(out_folder, warn = FALSE), collapse = "\n")
-  expect_identical(regmatches(txt, gregexpr("\\\\pgn[a-z]+", txt))[[1L]],
-                   c("\\pgnrestart", "\\pgndec"))
+  expect_identical(regmatches(txt, gregexpr("\\\\pgn[a-z]+", txt))[[1L]], character(0))
 })

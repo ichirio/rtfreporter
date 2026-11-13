@@ -1,10 +1,6 @@
 # rtfreport.R helpers: header/footer construction,
 # internal report builders, and validator.
 
-# rtf_default_format() / default_format = are deprecated (#804): these tests
-# check what they still do, not the warning (test-rtf-style.R does).
-silence_deprecation("rtf_default_format")
-
 # ──────── rtf_header / rtf_footer construction ────────────────────────────
 
 test_that("rtf_header() accepts a single named vector and wraps it in a list", {
@@ -169,4 +165,13 @@ test_that(".rtfreport_validate() rejects a page with an unsupported content type
   r$pages[[1L]] <- rtfreporter:::.new_page(content = list(broken = TRUE))
   expect_error(rtfreporter:::.rtfreport_validate(r),
                "rtftable.*rtfplot")
+})
+
+test_that(".rtfreport_validate() rejects a segment whose content is not an rtftable or rtfplot", {
+  r <- rtfreporter:::.new_rtfreport()
+  r <- rtfreporter:::.rtfreport_add_section(r)
+  r <- rtfreporter:::.rtfreport_add_page(r, content = rtftable(data.frame(A = 1)))
+  r$pages[[1L]]$segments <- list(list(content = data.frame(A = 1)))
+  expect_error(rtfreporter:::.rtfreport_validate(r),
+               "Page 1: each content must be rtftable or rtfplot")
 })

@@ -79,6 +79,7 @@ define's
 deliverable's
 derivers
 devEMF
+devtools
 DF
 dialog
 DM
@@ -162,6 +163,7 @@ paren
 pasteable
 pbo
 pct
+Pharma
 Pharmaverse
 pharmaverse
 pharmaverseadam
@@ -202,6 +204,7 @@ rtf
 RTF's
 rtfplot
 rtfreport
+rtfreporter
 rtfreporter's
 RTFs
 rtftable
@@ -231,6 +234,7 @@ TAK
 tbl
 TEAE
 TEAEs
+testthat
 TFL
 tflplanner
 TFLs
@@ -258,6 +262,7 @@ unioned
 unparsable
 unsplit
 unsupplied
+untracked
 URS
 v0
 v1
@@ -271,3 +276,22 @@ xportr
 ydisctools
 Yenu's
 zzz
+Anthropic
+CLI
+Customizations
+Dependabot
+Pharma
+matcher
+stderr
+subagent
+subagents
+worktree
+Worktree
+codebase
+lintr
+PascalCase
+Anthropic's
+maintainer's
+pre
+rtfreporter
+tflplanner's

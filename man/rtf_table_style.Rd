@@ -10,6 +10,7 @@ rtf_table_style(
   border_body = NULL,
   border_first_row = NULL,
   border_last_row = NULL,
+  border_group = NULL,
   header_align = NULL,
   header_bold = FALSE,
   header_italic = FALSE,
@@ -26,6 +27,12 @@ rtf_table_style(
 }
 \arguments{
 \item{border_header, border_spanning, border_body, border_first_row, border_last_row}{\code{\link[=rtf_border]{rtf_border()}} objects (or \code{NULL}) controlling each zone of the table.}
+
+\item{border_group}{An \code{\link[=rtf_border]{rtf_border()}} (or \code{NULL}, the default: no rule)
+drawn under the \strong{last row of each row group} -- the groups
+\code{as_rtftables(group_by = )} finds.  It is written by \code{\link[=as_rtftables]{as_rtftables()}}
+(and so by \code{\link[=plan_style]{plan_style()}}); \code{\link[=rtftable]{rtftable()}} alone has no groups and
+ignores it.  See \code{\link[=plan_style]{plan_style()}} for the last-row and page-break rules.}
 
 \item{header_align, header_bold, header_italic}{Defaults for column-header
 row formatting.  \code{header_align = NULL} means "inherit \code{align}";

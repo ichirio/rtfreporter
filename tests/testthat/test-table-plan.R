@@ -609,8 +609,8 @@ test_that("plan_cell_style() says where as well as how", {
   expect_false(all(b))
   # the two spellings of a condition do not mix in one call
   expect_error(plan_cell_style(base, bold = ~ TRUE, where = ~ TRUE), "two calls")
-  expect_error(plan_cell_style(base, header = TRUE, color = "#FF0000"),
-               "bold, italic, underline, align and border")
+  expect_error(plan_cell_style(base, header = TRUE, indent_twips = 100),
+               "bold, italic, underline, align, border, color and background")
   expect_error(plan_cell_style(base), "nothing to style")
 })
 
@@ -1275,11 +1275,22 @@ test_that("n = TRUE reads a cards sentinel keyed by the cols", {
   expect_identical(nv(p), c(A = 40, B = 50))
 })
 
-test_that("two sentinels are a choice, so neither is made", {
+test_that("a total stated by group is read before a stack's denominator", {
   skip_if_no_cards2()
   d <- data.frame(
     TRT = c("A", "A"),
     variable = c("..ard_total_n..", "..ard_hierarchical_overall.."),
+    stat_name = c("N", "N"), stat = c(40, 12),
+    .label = c("all", "any"), stringsAsFactors = FALSE)
+  p <- table_plan(d, cols = "TRT") |> plan_cells(notes = FALSE)
+  expect_identical(unname(nv(p)[["A"]]), 40)
+})
+
+test_that("two other sentinels are a choice, so neither is made", {
+  skip_if_no_cards2()
+  d <- data.frame(
+    TRT = c("A", "A"),
+    variable = c("..ard_hierarchical_overall..", "..ard_other.."),
     stat_name = c("N", "N"), stat = c(40, 12),
     .label = c("all", "any"), stringsAsFactors = FALSE)
   p <- table_plan(d, cols = "TRT") |> plan_cells(notes = FALSE)
@@ -1992,8 +2003,13 @@ test_that("plan_style() takes the whole table's settings, and only those", {
   z <- plan_apply(plan_style(p, border_body = rtf_border(bottom = TRUE)),
                   "args")$rtf
   expect_s3_class(z$style, "rtf_table_style")
-  expect_error(plan_style(p, border = "tfl", border_body = rtf_border()),
-               "one way")
+  # `border` with a zone: the preset with that zone merged onto it
+  zb <- plan_apply(plan_style(p, border = "tfl",
+                              border_body = rtf_border(bottom = TRUE)),
+                   "args")$rtf
+  expect_s3_class(zb$border, "rtf_table_border")
+  expect_false(is.null(zb$border$header))
+  expect_false(is.null(zb$border$body))
 })
 
 test_that("plan_columns() declares the stub column, auto width and the key separator", {
@@ -2272,9 +2288,12 @@ test_that("every as_rtftables() setting has a plan verb, with the direct call's 
        table_width_pct = 80)
   same(table_plan(tbl) |> plan_style(table_width_pct_of_writable = 0.9),
        table_width_pct_of_writable = 0.9)
+  # (no border said: the default preset's rules stay with the look, FR-PL990;
+  # the direct call says the preset as an object)
   same(table_plan(tbl) |> plan_style(header_bold = TRUE, header_italic = TRUE,
                                      header_align = "left", align = "right",
                                      bold = TRUE, italic = TRUE, underline = TRUE),
+       border = rtfreporter:::.normalize_table_border("tfl"),
        style = rtf_table_style(header_bold = TRUE, header_italic = TRUE,
                                header_align = "left", align = "right",
                                bold = TRUE, italic = TRUE, underline = TRUE))
@@ -2430,6 +2449,7 @@ test_that("a group count stated twice is one count; two different ones say why",
   expect_identical(twice$values, alone$values)
   expect_identical(unname(unlist(twice$values)), c(86, 84, 84))
   # two different counts for one column: not a column's number, and why
+  # (building the header stops on it: test-header-n-total-by-group.R)
   other <- groupn
   other$stat[[1]] <- 99L
   clash <- tok(dplyr::bind_rows(other, st))

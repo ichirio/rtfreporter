@@ -236,14 +236,115 @@
 # The {\fonttbl ...} group for the collected families.
 #   \fnil\fcharset0 -- unknown family, ANSI charset: deterministic glyph
 #   mapping across viewers without claiming a specific family.
-.build_font_table_rtf <- function(fonts) {
+# A family name that is not ASCII is written as Word writes it (#1047): see
+# .font_name_rtf().  `east_asian` is the charset of the document's east_asian
+# language (0 when it has none), which decides a name of Han characters only.
+.build_font_table_rtf <- function(fonts, east_asian = 0L) {
   if (length(fonts) == 0L) fonts <- .opt("rtfreporter.font")
   entries <- vapply(seq_along(fonts), function(i) {
     k <- .split_font_key(fonts[[i]])
-    sprintf("{\\f%d\\fnil\\fcharset%d %s;}", i - 1L, k$charset,
-            .rtf_escape(k$name))
+    w <- .font_name_rtf(k$name, k$charset, east_asian)
+    sprintf("{\\f%d\\fnil\\fcharset%d %s;}", i - 1L, w$charset, w$text)
   }, character(1L))
   paste0("{\\fonttbl", paste(entries, collapse = ""), "}")
+}
+
+# The East Asian character sets a family name can be written in: the RTF
+# \fcharset and the Windows code page of its bytes.
+.FONT_CJK_CODEPAGES <- c("128" = "CP932",   # Japanese (Shift-JIS)
+                         "134" = "CP936",   # Simplified Chinese (GBK)
+                         "136" = "CP950",   # Traditional Chinese (Big5)
+                         "129" = "CP949")   # Korean
+
+# Common East Asian families: the native name, its charset and the Latin name
+# Word writes after it as {\*\falt ...}.
+.FONT_CJK_KNOWN <- data.frame(
+  name = c("\u6e38\u660e\u671d",                     # Yu Mincho
+           "\u6e38\u30b4\u30b7\u30c3\u30af",         # Yu Gothic
+           "\uff2d\uff33 \u660e\u671d",              # MS Mincho
+           "\uff2d\uff33 \u30b4\u30b7\u30c3\u30af",  # MS Gothic
+           "\uff2d\uff33 \uff30\u660e\u671d",        # MS PMincho
+           "\uff2d\uff33 \uff30\u30b4\u30b7\u30c3\u30af",  # MS PGothic
+           "\u30e1\u30a4\u30ea\u30aa",               # Meiryo
+           "\u5b8b\u4f53",                           # SimSun
+           "\u9ed1\u4f53",                           # SimHei
+           "\u65b0\u7d30\u660e\u9ad4",               # PMingLiU
+           "\u5fae\u8edf\u6b63\u9ed1\u9ad4",         # Microsoft JhengHei
+           "\ub9d1\uc740 \uace0\ub515",              # Malgun Gothic
+           "\ubc14\ud0d5"),                          # Batang
+  charset = c(128L, 128L, 128L, 128L, 128L, 128L, 128L, 134L, 134L, 136L,
+              136L, 129L, 129L),
+  alt = c("Yu Mincho", "Yu Gothic", "MS Mincho", "MS Gothic", "MS PMincho",
+          "MS PGothic", "Meiryo", "SimSun", "SimHei", "PMingLiU",
+          "Microsoft JhengHei", "Malgun Gothic", "Batang"),
+  stringsAsFactors = FALSE
+)
+
+# The charset a family name that is not ASCII is written in, or 0 when no
+# East Asian code page can write it.
+#   * a family of the table above: its own charset;
+#   * a name with kana: Japanese (128); with Hangul: Korean (129);
+#   * otherwise (Han characters, fullwidth forms): the document's east_asian
+#     language when it is Japanese or Chinese or Korean and its code page
+#     writes the name, else the first of CP932, CP936, CP950, CP949 that
+#     writes it.
+# A charset the entry already has (its slot's `font_lang`) is kept when its
+# code page writes the name.
+.font_name_charset <- function(name, charset = 0L, east_asian = 0L) {
+  fits <- function(cs) {
+    cp <- .FONT_CJK_CODEPAGES[as.character(cs)]
+    !is.na(cp) && !is.na(iconv(name, "UTF-8", cp))
+  }
+  if (charset != 0L) return(if (fits(charset)) charset else 0L)
+  known <- match(name, .FONT_CJK_KNOWN$name)
+  if (!is.na(known)) return(.FONT_CJK_KNOWN$charset[[known]])
+  cp <- utf8ToInt(name)
+  kana   <- any((cp >= 0x3040L & cp <= 0x30FFL) | (cp >= 0x31F0L & cp <= 0x31FFL) |
+                (cp >= 0xFF66L & cp <= 0xFF9FL))
+  hangul <- any((cp >= 0xAC00L & cp <= 0xD7AFL) | (cp >= 0x1100L & cp <= 0x11FFL) |
+                (cp >= 0x3130L & cp <= 0x318FL))
+  order <- if (kana) 128L else if (hangul) 129L
+           else unique(c(if (east_asian != 0L) east_asian, 128L, 134L, 136L, 129L))
+  for (cs in order) if (fits(cs)) return(cs)
+  0L
+}
+
+# TRUE when a name holds an East Asian character: Hangul Jamo, CJK radicals
+# and symbols, kana, Han, Hangul syllables, compatibility ideographs, the
+# fullwidth and halfwidth forms, or the supplementary Han planes.
+.has_east_asian <- function(name) {
+  cp <- utf8ToInt(name)
+  any((cp >= 0x1100L & cp <= 0x11FFL) | (cp >= 0x2E80L & cp <= 0x9FFFL) |
+      (cp >= 0xAC00L & cp <= 0xD7AFL) | (cp >= 0xF900L & cp <= 0xFAFFL) |
+      (cp >= 0xFF00L & cp <= 0xFFEFL) | cp >= 0x20000L)
+}
+
+# A family name as the font table writes it: list(charset, text).  An ASCII
+# name is escaped as it always was.  A name an East Asian code page writes is
+# written in that code page's bytes, each non-ASCII character byte by byte as
+# \'xx, under the matching \fcharset, with {\*\falt <Latin name>} after it when
+# the family is a known one: the form Word writes, which Word reads back as
+# the family for every script.  Any other name keeps \uN? and its charset.
+.font_name_rtf <- function(name, charset = 0L, east_asian = 0L) {
+  plain <- list(charset = charset, text = .rtf_escape(name))
+  # Only a name with an East Asian character: a Latin name such as "Caf<e9>"
+  # is not to be written in a Chinese code page that happens to hold e-acute.
+  if (!nzchar(name) || !.has_east_asian(name)) return(plain)
+  cs <- .font_name_charset(name, charset, east_asian)
+  if (cs == 0L) return(plain)
+  cp <- .FONT_CJK_CODEPAGES[[as.character(cs)]]
+  chars <- strsplit(name, "", fixed = TRUE)[[1L]]
+  text <- vapply(chars, function(ch) {
+    if (utf8ToInt(ch) <= 127L) return(.rtf_escape(ch))
+    b <- iconv(ch, "UTF-8", cp, toRaw = TRUE)[[1L]]
+    paste0("\\'", as.character(b), collapse = "")
+  }, character(1L))
+  text <- paste(text, collapse = "")
+  known <- match(name, .FONT_CJK_KNOWN$name)
+  if (!is.na(known)) {
+    text <- paste0(text, "{\\*\\falt ", .FONT_CJK_KNOWN$alt[[known]], "}")
+  }
+  list(charset = cs, text = text)
 }
 
 # Everything the renderer needs to select fonts: the table entries, the

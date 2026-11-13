@@ -6,7 +6,7 @@
 # test.  For each function below, one row per claim of its roxygen: the
 # claim (short), the FR that states it, and the test that checks it.  The
 # tests below this table close the gaps the audit found.  A test written
-# before the audit and mapped by hand in inst/validation/test_map.csv is
+# before the audit and mapped by hand in inst/validation/traceability_matrix.csv is
 # named by its FT id.
 #
 # rtftable()
@@ -96,7 +96,7 @@
 #   sort_by / sort_desc; guards; applied first              | FR-TB134-136, FR-IX323 | FT-TB359, FT-TB362, FT-TB370, FT-TB361
 #   cont_label / min_group_rows                             | FR-TB137/138| FT-TB110, FT-TB118
 #   blank_rows; guards                                      | FR-TB139/140| FT-TB058, FT-TB306
-#   blank_rows -1: after each page's last row (fixed here)  | FR-TB139    | FT-TB754
+#   blank_rows -1: after the body's last row (fixed here)   | FR-TB139    | FT-TB754
 #   blank_row_first / blank_row_end / count_blank_rows      | FR-TB141/142, FR-IX324 | FT-TB115, FT-TB112, FT-TB119
 #   align_count_pct / cell_format; precedence; guards       | FR-TB143-146, FR-IX316 | FT-TB013, FT-TB062, FT-TB071
 #   na: where, not missing, NaN / Inf, order; guards        | FR-TB147-149| FT-TB072, FT-TB172, FT-TB073
@@ -117,7 +117,8 @@
 #   What is carried: rtables / tern                         | FR-TB579    | FT-TB738 to FT-TB742
 #   What is carried: flextable                              | FR-TB580    | FT-TB743 to FT-TB746
 #   What is carried: huxtable                               | FR-TB581    | FT-TB747 to FT-TB750
-#   What is carried: a gt with several stub columns         | FR-TB582    | FT-TB751, FT-TB752
+#   What is carried: a gt with several stub columns         | FR-TB582    | FT-TB751, FT-TB752,
+#     each headed by the stubhead, not its name             |             | FT-TB7501, FT-TB7502
 #   flextable caption set with as_paragraph()               | FR-TB618    | FT-TB980
 #   flextable line break, written as \line                  | FR-TB619    | FT-TB981
 #   no header rows: a blank header (flextable, huxtable)    | FR-TB620    | FT-TB982
@@ -406,6 +407,13 @@ test_that("FT-TB719 [FR-TB173]: footnote rows are strings or c(l =, r =), left-a
                "A footnote row is a string or a named vector", fixed = TRUE)
   s <- .at_rs(rtf_footnotes(rtf_tables(doc, t1), "FNZ", border = rtf_border(top = TRUE)))
   expect_true(grepl("\\clbrdrt", .at_line(s, "FNZ"), fixed = TRUE))
+  # a list of length(tables) blocks, or of length 1 (one block for every page)
+  two <- rtf_tables(doc, list(t1[[1L]], t1[[1L]]), footnotes = list(list("ONE"), list("TWO")))
+  expect_identical(two$contents[[1L]]$footnote, list("ONE"))
+  expect_identical(two$contents[[2L]]$footnote, list("TWO"))
+  same <- rtf_tables(doc, list(t1[[1L]], t1[[1L]]), footnotes = list(list("ONE")))
+  expect_identical(same$contents[[2L]]$footnote, list("ONE"))
+  expect_null(rtf_tables(doc, t1)$contents[[1L]]$footnote)
 })
 
 test_that("FT-TB720 [FR-TB574]: auto_title writes the name the same under either title_format, and composes with auto_section", {
@@ -438,6 +446,15 @@ test_that("FT-TB721 [FR-TB124]: max_rows is optional for split = \"by_value\": a
   # ignored by "none" and "rows"
   expect_length(as_rtftables(bv, max_rows = 2), 1L)
   expect_length(as_rtftables(bv, split = "rows", split_rows = 4, max_rows = 2), 2L)
+  # for "group_safe" and "group_force" it is the largest number of body rows on a page, and
+  # there is none by default: three groups of 2 and max_rows = 4 give pages of 4 and 2 rows
+  g <- data.frame(g = rep(c("A", "B", "C"), each = 2), v = 1:6)
+  for (s in c("group_safe", "group_force")) {
+    pg <- as_rtftables(g, split = s, max_rows = 4, group_col = "g")
+    expect_identical(unname(vapply(pg, function(x) nrow(x$data), 1L)), c(4L, 2L), info = s)
+    expect_error(as_rtftables(g, split = s, group_col = "g"),
+                 paste0("`max_rows` is required when split = \"", s, "\"."), fixed = TRUE)
+  }
 })
 
 test_that("FT-TB722 [FR-TB151]: as_rtftables(first_rows = ) with split = \"by_value\" stops", {
@@ -500,12 +517,13 @@ test_that("FT-TB726 [FR-TB576]: a dropped group_col still names by_value pages, 
   expect_true(grepl("(Cont.)", p[[2L]]$data$grp[1L], fixed = TRUE))
 })
 
-test_that("FT-TB754 [FR-TB139]: as_rtftables(blank_rows = -1) puts a blank after the last row of every page", {
-  # -1 used to be dropped as a negative position (fixed in this audit)
+test_that("FT-TB754 [FR-TB139]: as_rtftables(blank_rows = -1) puts a blank after the body's last row, on the last page", {
+  # -1 used to be dropped as a negative position (fixed in this audit); it is
+  # the whole body's last row, not each page's (#1028)
   df <- data.frame(x = sprintf("r%d", 1:5))
   expect_identical(as_rtftables(df, blank_rows = c(0, -1))[[1L]]$blank_rows, c(0L, 5L))
   p <- as_rtftables(df, split = "rows", split_rows = 4, blank_rows = -1)
-  expect_identical(lapply(p, function(x) x$blank_rows), list(3L, 2L))
+  expect_identical(lapply(p, function(x) x$blank_rows), list(NULL, 2L))
   s <- .at_one(p[[2L]])
   expect_match(.at_rows(s)[grep("r5\\cell", .at_rows(s), fixed = TRUE) + 1L],
                "\\cell\\row", fixed = TRUE)

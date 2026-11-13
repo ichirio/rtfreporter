@@ -11,7 +11,8 @@ rtf_titles(
   row_height_twips = NULL,
   markup = NULL,
   font = NULL,
-  align = NULL
+  align = NULL,
+  border = NULL
 )
 }
 \arguments{
@@ -46,6 +47,15 @@ size, and an explicit height always wins.}
 \item{\code{align}}{sets the block's default row alignment; a per-row
 \code{align} still beats it.}
 }}
+
+\item{border}{\code{NULL} (default) for no rule, or an \code{\link[=rtf_border]{rtf_border()}} for the
+title block as a whole, read as \code{\link[=rtf_footnotes]{rtf_footnotes()}}'s is: \code{top} above
+the first row, \code{bottom} below the last row, \code{inside_h} between rows,
+\code{left} / \code{right} on the outer edges of every row.  A row's own
+\code{border} is merged side by side over it, so the sides the row sets
+win.  It is drawn in the table form
+(\code{rtf_style(title_format = "table")}); the text form ignores it and
+warns.}
 }
 \value{
 Modified rtf_document.
@@ -67,7 +77,8 @@ with \code{rtf_style(title_format = "table")}, as a single-column table the
 same width as the content; title rows default to centred + bold.  A row's
 \code{row_height_twips} is that row's height, over the block's
 \code{row_height_twips}; it applies to the table form
-(\code{rtf_style(title_format = "table")}), as the block's does.
+(\code{rtf_style(title_format = "table")}), as the block's does.  So does a
+row's \code{border}: the text form draws none, ignores one you set, and warns.
 }
 \examples{
 df1 <- data.frame(Parameter = "Age", Value = "75.1")

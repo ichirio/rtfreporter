@@ -77,7 +77,7 @@ also in this kit):
 |---|---|
 | Quality Plan (`quality-plan.md`) | How the package's quality is assured: scope, the risk-based requirements, the acceptance criteria, the environments. |
 | Functional Requirements (`requirements.csv`) | What each function in the package's scope does, its arguments, the data it handles and the misuse it stops: one id (`FR-...`) each. The Quality Report lists the functions in scope. |
-| Functional Tests and the Traceability Matrix (FR -> FT) (`traceability-<tag>.xlsx`, release asset) | The tests of each FR. |
+| Functional Tests and the Traceability Matrix (FR -> FT) (`traceability_matrix-<tag>.xlsx`, release asset) | The tests of each FR. |
 | Quality Report (`quality-report-<tag>.pdf`, release asset) | The results on every environment of the package's Quality Plan (six in CI: Linux, macOS, Windows, several R versions; two on the maintainers' PC), the deviations (an FR with no test, and why it is accepted), the conclusion (*validation-ready* on a published release) and how to read each attachment; with every environment's sessionInfo and test log (`environments-<tag>.txt`). |
 
 **What Example Pharma checks itself**
@@ -136,7 +136,7 @@ A high-risk deviation with no workaround blocks acceptance.
 | This plan | `validation_plan.md` |
 | User Requirement Specification | `urs.csv` (columns explained in `urs.md`) |
 | UAT cases and their results | `uat_cases.csv` / `uat_cases.xlsx` |
-| Traceability Matrix (URS -> FR -> UAT) | `user_traceability.xlsx` (from `build_user_matrix.R`) |
+| Traceability Matrix (URS -> FR -> UAT) | `user_traceability_matrix.xlsx` (from `build_user_matrix.R`) |
 | Validation Summary Report | `validation_summary_report.md` |
 | Supplier evidence | the package's Quality Plan and Functional Requirements, and the release's Quality Report and its attachments |
 

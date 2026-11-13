@@ -17,7 +17,7 @@
 #'     (`UAT-NNN`) on dummy data, with blank `actual`, `result`, `tester` and
 #'     `date` to fill.}
 #'   \item{`build_user_matrix.R`}{Writes your Traceability Matrix (URS -> FR
-#'     -> UAT): `user_traceability.csv`, and `user_traceability.xlsx` when
+#'     -> UAT): `user_traceability_matrix.csv`, and `user_traceability_matrix.xlsx` when
 #'     writexl is installed.}
 #'   \item{`validation_summary_report.md`}{The Validation Summary Report you
 #'     fill: environment, UAT results, deviations, conclusion.}
@@ -26,8 +26,20 @@
 #' }
 #'
 #' The example content is fictional (a company "Example Pharma"); replace it
-#' with your own.  The package's Quality Report and its attachments are on
-#' each GitHub release of rtfreporter.
+#' with your own.
+#'
+#' From 0.9.0 on, the package's Quality Report is attached to each GitHub
+#' release of rtfreporter as `quality-report-<tag>.pdf`.  It states the
+#' results (overall and by area, with the reason for each skipped test), the
+#' environments the tests ran on and how they stand for the environments the
+#' package supports, the deviations, and the conclusion.  Use the report of
+#' the release you install: a report from a CI run started by hand is marked
+#' DRAFT and concludes nothing.  The same release carries the evidence, each
+#' file's name ending in the tag: `traceability_matrix-<tag>.xlsx` (which
+#' tests check each requirement), `environments-<tag>.txt` (every
+#' environment's sessionInfo and test log), `test-log-<tag>.txt` (the mapped
+#' tests' log) and the tables behind the results, `ft-<tag>.csv`,
+#' `functions-<tag>.csv` and `candidates-<tag>.csv`.
 #'
 #' @param dir The folder to write into.  Created if it does not exist.
 #' @param overwrite `FALSE` (default) refuses a folder that already has files

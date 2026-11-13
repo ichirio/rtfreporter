@@ -32,7 +32,7 @@ The released versions' manuals: [0.8.2](https://github.com/ichirio/rtfreporter/b
    (`rtf_body()`, `rtf_colheader()`, `create_table()`, …) into rtfreporter code.
    rtfreporter depends on no other RTF package.
 3. **Base R only.** No tidyverse is required. Use the native pipe `|>`
-   (R >= 4.2 for this package) or `magrittr::%>%` — both appear in the docs.
+   (R >= 4.3 for this package) or `magrittr::%>%` — both appear in the docs.
 4. **Units.** Widths and heights are **twips**: `1 inch = 1440 twips`,
    `1 pt = 20 twips`. Font size is in **half-points**: `18L` = 9 pt (the
    default), `16L` = 8 pt, `20L` = 10 pt.
@@ -286,14 +286,6 @@ without writing a file.
 | Table from a cards / cardx ARD | `normalize_ard()` → `table_plan()` → `plan_*()` → `rtf_tables(doc, plan)` **(§17)** |
 
 ---
-
-**Deprecated -- do not generate these** (they still work but warn, and are
-removed in 0.9):
-
-| Deprecated | Write instead |
-|---|---|
-| `rtf_default_format()` | `rtf_style()` (same keys at its shared level) |
-| `rtf_document(default_format = )` / `rtf_config(default_format = )` | `style = rtf_style(...)` |
 
 ## 5. `as_rtftables()` — the workhorse
 
@@ -904,8 +896,8 @@ p_ae <- ard_ae |>
 | Columns not printed | `plan_hide("COL")` |
 | Widths, decimal alignment | `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: `widths = c(row_label = 5, .values = 2)`, `row_title = "row_label"`. Columns are named (a row key's name, `.values`) or counted on the PRINTED columns (a hidden key left out) |
 | Column header | `plan_col_header(header, values, header_sep, col_header_align, lines, span)`: `values = list(n = TRUE)` reads N from the ARD; `list(n = "page", N = "table")` for per-page splits; `header_sep` splits a finished table's names into spanning rows; `lines = list(c(row_label = "", .values = "{col}"), c(row_label = "Characteristic", .values = "(N={n})"))` writes the header a row at a time (a cell's name = its columns, its value = the text; `span = "each"` / `"one"` / a key's name for a spanner) |
-| Whole-table look | `plan_style(border, align_count_pct, font, font_size_half_points, row_height_twips, ..., border_header, border_spanning, border_body, border_first_row, border_last_row, header_align, header_bold, header_italic, align, bold, italic, underline, table_width_twips, table_width_pct, table_width_pct_of_writable)`: the `border_*` and look fields make one `rtf_table_style()` |
-| Look of some cells | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: a value, or a formula `bold = ~ is.na(label)` |
+| Whole-table look | `plan_style(border, align_count_pct, font, font_size_half_points, row_height_twips, ..., border_header, border_spanning, border_body, border_first_row, border_last_row, border_group, header_align, header_bold, header_italic, align, bold, italic, underline, table_width_twips, table_width_pct, table_width_pct_of_writable)`: the `border_*` and look fields make one `rtf_table_style()`; `border = "tfl"` with a `border_*` zone is the preset with that zone merged on, side by side |
+| Look of some cells | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips, row)`: a value, or a formula `bold = ~ is.na(label)`; `header = TRUE, row = 1` styles one header row (bold, italic, underline, align, border); `header = TRUE, color = , background = ` colour and fill the header labels; `border` with `cols` alone is the header cells' border, so a body border is `where = ~ <condition>` (`where = ~ TRUE` for a whole column) or `border = ~ ifelse(cond, list(rtf_border(bottom = TRUE)), list(NULL))` |
 | A page per value | `plan_paginate_group(col, keep, heading, heading_at)` |
 | A p-value column; difference and CI columns (the test / difference records in the ARD: `cardx::ard_stats_t_test()`, `ard_stats_chisq_test()`, `ard_stats_kruskal_test()` ...) | `plan_compare(p = c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}"))`, `plan_compare(diff = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})", p = "{p.value:.3f}")`; `by = "COMPARISON"` for one column a comparison; `position = "first"` puts its columns before the arms (default `"last"`). Placed on the variable's first row (or its level's row). Never compute a p-value in R and paste it in; never `ard_stats_aov()` (no variable to place it on) |
 | A section per arm with "Treatment: X (N=xx)" in the header | `plan_paginate_group(col = "arm", keep = FALSE, heading = "Treatment: {value} (N={n})", heading_at = "section")` (or `rtf_tables(auto_section = TRUE)`; an argument given there wins); `{n}` is the arm's own tabulation in the ARD (`bind_ard(cards::ard_tabulate(adsl, variables = TRT01A), ...)`), never pulled by hand |
@@ -1093,7 +1085,7 @@ reference of a difference.
 ## 18. Complete public API (nothing outside this list exists)
 
 **Document / render:** `rtf_document` `rtf_config` `rtf_page`
-`rtf_style` `rtf_default_format` `rtf_watermark` `generate_rtfreport` `rtf_text_tokens`
+`rtf_style` `rtf_watermark` `generate_rtfreport` `rtf_text_tokens`
 `rtfreporter_options` `rtfreporter_reset_defaults` `rtfreporter_ai_manual`
 `rtfreporter_validation_kit`
 

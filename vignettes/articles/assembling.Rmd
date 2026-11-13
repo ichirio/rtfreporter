@@ -76,8 +76,7 @@ assemble_rtf(
     label   = c("Table 14.1.1  Demographic Characteristics",
                 "Table 14.3.1.1  Treatment-Emergent Adverse Events by SOC and PT",
                 "Table 14.3.5.1  Vital Signs by Visit",
-                "Listing 16.2.7.2  Severe Treatment-Emergent Adverse Events")),
-  toc_page_numbering = "roman")
+                "Listing 16.2.7.2  Severe Treatment-Emergent Adverse Events")))
 system2("soffice", c("--headless", "--convert-to", "pdf", "XYZ-001_tables.rtf"))
 ```
 
@@ -101,7 +100,8 @@ f2 <- make("Table 14.2.1 Adverse Events",  tempfile(fileext = ".rtf"))
 ## A table of contents from the titles: `toc = "auto"`
 
 `toc = "auto"` builds one TOC entry per file, taking each label from the file's
-first title:
+title: its title rows as the file shows them, joined with two spaces
+(`"Table 14.1.1"` and `"Demographics"` give `"Table 14.1.1  Demographics"`):
 
 ```{r assemble-auto, fold = "open"}
 pkg <- tempfile(fileext = ".rtf")
@@ -127,23 +127,29 @@ assemble_rtf(
     heading = c("EFFICACY ANALYSES", "SAFETY ANALYSES"),
     label   = c("Table 14.1.1 Demographics", "Table 14.2.1 Adverse Events")
   ),
-  toc_page_numbering = "roman",
   overwrite = TRUE
 )
 file.exists(pkg2)
 ```
 
-`assemble_rtf()` also takes a `cover` page and `toc_leader` / `toc_page_numbering`
-options; see `?assemble_rtf`.
+`assemble_rtf()` also takes a `toc_leader` and a `toc_style` for the table of
+contents; see `?assemble_rtf`.
 
 ## Page numbers
 
-Each output keeps its own running footer, so a table says *Page 2 of 5* of
-itself, whichever page of the deliverable it is on: write it with the static
-`{PAGE}` / `{TOTAL_PAGES}` tokens, filled in when that output is written.
-`toc_page_numbering` numbers the table of contents' own pages (`"roman"`,
-`"decimal"`), and the page each entry points to is the page in the assembled
-document.
+The assembled document's pages are numbered in one sequence from its first
+page: the cover is page 1, the table of contents comes next, then the outputs,
+with no restart. The total is all the pages. With a cover, a one-page table of
+contents and seven pages of tables, the first table is page 3 of 9 and the
+last 9 of 9; the page each entry of the table of contents points to is
+counted the same way.
+
+Each output can also keep its own running footer, so a table says *Page 2 of
+5* of itself, whichever page of the deliverable it is on: write it with the
+static `{PAGE}` / `{TOTAL_PAGES}` tokens, filled in when that output is
+written. The dynamic `{AUTO_PAGE}` / `{AUTO_TOTAL_PAGES}` give the
+deliverable's own numbers instead, and so does `assemble_rtf(book_page = )`
+for a `{BOOK_PAGE}` slot an output reserved.
 
 ## Assembling a folder: `assemble_folder()`
 

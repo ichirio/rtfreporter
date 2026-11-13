@@ -156,7 +156,7 @@
 #  read_meta      | FALSE / NULL          |                    | no header from the label         | FR-TB118
 #  read_meta      | token                 | "labels"           | the label                        | FR-TB119
 #  read_meta      | with an adapter token | c("labels", "spanning") | the label (the other ignored) | FR-TB119
-#  read_meta      | unknown token / length 0 | "bogus" / character(0) | no label                 | FR-TB119
+#  read_meta      | unknown token / length 0 | "bogus" / character(0) | error "Unknown data.frame `read_meta` token" / no label | FR-TB120
 #  read_meta      | NA / a number / length 2 / a token NA | | error "`read_meta` must be FALSE/TRUE or a character vector of tokens" | FR-TB120
 #  header_sep     | valid (default)       | "____"             | two header rows                  | FR-TB162
 #  header_sep     | NULL / length 0       |                    | one header row                   | FR-TB162
@@ -349,7 +349,7 @@ test_that("FT-DC284 [FR-DC186 FR-DC187 FR-DC188 FR-DC189 FR-DC192 FR-DC193 FR-DC
     E("markup", "prefix", "scr", mk),
     E("markup", "unknown", "bogus", mk),
     E("markup", "empty string", "", mk),
-    C("font", "non-ASCII", .eb2_kanji2, "ok:\\\\u26126\\?\\\\u26397\\?;"),
+    C("font", "non-ASCII", .eb2_kanji2, "ok:\\\\fcharset128 \\\\'96\\\\'be\\\\'92\\\\'a9;"),
     E("font", "empty string", "", fnt),
     E("font", "NA", NA_character_, fnt),
     E("font", "length 0", character(0), fnt),
@@ -374,7 +374,7 @@ test_that("FT-DC284 [FR-DC186 FR-DC187 FR-DC188 FR-DC189 FR-DC192 FR-DC193 FR-DC
   })
 })
 
-test_that("FT-DC285 [FR-DC203 FR-DC204 FR-DC205 FR-DC206 FR-DC207 FR-DC210 FR-DC212 FR-DC213 FR-DC214 FR-DC215 FR-DC216 FR-DC217 FR-DC218 FR-DC219 FR-TB600]: rtf_footnotes(): equivalence classes and boundaries of its arguments", {
+test_that("FT-DC285 [FR-DC203 FR-DC204 FR-DC205 FR-DC206 FR-DC207 FR-DC213 FR-DC214 FR-DC215 FR-DC216 FR-DC217 FR-DC218 FR-DC219 FR-TB600]: rtf_footnotes(): equivalence classes and boundaries of its arguments", {
   C <- .eb2_case
   E <- .eb2_err
   O <- .eb2_obj
@@ -482,7 +482,7 @@ test_that("FT-DC285 [FR-DC203 FR-DC204 FR-DC205 FR-DC206 FR-DC207 FR-DC210 FR-DC
     O("cell_padding_top_twips", "0 (min)", 0, function(b) identical(b$cell_padding_top_twips, 0L)),
     E("cell_padding_top_twips", "negative", -1, "^`cell_padding_top_twips` must be a single non-negative integer"),
     E("cell_padding_top_twips", "Inf", Inf, "^`cell_padding_top_twips` must be a single non-negative integer"),
-    C("font", "non-ASCII", .eb2_kanji2, "ok:\\\\u26126\\?\\\\u26397\\?;"),
+    C("font", "non-ASCII", .eb2_kanji2, "ok:\\\\fcharset128 \\\\'96\\\\'be\\\\'92\\\\'a9;"),
     E("font", "empty string", "", "^`font` must be a single font family name"),
     E("markup", "prefix", "scr", "^`markup` must be a subset"),
     O("drop_empty_rows", "TRUE", TRUE, function(b) isTRUE(b$drop_empty_rows)),
@@ -512,19 +512,19 @@ test_that("FT-DC285 [FR-DC203 FR-DC204 FR-DC205 FR-DC206 FR-DC207 FR-DC210 FR-DC
   }
 }
 
-test_that("FT-DC286 [FR-DC295 FR-DC297 FR-DC300 FR-DC302 FR-DC325 FR-DC326 FR-DC327 FR-DC328 FR-DC329 FR-DC331 FR-DC341 FR-DC342 FR-DC343 FR-DC354 FR-TB600]: rtf_header(): equivalence classes and boundaries of its arguments", {
+test_that("FT-DC286 [FR-DC295 FR-DC297 FR-DC300 FR-DC302 FR-DC325 FR-DC326 FR-DC327 FR-DC328 FR-DC331 FR-DC341 FR-DC342 FR-DC343 FR-DC354 FR-TB600]: rtf_header(): equivalence classes and boundaries of its arguments", {
   .eb2_run(.eb2_band_cases("rtf_header"), .eb2_band_run(rtf_header, "header"))
   # No rule by default.
   expect_null(rtf_header(c(l = "A"))$border)
 })
 
-test_that("FT-DC287 [FR-DC295 FR-DC297 FR-DC300 FR-DC302 FR-DC325 FR-DC326 FR-DC327 FR-DC328 FR-DC329 FR-DC331 FR-DC341 FR-DC342 FR-DC343 FR-DC354 FR-TB600]: rtf_footer(): equivalence classes and boundaries of its arguments", {
+test_that("FT-DC287 [FR-DC295 FR-DC297 FR-DC300 FR-DC302 FR-DC325 FR-DC326 FR-DC327 FR-DC328 FR-DC331 FR-DC341 FR-DC342 FR-DC343 FR-DC354 FR-TB600]: rtf_footer(): equivalence classes and boundaries of its arguments", {
   .eb2_run(.eb2_band_cases("rtf_footer"), .eb2_band_run(rtf_footer, "footer"))
   # A top rule by default.
   expect_true(inherits(rtf_footer(c(l = "A"))$border, "rtf_border"))
 })
 
-test_that("FT-DC288 [FR-DC309 FR-DC310 FR-DC311 FR-DC312 FR-DC320 FR-DC321 FR-DC322 FR-DC324 FR-DC354]: rtf_style(): equivalence classes and boundaries of its arguments", {
+test_that("FT-DC288 [FR-DC309 FR-DC310 FR-DC311 FR-DC320 FR-DC321 FR-DC322 FR-DC324 FR-DC354]: rtf_style(): equivalence classes and boundaries of its arguments", {
   C <- .eb2_case
   E <- .eb2_err
   O <- .eb2_obj
@@ -537,7 +537,7 @@ test_that("FT-DC288 [FR-DC309 FR-DC310 FR-DC311 FR-DC312 FR-DC320 FR-DC321 FR-DC
   ttl <- function(n) function(x) identical(.eb2_cellx1(x), paste0("\\cellx", n))
   cases <- list(
     E("fnt", "unknown name", "Arial", "^`rtf_style\\(\\)`: unknown argument `fnt`"),
-    C("font", "non-ASCII", .eb2_kanji2, "ok:\\\\u26126\\?\\\\u26397\\?;"),
+    C("font", "non-ASCII", .eb2_kanji2, "ok:\\\\fcharset128 \\\\'96\\\\'be\\\\'92\\\\'a9;"),
     E("font", "empty string", "", fnt),
     E("font", "NA", NA_character_, fnt),
     E("font", "length 0", character(0), fnt),
@@ -585,7 +585,9 @@ test_that("FT-DC288 [FR-DC309 FR-DC310 FR-DC311 FR-DC312 FR-DC320 FR-DC321 FR-DC
     E("table", "row_height_exact NA", list(row_height_exact = NA), "^`rtf_style\\(table\\)\\$row_height_exact` must be TRUE or FALSE"),
     E("table", "header_row_height_twips -1", list(header_row_height_twips = -1), "^`rtf_style\\(table\\)\\$header_row_height_twips` must be"),
     E("titles", "align unknown", list(align = "x"), "^`rtf_style\\(titles\\)\\$align` must be"),
-    E("titles", "border, not its key", list(border = rtf_border(top = TRUE)), "^`rtf_style\\(titles = \\)`: unknown key `border`"),
+    O("titles", "border, a key as rtf_titles(border = ) is", list(border = rtf_border(top = TRUE)),
+      function(st) inherits(st$titles$border, "rtf_border")),
+    E("titles", "border not an rtf_border", list(border = "top"), "^`rtf_style\\(titles\\)\\$border` must be NULL or an rtf_border"),
     E("footnotes", "border a string", list(border = "top"), "^`rtf_style\\(footnotes\\)\\$border` must be NULL or an rtf_border\\(\\) object"),
     E("header", "color a name", list(color = "red"), "^`rtf_style\\(header\\)\\$color` must be NULL or a 6-digit hex colour")
   )
@@ -647,7 +649,7 @@ test_that("FT-TB776 [FR-IX355 FR-TB118 FR-TB119 FR-TB120 FR-TB145 FR-TB146 FR-TB
     O("read_meta", "NULL", NULL, nolab, more = list(x = lab)),
     O("read_meta", "token", "labels", hdr("Value label"), more = list(x = lab)),
     O("read_meta", "with an adapter token", c("labels", "spanning"), hdr("Value label"), more = list(x = lab)),
-    O("read_meta", "unknown token", "bogus", nolab, more = list(x = lab)),
+    E("read_meta", "unknown token", "bogus", "^Unknown data.frame `read_meta` token", more = list(x = lab)),
     O("read_meta", "length 0", character(0), nolab, more = list(x = lab)),
     E("read_meta", "NA", NA, rm, more = list(x = lab)),
     E("read_meta", "a number", 1, rm, more = list(x = lab)),
@@ -829,7 +831,7 @@ test_that("FT-PL968 [FR-PL462 FR-PL464 FR-PL467 FR-PL470 FR-PL471 FR-TB284 FR-TB
   })
 })
 
-test_that("FT-PL969 [FR-PL240 FR-PL241 FR-PL243 FR-PL244 FR-PL246 FR-PL248 FR-PL249]: plan_digits(): equivalence classes and boundaries of its arguments", {
+test_that("FT-PL969 [FR-PL240 FR-PL241 FR-PL243 FR-PL246 FR-PL248 FR-PL249]: plan_digits(): equivalence classes and boundaries of its arguments", {
   vals <- function(v) function(t) identical(t$Placebo, v)
   O <- .eb2_obj
   E <- .eb2_err
@@ -881,7 +883,7 @@ test_that("FT-PL970 [FR-PL183 FR-PL187 FR-PL193 FR-PL194 FR-PL196 FR-PL934 FR-TB
   })
 })
 
-test_that("FT-PL971 [FR-PL362 FR-PL363 FR-PL364 FR-PL913 FR-PL958 FR-TB198 FR-TB204 FR-TB605]: plan_stub(): equivalence classes and boundaries of its arguments", {
+test_that("FT-PL971 [FR-PL362 FR-PL363 FR-PL913 FR-PL958 FR-TB198 FR-TB204 FR-TB605]: plan_stub(): equivalence classes and boundaries of its arguments", {
   O <- .eb2_obj
   E <- .eb2_err
   ind <- function(n) function(p) {
@@ -929,7 +931,7 @@ test_that("FT-PL971 [FR-PL362 FR-PL363 FR-PL364 FR-PL913 FR-PL958 FR-TB198 FR-TB
 #  The fixes for #850 - #853: what the batch left out.
 # ---------------------------------------------------------------------------
 
-test_that("FT-TB777 [FR-TB606 FR-TB128 FR-TB203 FR-TB284]: a column position is a whole number in 1..ncol; TRUE, a fraction or a factor stops", {
+test_that("FT-TB777 [FR-TB606 FR-TB203]: a column position is a whole number in 1..ncol; TRUE, a fraction or a factor stops", {
   h <- data.frame(SOC = c("Gastro", "Gastro", "Nerv"),
                   PT  = c("Nausea", "Vomit", "Headache"),
                   N   = c("1", "2", "3"))
@@ -992,7 +994,7 @@ test_that("FT-DC289 [FR-DC356 FR-DC343]: rtf_header() / rtf_footer(width_twips =
   }
 })
 
-test_that("FT-PL972 [FR-PL959 FR-PL240 FR-PL241 FR-PL244]: plan_digits() takes whole decimals (0 or more) or \"<n>s\", and stops on anything else naming the key", {
+test_that("FT-PL972 [FR-PL959 FR-PL240 FR-PL241]: plan_digits() takes whole decimals (0 or more) or \"<n>s\", and stops on anything else naming the key", {
   st <- data.frame(ARM = rep(c("Placebo", "Active"), each = 3),
                    variable = rep(c("AGE", "SEX", "SEX"), 2),
                    .label = rep(c(NA, "F", "M"), 2),
@@ -1025,7 +1027,7 @@ test_that("FT-PL972 [FR-PL959 FR-PL240 FR-PL241 FR-PL244]: plan_digits() takes w
   expect_s3_class(plan_digits(p, rounding = "sas"), "table_plan")
 })
 
-test_that("FT-TB778 [FR-TB607 FR-PL187 FR-TB598]: a blank_rows position past the last row, below -1 or not whole stops, in rtftable(), as_rtftables() and plan_blanks()", {
+test_that("FT-TB778 [FR-TB607 FR-PL187]: a blank_rows position past the last row, below -1 or not whole stops, in rtftable(), as_rtftables() and plan_blanks()", {
   grp <- data.frame(G = c("Age", "  Mean", "  SD", "Sex", "  F", "  M"),
                     V = c("40", "41", "3", "x", "5", "6"))
   oor <- function(p) sprintf(paste0("^`blank_rows` position %s out of range: the table has 6 rows ",
@@ -1051,11 +1053,16 @@ test_that("FT-TB778 [FR-TB607 FR-PL187 FR-TB598]: a blank_rows position past the
   # plan_blanks() says which verb declared it
   expect_error(plan_apply(plan_blanks(table_plan(grp), where = 7)),
                "declared by:\\s+plan_blanks\\(where = 7\\)")
-  # checked on the whole body: a position within it, past a shorter page,
-  # puts no blank on that page
+  # checked on the whole body, and counted on it (#1028): a position is after
+  # that body row, on the page it lands on, once
   # (two pages of three rows each here)
   pg <- as_rtftables(grp, blank_rows = 4, max_rows = 4, split = "group_force")
-  expect_identical(lapply(pg, `[[`, "blank_rows"), list(NULL, NULL))
+  expect_identical(lapply(pg, `[[`, "blank_rows"), list(NULL, 1L))
   pg <- as_rtftables(grp, blank_rows = 2, max_rows = 4, split = "group_force")
-  expect_identical(lapply(pg, `[[`, "blank_rows"), list(2L, 2L))
+  expect_identical(lapply(pg, `[[`, "blank_rows"), list(2L, NULL))
+  # plan_blanks(where = ) the same: after body row 4, the first row of page 2
+  pg <- plan_apply(table_plan(grp) |>
+                     plan_paginate_rows(max_rows = 4, split = "group_force") |>
+                     plan_blanks(where = 4))
+  expect_identical(lapply(pg, `[[`, "blank_rows"), list(NULL, 1L))
 })

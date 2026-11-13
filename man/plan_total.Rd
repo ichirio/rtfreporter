@@ -4,25 +4,23 @@
 \alias{plan_total}
 \title{Add a Total column (or row) from the overall statistics}
 \usage{
-plan_total(
-  .plan,
-  label = "Total",
-  position = c("last", "first"),
-  direction = c("cols", "rows", "both")
-)
+plan_total(.plan, label = NULL, position = NULL, direction = NULL)
 }
 \arguments{
 \item{.plan}{A \code{\link[=table_plan]{table_plan()}}.}
 
 \item{label}{The heading of the Total column (or the label of the Total
-row), one text: \code{"Total"}.}
+row), one text.  Left out (\code{NULL}): \code{"Total"}, or what an earlier
+\code{plan_total()} said -- a later call that leaves it out keeps it.}
 
 \item{position}{Where it goes among the column key's values: \code{"last"}
-(default) or \code{"first"}.}
+or \code{"first"}.  Left out (\code{NULL}): \code{"last"}, or what an earlier
+\code{plan_total()} said.}
 
-\item{direction}{What is added:
+\item{direction}{What is added (left out, \code{NULL}: \code{"cols"}, or what an
+earlier \code{plan_total()} said):
 \describe{
-\item{\code{"cols"}}{(default) the Total \strong{column}, from the records
+\item{\code{"cols"}}{the Total \strong{column}, from the records
 with no value of the column key.  With two column keys the
 innermost is folded: \code{cols = c(TRTA, AESEV)} gives each arm a
 total column from its records with no \code{AESEV} (an AE at any

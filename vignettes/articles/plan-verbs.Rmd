@@ -65,7 +65,11 @@ Two rules hold for every verb:
    already know the arguments.
 2. **A later layer wins.** A verb can be called more than once. For the same
    key, the last call decides, so a house style is written once and one table
-   changes it by adding a line.
+   changes it by adding a line. It wins argument by argument. An argument that
+   is a named list or vector, such as `plan_columns(widths = c(AGE = 1200, SEX
+   = 900))`, is replaced as a whole: a later `widths = c(AGE = 1500)` leaves
+   `AGE` only. `plan_levels()`, `plan_labels()` and `plan_nest()` are the
+   exception.
 
 A table made with these verbs: the vital signs example under *Pages*.
 
@@ -489,7 +493,10 @@ analysis of that subgroup. The whole table, with
 `plan_style()` takes the whole-table settings `rtftable()` and
 `as_rtftables()` have: `border`, `font_size_half_points`, `row_height_twips`,
 `align_count_pct`, and the rules of each kind of row (`border_header`,
-`border_body`, `border_first_row`, ...).
+`border_body`, `border_first_row`, ...). Given with `border = "tfl"`, a
+`border_*` zone is merged onto the preset side by side, so
+`plan_style(border = "tfl", border_last_row = rtf_border(bottom = TRUE))`
+is the clinical rules with one more under the last row.
 
 ### `plan_cell_style()`: some cells
 
@@ -615,6 +622,23 @@ populations.
 `pages =`, you give one block for each page instead. Titles are often shared
 by a whole report and set in the running header, as in the examples above.
 These verbs are for the text that belongs to one table.
+
+Both take `border =`, an `rtf_border()` for the block as a whole: `top`
+above its first row, `bottom` below its last row, `inside_h` between rows.
+It belongs to this table, so it wins over a border the document sets for
+every block (`rtf_titles(border = )`, `rtf_style(titles = list(border = ))`).
+The title border is drawn when titles are a table
+(`rtf_style(title_format = "table")`); the footnotes are a table by default.
+
+```{r titles-border}
+pages <- table_plan(data.frame(Parameter = "Subjects", Placebo = "86",
+                               Active = "84")) |>
+  plan_titles("Table 14.1.1", "Demographics",
+              border = rtf_border(bottom = TRUE)) |>
+  plan_footnotes("Source: ADSL.", border = rtf_border(top = TRUE)) |>
+  plan_apply()
+attr(pages[[1]], "rtf_titles_border")
+```
 
 `plan_after(function(pages) ...)` runs your own functions on the finished
 pages. It is for what no verb declares. Prefer a verb when there is one: a

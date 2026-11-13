@@ -39,6 +39,8 @@ drops the rest, before the cells are made and the rows sorted.  The
 conditions are R over a record's statistics and keys, the language of
 \code{\link[=plan_cells]{plan_cells()}}' guards; nothing is computed, \code{p} is the ARD's.  The
 columns stay.  In a SOC / PT table a SOC goes with its last PT.
+A later \code{plan_filter()} replaces the earlier one as a whole: the last call
+is the filter.
 }
 \examples{
 # Invented adverse-event counts, 20 subjects an arm

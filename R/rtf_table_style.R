@@ -30,6 +30,11 @@
 #'
 #' @param border_header,border_spanning,border_body,border_first_row,border_last_row
 #'   [rtf_border()] objects (or `NULL`) controlling each zone of the table.
+#' @param border_group An [rtf_border()] (or `NULL`, the default: no rule)
+#'   drawn under the **last row of each row group** -- the groups
+#'   `as_rtftables(group_by = )` finds.  It is written by [as_rtftables()]
+#'   (and so by [plan_style()]); [rtftable()] alone has no groups and
+#'   ignores it.  See [plan_style()] for the last-row and page-break rules.
 #' @param header_align,header_bold,header_italic Defaults for column-header
 #'   row formatting.  `header_align = NULL` means "inherit `align`";
 #'   otherwise `"left"`, `"center"` or `"right"`.
@@ -70,6 +75,7 @@ rtf_table_style <- function(
   border_body      = NULL,
   border_first_row = NULL,
   border_last_row  = NULL,
+  border_group     = NULL,
   header_align     = NULL,
   header_bold      = FALSE,
   header_italic    = FALSE,
@@ -94,6 +100,7 @@ rtf_table_style <- function(
   .check_border(border_body,      "border_body")
   .check_border(border_first_row, "border_first_row")
   .check_border(border_last_row,  "border_last_row")
+  .check_border(border_group,     "border_group")
 
   structure(
     list(
@@ -102,6 +109,7 @@ rtf_table_style <- function(
       border_body      = border_body,
       border_first_row = border_first_row,
       border_last_row  = border_last_row,
+      border_group     = border_group,
 
       header_align  = .check_align(header_align, "header_align"),
       header_bold   = isTRUE(header_bold),
@@ -173,6 +181,8 @@ print.rtf_table_style <- function(x, ...) {
     v <- x[[paste0("border_", z)]]
     cat(sprintf("    %-10s: %s\n", z, if (is.null(v)) "none" else "<rtf_border>"))
   }
+  # only when set, so a style without it prints as before
+  if (!is.null(x$border_group)) cat("    group     : <rtf_border>\n")
   cat(sprintf("  header_align : %s\n",
               if (is.null(x$header_align)) "(inherit align)" else x$header_align))
   cat(sprintf("  header_bold  : %s\n", x$header_bold))
@@ -199,7 +209,8 @@ print.rtf_table_style <- function(x, ...) {
     spanning  = style$border_spanning,
     body      = style$border_body,
     first_row = style$border_first_row,
-    last_row  = style$border_last_row
+    last_row  = style$border_last_row,
+    group     = style$border_group
   )
 }
 

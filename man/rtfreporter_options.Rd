@@ -26,6 +26,29 @@ with: \code{"auto"} (factory), \code{"ragg"} or \code{"png"}.  The default follo
 \code{grDevices::png()} otherwise; \code{"png"} pins the base device.  Files
 given as paths are embedded as they are, whatever it says.}
 }
+
+One is the document's font:
+\describe{
+\item{\code{rtfreporter.font}}{The default of \code{rtf_document(font_table = )}
+and of every \verb{font =} (factory \code{"Courier New"}).  A family name that
+is not ASCII, such as a Japanese one, is written in the font table as
+Word writes it: in its East Asian code page with the matching
+\verb{\\fcharset}, and with its Latin name in \verb{\\falt} for common
+families (see \emph{Font names that are not ASCII} in \code{\link[=rtf_document]{rtf_document()}}).}
+}
+
+One is about the table of contents of \code{\link[=assemble_rtf]{assemble_rtf()}}:
+\describe{
+\item{\code{rtfreporter.toc_style}}{The size and boldness of its text, the
+default of \code{assemble_rtf(toc_style = )}: a list with the keys \code{title},
+\code{heading} and \code{entry} (each \code{list(size = <points>, bold = TRUE/FALSE)})
+and \code{gap} (\code{list(size = )}, the blank line below the title), merged over
+the built-in values key by key (factory \code{NULL}: title 14 pt bold,
+heading 11 pt bold, entry 10 pt, gap 9 pt).  \code{entry} also takes
+\code{hanging} (\code{FALSE}, \code{TRUE} for the title's wrapped lines lined up after
+its number, or a positive whole number of twips): a hanging indent for
+an entry's wrapped lines.}
+}
 }
 \examples{
 rtfreporter_options()

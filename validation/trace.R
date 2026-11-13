@@ -22,14 +22,18 @@
 #  making the change, never by the block merely calling the function:
 #    * a new test names its id and FRs at its head:
 #        test_that("FT-PL<nnn> [FR-PL101 FR-PL102]: table_plan() ...", ...)
-#    * an existing test is mapped in inst/validation/test_map.csv
+#    * an existing test is mapped in inst/validation/traceability_matrix.csv
 #      (file, test, ft, fr), written by hand.
+#  Each mapping is checked when it is made: inst/validation/traceability_review.csv
+#  (ft, fr, verdict, evidence, fr_covered) records that the test's expectations
+#  assert what the FR states, with the expectation lines as the evidence; the
+#  matrix shows it in its `checked` and `evidence` columns.
 #  The blocks that call a function in scope but check none of its FRs are
 #  listed as candidates (validation/out/candidates.csv): a help to find the
 #  tests to read, never counted as coverage.
 #
 #  Written to validation/out/:
-#    traceability.xlsx / .csv   the Traceability Matrix: one row a leaf FR, its
+#    traceability_matrix.xlsx / traceability_matrix.csv the Traceability Matrix: one row a leaf FR, its
 #                               tests and where (no results); the xlsx's
 #                               second sheet, the upper FRs' status
 #    ft.csv                     one row an FT: its file, test, FRs
@@ -107,7 +111,7 @@ files <- list.files(file.path(root, "tests", "testthat"), "^test-.*[.]R$", full.
 tb <- do.call(rbind, lapply(files, blocks))
 
 # ---- the map: by hand, and the new tests' own names -------------------------------
-map <- utils::read.csv(file.path(vdir, "test_map.csv"), colClasses = "character",
+map <- utils::read.csv(file.path(vdir, "traceability_matrix.csv"), colClasses = "character",
                        stringsAsFactors = FALSE)
 head_re <- "^(FT-[A-Z]{2}[0-9]{3,4}) \\[([^]]*)\\]:"
 named <- tb[grepl(head_re, tb$test), , drop = FALSE]
@@ -119,7 +123,7 @@ if (nrow(named)) {
 }
 gone <- !paste(map$file, map$test, sep = "\r") %in% paste(tb$file, tb$test, sep = "\r")
 if (any(gone)) {
-  stop(sprintf("test_map.csv names %d test(s) not in the tests (renamed?): %s.", sum(gone),
+  stop(sprintf("traceability_matrix.csv names %d test(s) not in the tests (renamed?): %s.", sum(gone),
                paste(utils::head(paste(map$file[gone], map$test[gone], sep = ": "), 3),
                      collapse = "; ")), call. = FALSE)
 }
@@ -153,17 +157,34 @@ tr$coverage <- vapply(fr$id, function(id) {
   n <- sum(tr$n_ft[match(lv, tr$fr)] > 0L)
   if (n == length(lv)) "covered" else if (n > 0L) "partial" else "none"
 }, "")
+# the check of each mapping (inst/validation/traceability_review.csv): its
+# test's expectations assert what the FR states -- the whole of it ("asserts")
+# or a part, the FR's tests together asserting all of it ("part")
+rv <- utils::read.csv(file.path(vdir, "traceability_review.csv"), colClasses = "character",
+                      na.strings = "", stringsAsFactors = FALSE)
+checked_of <- function(id) {
+  r <- rv[rv$fr == id & rv$ft %in% fts(id), , drop = FALSE]
+  if (!nrow(r) || length(setdiff(fts(id), r$ft))) return("")
+  if (any(r$verdict == "asserts")) "by a test" else "by its tests together"
+}
+evidence_of <- function(id) {
+  r <- rv[rv$fr == id & rv$ft %in% fts(id), , drop = FALSE]
+  paste(sprintf("%s: %s", r$ft, r$evidence), collapse = "\n")
+}
 tm <- data.frame(`FR ID` = tr$fr, parent = tr$parent, `function` = tr$functions, type = tr$kind,
                  requirement = tr$statement, `FT ID(s)` = tr$ft,
                  `test file:line` = vapply(tr$fr, function(id) where_of(fts(id)), ""),
-                 status = tr$coverage, check.names = FALSE, stringsAsFactors = FALSE)
+                 status = tr$coverage,
+                 checked = vapply(tr$fr, checked_of, ""),
+                 evidence = vapply(tr$fr, evidence_of, ""),
+                 check.names = FALSE, stringsAsFactors = FALSE)
 tm <- tm[leaf, , drop = FALSE]
-utils::write.csv(tm, file.path(out, "traceability.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+utils::write.csv(tm, file.path(out, "traceability_matrix.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 writexl::write_xlsx(list(`FR to FT` = tm,
                          `upper FRs` = data.frame(`FR ID` = tr$fr[!leaf], parent = tr$parent[!leaf],
                                                   requirement = tr$statement[!leaf],
                                                   status = tr$coverage[!leaf], check.names = FALSE)),
-                    file.path(out, "traceability.xlsx"))
+                    file.path(out, "traceability_matrix.xlsx"))
 utils::write.csv(map[c("ft", "file", "test", "fr")], file.path(out, "ft.csv"), row.names = FALSE,
                  fileEncoding = "UTF-8")
 
@@ -179,8 +200,6 @@ utils::write.csv(cand, file.path(out, "candidates.csv"), row.names = FALSE, file
 fn_rows <- lapply(scope, function(f) {
   mine <- leaf & vapply(fr_fns, function(x) f %in% x, NA)
   formals_ <- setdiff(names(formals(get(f, envir = ns))), c(".plan", "..."))
-  # (a deprecated export is left out of the argument count, as in the coverage test)
-  if (f %in% get(".deprecated_exports", envir = ns)) formals_ <- character()
   named_in_fr <- formals_[vapply(formals_, function(a) {
     ns$.fr_names_arg(f, a, fr$statement[mine])
   }, NA)]
@@ -218,6 +237,19 @@ res <- data.frame(file = d$file, test = d$test,
                   result = ifelse(d$error | d$failed > 0, "fail", ifelse(d$skipped, "skip", "pass")),
                   stringsAsFactors = FALSE)
 res <- res[!duplicated(paste(res$file, res$test)), , drop = FALSE]
+# each skip with its reason: the skip condition's message, as testthat's
+# "Skipped tests" section of the log groups them
+skip_rows <- lapply(lst$get_results(), function(x) {
+  sk <- Filter(function(e) inherits(e, "expectation_skip"), x$results)
+  if (!length(sk)) return(NULL)
+  data.frame(file = x$file, test = x$test,
+             reason = vapply(sk, function(e) trimws(sub("^Reason:\\s*", "", strsplit(conditionMessage(e), "\n")[[1L]][1L])), ""),
+             stringsAsFactors = FALSE)
+})
+skips <- do.call(rbind, skip_rows)
+if (is.null(skips)) skips <- data.frame(file = character(), test = character(), reason = character())
+skips$where <- tb$line[match(paste(skips$file, skips$test), paste(tb$file, tb$test))]
+skips$where <- sprintf("%s:%s", skips$file, skips$where)
 result <- res$result[match(paste(map$file, map$test), paste(res$file, res$test))]
 result[is.na(result)] <- "not run"
 fr_ok <- vapply(fr$id[leaf], function(id) {
@@ -319,6 +351,183 @@ dev_lines <- if (!nrow(dev) && !length(unassessed)) "None: every leaf requiremen
                                   paste(unassessed, collapse = ", ")))
 n_guard <- sum(tl$kind == "guard")
 n_ix <- sum(tl$kind == "interaction")
+cell <- function(x) gsub("\\s+", " ", gsub("|", "/", x, fixed = TRUE))
+
+# ---- the results by area (the FR id's area: requirements.csv) ---------------------------
+# `checked` is the review of the mappings (traceability_review.csv): "by a test" when a
+# test's expectations assert the whole requirement, "by its tests together" when each
+# asserts a part and together all of it, blank when not reviewed
+tl$area <- fr$area[leaf]
+tl$ok <- fr_ok
+tl$review <- tm$checked
+area_row <- function(x, label) {
+  sprintf("| %s | %d | %d | %d | %d | %d | %d |", label, nrow(x), sum(x$n_ft > 0), sum(x$ok),
+          sum(x$review == "by a test"), sum(x$review == "by its tests together"),
+          sum(x$n_ft > 0 & !nzchar(x$review)))
+}
+area_lines <- c(
+  "| Area | Leaf requirements | With a test | Tests pass | Review: asserts | Review: part only | Not reviewed |",
+  "|---|---|---|---|---|---|---|",
+  vapply(sort(unique(tl$area)), function(a) area_row(tl[tl$area == a, , drop = FALSE], a), ""),
+  gsub("^[|] (.*?) [|]", "| **\\1** |", area_row(tl, "Total"), perl = TRUE))
+
+# ---- the skips, with the reason (the mapped tests' run) ---------------------------------
+skip_lines <- if (!nrow(skips)) "No test of the mapped tests' run was skipped." else {
+  rs <- table(skips$reason)
+  rs <- names(rs)[order(-as.integer(rs), names(rs))]
+  c("| Reason | Skips | Where (test file:line) |", "|---|---|---|",
+    vapply(rs, function(r) {
+      w <- skips$where[skips$reason == r]
+      sprintf("| %s | %d | %s |", cell(r), length(w), cell(paste(unique(w), collapse = ", ")))
+    }, ""))
+}
+
+# ---- the supported environments, and which tested one stands for each range ------------
+# The mapping (supported -> stands for it -> why) and the risks accepted are the
+# Quality Plan's section "The environment strategy", read here at run time; the rule
+# that finds an environment of this run for a row of that table is below.
+desc_f <- read.dcf(file.path(root, "DESCRIPTION"), fields = c("Depends", "Imports", "Suggests"))
+dep_list <- function(x) {
+  x <- trimws(strsplit(ifelse(is.na(x), "", x), ",")[[1L]])
+  x[nzchar(x)]
+}
+r_min <- sub("^R \\(>= ([0-9.]+)\\)$", "\\1", grep("^R \\(", dep_list(desc_f[, "Depends"]), value = TRUE))
+imports <- dep_list(desc_f[, "Imports"])
+base_pkgs <- rownames(utils::installed.packages(priority = "base"))
+sug <- dep_list(desc_f[, "Suggests"])
+sug_pkg <- sub("\\s*[(].*$", "", sug)
+sug_min <- ifelse(grepl("[(]>=", sug), sub("^.*[(]>=\\s*([^)]+)[)].*$", "\\1", sug), "")
+plan <- readLines(file.path(vdir, "quality-plan.md"), encoding = "UTF-8", warn = FALSE)
+i0 <- grep("^### The environment strategy", plan)
+i1 <- grep("^##", plan)
+i1 <- if (length(i0)) min(c(i1[i1 > i0], length(plan) + 1L)) - 1L else 0L
+strategy <- if (length(i0)) plan[i0:i1] else character()
+rows <- strsplit(sub("^[|] *", "", sub(" *[|]$", "", grep("^[|]", strategy, value = TRUE))), " *[|] *")
+rows <- Filter(function(x) length(x) == 3L && !grepl("^-+$", x[1L]) && x[1L] != "Supported", rows)
+# the risks accepted: the list that follows "What is not tested"
+j0 <- grep("^What is not tested", strategy)
+risk_items <- character()
+if (length(j0)) {
+  for (ln in strategy[-seq_len(j0)]) {
+    if (grepl("^- ", ln)) risk_items <- c(risk_items, sub("^- ", "", ln))
+    else if (grepl("^  +\\S", ln) && length(risk_items)) {
+      risk_items[length(risk_items)] <- paste(risk_items[length(risk_items)], trimws(ln))
+    } else if (nzchar(trimws(ln)) && length(risk_items)) break
+  }
+}
+# the versions of every suggested package, by environment (packages.csv of each record)
+env_dirs <- c(list.dirs(file.path(root, "validation", "env-out"), recursive = FALSE),
+              list.dirs(file.path(root, "validation", "env-local"), recursive = FALSE))
+env_dirs <- env_dirs[file.exists(file.path(env_dirs, "env.csv"))]
+pk <- do.call(rbind, lapply(env_dirs, function(d) {
+  p <- file.path(d, "packages.csv")
+  if (!file.exists(p)) return(NULL)
+  x <- utils::read.csv(p, colClasses = "character", na.strings = c("NA", ""), stringsAsFactors = FALSE)
+  x$environment <- utils::read.csv(file.path(d, "env.csv"), colClasses = "character")$environment
+  x
+}))
+# which environment of this run stands for a row of the plan's table
+env_for <- function(supported) {
+  if (is.null(envs)) return(list(list(label = NULL, idx = integer())))
+  devel <- grepl("Under development|devel", envs$r)
+  rv <- suppressWarnings(numeric_version(ifelse(grepl("^R version [0-9]", envs$r),
+                                         sub("^R version ([0-9]+[.][0-9]+).*$", "\\1", envs$r), NA)))
+  is_min <- !devel & !is.na(rv) & rv == numeric_version(r_min[1L])[1L, 1:2]
+  # the minimum environment: the CI job "ubuntu-24.04 (R <min>, minimum
+  # environment)", R at DESCRIPTION's minimum and each dependency at its own;
+  # the recommended environment: the CI jobs of the latest R, "(R release)"
+  min_env <- grepl("minimum environment", envs$environment, fixed = TRUE)
+  rec_env <- envs$source == "ci" & grepl("(R release)", envs$environment, fixed = TRUE)
+  os_is <- function(re) which(grepl(re, envs$os))
+  if (grepl("^The minimum environment", supported)) {
+    list(list(label = NULL, idx = which(min_env & is_min)))
+  } else if (grepl("^The recommended environment", supported)) {
+    list(list(label = NULL, idx = which(rec_env)))
+  } else if (grepl("in use now", supported)) {
+    list(list(label = NULL, idx = which(!devel & !min_env)))
+  } else if (grepl("^The next R", supported)) {
+    list(list(label = NULL, idx = which(devel)))
+  } else if (grepl("^Windows, macOS and Linux", supported)) {
+    list(list(label = "Windows", idx = os_is("^Windows")), list(label = "macOS", idx = os_is("^macOS")),
+         list(label = "Linux", idx = os_is("Ubuntu|Debian|Linux|Fedora")))
+  } else list(list(label = NULL, idx = NA_integer_))
+}
+sup_gaps <- character()
+sup_rows <- if (!is.null(envs)) unlist(lapply(rows, function(x) {
+  lapply(env_for(x[1L]), function(m) {
+    what <- if (is.null(m$label)) x[1L] else sprintf("%s: %s", x[1L], m$label)
+    if (anyNA(m$idx)) {
+      sup_gaps <<- c(sup_gaps, what)
+      return(sprintf("| %s | %s | (no rule in validation/trace.R for this row of the plan) | **not checked** | %s |",
+                     cell(what), cell(x[2L]), cell(x[3L])))
+    }
+    bad <- m$idx[m$idx %in% which(!env_pass(envs) | envs$environment %in% env_stale)]
+    verdict <- if (!length(m$idx)) {
+      sup_gaps <<- c(sup_gaps, what)
+      "**no environment gathered**"
+    } else if (length(bad)) {
+      sup_gaps <<- c(sup_gaps, what)
+      sprintf("**failing: %s**", paste(envs$environment[bad], collapse = "; "))
+    } else sprintf("pass (%d)", length(m$idx))
+    sprintf("| %s | %s | %s | %s | %s |", cell(what), cell(x[2L]),
+            if (length(m$idx)) cell(paste(envs$environment[m$idx], collapse = "; ")) else "--",
+            verdict, cell(x[3L]))
+  })
+}), use.names = FALSE)
+sup_head <- c("| Supported | Stands for it (Quality Plan) | In this run | Result | Why that is enough (Quality Plan) |",
+              "|---|---|---|---|---|")
+min_run <- function(p) {
+  x <- pk[pk$package == p & !is.na(pk$version), , drop = FALSE]
+  if (!nrow(x)) return(c(low = "--", high = "--"))
+  v <- numeric_version(x$version)
+  c(low = as.character(min(v)), high = as.character(max(v)))
+}
+# the environments where a package was not installed (or its record does not list it)
+absent_in <- function(p) {
+  have <- pk$environment[pk$package == p & !is.na(pk$version)]
+  setdiff(unique(pk$environment), have)
+}
+sug_show <- if (is.null(pk)) integer() else
+  which(nzchar(sug_min) | vapply(sug_pkg, function(p) length(absent_in(p)) > 0L, NA))
+sug_lines <- if (is.null(pk)) "No environment's list of package versions was gathered in this run." else c(
+  "| Suggested package | Minimum (DESCRIPTION) | Lowest used | Highest used | Not installed in |",
+  "|---|---|---|---|---|",
+  vapply(sug_show, function(k) {
+    m <- min_run(sug_pkg[k])
+    gone <- absent_in(sug_pkg[k])
+    sprintf("| %s | %s | %s | %s | %s |", sug_pkg[k], if (nzchar(sug_min[k])) sug_min[k] else "--",
+            m[["low"]], m[["high"]], if (length(gone)) cell(paste(gone, collapse = "; ")) else "")
+  }, ""))
+at_min <- if (is.null(pk)) NA_integer_ else sum(vapply(seq_along(sug_pkg), function(k) {
+  m <- min_run(sug_pkg[k])
+  nzchar(sug_min[k]) && m[["low"]] != "--" && numeric_version(m[["low"]]) <= numeric_version(sug_min[k])
+}, NA))
+sup_lines <- c(
+  sprintf("What the package says it supports, read from DESCRIPTION: R (>= %s); %s; %d suggested packages, %d with a minimum version.",
+          r_min[1L],
+          if (all(imports %in% base_pkgs)) {
+            sprintf("imports only packages that ship with R (%s)", paste(imports, collapse = ", "))
+          } else sprintf("imports %s", paste(imports, collapse = ", ")),
+          length(sug), sum(nzchar(sug_min))),
+  "The operating systems are Windows, macOS and Linux (the Quality Plan, section 5).",
+  "",
+  "For each supported range, the environment of this run that stands for it, as the Quality Plan's *environment strategy* says, and its result:",
+  "",
+  if (is.null(envs)) "No environment's record was gathered in this run." else c(sup_head, unlist(sup_rows)),
+  if (length(sup_gaps)) c("", sprintf("**Not every supported range has a passing environment standing for it: %s.**",
+                                       paste(sup_gaps, collapse = "; "))) else
+    if (!is.null(envs)) c("", "Every supported range has at least one passing environment standing for it."),
+  "",
+  "The suggested packages, as the environments ran them (those with a minimum version, and those not installed in some environment):",
+  "",
+  sug_lines,
+  if (!is.na(at_min)) c("", sprintf("%d of the %d suggested packages with a minimum version were run at that minimum in at least one environment%s.",
+                                    at_min, sum(nzchar(sug_min)),
+                                    if (at_min < sum(nzchar(sug_min))) "; the others ran only with a newer version" else "")),
+  "",
+  "What is not tested, and the risk accepted (the Quality Plan, the *environment strategy*):",
+  "",
+  if (length(risk_items)) paste("-", risk_items) else "(the list was not found in inst/validation/quality-plan.md)")
 sm <- c(
   sprintf("# rtfreporter %s: Quality Report", utils::packageVersion("rtfreporter")),
   "",
@@ -351,12 +560,28 @@ sm <- c(
                                                      tr$coverage[!leaf][tr$coverage[!leaf] != "covered"]),
                                              collapse = "; "))),
   "",
+  "## Results by area",
+  "",
+  "The leaf requirements by the area of their FR id; *Review* is the check of each mapping (traceability_review.csv): **asserts**, a test's expectations assert the whole requirement; **part only**, each test asserts a part and together all of it.",
+  "",
+  area_lines,
+  "",
+  "## Skipped tests, with the reason",
+  "",
+  sprintf("The mapped tests' run (test-log.txt): %d skipped, by the reason the test gives. The skip count of each other environment is in its table row; its reasons are in environments.txt.", nrow(skips)),
+  "",
+  skip_lines,
+  "",
   "## Environments",
   "",
   sprintf("The same tests, on every environment of the Quality Plan (section 5: %d in CI, %d local), each record of rtfreporter %s; gathered here: %d in CI, %d local.",
           expected_env[["ci"]], expected_env[["local"]], this_version, n_env[["ci"]], n_env[["local"]]),
   "",
   env_lines,
+  "",
+  "## Supported environments, and the tested ones that stand for them",
+  "",
+  sup_lines,
   "",
   "## Deviations",
   "",
@@ -414,9 +639,9 @@ sm <- c(
   "",
   "## Attachments, and how to read them",
   "",
-  "On the release each file's name carries the tag (`quality-report-<tag>.pdf`, `traceability-<tag>.xlsx`, ...); a CI run started by hand keeps them as its artifact `quality-report`.",
+  "On the release each file's name carries the tag (`quality-report-<tag>.pdf`, `traceability_matrix-<tag>.xlsx`, ...); a CI run started by hand keeps them as its artifact `quality-report`.",
   "",
-  "- **traceability.xlsx**, the Traceability Matrix (FR -> FT). Sheet *FR to FT*: one row a leaf requirement -- its FR ID, parent, function, type, the requirement, the FT IDs that check it and where they are (test file:line), its status (`covered` or `none`). Read it by requirement; a blank FT ID is a deviation (above). Sheet *upper FRs*: each parent requirement and whether every leaf under it is covered. It holds no results: those are test-log.txt. (traceability.csv, in the artifact, is the first sheet.)",
+  "- **traceability_matrix.xlsx**, the Traceability Matrix (FR -> FT). Sheet *FR to FT*: one row a leaf requirement -- its FR ID, parent, function, type, the requirement, the FT IDs that check it and where they are (test file:line), its status (`covered` or `none`), whether the check of its mappings found the requirement asserted (`checked`: by a test, or by its tests together) and the expectation lines that assert it (`evidence`). Read it by requirement; a blank FT ID is a deviation (above). Sheet *upper FRs*: each parent requirement and whether every leaf under it is covered. It holds no results: those are test-log.txt. (traceability_matrix.csv, in the artifact, is the first sheet.)",
   "- **test-log.txt**: testthat's own output for the mapped tests, run in this job, ending in `[ FAIL n | WARN n | SKIP n | PASS n ]`. The evidence that they pass.",
   "- **ft.csv**: one row a functional test: its FT ID, file, name and the requirements it checks. Read it by test.",
   "- **functions.csv**: one row a function in scope: its leaf requirements by type, how many have a test, its arguments, those a requirement names, those a test gives and those no requirement names. Read it for a function's depth (an aid).",

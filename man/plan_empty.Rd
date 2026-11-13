@@ -7,8 +7,8 @@
 plan_empty(
   .plan,
   text = "No subjects met the criteria.",
-  when = c("auto", "no_rows", "overall_zero"),
-  position = c("last", "first", "replace"),
+  when = NULL,
+  position = NULL,
   footnote = NULL
 )
 }
@@ -16,18 +16,22 @@ plan_empty(
 \item{.plan}{A \code{\link[=table_plan]{table_plan()}}.}
 
 \item{text}{The row's text, one string, in the row label column (the
-first column when there is none); \code{NULL} for no row.}
+first column when there is none); \code{NULL} for no row.  Left out: the
+default sentence, or what an earlier \code{plan_empty()} said -- a later
+call that leaves it out keeps it.}
 
-\item{when}{When the table is empty:
+\item{when}{When the table is empty (left out, \code{NULL}: \code{"auto"}, or
+what an earlier \code{plan_empty()} said):
 \describe{
-\item{\code{"auto"}}{(default) either of the two below.}
+\item{\code{"auto"}}{either of the two below.}
 \item{\code{"no_rows"}}{no body row, after \code{\link[=plan_filter]{plan_filter()}}.}
 \item{\code{"overall_zero"}}{its overall row (\code{normalize_ard(overall = )})
 is 0 in every column.}
 }}
 
-\item{position}{Where the row goes: \code{"last"} (default, after the rows:
-the overall row's 0 stays), \code{"first"} or \code{"replace"} (the row alone).}
+\item{position}{Where the row goes: \code{"last"} (after the rows: the
+overall row's 0 stays), \code{"first"} or \code{"replace"} (the row alone).
+Left out (\code{NULL}): \code{"last"}, or what an earlier \code{plan_empty()} said.}
 
 \item{footnote}{A line added to the table's footnotes when it is empty,
 after any \code{\link[=plan_footnotes]{plan_footnotes()}}; \code{NULL} (default) none.}

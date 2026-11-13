@@ -44,8 +44,15 @@ size, and an explicit height always wins.}
 }}
 
 \item{border}{\code{NULL} (default) for \strong{no rule} -- unlike the page footer,
-the footnote draws none unless asked. An \code{\link[=rtf_border]{rtf_border()}} puts one on the
-first row, e.g. \code{border = rtf_border(top = TRUE)}.}
+the footnote draws none unless asked.  An \code{\link[=rtf_border]{rtf_border()}} is the border
+of the block as a whole, read as \code{\link[=rtf_footer]{rtf_footer()}}'s is: \code{top} above the
+first row, \code{bottom} below the last row, \code{inside_h} between rows, \code{left}
+/ \code{right} on the outer edges of every row, \code{inside_v} between the cells
+of a row; e.g. \code{border = rtf_border(top = TRUE)} for a separator rule
+above the block.  A row given as a list may carry its own \verb{border =}
+(\code{list(columns = , border = )}), merged side by side over the block's.  It is drawn only with
+\code{rtf_style(footnote_format = "table")} (the default); the text form
+ignores it and warns.}
 }
 \value{
 Modified rtf_document.
@@ -55,7 +62,9 @@ Same shape as \code{\link[=rtf_titles]{rtf_titles()}}: a list with one block per
 figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string,
 a named vector \code{c(l = , c = , r = )}, or the page footer's row list
 \code{list(columns = , row_height_twips = )}, whose \code{row_height_twips} is that
-row's height over the block's).
+row's height over the block's; it takes \verb{border =} and, as a band row
+does, \verb{bold =}, \verb{italic =} and \verb{underline =} (each \code{TRUE} or \code{FALSE})
+for every cell of the row).
 Footnote rows default to left-aligned and draw no rule unless \code{border}
 (or a row's own \code{border}) asks for one. \code{NULL} per element
 suppresses the footnote for that content.

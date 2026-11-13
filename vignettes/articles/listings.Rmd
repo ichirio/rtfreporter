@@ -490,6 +490,10 @@ lsting <- rlistings::as_listing(adsl, key_cols = "USUBJID")
 as_rtftables(lsting, max_rows = 20)     # no `listing =` argument
 ```
 
+That gives pages of up to 20 rows, cut between subjects: `max_rows` alone makes
+the split `"group_safe"` on the listing's first key column, so a subject is kept
+whole when it fits on a page. `split` and `group_col` of your own still win.
+
 `build_listing()` and `as_rtftables(listing = )` refuse a `listing_df` for that
 reason, with a message pointing here. (An rlistings listing is a `data.frame`
 subclass, so without that guard it would quietly be treated as raw source

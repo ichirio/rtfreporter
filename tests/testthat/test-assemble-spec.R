@@ -132,9 +132,13 @@ test_that("assemble_folder() without an output file gives the table of contents"
   txt3 <- paste(readLines(out3, warn = FALSE), collapse = "")
   expect_lt(regexpr("SAFETY", txt3), regexpr("DEMOGRAPHICS", txt3))
 
-  expect_error(assemble_rtf(toc = data.frame(file = spec$file),
+  # (a table needs the column `file`; without `label` the titles label the rows)
+  expect_error(assemble_rtf(toc = data.frame(label = spec$label),
                             output_file = tempfile(fileext = ".rtf")),
-               "needs the columns `file` and `label`")
+               "needs the column `file`")
+  out4 <- tempfile(fileext = ".rtf")
+  assemble_rtf(toc = data.frame(file = spec$file), output_file = out4)
+  expect_true(file.exists(out4))
 })
 
 test_that("FT-AS130 [FR-AS151 FR-AS148 FR-AS149]: assemble_folder() orders numbered files by number, then the others by file name, the same in every locale (#827)", {
@@ -186,4 +190,43 @@ test_that("natural order: a long run of digits sorts by its number, with no warn
   expect_identical(x[o], c("a.rtf", "t_9.rtf", "t_10.rtf", "t_20261106092959.rtf",
                            "t_020261106093000.rtf", "t_20261106093001.rtf",
                            "t_123456789012345678901.rtf"))
+})
+
+# ── coverage gaps: label markup, an .xlsx spec ─────────────────────────────
+
+test_that("a title's markup group keeps its text in the contents label", {
+  d <- tempfile("asm"); dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  mk <- function(f, ttl) {
+    doc <- rtf_document() |>
+      rtf_tables(data.frame(A = 1:2)) |>
+      rtf_titles(list(c("Table 14.1.1", ttl)))
+    generate_rtfreport(doc, file.path(d, f), overwrite = TRUE)
+  }
+  mk("a.rtf", "Water H_{2}O study")
+  mk("b.rtf", "Plain study")
+  # the RTF holds the subscript group ...
+  expect_true(any(grepl("H{\\sub 2}O", readLines(file.path(d, "a.rtf"), warn = FALSE),
+                        fixed = TRUE)))
+  # ... and the label has its text without the group
+  sp <- assemble_folder(d)
+  expect_true("Table 14.1.1  Water H2O study" %in% sp$label)
+  expect_true("Table 14.1.1  Plain study" %in% sp$label)
+})
+
+test_that("an .xlsx spec file is written by assemble_folder() and read back by assemble_rtf()", {
+  skip_if_not_installed("writexl")
+  skip_if_not_installed("readxl")
+  d <- .demo_dir()
+  xl <- tempfile(fileext = ".xlsx")
+  out <- tempfile(fileext = ".rtf")
+  on.exit(unlink(c(d, xl, out), recursive = TRUE), add = TRUE)
+  sp <- assemble_folder(d, spec_file = xl)
+  expect_true(file.exists(xl))
+  expect_identical(nrow(readxl::read_xlsx(xl)), nrow(sp))
+  assemble_rtf(toc = xl, output_file = out)
+  expect_true(file.exists(out))
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl("Demographics", txt, fixed = TRUE))
+  expect_true(grepl("Adverse Events", txt, fixed = TRUE))
 })

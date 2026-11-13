@@ -3,10 +3,6 @@
 # \clpadl as the top padding), the bottom as \clpadb<N>\clpadfb3.  0 / NULL
 # write nothing.  And a title, footnote or header / footer row's own height.
 
-# rtf_default_format() / default_format = are deprecated (#804): these tests
-# check what they still do, not the warning (test-rtf-style.R does).
-silence_deprecation("rtf_default_format")
-
 .vpad_df <- function() data.frame(A = 1:2, B = c("x", "y"))
 
 # The rows of a rendered document that carry `text` in a cell.
@@ -15,11 +11,11 @@ silence_deprecation("rtf_default_format")
   rows[grepl(text, rows, fixed = TRUE)]
 }
 
-.vpad_doc <- function(fmt = rtf_default_format(title_format = "table"),
+.vpad_doc <- function(fmt = rtf_style(title_format = "table"),
                       header = rtf_header(c(l = "HDR")),
                       footer = rtf_footer(c(l = "FTR")),
                       tbl = rtftable(.vpad_df())) {
-  rtf_document(default_format = fmt) |>
+  rtf_document(style = fmt) |>
     rtf_section(page = 1, secinfo = list(header = header, footer = footer)) |>
     rtf_tables(list(tbl)) |>
     rtf_titles(list("TTL")) |>
@@ -27,7 +23,7 @@ silence_deprecation("rtf_default_format")
 }
 
 test_that("FT-DC226 [FR-DC298 FR-DC299]: the document's top / bottom padding goes into every cell definition; 0 or NULL writes nothing", {
-  txt <- .render_to_string(.vpad_doc(rtf_default_format(
+  txt <- .render_to_string(.vpad_doc(rtf_style(
     title_format = "table", cell_padding_top_twips = 30L,
     cell_padding_bottom_twips = 45L)))
   pad <- "\\clpadl30\\clpadfl3\\clpadb45\\clpadfb3"
@@ -41,38 +37,23 @@ test_that("FT-DC226 [FR-DC298 FR-DC299]: the document's top / bottom padding goe
                                       gregexpr("clpadl30", .vpad_row(txt, " x\\cell"),
                                                fixed = TRUE))), 2L)
   # only the side given
-  txt_t <- .render_to_string(.vpad_doc(rtf_default_format(
+  txt_t <- .render_to_string(.vpad_doc(rtf_style(
     title_format = "table", cell_padding_top_twips = 30L)))
   expect_true(grepl("\\clpadl30\\clpadfl3\\cellx", txt_t, fixed = TRUE))
   expect_false(grepl("clpadb", txt_t, fixed = TRUE))
 
   # 0 and NULL: nothing written, the file byte for byte as before
   base <- .render_to_string(.vpad_doc())
-  zero <- .render_to_string(.vpad_doc(rtf_default_format(
+  zero <- .render_to_string(.vpad_doc(rtf_style(
     title_format = "table", cell_padding_top_twips = 0L,
     cell_padding_bottom_twips = 0L)))
   expect_false(grepl("clpad", base, fixed = TRUE))
   expect_identical(zero, base)
-
-  fmt <- rtf_default_format(cell_padding_top_twips = 30L)
-  expect_identical(fmt$cell_padding_top_twips, 30L)
-  expect_null(fmt$cell_padding_bottom_twips)
-  expect_output(print(fmt), "padding T/B 30/0 twips")
-  expect_false(any(grepl("T/B", capture.output(print(rtf_default_format())))))
-
-  expect_error(rtf_default_format(cell_padding_top_twips = -1),
-               "`cell_padding_top_twips` must be a single non-negative integer (twips) or NULL.",
-               fixed = TRUE)
-  expect_error(rtf_default_format(cell_padding_bottom_twips = c(1, 2)),
-               "`cell_padding_bottom_twips` must be a single non-negative integer",
-               fixed = TRUE)
-  expect_error(rtf_default_format(cell_padding_bottom_twips = NA),
-               "`cell_padding_bottom_twips`", fixed = TRUE)
 })
 
 test_that("FT-DC227 [FR-DC300]: rtf_header() / rtf_footer(cell_padding_top_twips, cell_padding_bottom_twips) pad the band's cells, over the document's", {
   doc <- .vpad_doc(
-    rtf_default_format(cell_padding_top_twips = 30L, cell_padding_bottom_twips = 30L),
+    rtf_style(cell_padding_top_twips = 30L, cell_padding_bottom_twips = 30L),
     header = rtf_header(list(c(l = "HDR", r = "R1")), cell_padding_top_twips = 90L),
     footer = rtf_footer(c(l = "FTR"), cell_padding_bottom_twips = 0L))
   txt <- .render_to_string(doc)
@@ -128,7 +109,7 @@ test_that("FT-DC228 [FR-DC301 FR-DC302]: a header / footer row given as a list h
 })
 
 test_that("FT-DC229 [FR-DC303 FR-DC304]: a title row's row_height_twips is that row's height in the table form", {
-  doc <- rtf_document(default_format = rtf_default_format(title_format = "table")) |>
+  doc <- rtf_document(style = rtf_style(title_format = "table")) |>
     rtf_tables(list(.vpad_df())) |>
     rtf_titles(list(list("T1", list(text = "T2", row_height_twips = 444L),
                          list(text = "", row_height_twips = 120L),
@@ -166,7 +147,7 @@ test_that("FT-DC230 [FR-DC305 FR-DC306]: a footnote row given as list(columns = 
 
   # the paragraph form has no rows: the text is kept, the height has no place
   txt_p <- .render_to_string(rtf_document(
-    default_format = rtf_default_format(footnote_format = "text")) |>
+    style = rtf_style(footnote_format = "text")) |>
       rtf_tables(list(.vpad_df())) |>
       rtf_footnotes(list(list(list(columns = "F2", row_height_twips = 555L)))))
   expect_match(txt_p, "\\\\pard\\\\ql\\\\li0\\\\ri0 F2\\\\par")
@@ -178,8 +159,8 @@ test_that("FT-DC230 [FR-DC305 FR-DC306]: a footnote row given as list(columns = 
   expect_error(.fn_err(list(columns = "F2", row_height_twips = -1)),
                "`rtf_footnotes()` row 2's `row_height_twips` must be a single non-negative integer (twips) or NULL.",
                fixed = TRUE)
-  expect_error(.fn_err(list(columns = "F2", bold = TRUE)),
-               "`rtf_footnotes()` row 2: a row given as a list takes columns = and row_height_twips =; got 'bold'.",
+  expect_error(.fn_err(list(columns = "F2", colour = "red")),
+               "`rtf_footnotes()` row 2: a row given as a list takes columns =, row_height_twips =, border =, bold =, italic = and underline =; got 'colour'.",
                fixed = TRUE)
   # a list without columns is the old styled row, still refused
   expect_error(.fn_err(list(text = "F2")), "Per-row styling lists are no longer supported",
@@ -251,22 +232,22 @@ test_that("FT-IX026 [FR-IX395]: top / bottom padding: the module's own value win
   txt <- .render_to_string(rtf_document() |> rtf_tables(list(rtftable(df))))
   expect_true(grepl("\\clpadl11\\clpadfl3\\clpadb12\\clpadfb3\\cellx", txt, fixed = TRUE))
   # the document default over the option
-  fmt <- rtf_default_format(cell_padding_top_twips = 21L, cell_padding_bottom_twips = 22L)
-  txt <- .render_to_string(rtf_document(default_format = fmt) |>
+  fmt <- rtf_style(cell_padding_top_twips = 21L, cell_padding_bottom_twips = 22L)
+  txt <- .render_to_string(rtf_document(style = fmt) |>
                              rtf_tables(list(rtftable(df))))
   expect_true(grepl("\\clpadl21\\clpadfl3\\clpadb22\\clpadfb3\\cellx", txt, fixed = TRUE))
   expect_false(grepl("clpadl11", txt, fixed = TRUE))
   # a style over the document; the table's own over the style
   st <- rtf_table_style(cell_padding_top_twips = 31L)
-  txt <- .render_to_string(rtf_document(default_format = fmt) |>
+  txt <- .render_to_string(rtf_document(style = fmt) |>
                              rtf_tables(list(rtftable(df, style = st))))
   expect_true(grepl("\\clpadl31\\clpadfl3\\clpadb22\\clpadfb3\\cellx", txt, fixed = TRUE))
-  txt <- .render_to_string(rtf_document(default_format = fmt) |>
+  txt <- .render_to_string(rtf_document(style = fmt) |>
                              rtf_tables(list(rtftable(df, style = st,
                                                       cell_padding_top_twips = 41L))))
   expect_true(grepl("\\clpadl41\\clpadfl3\\clpadb22\\clpadfb3\\cellx", txt, fixed = TRUE))
   # a band's own over the document
-  txt <- .render_to_string(rtf_document(default_format = fmt) |>
+  txt <- .render_to_string(rtf_document(style = fmt) |>
     rtf_section(page = 1, secinfo = list(
       header = rtf_header(c(l = "HDR"), cell_padding_bottom_twips = 52L),
       footer = NULL)) |>

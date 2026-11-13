@@ -420,8 +420,11 @@
   if (is.character(f) && length(f) == 1L && nzchar(f)) f else NULL
 }
 
+# interactive() is a primitive, which a test cannot mock; this binding it can
+.is_interactive <- function() interactive()
+
 .program_from_rstudio <- function() {
-  if (!interactive() || !requireNamespace("rstudioapi", quietly = TRUE)) {
+  if (!.is_interactive() || !requireNamespace("rstudioapi", quietly = TRUE)) {
     return(NULL)
   }
   ok <- tryCatch(rstudioapi::isAvailable(), error = function(e) FALSE)
@@ -895,6 +898,36 @@
   b
 }
 
+# The border of each row of a block whose rows are fixed -- a page header or
+# footer band, a title or footnote block -- written as one zone.
+#
+# `zone` (an rtf_border or NULL) is the whole block's: `top` above the first
+# row, `bottom` below the last, `inside_h` between rows (.zone_row_border());
+# its `left` / `right` / `inside_v` are left for .cell_edge_border() to place
+# on each row's cells.  `own` holds each row's own rtf_border (or NULL),
+# merged side by side over the zone's, so a side the row sets wins.
+#
+# A boundary both rows draw is drawn once, as the upper row's bottom, as
+# .zone_row_border() does: the lower row's own `top` is dropped, after
+# replacing the upper row's bottom when that came only from the zone (a row's
+# side beats the zone's).  A lower row's top with nothing above it stays.
+.block_row_borders <- function(zone, own) {
+  n   <- length(own)
+  eff <- lapply(seq_len(n), function(i) {
+    .merge_rtf_border(.zone_row_border(zone, i, n), own[[i]])
+  })
+  for (i in seq_len(n)[-1L]) {
+    top    <- if (inherits(eff[[i]], "rtf_border")) eff[[i]]$top
+    bottom <- if (inherits(eff[[i - 1L]], "rtf_border")) eff[[i - 1L]]$bottom
+    if (is.null(top) || is.null(bottom)) next
+    # both rows draw the boundary: the upper row's bottom carries it -- the
+    # lower row's own top when the upper row's comes only from the zone
+    if (is.null(own[[i - 1L]]$bottom)) eff[[i - 1L]]["bottom"] <- list(top)
+    eff[[i]]["top"] <- list(NULL)
+  }
+  eff
+}
+
 .build_cell_defs <- function(cellx, border_spec, valign_cmd,
                              color_index_map = NULL, shade = NULL) {
   n <- length(cellx)
@@ -954,7 +987,8 @@
 #   italic       -- (optional) TRUE / FALSE.  Default FALSE.
 #   underline    -- (optional) TRUE / FALSE.  Default FALSE.
 #   promoted     -- (internal) TRUE on a label-row cell promoted by
-#                   style_header(); it takes col_spec[[from]]$header_background.
+#                   style_header(); it takes col_spec[[from]]$header_background
+#                   and $header_color.
 #
 # `border_spec` is the row-level border (only top on first / bottom on
 # last header row, per .header_outer_border()).  `group_bottom_side`,
@@ -1125,6 +1159,15 @@
       if (isTRUE(sp$underline)) label <- paste0("\\ul ", label, "\\ulnone ")
       if (isTRUE(sp$italic))    label <- paste0("\\i ",  label, "\\i0 ")
       if (isTRUE(sp$bold))      label <- paste0("\\b ",  label, "\\b0 ")
+      # A promoted label-row cell keeps its column's header text colour,
+      # as the label row had it.
+      hc <- if (isTRUE(sp$promoted) && !is.null(col_spec) &&
+                j <= length(col_spec)) col_spec[[j]]$header_color
+      if (!is.null(hc) && !is.null(color_index_map) &&
+          !is.null(color_index_map[[hc]])) {
+        label <- paste0("\\cf", as.integer(color_index_map[[hc]]), " ",
+                        label, "\\cf1 ")
+      }
       al        <- .span_align(sp)
       align_cmd <- switch(al, left = "\\ql", right = "\\qr",
                               center = "\\qc", "\\qc")
@@ -1174,8 +1217,12 @@
     bold  <- isTRUE(spec$header_bold)
     itl   <- isTRUE(spec$header_italic)
     align <- spec$header_align %||% "center"
+    # the column's header text colour (style_cols(header_color = )); none
+    # given, no colour command, as before
+    color_idx <- if (!is.null(spec$header_color) && !is.null(color_index_map))
+      color_index_map[[spec$header_color]] else NULL
     .build_cell_content(text, align, bold, itl, FALSE, 0L, pad_l, pad_r,
-                        fs_cmd = fs_cmd)
+                        color_idx = color_idx, fs_cmd = fs_cmd)
   }, character(1L))
   .build_row(cell_defs, cell_contents, row_height_twips, table_align)
 }
@@ -1786,7 +1833,8 @@
                                    doc_pad_l = NULL, doc_pad_r = NULL,
                                    doc_markup = character(0),
                                    font_index_map = list(),
-                                   doc_pad_t = NULL, doc_pad_b = NULL) {
+                                   doc_pad_t = NULL, doc_pad_b = NULL,
+                                   table_align = "left") {
   if (is.null(hf) || length(hf$rows) == 0L) {
     return(character())
   }
@@ -1842,6 +1890,13 @@
     hf$cell_padding_bottom_twips %||% doc_pad_b %||%
       defaults$default_cell_padding_bottom_twips %||% 0L)
 
+  # The band's border is the whole zone's, resolved over the rows written
+  # (after drop_empty_rows): top above the first, bottom below the last,
+  # inside_h between rows, left / right / inside_v on each row's cells.  A
+  # row given as a list may carry its own `border`, whose sides win.
+  row_borders <- .block_row_borders(
+    hf_border, lapply(rows, function(r) if (is.list(r)) r$border))
+
   out_rows <- character()
   for (row_idx in seq_along(rows)) {
     row_def  <- rows[[row_idx]]
@@ -1856,6 +1911,11 @@
     row_color <- (if (is.list(row_def)) row_def$color) %||% hf$color
     color_idx <- if (!is.null(row_color) && !is.null(color_index_map))
                    color_index_map[[toupper(row_color)]] else NULL
+    # bold / italic / underline: the row's (list form), on every cell, in
+    # the words a title row uses (GAPS G14); left out, the text is plain
+    row_emph <- if (is.list(row_def))
+      c(bold = isTRUE(row_def$bold), italic = isTRUE(row_def$italic),
+        underline = isTRUE(row_def$underline)) else c(FALSE, FALSE, FALSE)
     if (is.null(cols_vec) || length(cols_vec) == 0L) {
       cols_vec <- c("")
     }
@@ -1905,14 +1965,21 @@
     cellx  <- cumsum(rep(cell_w, n_cols))
     # the last cell ends at the band's edge, whatever the division leaves
     cellx[n_cols] <- as.integer(width)
-    # Border applies only to the first row of the header/footer block.
-    row_border_cmds <- if (row_idx == 1L) .build_border_commands(hf_border, color_index_map) else ""
+    cell_border_cmds <- vapply(seq_len(n_cols), function(j) {
+      .build_border_commands(.cell_edge_border(row_borders[[row_idx]], j, n_cols),
+                             color_index_map)
+    }, character(1L))
 
     row <- table_cmd$row_start
     row <- paste0(row, row_rh_str)
-    for (cx in cellx) {
-      if (nzchar(row_border_cmds) || nzchar(vpad_cmd)) {
-        row <- paste0(row, row_border_cmds, vpad_cmd, "\\cellx", cx)
+    # the block's placement across the page (a footnote under a centred
+    # content, #968); a header / footer band stays at the margin
+    row <- paste0(row, switch(table_align, center = "\\trqc",
+                              right = "\\trqr", ""))
+    for (j in seq_len(n_cols)) {
+      cx <- cellx[j]
+      if (nzchar(cell_border_cmds[j]) || nzchar(vpad_cmd)) {
+        row <- paste0(row, cell_border_cmds[j], vpad_cmd, "\\cellx", cx)
       } else {
         row <- paste0(row, .cmd_fmt(table_cmd$cell_boundary_template, list(cx = cx)))
       }
@@ -1922,6 +1989,12 @@
                    center = align_cmd$center, align_cmd$default)
       txt <- .render_tokens(cols_display[i], current_page = current_page,
                             total_pages = total_pages, markup = hf_markup)
+      # decorations inside-out, as a title cell's (.build_cell_content())
+      if (nzchar(txt)) {
+        if (row_emph[[3L]]) txt <- paste0("\\ul ", txt, "\\ulnone ")
+        if (row_emph[[2L]]) txt <- paste0("\\i ",  txt, "\\i0 ")
+        if (row_emph[[1L]]) txt <- paste0("\\b ",  txt, "\\b0 ")
+      }
       if (!is.null(color_idx) && nzchar(txt)) {
         txt <- paste0("\\cf", as.integer(color_idx), " ", txt, "\\cf1 ")
       }
@@ -1948,9 +2021,14 @@
     txt <- c(hf$color, unlist(lapply(hf$rows, function(r) if (is.list(r)) r$color),
                               use.names = FALSE))
     txt <- toupper(as.character(txt))
+    # the rows' own borders, after the band's
+    rb <- unlist(lapply(hf$rows, function(r) {
+      if (is.list(r) && inherits(r$border, "rtf_border"))
+        .collect_border_colors(r$border)
+    }), use.names = FALSE)
     b <- hf$border
-    if (is.null(b) || !inherits(b, "rtf_border")) return(txt)
-    c(txt, .collect_border_colors(b))
+    if (is.null(b) || !inherits(b, "rtf_border")) return(c(txt, rb))
+    c(txt, .collect_border_colors(b), rb)
   }
 
   # Colours of the per-cell borders inside one col_header rows list.
@@ -1978,6 +2056,8 @@
       out <- c(out, unlist(lapply(tbl$col_spec, function(s) s$background),
                            use.names = FALSE))
       out <- c(out, unlist(lapply(tbl$col_spec, function(s) s$header_background),
+                           use.names = FALSE))
+      out <- c(out, unlist(lapply(tbl$col_spec, function(s) s$header_color),
                            use.names = FALSE))
       out <- c(out, unlist(lapply(tbl$col_spec, function(s)
         .collect_border_colors(s$border)), use.names = FALSE))
@@ -2030,6 +2110,17 @@
       cols <- c(cols, .tbl_colors(sg[["content"]]))
       cols <- c(cols, .text_block_colors(sg[["title"]],    is_footer = FALSE))
       cols <- c(cols, .text_block_colors(sg[["footnote"]], is_footer = TRUE))
+    }
+  }
+  # The title and footnote blocks' own borders (rtf_titles(border = ),
+  # rtf_footnotes(border = )), last, so a document without them keeps its table
+  cols <- c(cols, .collect_border_colors(report$document$title_style$border),
+            .collect_border_colors(report$document$footnote_style$border))
+  # and a content's own (plan_titles(border = ), plan_footnotes(border = ))
+  for (pg in report$pages) {
+    for (sg in pg$segments) {
+      cols <- c(cols, .collect_border_colors(sg[["title_border"]]),
+                .collect_border_colors(sg[["footnote_border"]]))
     }
   }
   cols <- cols[!is.na(cols) & nzchar(cols)]
@@ -2127,7 +2218,7 @@
         bold      = if (is.null(r$bold)) def_bold else isTRUE(r$bold),
         italic    = isTRUE(r$italic),
         underline = isTRUE(r$underline),
-        color     = r$color,
+        color     = .check_hf_color(r$color, "color"),
         border    = r$border
       )
       if (!is.null(rec$border) && !inherits(rec$border, "rtf_border")) {
@@ -2150,8 +2241,29 @@
   # Footnote separator: a top rule on the first row unless it sets its own border.
   if (is_footer && length(out) >= 1L && is.null(out[[1L]]$border)) {
     out[[1L]]$border <- rtf_border(top = TRUE)
+    # marked, so the text format can tell this default from a border the user
+    # wrote (see .warn_text_block_border())
+    out[[1L]]$border_default <- TRUE
   }
   out
+}
+
+# The text format draws no paragraph border.  A `border` the user wrote on a
+# title / footnote (a row's own, or the block's) is therefore ignored there:
+# say so, once per render.  The footnote's default top line (marked
+# `border_default` by .normalize_text_block()) is not the user's and never
+# warns.  Outside a render (.run_ctx$text_border_warned is NULL) it warns
+# every call.
+.warn_text_block_border <- function(rows, style) {
+  user <- !is.null(style$border) ||
+    any(vapply(rows, function(r) !is.null(r$border) && !isTRUE(r$border_default),
+               logical(1L)))
+  if (!user || isTRUE(.run_ctx$text_border_warned)) return(invisible(FALSE))
+  if (!is.null(.run_ctx$text_border_warned)) .run_ctx$text_border_warned <- TRUE
+  warning("A title or footnote `border` is drawn only when title_format / ",
+          "footnote_format = \"table\"; it is ignored in the text format.",
+          call. = FALSE)
+  invisible(TRUE)
 }
 
 # Hex colours referenced by a title/footnote block (row text + row borders),
@@ -2191,6 +2303,12 @@
                    .fs_cmd_for(m$fs, font_half_points))
   if (!is.null(style$markup)) markup <- style$markup
   cellx  <- as.integer(total_width_twips)
+  # The block's border (rtf_titles(border = )) is the whole block's, as a
+  # band's is; each row's own border wins side by side
+  # (.block_row_borders()).  One cell a row: its left / right are the row's.
+  borders <- .block_row_borders(style$border,
+                                lapply(rows, function(rec) rec$border))
+  for (i in seq_along(rows)) rows[[i]]$border <- borders[[i]]
 
   vapply(rows, function(rec) {
     cell_def <- paste0(.build_border_commands(rec$border, color_index_map),
@@ -2219,7 +2337,8 @@
 # Render a title/footnote block as plain paragraphs (one per line) spanning the
 # writable width, honouring per-row align / bold / italic / underline / colour.
 # A row `border` does NOT apply in text mode (a paragraph carries no cell rule),
-# so the footnote separator is only drawn in the table form.
+# so the footnote separator is only drawn in the table form; a border the user
+# wrote is warned about once per render (.warn_text_block_border()).
 .render_text_block_text <- function(block, is_footer, color_index_map = NULL,
                                     markup = "script", pad_l = 0L, pad_r = 0L,
                                     style = NULL, font_half_points = 18L,
@@ -2227,6 +2346,7 @@
                                     current_page = NULL, total_pages = NULL) {
   rows <- .normalize_text_block(block, is_footer, style$align)
   if (length(rows) == 0L) return(character())
+  .warn_text_block_border(rows, style)
   # Honour the document-wide cell padding as left/right paragraph indent, so the
   # "every element inherits the document padding" contract still holds.
   if (!is.null(style$markup)) markup <- style$markup
@@ -2453,9 +2573,9 @@
     report <- .rtfreport_add_page(report, segments = p$segments)
   }
 
-  # The document's style (#804): its rtf_style() over its deprecated
-  # default_format -- the shared level as the document defaults, each section
-  # into its modules where they left a key unset (R/rtf_style.R).
+  # The document's style (#804): its rtf_style() -- the shared level as the
+  # document defaults, each section into its modules where they left a key
+  # unset (R/rtf_style.R).
   .apply_style_to_report(report, pipe_doc$document)
 }
 
@@ -2615,6 +2735,7 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
   .run_ctx$program_fallback <- .check_program(program_fallback,
                                               "program_fallback")
   .run_ctx$program_done <- FALSE
+  .run_ctx$text_border_warned <- FALSE
   .run_ctx$time <- .resolve_render_time()
   .run_ctx$tokens <- .user_tokens(
     if (inherits(report, "rtf_document")) report$document$tokens)
@@ -2622,6 +2743,7 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
     .run_ctx$program <- NULL
     .run_ctx$program_fallback <- NULL
     .run_ctx$program_done <- NULL
+    .run_ctx$text_border_warned <- NULL
     .run_ctx$time <- NULL
     .run_ctx$tokens <- NULL
     .run_ctx$page_values <- NULL
@@ -2676,7 +2798,8 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
 
   lines <- c(
     .font_header_rtf(doc_cmd$rtf_header_open, font_index_map),
-    .build_font_table_rtf(doc_fonts),
+    .build_font_table_rtf(
+      doc_fonts, attr(font_index_map, "charsets", exact = TRUE)[["east_asian"]]),
     color_table_str,
     .cmd_fmt(doc_cmd$page_settings_template, list(
       width_twips           = page_defaults$width_twips,

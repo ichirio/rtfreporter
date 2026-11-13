@@ -255,7 +255,6 @@ assemble_rtf(
   toc                = build_toc_for(f1_auto, f2_auto, f3_auto),
   toc_title          = "Table of Contents",
   toc_leader         = "dot",
-  toc_page_numbering = "roman",
   overwrite          = TRUE
 )
 report_size(final_auto_default); convert_to_pdf(final_auto_default)
@@ -270,7 +269,6 @@ assemble_rtf(
   toc                = build_toc_for(f1_auto, f2_auto, f3_auto),
   toc_title          = "Table of Contents",
   toc_leader         = "dot",
-  toc_page_numbering = "roman",
   overwrite          = TRUE
 )
 report_size(final_auto_full); convert_to_pdf(final_auto_full)
@@ -302,7 +300,6 @@ assemble_rtf(
   toc                = build_toc_for(f1_static, f2_static, f3_static),
   toc_title          = "Table of Contents",
   toc_leader         = "dot",
-  toc_page_numbering = "roman",
   overwrite          = TRUE
 )
 report_size(final_static_default); convert_to_pdf(final_static_default)
@@ -317,7 +314,6 @@ assemble_rtf(
   toc                = build_toc_for(f1_static, f2_static, f3_static),
   toc_title          = "Table of Contents",
   toc_leader         = "dot",
-  toc_page_numbering = "roman",
   overwrite          = TRUE
 )
 report_size(final_static_full); convert_to_pdf(final_static_full)

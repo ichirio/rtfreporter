@@ -3,10 +3,10 @@
 # ============================================================================
 #
 #  Standalone helper for assigning blank-row positions to a single
-#  data.frame.  This is the function `as_rtftables()` calls on every
-#  per-page chunk; we expose it so callers who do their own paging
-#  (or who only need blank-row insertion, no splitting) can use the
-#  same blank-spec API.
+#  data.frame.  `as_rtftables()` calls it on every per-page chunk for the
+#  separator rules; integer positions it resolves on the whole body (#1028).
+#  We expose it so callers who do their own paging (or who only need
+#  blank-row insertion, no splitting) can use the same blank-spec API.
 #
 #  Position semantics match `rtftable(blank_rows = ...)`:
 #      0  -> blank row BEFORE the first data row
@@ -23,9 +23,19 @@
 #' page-sized data.frame and only need to add blank rows -- no
 #' pagination required.
 #'
-#' [as_rtftables()] calls this function on every page it produces, so
-#' the behaviour here defines what its `blank_rows`, `blank_row_first`
-#' and `blank_row_end` arguments do.
+#' The positions count rows of `data` as a whole.  Given to
+#' [as_rtftables()] with `blank_rows` left `NULL`, a data frame that
+#' carries the attribute keeps that meaning across the pages: position
+#' `k` is a blank after row `k` of the whole data frame, on the page that
+#' row lands on (once, and at the foot of that page when the row ends it,
+#' not carried to the top of the next); `0` is before the first row and
+#' the last row's position after the last.  A page that no position falls
+#' on gets no blank.
+#'
+#' [as_rtftables()] calls this function on every page it produces for
+#' the separator rules (`"between_groups"`, [blank_rows_by_change()],
+#' [blank_rows_by_rule()]) and for `blank_row_first` and `blank_row_end`;
+#' its integer positions are the whole body's, as above.
 #'
 #' @param data A data.frame (or tibble).
 #' @param blank_rows Blank-row specification. One of -- or a `list()` combining
@@ -70,7 +80,7 @@
 #'                       blank_row_end   = TRUE)
 #' attr(out, "rtf_blank_rows")
 #'
-#' @seealso [as_rtftables()] for the per-page version; [rtftable()]
+#' @seealso [as_rtftables()] for the paginated version; [rtftable()]
 #'   (`read_attributes = TRUE`) which consumes the attribute.
 #' @export
 set_blank_rows <- function(data,

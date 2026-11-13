@@ -39,7 +39,9 @@ Breaking: no  <!-- or "yes", and the migration: what old code must change to -->
 
 - FRs added / changed:
 - Tests (FT ids) added / changed:
-- RTF outputs changed on purpose (others identical):
+- RTF outputs changed on purpose (others identical; each changed reference
+  read again against its code and its row in
+  `inst/validation/reference_review.csv` updated):
 
 ## Checklist
 
@@ -47,8 +49,11 @@ Breaking: no  <!-- or "yes", and the migration: what old code must change to -->
 - [ ] Added or updated **tests** under `tests/testthat/` for the change.
 - [ ] For a behaviour change: FRs in `inst/validation/requirements.csv`, a
       test per leaf FR (named with its FT id, or a row in
-      `inst/validation/test_map.csv`), a `deviations.csv` row where no test
+      `inst/validation/traceability_matrix.csv`), a `deviations.csv` row where no test
       is possible; `validation/trace.R` and the `test-validation*.R` tests pass.
+- [ ] Each new mapping checked: I read the FR and the test, and its expectations
+      assert what the FR states; a row in `inst/validation/traceability_review.csv`
+      quotes them as the evidence.
 - [ ] Updated **roxygen** docs and ran `devtools::document()` (committed `man/*.Rd`).
 - [ ] The four pre-push checks pass (see *Pull requests* in
       `CONTRIBUTING.md`): `R CMD check --as-cran` on the built tarball,

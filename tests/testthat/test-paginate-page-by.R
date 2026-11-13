@@ -128,11 +128,19 @@ test_that("an explicit group_col still wins", {
   expect_length(pg, 4L)
 })
 
-test_that("blank_rows positions are resolved per partition", {
+test_that("blank_rows positions count rows of the whole body, not of each partition", {
+  # -1 is after the body's last row: on the last BY page only (#1028)
   pg <- as_rtftables(.lab(), page_by = "period", blank_rows = c(-1),
                      drop_cols = "period")
-  expect_identical(attr(pg[[1L]]$data, "rtf_blank_rows", exact = TRUE),
-                   attr(pg[[2L]]$data, "rtf_blank_rows", exact = TRUE))
+  b <- lapply(pg, function(p) attr(p$data, "rtf_blank_rows", exact = TRUE))
+  expect_null(b[[1L]])
+  expect_identical(b[[length(b)]], nrow(pg[[length(pg)]]$data))
+  # 0 is before the body's first row: on the first BY page only
+  pg <- as_rtftables(.lab(), page_by = "period", blank_rows = 0,
+                     drop_cols = "period")
+  b <- lapply(pg, function(p) attr(p$data, "rtf_blank_rows", exact = TRUE))
+  expect_identical(b[[1L]], 0L)
+  expect_true(all(vapply(b[-1L], is.null, logical(1L))))
 })
 
 test_that("page_by composes with paginate_cols() and order", {
@@ -405,4 +413,28 @@ test_that(".resolve_page_axes fills and validates on its own", {
   expect_identical(f(c("rows")), c("rows", "group", "cols"))
   expect_identical(f(c("cols", "rows", "group")),
                    c("cols", "rows", "group"))
+})
+
+test_that("FT-TB7901 [FR-IX415]: a table row whose BY value is NA or blank takes the next value's page, else the one before", {
+  pg_of <- function(p) {
+    pg <- as_rtftables(data.frame(PARAM = p, V = seq_along(p),
+                                  stringsAsFactors = FALSE),
+                       page_by = "PARAM")
+    list(names = names(pg), v = unname(lapply(pg, function(x) x$data$V)))
+  }
+  # a run of NA and "" between two values goes with the one after it
+  a <- pg_of(c("ALT", "ALT", NA, NA, "", "", "AST", "AST"))
+  expect_identical(a$names, c("ALT", "AST"))
+  expect_identical(a$v, list(1:2, 3:8))
+  # leading blanks take the first value; trailing blanks the last one
+  b <- pg_of(c(NA, "", "ALT", "ALT", "AST", NA, ""))
+  expect_identical(b$names, c("ALT", "AST"))
+  expect_identical(b$v, list(1:4, 5:7))
+  # no value at all: one page, named ""
+  d <- pg_of(c(NA, NA, ""))
+  expect_identical(d$names, "")
+  expect_identical(d$v, list(1:3))
+  # filled first, the row has a page of its own
+  e <- pg_of(c("ALT", "ALT", "Missing", "AST"))
+  expect_identical(e$names, c("ALT", "Missing", "AST"))
 })

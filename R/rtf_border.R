@@ -21,15 +21,8 @@
 # Deprecation warnings fire once per session: a table-building loop would
 # otherwise repeat the same paragraph for every table.  The environment is
 # package-local, so the state dies with the session.
-# Exported functions that are deprecated and scheduled for removal.  Each
-# still works and warns once per session.
-#
-# Removing them in a MINOR is legal only because `MAJOR 0` means the package is
-# not formally released (see "Pre-1.0 is different" in CONTRIBUTING.md).  From
-# v1.0.0 the same removal would require a major.
-# 0.9.0 removed the 0.5.0 - 0.8.x ones (#594, #788).  rtf_default_format()
-# gave way to rtf_style() (#804), and goes in 0.9.
-.deprecated_exports <- c("rtf_default_format")
+# 0.9.0 removed the deprecated exports (0.5.0 - 0.8.x, #594, #788, and
+# rtf_default_format(), #804, #975): none is deprecated now.
 
 .deprecation_state <- new.env(parent = emptyenv())
 
@@ -445,9 +438,10 @@ print.rtf_border <- function(x, ...) {
                               last_row  = NULL,
                               outer     = NULL,
                               inside_h  = NULL,
-                              inside_v  = NULL) {
+                              inside_v  = NULL,
+                              group     = NULL) {
   zones <- list(header = header, spanning = spanning, body = body,
-                first_row = first_row, last_row = last_row)
+                first_row = first_row, last_row = last_row, group = group)
   for (nm in names(zones)) {
     v <- zones[[nm]]
     if (!is.null(v) && !inherits(v, "rtf_border")) {
@@ -460,10 +454,18 @@ print.rtf_border <- function(x, ...) {
   }
   .check_border_side(inside_h, "inside_h")
   .check_border_side(inside_v, "inside_v")
-  structure(
+  # `group` is the sixth zone, the rule under the last row of each row
+  # group.  The renderer does not draw it (it is not a row KIND of this
+  # table): as_rtftables() turns it into per-cell borders.  It is carried
+  # only when given, so a table without one is the object it always was.
+  grp <- zones$group
+  zones$group <- NULL
+  out <- structure(
     c(zones, list(outer = outer, inside_h = inside_h, inside_v = inside_v)),
     class = "rtf_table_border"
   )
+  if (!is.null(grp)) out$group <- grp
+  out
 }
 
 # -- Whole-table shortcuts -> the five zones ------------------------------------
