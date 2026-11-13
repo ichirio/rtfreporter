@@ -183,3 +183,32 @@ test_that("FT-AS7204 [FR-AS271]: toc_page_numbering, whatever its value, is an u
   expect_false(file.exists(out))
   expect_identical(list.files(o), character(0))
 })
+
+test_that("FT-AS7205 [FR-AS158]: assemble_folder() refuses an argument assemble_rtf() does not take before anything is read or written, as R does (unused argument), with or without an output_file", {
+  d <- tempfile("ps")
+  o <- tempfile("ps-out")
+  dir.create(d)
+  dir.create(o)
+  on.exit(unlink(c(d, o), recursive = TRUE), add = TRUE)
+  .ps_inputs(d)
+  out <- file.path(o, "book.rtf")
+  sf <- file.path(o, "spec.csv")
+  # with an output_file (and a spec_file)
+  expect_error(assemble_folder(d, out, spec_file = sf, cvoer = list(title = "X")),
+               "unused argument (cvoer = list(title = \"X\"))", fixed = TRUE)
+  expect_error(assemble_folder(d, out, spec_file = sf, toc_page_numbering = "roman"),
+               "unused argument (toc_page_numbering = \"roman\")", fixed = TRUE)
+  expect_error(assemble_folder(d, out, spec_file = sf, book_pg = 1, bookmark_prefx = "t"),
+               "unused arguments (book_pg = 1, bookmark_prefx = \"t\")", fixed = TRUE)
+  # without an output_file (the table only), with a spec_file
+  expect_error(assemble_folder(d, spec_file = sf, cvoer = list(title = "X")),
+               "unused argument (cvoer = list(title = \"X\"))", fixed = TRUE)
+  expect_error(assemble_folder(d, spec_file = sf, toc_page_numbering = "roman"),
+               "unused argument (toc_page_numbering = \"roman\")", fixed = TRUE)
+  expect_identical(list.files(o), character(0))
+  # an argument assemble_rtf() takes still goes on to it
+  assemble_folder(d, out, spec_file = sf, cover = list(title = "Study EX-1"))
+  expect_true(file.exists(out))
+  expect_true(file.exists(sf))
+  expect_match(paste(readLines(out, warn = FALSE), collapse = "\n"), "\\fs44 Study EX-1", fixed = TRUE)
+})

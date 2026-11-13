@@ -332,6 +332,27 @@
 # The scalar arguments of assemble_folder() (#862), before any file is read:
 # a base-R message ("invalid filename argument", "NA in coercion to
 # boolean") does not say which argument is wrong.
+# assemble_folder()'s `...` goes on to assemble_rtf(), but only once the
+# folder is read and the spec file written -- and not at all without an
+# output_file.  So an argument assemble_rtf() would refuse is refused here
+# first, as R refuses it: "unused argument (x = 1)".  `dots` is the call's
+# unevaluated `...` (match.call(expand.dots = FALSE)$...).  The arguments
+# assemble_folder() gives assemble_rtf() itself (input_files, toc) are
+# unused here too.
+.check_folder_dots <- function(dots) {
+  if (!length(dots)) return(invisible(NULL))
+  nm <- names(dots) %||% rep("", length(dots))
+  ok <- setdiff(names(formals(assemble_rtf)), c("input_files", "toc"))
+  bad <- !nzchar(nm) | !nm %in% ok
+  if (!any(bad)) return(invisible(NULL))
+  shown <- vapply(which(bad), function(i) {
+    v <- deparse1(dots[[i]])
+    if (nzchar(nm[i])) paste(nm[i], "=", v) else v
+  }, "")
+  stop(sprintf("unused argument%s (%s)", if (sum(bad) > 1L) "s" else "",
+               paste(shown, collapse = ", ")), call. = FALSE)
+}
+
 .check_folder_args <- function(dir, spec_file, recursive) {
   if (!is.character(dir) || length(dir) != 1L || is.na(dir) || !nzchar(dir)) {
     stop("`dir` must be a single folder path.", call. = FALSE)
@@ -464,6 +485,9 @@
 #'   `FALSE` (default); another value is an error.
 #' @param toc_title,toc_leader,overwrite,... Passed through to
 #'   [assemble_rtf()] (`cover`, `book_page`, `toc_style` ... go in `...`).
+#'   An argument in `...` that [assemble_rtf()] does not take, or one without
+#'   a name, is an error ("unused argument"), with or without an
+#'   `output_file`, checked before any file is read or written.
 #'   The assembled file's pages are numbered as [assemble_rtf()] numbers them
 #'   (its **Page numbering**): one Arabic sequence from the first page, a
 #'   cover and the table of contents included, and the total is all pages.
@@ -498,6 +522,7 @@ assemble_folder <- function(dir, output_file = NULL, spec_file = NULL,
                             toc_title = "Table of Contents",
                             toc_leader = "dot",
                             overwrite = FALSE, ...) {
+  .check_folder_dots(match.call(expand.dots = FALSE)$...)
   .check_folder_args(dir, spec_file, recursive)
   spec <- .assemble_spec(dir = dir, recursive = recursive)
   # one file is a table of contents, not a book (#862): stop before the
