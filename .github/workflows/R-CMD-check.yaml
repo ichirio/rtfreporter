@@ -61,9 +61,12 @@ jobs:
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
 
+      # broom.helpers is not in DESCRIPTION: gtsummary suggests it, and
+      # tbl_regression() needs it, so without it the tbl_regression test
+      # (test-gtsummary-adapter.R) skips.  Installed here for the tests only.
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck
+          extra-packages: any::rcmdcheck any::broom.helpers
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
