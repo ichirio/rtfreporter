@@ -113,7 +113,12 @@
 # Prepend a stub column (at position 1) to a reindexed col_header covering
 # `nkeep` stat columns.  Char rows get the label prepended; on a multi-row
 # header only the bottom (leaf) row carries `stub_header`, spanning rows get an
-# empty leading cell and their cells shifted one column right.
+# empty leading cell and their cells shifted one column right.  The leading
+# cell is written in the row's own form: a `pos` cell before `pos` cells, a
+# `from` / `to` cell before a row of them (one cell form per row, so the row
+# still normalises), and on a labels row promoted to cells (a gt column
+# label with a border, style_header(border = )) a promoted cell, which
+# follows the stub column's header styling as the others do (#1041).
 .prepend_stub_header <- function(ch, stub_header, nkeep) {
   if (is.null(ch)) return(NULL)
   if (is.character(ch)) return(c(stub_header, ch))
@@ -134,7 +139,7 @@
           }
           cell
         })
-        return(c(list(list(pos = 1L, label = lab)), shifted))
+        return(c(list(.header_lead_cell(row, lab)), shifted))
       }
       row
     }))
