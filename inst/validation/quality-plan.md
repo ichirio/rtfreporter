@@ -224,7 +224,7 @@ the package supports:
 | The R versions in use now | Ubuntu, R oldrel-1 and release; Windows and macOS, release; the local R 4.4.2 and 4.6.1 | Between them they run the current and the previous release of R. |
 | The next R | Ubuntu, R devel | A change in R that will break the package shows here first. |
 | Windows, macOS and Linux | Windows, macOS and Ubuntu, each with at least one CI job | Each system is run, with the tests and R CMD check. |
-| The minimum versions of the suggested packages: each `(>= x)` in `DESCRIPTION` | Ubuntu, R 4.4, with each suggested package that has a minimum installed at exactly that version (the CI job *dependency minimums*) | The use of a feature newer than a minimum fails here. |
+| The minimum versions of the suggested packages: each `(>= x)` in `DESCRIPTION` | Ubuntu, R 4.5, with each suggested package that has a minimum installed at exactly that version (the CI job *dependency minimums*) | The use of a feature newer than a minimum fails here. |
 | The latest versions of the suggested packages | Every other CI job and the local runs, which install the newest versions their R allows | A new version of a dependency that breaks the package shows here. |
 
 The package imports only packages that ship with R (`DESCRIPTION`), so
@@ -243,8 +243,8 @@ minimum, the minimum is raised.
 R's minimum and the dependencies' minimums are checked in separate jobs:
 R 4.2 in the R 4.2 job of the matrix, with the newest packages that R
 allows, and the dependencies' minimums in the job *dependency minimums* on
-R 4.4.  They cannot be one job, because `tern`'s dependencies (through
-`car`) cannot be installed on R 4.2.
+R 4.5.  They cannot be one job, because `tern`'s dependencies (through
+`car`, down to `Deriv`, which needs R (>= 4.5)) cannot be installed on an older R.
 
 What is not tested, and the risk accepted:
 
@@ -256,7 +256,7 @@ What is not tested, and the risk accepted:
   failure on a system without one that no job shows.
 - **Versions between the minimum and the latest** of a suggested package,
   and a mix of them other than the two tested; and the minimums on R 4.2
-  (they are tested on R 4.4).
+  (they are tested on R 4.5).
 - **Other versions of an operating system**, other architectures, and other
   locales than those of the CI images and the maintainers' PC.
 - **Another RTF reader.**  The tests compare the RTF text.  They do not open
@@ -314,7 +314,7 @@ maintainers' own; no third-party audit is made.
 
 - **CI** (7): the R-CMD-check workflow's matrix -- Ubuntu (R devel,
   release, oldrel-1, 4.2), macOS (release), Windows (release) -- and its
-  job *dependency minimums* (Ubuntu, R 4.4, the suggested packages at the
+  job *dependency minimums* (Ubuntu, R 4.5, the suggested packages at the
   minimum versions `DESCRIPTION` names), at the release's commit; the tests
   and R CMD check.
 - **Local** (2): the maintainers' PC, two versions of R (now 4.4.2 and
