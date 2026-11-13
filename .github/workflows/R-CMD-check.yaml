@@ -53,6 +53,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # One job only, so CI stays light: LibreOffice, pdffonts and a Japanese
+      # font for the LibreOffice test (test-font-slots.R), and a non-English
+      # time locale for the month-name test (test-tm-gaps-g2.R).  The other
+      # jobs skip those two tests.
+      - name: LibreOffice, pdffonts, a Japanese font and other time locales
+        if: matrix.config.os == 'ubuntu-latest' && matrix.config.r == 'release'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libreoffice-writer poppler-utils fonts-noto-cjk fontconfig locales
+          sudo locale-gen ja_JP.UTF-8 de_DE.UTF-8
+          soffice --version
+          pdffonts -v || true
+          fc-list :lang=ja family | head -n 3
+          locale -a | grep -E '^(ja_JP|de_DE)'
+
       - uses: r-lib/actions/setup-pandoc@v2
 
       - uses: r-lib/actions/setup-r@v2
