@@ -171,8 +171,8 @@ test_that("FT-AS133 [FR-AS238]: the level of a table of contents row is a whole 
   toc$level <- c(1, 3)
   assemble_rtf(toc = toc, output_file = out)
   txt <- readLines(out, warn = FALSE)
-  expect_true(any(grepl("{\\pard\\fs20\\tqr", txt, fixed = TRUE)))        # level 1: no indent
-  expect_true(any(grepl("{\\pard\\li1200\\fs20\\tqr", txt, fixed = TRUE))) # level 3
+  expect_true(any(grepl("{\\pard\\ri720\\keep\\fs20\\tqr", txt, fixed = TRUE)))        # level 1: no indent
+  expect_true(any(grepl("{\\pard\\li1200\\ri720\\keep\\fs20\\tqr", txt, fixed = TRUE))) # level 3
   for (bad in list(4, 0, 2.5)) {
     toc$level <- c(2, bad)
     expect_error(assemble_rtf(toc = toc, output_file = out, overwrite = TRUE),

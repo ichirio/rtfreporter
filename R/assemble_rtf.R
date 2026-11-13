@@ -290,7 +290,9 @@
   )
 }
 
-.toc_entry <- function(label, file = NULL, level = 2L) {
+# (`number`: the "Table N" the file's title reader found, NULL when none, for
+# the hanging style's split of the label, .toc_split_label())
+.toc_entry <- function(label, file = NULL, level = 2L, number = NULL) {
   .check_toc_level(level, 3L, "toc_entry")
   if (length(label) != 1L || is.na(label)) {
     stop("A TOC entry's `label` must be a single string, not NA.",
@@ -299,7 +301,8 @@
   structure(
     list(label = as.character(label)[1L],
          file  = file,
-         level = as.integer(level)),
+         level = as.integer(level),
+         number = number),
     class = "rtf_toc_entry"
   )
 }
@@ -322,8 +325,9 @@
   # "auto" -> extract title from each input file
   if (is.character(toc) && length(toc) == 1L && toc == "auto") {
     out <- lapply(seq_along(input_files), function(i) {
-      list(label = .toc_label_from_title(input_files[i]), level = 1L,
-           file_idx = i, type = "entry")
+      info <- .rtf_table_label(input_files[i])
+      list(label = info$label, level = 1L, file_idx = i, type = "entry",
+           number = .toc_number_of(info$table))
     })
     return(out)
   }
@@ -376,7 +380,7 @@
         }
         used <<- c(used, fi)
         return(list(label = e$label, level = e$level,
-                    file_idx = fi, type = "entry"))
+                    file_idx = fi, type = "entry", number = e$number))
       }
       stop("`toc` must be \"auto\", a character vector of labels, a table (data.frame) or the path of one.",
            call. = FALSE)
@@ -470,19 +474,30 @@
 # The title takes `title_lines` lines (default 1: a title of one line; a "\n"
 # in it adds a line); the sizes are those of `style` (.toc_style(): 14 pt
 # title, 9 pt blank line, 11 pt heading, 10 pt entry by default).
+# With a hanging indent an entry whose label splits into a number and a title
+# (.toc_split_label()) has its title, every line of it, at the hang: its lines
+# are the title's, `hang` twips narrower.  `em` is the TOC font's character
+# width in ems (.toc_font_em()).
 .toc_entry_pages <- function(toc_entries, title_lines = 1L,
-                             style = .toc_style(NULL)) {
+                             style = .toc_style(NULL), em = 0.6) {
   if (!length(toc_entries)) return(integer(0))
   room <- 0.9 * (12240 - 2 * 1296)
   line <- function(hp) 1.15 * hp * 10               # half-points -> twips
   used <- title_lines * line(.toc_hp(style$title)) + line(.toc_hp(style$gap))
   page <- 1L
   out  <- integer(length(toc_entries))
+  hang_all <- .toc_hang(toc_entries, style$entry, em)
   for (i in seq_along(toc_entries)) {
     e  <- toc_entries[[i]]
     hp <- .toc_hp(if (identical(e$type, "heading")) style$heading else style$entry)
-    hang <- if (identical(e$type, "heading")) 0L else .toc_hanging(style$entry)
-    n  <- .toc_label_lines(e$label, e$level, hp, hang)
+    hang <- if (identical(e$type, "heading")) 0L else hang_all
+    ri <- if (identical(e$type, "heading")) 720L else .toc_entry_ri(hp)
+    sp <- if (hang > 0L && isTRUE(style$entry$hanging)) .toc_split_label(e$label, e$number)
+    n  <- if (!is.null(sp)) {
+      .toc_label_lines(sp[["title"]], e$level, hp, 0L, ri + hang)
+    } else {
+      .toc_label_lines(e$label, e$level, hp, hang, ri)
+    }
     h  <- n * line(hp)
     if (used + h > room && used > 0) {
       page <- page + 1L
@@ -499,12 +514,76 @@
   out
 }
 
+# An entry's right indent in twips (#1056): the page-number column (the
+# widest cached page number, at least 4 digits) and a gap of 2 characters, at
+# Courier New's width at `hp` half-points (no font's digits are wider), so a
+# long label wraps before the column where the page numbers stand.  720 at
+# the default 10 pt up to page 9999.
+.toc_entry_ri <- function(hp, digits = 4L) {
+  char <- 0.6 * hp * 10                    # Courier New: 0.6 em, in twips
+  as.integer(round((max(4L, digits) + 2L) * char))
+}
+
+# A label as a number and a title, for the hanging style: c(number = ,
+# title = ), or NULL when it does not split.  `number` is what the file's
+# title reader found ("Table 14.1.1", toc = "auto" and assemble_folder()):
+# the label splits after it when it starts with it.  Else a label that starts
+# with Table, Figure or Listing and a number ("14.3.2", "14.3.2.1", "14.1.1a")
+# splits after the number.  Either way the title is what follows, without the
+# spaces before it, and is not empty.
+.toc_split_label <- function(label, number = NULL) {
+  if (is.null(label) || is.na(label)) return(NULL)
+  if (length(number) == 1L && !is.na(number) && nzchar(number) &&
+      startsWith(label, number)) {
+    rest <- substring(label, nchar(number) + 1L)
+    if (grepl("^\\s+\\S", rest)) {
+      return(c(number = number, title = sub("^\\s+", "", rest)))
+    }
+  }
+  rx <- "^((?:Table|Figure|Listing)\\s+[0-9][0-9A-Za-z.-]*)\\s+(\\S.*)$"
+  m  <- regmatches(label, regexec(rx, label, perl = TRUE))[[1L]]
+  if (length(m) != 3L) return(NULL)
+  c(number = m[2L], title = m[3L])
+}
+
+# The width of a character of the TOC's font in ems, for the hanging style's
+# number column: 0.6 for Courier New (or Courier), exact; 0.75 for any other
+# font, a generous estimate (wider than the digits, capitals and lower case of
+# the usual proportional fonts), so a wrong guess leaves a little too much
+# room, not too little.  The font is the document's: that of the first
+# input's \deff.
+.toc_font_em <- function(lines) {
+  head <- paste(lines[seq_len(min(20L, length(lines)))], collapse = " ")
+  deff <- regmatches(head, regexec("\\\\deff([0-9]+)", head))[[1L]]
+  f    <- if (length(deff) == 2L) deff[2L] else "0"
+  rx   <- paste0("\\{\\\\f", f, "(?![0-9])[^ ;}]* ([^;}]*);")
+  name <- regmatches(head, regexec(rx, head, perl = TRUE))[[1L]]
+  if (length(name) == 2L && grepl("^Courier", trimws(name[2L]))) 0.6 else 0.75
+}
+
+# The hanging indent of the TOC's entries in twips: 0 when off (FALSE); a
+# number of twips when given; for TRUE the widest number of the entries that
+# split (.toc_split_label()) at `em` ems a character, and a gap of 1 em, at
+# the entry size; 720 when no entry splits.
+.toc_hang <- function(toc_entries, item, em = 0.6) {
+  h <- .toc_hanging(item)
+  if (!isTRUE(item$hanging)) return(h)
+  nums <- unlist(lapply(toc_entries, function(e) {
+    if (identical(e$type, "heading")) return(NULL)
+    .toc_split_label(e$label, e$number)[["number"]]
+  }))
+  if (!length(nums)) return(720L)
+  pt <- item$size
+  as.integer(ceiling(max(nchar(nums)) * em * pt * 20 + pt * 20))
+}
+
 # The lines a label takes at `hp` half-points: it wraps at Courier New's width
-# beside its level's indent and its page number; the lines after the first
+# beside its level's indent and the page-number column (`ri` twips: an entry's
+# right indent, .toc_entry_ri(); 720 for a heading); the lines after the first
 # have `hang` twips less width (a hanging indent).
-.toc_label_lines <- function(label, level, hp, hang = 0L) {
+.toc_label_lines <- function(label, level, hp, hang = 0L, ri = 720L) {
   char  <- .char_width_in("courier_new", 10) * 1440  # a 10 pt character, twips
-  width <- .TOC_TEXT_W - .toc_indent_for_level(level) - 720
+  width <- .TOC_TEXT_W - .toc_indent_for_level(level) - ri
   len   <- nchar(label %||% "")
   n <- max(1, ceiling(len * char * hp / 20 / width))
   if (hang > 0L && n > 1) {
@@ -641,7 +720,7 @@
 .build_toc_section <- function(toc_entries, bookmarks, toc_title,
                                 toc_leader = c("dot", "none"),
                                 entry_pages = NULL, title_rtf = NULL,
-                                toc_style = NULL) {
+                                toc_style = NULL, em = 0.6) {
   if (is.null(title_rtf)) title_rtf <- .toc_title_rtf(toc_title)
   style <- .toc_style(toc_style)
   toc_leader <- match.arg(toc_leader)
@@ -649,6 +728,13 @@
   # The page numbers sit on a right tab at the right margin: the TOC
   # section's text width (#967).
   tab_pos <- .TOC_TEXT_W
+  # An entry's right indent: a long label wraps before the page-number column
+  # (#1056); the page number stays on the tab at the margin, on the last line.
+  # \keep: Word never splits an entry across two TOC pages.
+  digits <- if (length(entry_pages) && any(!is.na(entry_pages))) {
+    nchar(as.character(max(entry_pages, na.rm = TRUE)))
+  } else 1L
+  ri_cmd <- sprintf("\\ri%d\\keep", .toc_entry_ri(.toc_hp(style$entry), digits))
 
   # Section preamble.  \sbkpage forces a new page at the start; landscape +
   # rtfreporter-default margins.
@@ -665,13 +751,18 @@
     sprintf("{\\pard%s\\par}", .toc_char_cmd(style$gap))
   )
 
-  on_page <- .toc_entry_pages(toc_entries, .toc_title_lines(title_rtf), style)
+  on_page <- .toc_entry_pages(toc_entries, .toc_title_lines(title_rtf), style, em)
+  # The hanging style: one hang for every entry (.toc_hang())
+  hang_all <- .toc_hang(toc_entries, style$entry, em)
   for (k in seq_along(toc_entries)) {
     e          <- toc_entries[[k]]
     indent     <- .toc_indent_for_level(e$level)
     indent_cmd <- if (indent > 0L) sprintf("\\li%d", indent) else ""
-    hang <- if (e$type == "heading") 0L else .toc_hanging(style$entry)
+    hang <- if (e$type == "heading") 0L else hang_all
     if (hang > 0L) indent_cmd <- sprintf("\\li%d\\fi-%d", indent + hang, hang)
+    # (with the hang: a label that splits is its number, a tab to the hang,
+    # and its title, whose lines all start at the hang)
+    sp <- if (hang > 0L && isTRUE(style$entry$hanging)) .toc_split_label(e$label, e$number)
     # (the first entry of each later TOC page starts that page)
     if (k > 1L && on_page[k] > on_page[k - 1L]) indent_cmd <- paste0("\\pagebb", indent_cmd)
 
@@ -690,19 +781,29 @@
     # update it to the live value on field refresh.
     bm  <- bookmarks[e$file_idx]
     txt <- .toc_escape(e$label)
+    tabs <- ""
+    if (!is.null(sp)) {
+      txt  <- paste0(.toc_escape(sp[["number"]]), "\\tab ", .toc_escape(sp[["title"]]))
+      # the stop at the hang, and two more 2 and 4 em after it: a number
+      # wider than the hang tabs to the next of them, never to the page
+      # number's right tab (Word has no default stops left of the last one)
+      em_tw <- as.integer(round(style$entry$size * 20))
+      tabs  <- paste(sprintf("\\tx%d", indent + hang + c(0L, 2L, 4L) * em_tw), collapse = "")
+    }
     pg  <- if (!is.null(entry_pages) && e$file_idx <= length(entry_pages) &&
                !is.na(entry_pages[e$file_idx])) {
       as.integer(entry_pages[e$file_idx])
     } else 1L
     line <- sprintf(
-      paste0("{\\pard%s%s\\tqr%s\\tx%d ",
+      paste0("{\\pard%s%s%s%s\\tqr%s\\tx%d ",
              "{\\field{\\*\\fldinst HYPERLINK \\\\l \"%s\"}",
              "{\\fldrslt %s}}",
              "\\tab",
              "{\\field{\\*\\fldinst PAGEREF %s \\\\h}",
              "{\\fldrslt %d}}",
              "\\par}"),
-      indent_cmd, .toc_char_cmd(style$entry), leader_cmd, tab_pos, bm, txt, bm, pg
+      indent_cmd, ri_cmd, .toc_char_cmd(style$entry), tabs, leader_cmd, tab_pos,
+      bm, txt, bm, pg
     )
     lines <- c(lines, line)
   }
@@ -795,6 +896,34 @@
 #' has a `PAGEREF` field so the page number next to the entry is
 #' calculated by the viewer when the file opens.
 #'
+#' The page number stands on a right tab at the right margin.  A label too
+#' long for one line wraps before the page-number column, never into it: each
+#' entry has a right indent (`\ri`) of the column's width plus a gap, six
+#' characters at the entry's font size (four digits and two spaces; more when
+#' a page number has more digits), 720 twips (0.5 in) at the default 10 pt.
+#' The page number and its leader stay on the label's last line, at the
+#' margin.  Every level has it, with or without a hanging indent; headings do
+#' not.  An entry is also kept on one page (`\keep`): Word never splits it
+#' across two TOC pages.
+#'
+#' With a hanging indent (`toc_style = list(entry = list(hanging = TRUE))`)
+#' an entry is its number, a tab and its title (`"Table 14.3.2"`, then
+#' `"Summary of ..."`), and the title's wrapped lines start where its first
+#' line does, after the number.  The hang is the width of the widest number
+#' in the TOC and a gap of 1 em at the entry's size: a character is 0.6 em
+#' in Courier New (exact) and is taken as 0.75 em in any other font (a
+#' generous estimate: a wrong one leaves a little too much room).  Two more
+#' tab stops follow the hang, 2 and 4 em after it, so a number wider than
+#' the hang puts its title at the next of them, never at the page number's
+#' tab.  With `"auto"` and [assemble_folder()] the
+#' number is the one the file's title is read with (`"Table 14.1.1"`); a
+#' label given as text is split when it starts with `Table`, `Figure` or
+#' `Listing` and a number (`14.3.2`, `14.3.2.1`, `14.1.1a`).  A label that
+#' does not split is written whole, its wrapped lines at the same hang; when
+#' no label splits the hang is 720 twips.  A whole number of twips
+#' (`hanging = 360`) is the hang as given, and each label is written whole,
+#' its wrapped lines that far in.
+#'
 #' @section Page numbering:
 #' Every page of the assembled file is numbered in one Arabic sequence from
 #' its first page, and the total is the count of all its pages.  The cover,
@@ -873,10 +1002,10 @@
 #'   the entries' size only.  Built in: title 14 pt bold, heading 11 pt bold,
 #'   entry 10 pt, gap 9 pt.  A size is a positive number of points, whole or
 #'   half (`10.5`).  `entry` also takes `hanging`: `FALSE` (default) writes each
-#'   entry's wrapped lines at the indent of its first line; `TRUE` hangs them
-#'   720 twips (half an inch) further in, and a positive whole number is that
-#'   many twips (`list(entry = list(hanging = 360))`).  Headings are not
-#'   affected.  Default `getOption("rtfreporter.toc_style")`.  The font is
+#'   entry's wrapped lines at the indent of its first line; `TRUE` lines them
+#'   up where the title starts, after the number (see **Table of Contents**),
+#'   and a positive whole number of twips hangs them that far in, the label
+#'   written whole (`list(entry = list(hanging = 360))`).  Headings are not affected.  Default `getOption("rtfreporter.toc_style")`.  The font is
 #'   the document's (that of the first input file).  Another key, a size that
 #'   is not a positive number, a `bold` that is not `TRUE` / `FALSE` or a
 #'   `hanging` that is not `TRUE` / `FALSE` / a positive whole number is an
@@ -1017,8 +1146,11 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
   # TOC's own pages included (#815, #1049).
   entry_pages <- NULL
   title_rtf   <- if (use_toc) .toc_title_rtf(toc_title)
+  # (the TOC's font, the document's, for the hanging style's number column)
+  toc_em      <- if (use_toc) .toc_font_em(readLines(input_files[1L], n = 20L, warn = FALSE))
   toc_pages   <- if (use_toc) {
-    max(1L, .toc_entry_pages(toc_entries, .toc_title_lines(title_rtf), toc_style))
+    max(1L, .toc_entry_pages(toc_entries, .toc_title_lines(title_rtf), toc_style,
+                             toc_em))
   } else 0L
   if (use_toc) {
     npages <- vapply(input_files, function(f)
@@ -1050,7 +1182,7 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
         .build_toc_section(toc_entries, bookmarks, toc_title,
                            toc_leader = toc_leader,
                            entry_pages = entry_pages, title_rtf = title_rtf,
-                           toc_style = toc_style)
+                           toc_style = toc_style, em = toc_em)
       )
     }
 

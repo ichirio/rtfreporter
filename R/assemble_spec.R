@@ -79,6 +79,14 @@
   .rtf_table_label(file)$label
 }
 
+# The number a contents entry's label starts with, as the title reader found
+# it: "Table " and the table number (.rtf_table_label()$table); NULL when it
+# found none.
+.toc_number_of <- function(table) {
+  if (length(table) != 1L || is.na(table) || !nzchar(table)) return(NULL)
+  paste("Table", table)
+}
+
 # A title's RTF as the text of a label (a contents entry, its outline entry,
 # the folder table's label): what a page token wrote there is left out -- a
 # page number (\chpgn), a NUMPAGES field, the {BOOK_PAGE} slot -- since a
@@ -296,9 +304,17 @@
     lvl <- if (!is.null(spec$level) && !is.na(spec$level[i]))
       as.numeric(spec$level[i]) else 2L
     # (no label, or an NA one: the file's own title, as toc = "auto" reads it)
+    # The number the title reader found (assemble_folder()'s `table`, or the
+    # file's when the label is read here), for the hanging style's split
     lab <- spec$label[i]
-    if (is.na(lab)) lab <- .toc_label_from_title(spec$file[i])
-    toc <- c(toc, list(.toc_entry(lab, file = spec$file[i], level = lvl)))
+    num <- if (!is.null(spec$table)) as.character(spec$table[i]) else NA_character_
+    if (is.na(lab)) {
+      info <- .rtf_table_label(spec$file[i])
+      lab  <- info$label
+      num  <- info$table
+    }
+    toc <- c(toc, list(.toc_entry(lab, file = spec$file[i], level = lvl,
+                                  number = .toc_number_of(num))))
   }
   toc
 }
