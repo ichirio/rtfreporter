@@ -689,7 +689,7 @@ Column (leaf) labels        \tab yes \tab yes \tab yes \tab yes \cr
 Per-column alignment        \tab yes \tab yes \tab yes \tab yes \cr
 Spanning headers            \tab yes \tab yes \tab yes \tab yes \cr
 Column widths               \tab yes (px/pct) \tab -- \tab -- \tab -- \cr
-Title + subtitle            \tab yes \tab yes \tab yes (caption) \tab yes (caption) \cr
+Title + subtitle            \tab yes (caption too) \tab yes \tab yes (caption) \tab yes (caption) \cr
 Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab yes (\code{add_footnote()} rows) \cr
 In-cell footnote marks      \tab yes (superscript, labels and footnote lines too) \tab yes (superscript) \tab as text \tab -- \cr
 Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab group rows, no indent \tab as typed, no indent \cr
@@ -708,6 +708,13 @@ first, verbs win per side / per field.  \emph{Not} carried: \code{cell_fill()},
 fonts and sizes, header text colour, and gt's \strong{theme} borders
 (\code{tab_options()}) -- those describe gt's own default look; rtfreporter's
 \code{border} presets govern the frame instead.
+
+A gt caption (\code{gt::tab_caption()}, and so gtsummary's \code{modify_caption()})
+is the first row of the page title, above the \code{tab_header()} title and
+subtitle, as gt prints it; on a \code{gt_group} / \code{gt_split} each member's own
+caption is read.  It is read with the \code{"titles"} token, so titles you give
+yourself (\code{rtf_tables(titles = )}, \code{\link[=rtf_titles]{rtf_titles()}}) replace it as they
+replace the gt title.
 
 For flextable the \emph{displayed} text is read (header labels set via
 \code{set_header_labels()} and \verb{colformat_*()} formatting included), not the raw
@@ -728,8 +735,9 @@ so there is no indent).
 \strong{Not carried} (RTF cannot reproduce these, or they belong to the
 source's own theme): cell background colours / fills, font and size
 styling, gt theme borders (\code{tab_options()}), header text colour, and
-Markdown formatting inside labels or titles (a \code{gt::html()} label is read
-as its text, a \verb{<br>} as a line break).  For a plain \code{data.frame} / tibble two pieces of
+Markdown formatting inside labels, titles or a caption (its bold markers
+go: \verb{**Table 9** Summary} is read as \verb{Table 9 Summary}; a
+\code{gt::html()} label is read as its text, a \verb{<br>} as a line break).  For a plain \code{data.frame} / tibble two pieces of
 metadata are read: column \code{label} attributes become header labels (the
 \code{"labels"} token, see \code{read_meta}), and delimited column names are
 reconstructed into a spanning header (see \code{header_sep}); everything else

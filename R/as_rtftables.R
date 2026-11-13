@@ -188,7 +188,7 @@
 #'   Per-column alignment        \tab yes \tab yes \tab yes \tab yes \cr
 #'   Spanning headers            \tab yes \tab yes \tab yes \tab yes \cr
 #'   Column widths               \tab yes (px/pct) \tab -- \tab -- \tab -- \cr
-#'   Title + subtitle            \tab yes \tab yes \tab yes (caption) \tab yes (caption) \cr
+#'   Title + subtitle            \tab yes (caption too) \tab yes \tab yes (caption) \tab yes (caption) \cr
 #'   Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab yes (`add_footnote()` rows) \cr
 #'   In-cell footnote marks      \tab yes (superscript, labels and footnote lines too) \tab yes (superscript) \tab as text \tab -- \cr
 #'   Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab group rows, no indent \tab as typed, no indent \cr
@@ -207,6 +207,13 @@
 #' fonts and sizes, header text colour, and gt's **theme** borders
 #' (`tab_options()`) -- those describe gt's own default look; rtfreporter's
 #' `border` presets govern the frame instead.
+#'
+#' A gt caption (`gt::tab_caption()`, and so gtsummary's `modify_caption()`)
+#' is the first row of the page title, above the `tab_header()` title and
+#' subtitle, as gt prints it; on a `gt_group` / `gt_split` each member's own
+#' caption is read.  It is read with the `"titles"` token, so titles you give
+#' yourself (`rtf_tables(titles = )`, [rtf_titles()]) replace it as they
+#' replace the gt title.
 #'
 #' For flextable the *displayed* text is read (header labels set via
 #' `set_header_labels()` and `colformat_*()` formatting included), not the raw
@@ -227,8 +234,9 @@
 #' **Not carried** (RTF cannot reproduce these, or they belong to the
 #' source's own theme): cell background colours / fills, font and size
 #' styling, gt theme borders (`tab_options()`), header text colour, and
-#' Markdown formatting inside labels or titles (a `gt::html()` label is read
-#' as its text, a `<br>` as a line break).  For a plain `data.frame` / tibble two pieces of
+#' Markdown formatting inside labels, titles or a caption (its bold markers
+#' go: `**Table 9** Summary` is read as `Table 9 Summary`; a
+#' `gt::html()` label is read as its text, a `<br>` as a line break).  For a plain `data.frame` / tibble two pieces of
 #' metadata are read: column `label` attributes become header labels (the
 #' `"labels"` token, see `read_meta`), and delimited column names are
 #' reconstructed into a spanning header (see `header_sep`); everything else

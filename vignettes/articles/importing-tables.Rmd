@@ -230,7 +230,7 @@ restate it. What is carried:
 | Per-column alignment | yes | yes | yes | yes |
 | Spanning headers | yes | yes | yes | yes |
 | Column widths | yes (px/pct) | -- | -- | -- |
-| Title + subtitle | yes | yes | yes (caption) | yes (caption) |
+| Title + subtitle | yes (caption too) | yes | yes (caption) | yes (caption) |
 | Footnotes / source notes | yes | yes | yes (footer) | yes (`add_footnote()` rows) |
 | In-cell footnote marks | yes (superscript) | yes (superscript) | as text | -- |
 | Row-group rows + indent | yes (rendered) | yes (rendered) | group rows, no indent | as typed, no indent |

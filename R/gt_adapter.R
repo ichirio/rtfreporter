@@ -146,17 +146,20 @@
   v
 }
 
-# Title + subtitle (+ preheader) as a character vector for the page title.
-# `marks` (from .gt_footnote_marks()) puts gt's footnote mark after the
-# title and the subtitle.
+# Caption + title + subtitle (+ preheader) as a character vector for the
+# page title.  The caption (`tab_caption()`, gtsummary's `modify_caption()`)
+# comes first, as gt prints it above the header (#1029); its markdown bold
+# markers go, as for the other gt texts.  `marks` (from .gt_footnote_marks())
+# puts gt's footnote mark after the title and the subtitle.
 .extract_titles <- function(gt_obj, marks = NULL) {
+  cap <- .flatten_to_chr(.gt_option(gt_obj, "table_caption", NULL))
   heading <- gt_obj[["_heading"]]
-  if (is.null(heading)) return(NULL)
+  if (is.null(heading)) heading <- list()
   ttl <- .flatten_to_chr(heading$title)
   sub <- .flatten_to_chr(heading$subtitle)
   if (!is.na(ttl)) ttl <- .gt_add_mark(ttl, marks$title)
   if (!is.na(sub)) sub <- .gt_add_mark(sub, marks$subtitle)
-  rows <- c(ttl, sub,
+  rows <- c(cap, ttl, sub,
             .flatten_to_chr(heading$preheader))
   rows <- rows[!is.na(rows)]
   if (!length(rows)) return(NULL)
