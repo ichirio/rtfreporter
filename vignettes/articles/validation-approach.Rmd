@@ -125,7 +125,7 @@ which date the snapshot is.
 
 The Quality Plan names what is not tested, and accepts the risk:
 
-- a system without the suggested packages (most jobs install them);
+- a system without the suggested packages (every CI job installs them);
 - versions of R and of the suggested packages between the minimum and the latest;
 - other operating system versions, other architectures and other locales;
 - another RTF reader. The tests compare RTF text. A person opens the

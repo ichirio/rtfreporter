@@ -253,8 +253,9 @@ minimum is raised, and the table says which package forced it.
 
 What is not tested, and the risk accepted:
 
-- **A suggested package absent.**  Every job has the suggested packages
-  installed.  A test that needs one is skipped when it is absent
+- **A suggested package absent.**  Every CI job has the suggested packages
+  installed; a local run has those installed on the PC, and the Quality
+  Report names any it lacks.  A test that needs one is skipped when it is absent
   (`skip_if_not_installed()`).  The risk is a failure on a system without
   one that no job shows.
 - **Versions between the minimum and the latest** of R or of a dependency,
