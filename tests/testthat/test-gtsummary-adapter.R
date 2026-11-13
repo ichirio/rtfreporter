@@ -30,8 +30,11 @@ library(testthat)
     y = c(1, 0, 1, 1, 0, 1),
     x = c(25, 35, 45, 55, 65, 30)
   )
-  fit <- glm(y ~ x, data = df, family = binomial)
-  gtsummary::tbl_regression(fit, exponentiate = TRUE)
+  # lm(), not glm(): tern (loaded by test-adapter-option-robustness.R in the
+  # same R session) registers its own tidy.glm over broom's, and
+  # tbl_regression() then fails on a glm fit; tidy.lm is broom's alone.
+  fit <- lm(y ~ x, data = df)
+  gtsummary::tbl_regression(fit)
 }
 
 
