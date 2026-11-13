@@ -165,10 +165,9 @@
   out
 }
 
-# a cover, then the TOC, then the body (the name is the fixture's, written
-# when the TOC was numbered in Roman; since #1049 the pages run in one
-# sequence from the cover)
-.tt_case_coverroman <- function(dir) {
+# a cover, then the TOC, then the body, the pages in one sequence from the
+# cover
+.tt_case_cover <- function(dir) {
   f <- .tt_inputs(dir, c(t_14_1_1 = "Table 14.1.1 Demographics",
                          t_14_2_1 = "Table 14.2.1 Adverse Events",
                          t_14_3_1 = "Table 14.3.1 Laboratory"),

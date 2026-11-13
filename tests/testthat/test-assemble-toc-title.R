@@ -600,10 +600,10 @@ test_that("FT-AS4043 [FR-AS263]: the two-page TOC is rebuilt byte for byte (fixt
   expect_identical(.tt_bytes(.tt_case_multipage(d)), .tt_bytes(fx))
 })
 
-test_that("FT-AS4044 [FR-AS266]: the cover and TOC deliverable is rebuilt byte for byte (fixtures/toc-coverroman.rtf)", {
-  fx <- test_path("fixtures", "toc-coverroman.rtf")
+test_that("FT-AS4044 [FR-AS266]: the cover and TOC deliverable is rebuilt byte for byte (fixtures/toc-cover.rtf)", {
+  fx <- test_path("fixtures", "toc-cover.rtf")
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
-  expect_identical(.tt_bytes(.tt_case_coverroman(d)), .tt_bytes(fx))
+  expect_identical(.tt_bytes(.tt_case_cover(d)), .tt_bytes(fx))
 })
 
 # -- the hanging indent of an entry (toc_style entry = list(hanging = )) ----------

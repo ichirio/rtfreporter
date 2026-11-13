@@ -590,7 +590,12 @@ releases -- is not written again; this section says only what it does not.
     `asserts` or `part`, `evidence` the expectation lines that assert it,
     `fr_covered` `yes` when the FR's tests together assert all it states).
     A test that asserts none of an FR is not mapped to it, and a mapping
-    with no row fails `test-validation-leaves.R`;
+    with no row fails `test-validation-leaves.R`.  A new row goes to its
+    place, never to the end: by `fr` in the order of `requirements.csv`,
+    then by `ft` with the number read as a number (`FT-AR063` before
+    `FT-AR3000`); `inst/validation/reference_review.csv` is kept by `file`
+    the same way.  `test-validation-table-order.R` checks both, so two PRs
+    that add rows change different lines;
   - name every new argument in a leaf FR of its function, as `arg =` or
     bare inside `f(...)`; the plain word in prose does not count, and an
     argument without such an FR fails `test-validation-coverage.R`;
