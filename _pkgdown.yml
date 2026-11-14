@@ -75,13 +75,13 @@ home:
       devnotes:
         title: Dev stage
         text: |
-          v0.8.2 released (current stable); pre-1.0, the API may still change
-          before v1.0.0.  Development continues at `0.8.2.9000` — the standard
-          R scheme, where the three-component part names the last release.
+          v0.9.0 released (current stable).  Development continues at
+          `0.9.0.9000` — the standard R scheme, where the three-component
+          part names the last release.
 
           Roadmap:
 
-          **Next release** (in development on `main`):
+          **In 0.9.0**:
 
           - Tables from an ARD, end to end: every `as_rtftables()` setting
             has a plan verb, plus a Total column (also a Total row for a
@@ -101,8 +101,16 @@ home:
             (`latin` / `east_asian` / `complex`) and `font_lang`.
           - Figures: the drawing settings in `rtf_figures()`, and a better PNG
             device when one is installed.
+          - Joined files: a table of contents whose indent by level, title,
+            text sizes and hanging indent can be set, labels read from the
+            titles, page numbers at the right margin, and the book's page
+            number beside each report's own.
+          - Footnotes that follow the width and placement of their table or
+            figure, and one style object for every part of a document
+            (`rtf_style()`).
           - A folder for an AI assistant (`rtfreporter_ai_manual()`): the
-            manual, example programs, your ARD's shape and one file to paste.
+            manual, example programs, your ARD's shape and one file to paste;
+            articles on validation and on developing with AI agents.
           - A cleaner API: one name per thing,
             `rtf_section(header = , footer = )`, table formats in the plan
             or the style rather than in `rtf_tables()`, and the old border
