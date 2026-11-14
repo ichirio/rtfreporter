@@ -333,7 +333,8 @@ statistic, or one of the forms above; write them most important first.
 
 The difference between two arms: make it at the ARD step, show it with
 `plan_compare()`, and order the rows by its statistic (`"-estimate"`, the
-largest difference first; without the minus, the smallest):
+largest difference first; without the minus, the smallest).
+`cards::diff_ard_hierarchical()` needs cards 0.9.0 or later:
 
 ```r
 ard  <- cards::ard_stack_hierarchical(adae, variables = c(AESOC, AEDECOD), by = TRTA,

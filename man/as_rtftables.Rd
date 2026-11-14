@@ -789,6 +789,18 @@ finishing a tidy hierarchy-column data.frame into the indented stub
 layout beforehand.
 }
 
+\section{Package versions}{
+
+The minimum gt in DESCRIPTION, 1.1.0, does all of the above except two
+things that need gt 1.4.0 or later:
+\itemize{
+\item a cell style on a member of \code{gt::gt_split(row_every_n = )}: gt before
+1.4.0 stops on it;
+\item rows hidden with \code{gt::rows_hide()}, which gt has from 1.4.0: they are
+left out of the pages, on every member of a \code{gt_split()} as well.
+}
+}
+
 \section{Superseded arguments}{
 
 These \code{...} arguments still work and are handy for simple one-shot tables,
