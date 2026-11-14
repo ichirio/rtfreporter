@@ -44,7 +44,8 @@ if (is.null(cov)) {
 ### Every environment's sessionInfo and tests' log
 
 In `environments.txt` (attached to the release with this report), one part an
-environment of the table above: its `sessionInfo()` (R, the OS and the
-locale), the version of every package `DESCRIPTION` names (Imports and
-Suggests, or "not installed") and testthat's own log, ending in
+environment of the two tables above (required, and additional): its
+`sessionInfo()` (R, the OS and the locale), the version of every package
+`DESCRIPTION` names (Imports and Suggests, or "not installed") and
+testthat's own log, ending in
 `[ FAIL n | WARN n | SKIP n | PASS n ]`.

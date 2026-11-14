@@ -78,7 +78,7 @@ also in this kit):
 | Quality Plan (`quality-plan.md`) | How the package's quality is assured: scope, the risk-based requirements, the acceptance criteria, the environments. |
 | Functional Requirements (`requirements.csv`) | What each function in the package's scope does, its arguments, the data it handles and the misuse it stops: one id (`FR-...`) each. The Quality Report lists the functions in scope. |
 | Functional Tests and the Traceability Matrix (FR -> FT) (`traceability_matrix-<tag>.xlsx`, release asset) | The tests of each FR. |
-| Quality Report (`quality-report-<tag>.pdf`, release asset) | The results on every environment of the package's Quality Plan (six in CI: Linux, macOS, Windows, several R versions; two on the maintainers' PC), the deviations (an FR with no test, and why it is accepted), the conclusion (*validation-ready* on a published release) and how to read each attachment; with every environment's sessionInfo and test log (`environments-<tag>.txt`). |
+| Quality Report (`quality-report-<tag>.pdf`, release asset) | The results on the environments of the package's Quality Plan: the required ones, on which the conclusion rests (in CI, the minimum versions and the latest R on Linux, macOS and Windows; the latest R on the maintainers' PC), and the additional ones, reported for reference and not judged; the deviations (an FR with no test, and why it is accepted), the conclusion (*validation-ready* on a published release) and how to read each attachment; with every environment's sessionInfo and test log (`environments-<tag>.txt`). |
 
 **What Example Pharma checks itself**
 
