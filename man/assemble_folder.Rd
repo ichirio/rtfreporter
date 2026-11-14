@@ -85,8 +85,10 @@ running header's \code{"Table N"} line, the title written after the number
 winning over the centred lines below it, and a file with neither, its file
 name without \code{.rtf}; one row a file, so a file whose titles change from
 page to page with \code{page_by} (\code{"Summary of {PARAM}"}) is labelled by its
-first page's title), \code{level} (the entry's indent, a whole
-number from 1 to 3, default 2) and \code{pages} (informational).
+first page's title), \code{level} (the entry's level, a whole
+number from 1 to 3, default 2; the levels start at the same left position
+unless \code{toc_style = list(indent = )}, in \code{...}, indents them) and \code{pages}
+(informational).
 }
 \examples{
 # two TFL files in a folder, as a study's output

@@ -190,7 +190,7 @@ test_that("FT-AS3006 [FR-AS112]: toc = \"auto\" makes one level-1 entry per file
   expect_true(grepl("{\\fldrslt plain_two}}", ent[2], fixed = TRUE))
 })
 
-test_that("FT-AS3007 [FR-AS115]: a toc table prints a heading above an entry when its value changes (NA or empty none), uses each label, and indents entries at level 2 when level is absent", {
+test_that("FT-AS3007 [FR-AS115]: a toc table prints a heading above an entry when its value changes (NA or empty none), uses each label, and puts entries at level 2 (flush left by default) when level is absent", {
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   fs <- vapply(1:4, function(i) .g2_fake(file.path(d, paste0("f", i, ".rtf")), i),
@@ -204,7 +204,7 @@ test_that("FT-AS3007 [FR-AS115]: a toc table prints a heading above an entry whe
   expect_identical(l[h], c("{\\pard\\b\\fs22 HA\\par}", "{\\pard\\b\\fs22 HB\\par}"))
   e <- grep("HYPERLINK", l, fixed = TRUE)
   expect_length(e, 4L)
-  expect_true(all(startsWith(l[e], "{\\pard\\li600\\ri720\\keep\\fs20\\tqr\\tldot\\tx14112 ")))
+  expect_true(all(startsWith(l[e], "{\\pard\\ri720\\keep\\fs20\\tqr\\tldot\\tx14112 ")))
   for (k in 1:4) {
     expect_true(grepl(sprintf("{\\fldrslt Label %d}}", k), l[e[k]], fixed = TRUE))
   }
@@ -213,14 +213,15 @@ test_that("FT-AS3007 [FR-AS115]: a toc table prints a heading above an entry whe
   expect_identical(h[2], e[4] - 1L)
 
   # no label (NA) takes the file's title; level 1, 3 and NA (2) give no indent, 1200 and
-  # 600 twips; order = 3, 1, 2 takes row 2, then row 3, then row 1
+  # 600 twips with toc_style indent = 600 (none by default); order = 3, 1, 2 takes row 2,
+  # then row 3, then row 1
   g <- vapply(1:3, function(i) {
     .g2_demo(file.path(d, sprintf("g%d.rtf", i)), sprintf("Table %d T%d", i, i))
   }, character(1L))
   tb2 <- data.frame(file = g, label = c(NA, "Own two", NA), level = c(1L, 3L, NA),
                     order = c(3L, 1L, 2L), stringsAsFactors = FALSE)
   out2 <- file.path(d, "out2.rtf")
-  assemble_rtf(toc = tb2, output_file = out2)
+  assemble_rtf(toc = tb2, output_file = out2, toc_style = list(indent = 600))
   l2 <- .g2_lines(out2)
   e2 <- grep("HYPERLINK", l2, fixed = TRUE)
   expect_length(e2, 3L)
@@ -582,7 +583,8 @@ test_that("FT-AS3020 [FR-AS159]: a table from assemble_folder(), edited, gives t
   ed$heading <- c("Group A", "Group A")        # a heading set (printed once)
   w <- .g2_dir()
   out <- file.path(w, "out.rtf")
-  assemble_rtf(toc = ed, output_file = out)
+  # (the levels show as indents with toc_style indent = 600)
+  assemble_rtf(toc = ed, output_file = out, toc_style = list(indent = 600))
   l <- .g2_lines(out)
   ent <- l[grepl("HYPERLINK", l, fixed = TRUE)]
   expect_length(ent, 2L)

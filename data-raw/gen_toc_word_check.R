@@ -1,18 +1,26 @@
 # ============================================================================
-#  A table-of-contents book to check in Word (#1056)
+#  A table-of-contents book to check in Word (#1056, #1068)
 # ============================================================================
 #
 #  About 40 real reports -- one-page and multi-page tables, figures, short
 #  listings and one long listing -- assembled into two books with a cover and
 #  a table of contents of more than one page:
 #
-#    toc-book-default.rtf   the default TOC style
+#    toc-book-default.rtf   the default TOC style: every heading and entry,
+#                           levels 2 and 3 alike, at the same left position
 #    toc-book-hanging.rtf   toc_style = list(entry = list(hanging = TRUE))
 #
 #  The book runs past 100 pages, so the TOC shows page numbers of 1, 2 and 3
-#  digits; several titles are long enough to wrap in the TOC; every report's
-#  header reads "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}", so each page prints
-#  its number in the book.  The data are fictional (set.seed()).
+#  digits; several titles are long enough to wrap in the TOC.  Every report
+#  page shows two page numbers:
+#    - header, right: the report's own page, "Page {PAGE} of {TOTAL_PAGES}",
+#      written when the report is made (static), so it stays the report's
+#      number in the book ("Page 3 of 50" on the third page of the listing);
+#    - footer, centre: the book's page, a {BOOK_PAGE} slot in its own footer
+#      row under the "Source: ..." row, filled by assemble_rtf(book_page =
+#      "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}") ("Page 74 of 121").
+#  The cover and the TOC pages have no page number.  The data are fictional
+#  (set.seed()).
 #
 #  The two books are committed as tests/testthat/fixtures/toc-word-check-
 #  default.rtf and toc-word-check-hanging.rtf.
@@ -34,11 +42,16 @@ arms <- c("Placebo (N=120)", "Drug 10 mg (N=118)", "Drug 20 mg (N=121)")
 n_arm <- c(120L, 118L, 121L)
 
 # -- the page set-up every report shares --------------------------------------
+# (the header's page is the report's own; the footer's {BOOK_PAGE} row is
+# empty in a report and gets the book's page when the book is assembled)
 hdr <- rtf_header(rows = list(
-  c(l = "Example Pharma", r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"),
+  c(l = "Example Pharma", r = "Page {PAGE} of {TOTAL_PAGES}"),
   c(l = "Study EX-2026-01 (fictional data)", r = "Final, 13NOV2026")
 ))
-ftr <- rtf_footer(c(l = "Source: data-raw/gen_toc_word_check.R (fictional data)"))
+ftr <- rtf_footer(rows = list(
+  c(l = "Source: data-raw/gen_toc_word_check.R (fictional data)"),
+  c(c = "{BOOK_PAGE}")
+))
 
 write_report <- function(name, fill, ...) {
   path <- file.path(in_dir, paste0(name, ".rtf"))
@@ -368,6 +381,7 @@ books <- c(default = "toc-book-default.rtf", hanging = "toc-book-hanging.rtf")
 for (b in names(books)) {
   out <- file.path(out_dir, books[[b]])
   assemble_rtf(toc = toc, output_file = out, cover = cover, overwrite = TRUE,
+               book_page = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}",
                toc_style = if (b == "hanging") list(entry = list(hanging = TRUE)))
   message(sprintf("%s: %.0f KB", out, file.size(out) / 1024))
 }
