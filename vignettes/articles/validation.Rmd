@@ -27,15 +27,36 @@ The package keeps three records of what it does and how it is tested.
 - **The Traceability Matrix (FR -> FT).** Every FR with its tests. An FR with
   no test is listed as a deviation, with its risk and why it is accepted.
 
-At each release, CI writes the **Quality Report**: the results on every
-environment (six in CI -- Linux, macOS and Windows, several R versions --
-and two runs on the maintainers' PC), the deviations, the conclusion and how
-to read each attachment. It is attached to the GitHub release with its
-evidence: the Traceability Matrix (`traceability_matrix-<tag>.xlsx`), every
-environment's sessionInfo and test log (`environments-<tag>.txt`), the
-mapped tests' log and the tables behind the results. Only the report of a
-published release can conclude *validation-ready*; a report made any other
-way is marked DRAFT. The rules behind it are the package's **Quality Plan**
+From 0.9.0 on, CI writes the **Quality Report** at each release and attaches
+it to the GitHub release as `quality-report-<tag>.pdf`. It holds:
+
+- the results: the requirements with a test and the tests that pass, overall
+  and by area, and each skipped test with its reason;
+- the environments the tests ran on, each with its result: the required
+  ones, on which the conclusion rests (in CI, the minimum environment, with
+  R and every dependency at its minimum version, and the latest R on Linux,
+  macOS and Windows; and the latest R on the maintainers' PC), and the
+  additional ones, for reference and not judged (in CI, the previous and
+  the next R on Linux; and an older R on the maintainers' PC);
+- the environments the package supports (the R version, the operating
+  systems, the suggested packages) and, for each, the tested environment
+  that stands for it, with what is not tested and the risk accepted;
+- the deviations, and the conclusion.
+
+Only the report of a published release can conclude *validation-ready*. A
+report from a CI run started by hand is marked DRAFT and concludes nothing:
+take the report of the release you install. The release carries the
+evidence too, each file's name ending in the tag:
+
+| Your question | Attachment |
+|---|---|
+| Which tests check this requirement? | `traceability_matrix-<tag>.xlsx` |
+| Did the tests pass? | `test-log-<tag>.txt` |
+| What exactly did each environment run with? | `environments-<tag>.txt` (every environment's sessionInfo and test log) |
+| What does this test check? Which tests exist for no requirement? | `ft-<tag>.csv`; `candidates-<tag>.csv` |
+| How deeply is this function covered? | `functions-<tag>.csv` |
+
+The rules behind the report are the package's **Quality Plan**
 (`inst/validation/quality-plan.md`, also in the kit below).
 
 You use these as supplier evidence. You do not repeat them.
@@ -89,7 +110,9 @@ How the approach works, and a map of all the documents, are in [How rtfreporter 
     kit folder.
 
 6. **Fill the Validation Summary Report**, and attach the package's Quality
-   Report for the same version.
+   Report of the release for the same version (not a DRAFT). Check that your
+   environment is one the report's supported-environments section covers,
+   and read its deviations against your URS.
 
 ## How they connect
 
@@ -105,7 +128,8 @@ UR-008  ----------> FR-PL161 decimal alignment ----> FT (in traceability_matrix.
 - Your matrix (URS -> FR -> UAT) shows that every need has a check of your
   own.
 - The package's matrix (FR -> FT) and Quality Report show that the same FRs
-  are tested, and passed, on every environment of its Quality Plan.
+  are tested, and passed, on every environment of its Quality Plan, and
+  which supported environments those stand for.
 - Together they cover a need from your words down to a test.
 
 ## A new version

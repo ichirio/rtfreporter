@@ -15,7 +15,7 @@
 #  code (R/generate_rtfreport.R .substitute_page_tokens(),
 #  .substitute_run_tokens(), .hf_row_empty(); R/user_tokens.R;
 #  R/assemble_rtf.R .retotal_numpages(), .fill_book_page_slots(),
-#  .extract_first_title(); R/assemble_spec.R .rtf_table_label()):
+#  R/assemble_spec.R .rtf_title_text(), .rtf_table_label()):
 #
 #    tokens   the package's own are those of rtf_text_tokens(): {PAGE} and
 #             {TOTAL_PAGES} (numbers written into the file), {AUTO_PAGE}
@@ -70,17 +70,16 @@
 #    token     auto_page, auto_total, page, total, book, doc
 #    where     header, title, footnote
 #    sections  1, 2 (an input file of two sections)
-#    numbering none, roman, decimal (toc_page_numbering)
 #    cover     no, yes
 #    assemble  rtf (assemble_rtf(), no contents), auto (assemble_rtf(toc =
 #              "auto")), folder (assemble_folder())
 #    book      none, "Bk {AUTO_PAGE} of {AUTO_TOTAL_PAGES}" (book_page)
-#  The product is 1296 rows; .allpairs() picks the rows covering every
-#  pair (22).  Oracle: the "Mk ... kM" texts of the book are those of the inputs,
+#  The product is 432 rows; .allpairs() picks the rows covering every
+#  pair.  Oracle: the "Mk ... kM" texts of the book are those of the inputs,
 #  in order, each NUMPAGES field's cached result the book's page count (4,
 #  one more for a cover, one more for contents) and each slot filled with
 #  book_page (else left empty); \chpgn as often as in the inputs (and the
-#  slots); \pgnrestart 0 / 2 / 1 times; a contents entry's label is the
+#  slots); no \pgnrestart (one page sequence); a contents entry's label is the
 #  title as the file shows it, a dynamic page token and the slot left out.
 #  FR-AS138 FR-AS140 FR-AS141 FR-IX111 FR-IX384 FR-AS250.
 #
@@ -131,18 +130,18 @@
 #  (E) FT-AS148, decision table: the page tokens after assembly, two input
 #  files whose header has "{AUTO_PAGE} {AUTO_TOTAL_PAGES} {PAGE}
 #  {TOTAL_PAGES} [{BOOK_PAGE}]" and whose footnote has {AUTO_TOTAL_PAGES}.
-#    toc     numbering cover book_page          total  slot
-#    -       -         no    NULL               4      empty
-#    -       -         yes   NULL               5      empty
-#    auto    none      no    "Bk {AUTO_PAGE}"   5      Bk \chpgn
-#    auto    roman     yes   "{AUTO_TOTAL_PAGES}" 6    a NUMPAGES field, 6
-#    folder  decimal   no    "{OUTPUT_TITLE}"   5      as written
-#    auto    none      no    "{PAGE}"           stops  (FR-AS139)
-#    auto    none      no    "p {TOTAL_PAGES}"  stops  (FR-AS139)
+#    toc     cover book_page          total  slot
+#    -       no    NULL               4      empty
+#    -       yes   NULL               5      empty
+#    auto    no    "Bk {AUTO_PAGE}"   5      Bk \chpgn
+#    auto    yes   "{AUTO_TOTAL_PAGES}" 6    a NUMPAGES field, 6
+#    folder  no    "{OUTPUT_TITLE}"   5      as written
+#    auto    no    "{PAGE}"           stops  (FR-AS139)
+#    auto    no    "p {TOTAL_PAGES}"  stops  (FR-AS139)
 #  Every case: \chpgn stays (as often as in the inputs, and the slots'),
 #  every NUMPAGES field stays a field with the book's total cached, the
-#  static numbers stay those of the input ("1 2", "2 2"), \pgnrestart 0 /
-#  1 / 2.  FR-AS138 FR-AS139 FR-AS140 FR-AS141 FR-IX111 FR-IX384.
+#  static numbers stay those of the input ("1 2", "2 2"), no \pgnrestart.
+#  FR-AS138 FR-AS139 FR-AS140 FR-AS141 FR-IX111 FR-IX384.
 # ---------------------------------------------------------------------------
 
 .tk_time <- as.POSIXct("2026-01-02 03:04:00")
@@ -357,17 +356,17 @@ test_that("FT-DC293 [FR-DC282 FR-DC283 FR-DC285 FR-DC281 FR-DC111 FR-DC115 FR-DC
   paste0(base, " Mk", v, " kM")
 }
 
-test_that("FT-AS147 [FR-AS138 FR-AS140 FR-AS141 FR-IX111 FR-IX384 FR-AS250]: pairwise -- page token x where x sections x numbering x cover x assembler x book_page", {
+test_that("FT-AS147 [FR-AS138 FR-AS140 FR-AS141 FR-IX111 FR-IX384 FR-AS250]: pairwise -- page token x where x sections x cover x assembler x book_page", {
   dir <- tempfile("tk_b")
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
   levels <- list(token = names(.tk_names_b),
                  where = c("header", "title", "footnote"),
-                 sections = c("1", "2"), numbering = c("none", "roman", "decimal"),
+                 sections = c("1", "2"),
                  cover = c("no", "yes"), assemble = c("rtf", "auto", "folder"),
                  book = c("none", "given"))
   cand <- do.call(expand.grid, c(levels, stringsAsFactors = FALSE))
-  expect_identical(nrow(cand), 1296L)
+  expect_identical(nrow(cand), 432L)
   ap <- .allpairs(cand)
   expect_setequal(ap$need, .tk_pairs(levels))
   expect_setequal(ap$covered, ap$need)
@@ -385,12 +384,10 @@ test_that("FT-AS147 [FR-AS138 FR-AS140 FR-AS141 FR-IX111 FR-IX384 FR-AS250]: pai
     cover <- if (cs$cover == "yes") list(title = "Example Pharma Study EX-1")
     book <- if (cs$book == "given") "Bk {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"
     if (cs$assemble == "folder") {
-      assemble_folder(src, out, toc_page_numbering = cs$numbering,
-                      cover = cover, book_page = book)
+      assemble_folder(src, out, cover = cover, book_page = book)
     } else {
       assemble_rtf(f, out, cover = cover,
-                   toc = if (cs$assemble == "auto") "auto",
-                   toc_page_numbering = cs$numbering, book_page = book)
+                   toc = if (cs$assemble == "auto") "auto", book_page = book)
     }
     ins <- vapply(f, .tk_read, "")
     txt <- .tk_read(out)
@@ -414,15 +411,14 @@ test_that("FT-AS147 [FR-AS138 FR-AS140 FR-AS141 FR-IX111 FR-IX384 FR-AS250]: pai
     # every NUMPAGES field a field, with the book's total
     caches <- regmatches(txt, gregexpr("\\\\fldinst NUMPAGES\\}\\{\\\\fldrslt [0-9]+\\}", txt))[[1L]]
     expect_true(all(grepl(sprintf("fldrslt %d}", total), caches, fixed = TRUE)), info = info)
-    # the numbering
-    restarts <- if (!has_toc) 0L else switch(cs$numbering, none = 0L, roman = 2L, decimal = 1L)
-    expect_identical(.tk_count(txt, "\\pgnrestart"), restarts, info = info)
+    # the numbering: one sequence, no restart
+    expect_identical(.tk_count(txt, "\\pgnrestart"), 0L, info = info)
     # the contents entries
     if (has_toc) {
       labels <- regmatches(txt, gregexpr("HYPERLINK \\\\\\\\l \"[^\"]*\"\\}\\{\\\\fldrslt [^}]*\\}", txt))[[1L]]
       labels <- sub("^.*\\\\fldrslt ", "", sub("\\}$", "", labels))
       want_lab <- vapply(1:2, function(k) .tk_label(cs$token, cs$where, k), "")
-      if (cs$assemble == "folder") want_lab <- sub(" Ages", "  Ages", want_lab, fixed = TRUE)
+      # (assemble_folder() labels as toc = "auto" does, the title as written: #1030)
       expect_identical(labels, want_lab, info = info)
       expect_false(grepl("\\\\chpgn|\\\\field|rtfreporterbookpage", paste(labels, collapse = " ")))
     }
@@ -669,7 +665,6 @@ test_that("FT-AS148 [FR-AS138 FR-AS139 FR-AS140 FR-AS141 FR-IX111 FR-IX384]: dec
   n_fields <- sum(vapply(ins, .tk_count, 0L, pattern = "\\fldinst NUMPAGES"))
   cases <- data.frame(
     toc   = c("-", "-", "auto", "auto", "folder", "auto", "auto"),
-    num   = c("none", "none", "none", "roman", "decimal", "none", "none"),
     cover = c("no", "yes", "no", "yes", "no", "no", "no"),
     book  = c("-", "-", "Bk {AUTO_PAGE}", "{AUTO_TOTAL_PAGES}", "{OUTPUT_TITLE}",
               "{PAGE}", "p {TOTAL_PAGES}"),
@@ -677,7 +672,6 @@ test_that("FT-AS148 [FR-AS138 FR-AS139 FR-AS140 FR-AS141 FR-IX111 FR-IX384]: dec
     slot  = c("{\\*\\rtfreporterbookpage}", "{\\*\\rtfreporterbookpage}",
               "Bk \\chpgn ", .tk_numpages(6L), "\\{OUTPUT_TITLE\\}", "<error>",
               "<error>"),
-    restarts = c(0L, 0L, 0L, 2L, 1L, NA, NA),
     stringsAsFactors = FALSE)
   for (i in seq_len(nrow(cases))) {
     cs <- cases[i, ]
@@ -687,11 +681,10 @@ test_that("FT-AS148 [FR-AS138 FR-AS139 FR-AS140 FR-AS141 FR-IX111 FR-IX384]: dec
     book <- if (cs$book != "-") cs$book
     run <- function() {
       if (cs$toc == "folder") {
-        assemble_folder(src, out, toc_page_numbering = cs$num, cover = cover,
-                        book_page = book)
+        assemble_folder(src, out, cover = cover, book_page = book)
       } else {
         assemble_rtf(f, out, cover = cover, toc = if (cs$toc == "auto") "auto",
-                     toc_page_numbering = cs$num, book_page = book)
+                     book_page = book)
       }
     }
     if (cs$slot == "<error>") {
@@ -711,6 +704,6 @@ test_that("FT-AS148 [FR-AS138 FR-AS139 FR-AS140 FR-AS141 FR-IX111 FR-IX384]: dec
                      info = info)
     caches <- regmatches(txt, gregexpr("fldinst NUMPAGES\\}\\{\\\\fldrslt [0-9]+", txt))[[1L]]
     expect_true(all(endsWith(caches, paste0(" ", cs$total))), info = info)
-    expect_identical(.tk_count(txt, "\\pgnrestart"), cs$restarts, info = info)
+    expect_identical(.tk_count(txt, "\\pgnrestart"), 0L, info = info)
   }
 })

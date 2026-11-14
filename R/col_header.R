@@ -81,6 +81,8 @@
 #' @param label Character scalar.  Cell text; may be `""`.
 #' @param align Optional `"left"`, `"center"`, or `"right"`.  `NULL`
 #'   (default) inherits the leftmost covered column's `header_align`.
+#'   (A spanner [as_rtftables()] reads from a table object is aligned as its
+#'   source prints it -- centred for gt -- see *What is carried* there.)
 #' @param bold,italic,underline Logical.  Default `FALSE`.
 #' @param border Optional [rtf_border()] applied to **this header cell
 #'   only**, overriding the zone border and the automatic group-underline.

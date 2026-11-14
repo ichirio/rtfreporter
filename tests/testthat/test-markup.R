@@ -1,10 +1,6 @@
 # markup argument: control >=/<= (relational) and ^{}/_{} (script) conversion.
 # Default "script" -- relational symbol conversion is opt-in (#142).
 
-# rtf_default_format() / default_format = are deprecated (#804): these tests
-# check what they still do, not the warning (test-rtf-style.R does).
-silence_deprecation("rtf_default_format")
-
 .render_tbl <- function(df, ...) {
   doc <- rtf_document() |>
     rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
@@ -13,7 +9,7 @@ silence_deprecation("rtf_default_format")
 }
 
 .render_doc_default <- function(df, markup) {
-  doc <- rtf_document(default_format = list(markup = markup)) |>
+  doc <- rtf_document(style = rtf_style(markup = markup)) |>
     rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
     rtf_tables(rtftable(df))
   .render_to_string(doc)
@@ -84,12 +80,12 @@ test_that("markup = 'none' leaves both >= and ^{} literal", {
 
 # ── resolution: per-table overrides document default ─────────────────────────
 
-test_that("document default_format$markup applies, and a per-table markup overrides it", {
+test_that("document style markup applies, and a per-table markup overrides it", {
   df <- data.frame(A = "Age >= 65", stringsAsFactors = FALSE)
   # Document opts into relational; the table inherits it.
   expect_match(.render_doc_default(df, "all"), "\\u8805?", fixed = TRUE)
   # Per-table markup wins over the document default.
-  doc <- rtf_document(default_format = list(markup = "all")) |>
+  doc <- rtf_document(style = rtf_style(markup = "all")) |>
     rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
     rtf_tables(rtftable(df, markup = "none"))
   expect_false(grepl("u8805", .render_to_string(doc)))
@@ -100,7 +96,7 @@ test_that("document default_format$markup applies, and a per-table markup overri
 
 test_that("titles and footnotes follow the document markup setting", {
   df  <- data.frame(A = "x", stringsAsFactors = FALSE)
-  doc <- rtf_document(default_format = list(markup = "all")) |>
+  doc <- rtf_document(style = rtf_style(markup = "all")) |>
     rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
     rtf_tables(rtftable(df),
                titles    = list(list("Age >= 65")),

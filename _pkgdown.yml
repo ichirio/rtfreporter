@@ -84,27 +84,48 @@ home:
           **In 0.9.0**:
 
           - Tables from an ARD, end to end: every `as_rtftables()` setting
-            has a plan verb, plus a Total column, nested rows, BY pages, a
-            column header written row by row with `(N=xx)` from the same
-            ARD, tests or differences as columns, statistics grouped in one
-            column, stacked subgroups and rows kept by a rule.
-          - Joined files: a table of contents whose title, text sizes and
-            hanging indent can be set, labels read from the titles, and
-            page numbers at the right margin.
+            has a plan verb, plus a Total column (also a Total row for a
+            shift table), nested rows, BY pages and a column header written
+            row by row, with `(N=xx)` read from the same ARD.
+          - The tables a study report has: a test or a difference as a
+            column (`plan_compare()`), several statistics in one column
+            (`plan_stat_groups()`), subgroups one under another
+            (`normalize_ard(stack = )`), rows kept by a rule
+            (`plan_filter()`), sorting by a parent's count (`-n@SOC`), a
+            section per arm with its N (`heading =`) and a line for a table
+            with no events (`plan_empty()`).
+          - Flow placement: with `page_break = FALSE`, a table or a figure
+            goes on the page under the content before it, and a listing
+            under its summary table.
+          - Japanese and other East Asian text: a font per script
+            (`latin` / `east_asian` / `complex`) and `font_lang`.
+          - Figures: the drawing settings in `rtf_figures()`, and a better PNG
+            device when one is installed.
+          - Joined files: a table of contents whose indent by level, title,
+            text sizes and hanging indent can be set, labels read from the
+            titles, page numbers at the right margin, and the book's page
+            number beside each report's own.
           - Footnotes that follow the width and placement of their table or
-            figure.
-          - One style object for every part of a document (`rtf_style()`),
-            and one name per thing; the functions 0.8.x deprecated are
-            gone.
-          - A folder for an AI assistant (`rtfreporter_ai_manual()`), and
+            figure, and one style object for every part of a document
+            (`rtf_style()`).
+          - A folder for an AI assistant (`rtfreporter_ai_manual()`): the
+            manual, example programs, your ARD's shape and one file to paste;
             articles on validation and on developing with AI agents.
+          - A cleaner API: one name per thing,
+            `rtf_section(header = , footer = )`, table formats in the plan
+            or the style rather than in `rtf_tables()`, and the old border
+            functions on their way out.
 
           **Later**:
 
           - More table sources, and sturdier reading of the ones there are
             (gt, gtsummary, rtables / tern).
+          - Table plans for layouts that are not an ARD: column and row
+            sources you define.
           - Inline formatting inside a text: bold, italic and superscript
             spans.
+          - Footnote marks attached to a named row or cell.
+          - Styling rules for single body rows.
       community:
         title: Community
         text: |
@@ -384,8 +405,7 @@ reference:
       **Acts on:** the `rtf_document` object.
       `rtf_page()` and `rtf_style()` are the only settings that are
       document-only -- everything else in this reference acts on a table
-      (`rtf_style()` gathers every module's look in one object;
-      `rtf_default_format()` is deprecated in its favour).
+      (`rtf_style()` gathers every module's look in one object).
       `rtf_config()` edits an already-composed document; `rtf_document()`
       starts a new one.  `rtf_text_tokens()` lists every `{TOKEN}` a header,
       footer, title or footnote can carry (`{PAGE}`, `{PROGRAM}`,
@@ -395,7 +415,6 @@ reference:
       - rtf_config
       - rtf_page
       - rtf_style
-      - rtf_default_format
       - rtf_watermark
       - generate_rtfreport
       - rtf_text_tokens

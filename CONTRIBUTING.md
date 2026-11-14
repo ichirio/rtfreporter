@@ -439,7 +439,7 @@ maintainer approves them.
 
 | Workflow | File | What it does |
 |----------|------|--------------|
-| **R-CMD-check** | `R-CMD-check.yaml` | `R CMD check` on a matrix of OS / R versions (the standard `r-lib/actions` recipe).  Must be 0 errors / 0 warnings. |
+| **R-CMD-check** | `R-CMD-check.yaml` | `R CMD check` on a matrix of OS / R versions (the standard `r-lib/actions` recipe), and one more job, the *minimum environment*: R and each dependency at the minimum `DESCRIPTION` names, the rest from CRAN as on a dated Posit Package Manager snapshot (the release jobs are the *recommended environment*, the latest R with the latest packages) (`inst/validation/dependency-minimums.md` says why each is what it is).  Must be 0 errors / 0 warnings. |
 | **test-coverage** | `test-coverage.yaml` | Runs the testthat suite under `covr` and uploads coverage to Codecov. |
 | **pkgdown** | `pkgdown.yaml` | Builds the documentation site and (on `main` / on a published release) deploys it to the `gh-pages` branch. |
 | **version-guard** | `version-guard.yaml` | Fails a PR that raises the **MINOR or MAJOR** position of `DESCRIPTION` `Version:` unless the PR carries the `release` label (see *Versioning & releases*). A PATCH bump or no change always passes. |
@@ -590,7 +590,12 @@ releases -- is not written again; this section says only what it does not.
     `asserts` or `part`, `evidence` the expectation lines that assert it,
     `fr_covered` `yes` when the FR's tests together assert all it states).
     A test that asserts none of an FR is not mapped to it, and a mapping
-    with no row fails `test-validation-leaves.R`;
+    with no row fails `test-validation-leaves.R`.  A new row goes to its
+    place, never to the end: by `fr` in the order of `requirements.csv`,
+    then by `ft` with the number read as a number (`FT-AR063` before
+    `FT-AR3000`); `inst/validation/reference_review.csv` is kept by `file`
+    the same way.  `test-validation-table-order.R` checks both, so two PRs
+    that add rows change different lines;
   - name every new argument in a leaf FR of its function, as `arg =` or
     bare inside `f(...)`; the plain word in prose does not count, and an
     argument without such an FR fails `test-validation-coverage.R`;
@@ -654,7 +659,7 @@ releases -- is not written again; this section says only what it does not.
 
 ## Development setup
 
-Use R 4.2 or later (the oldest version CI tests).
+Use R 4.3 or later (the oldest version CI tests).
 
 ```r
 # tools for the pre-push checks; they are not in Suggests
@@ -720,6 +725,12 @@ contributors, CRAN and the tooling all read our numbers the same way.
 - Within one major version, **no minor or patch release breaks user code.**
 - Deprecation lifecycle: *deprecate in a minor* (function still works + warns)
   → *remove only in the next major*.
+- **A new version of a dependency** (an import, a suggested package, or R):
+  when rtfreporter can follow it and still work with the versions it
+  supported before, that is a **minor** release; when it cannot, and the new
+  version must be required (a minimum in `DESCRIPTION` is raised), that is a
+  **major** release.  The minimums and their reasons are in
+  `inst/validation/dependency-minimums.md` (the Quality Plan, section 6).
 - **Except while `MAJOR` is 0** — see below.
 
 ### Pre-1.0 is different
@@ -802,9 +813,12 @@ open a release Issue and perform a release.**
    attaches the Quality Report and its attachments to it.  Before step 5,
    on the release branch (`Version: X.Y.Z`), run
    `Rscript validation/env.R "<OS>, R <version>" local` on the
-   maintainers' PC for each R version of the Quality Plan and commit
+   maintainers' PC for each local environment of the Quality Plan
+   (section 5: the required one, and the additional one) and commit
    `validation/env-local/` in the release PR: the report counts only the
-   records of the version it reports.
+   records of the version it reports, and only a required record of this
+   code counts for the verdict.  R CMD check must succeed on every CI job
+   (a condition of the release, the Quality Plan, section 7).
 7. **(Once on CRAN)** run the CRAN pre-checks and submit —
    `devtools::check_win_devel()`, `urlchecker::url_check()`,
    `devtools::release()`.

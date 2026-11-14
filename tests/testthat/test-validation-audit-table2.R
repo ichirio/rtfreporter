@@ -64,11 +64,13 @@
 #   style_zone: the zones; guards                           | FR-TB440/441| FT-TB636, FT-TB685
 #   add_header_row: the row; .position; no header           | FR-TB231-234| FT-TB426, FT-TB425
 #   add_header_row: a wrong-length row / .position an error | FR-TB236    | FT-TB764
+#   a gt labels row promoted to cells; a spanning cell      | FR-TB425    | FT-TB7602
 #   the examples                                            | FR-TB425/430/439/233 | FT-TB762
 #
 # set_col_header()
 #   final-table coordinates; rows; nothing clears           | FR-TB212-214| FT-TB343, FT-TB347, FT-TB348
 #   a fully named row is a patch; a partly named row        | FR-TB215    | FT-TB126, FT-TB765
+#   a named row on a gt labels row promoted to cells        | FR-TB215    | FT-TB7603
 #   col_cell pos; unknown names; not cells                  | FR-TB216-219| FT-TB347, FT-TB345, FT-TB096
 #   align; guards                                           | FR-TB220/221| FT-TB349, FT-DC043
 #   values / by; guards                                     | FR-TB222-226| FT-TB081, FT-TB082, FT-TB083
@@ -95,6 +97,8 @@
 #   label attributes kept; zero rows                        | FR-TB202    | FT-TB389, FT-TB395
 #   vars; one column the stub as it is                      | FR-TB194    | FT-TB388, FT-TB390
 #   label / indent / layout / label_span; guards            | FR-TB197-205| FT-TB384, FT-TB401, FT-TB398, FT-TB396, FT-TB394
+#   label heads the stub on a gt labels row promoted to     | FR-TB197    | FT-TB7601
+#     cells (through stub_spec(label = ))                   |             |
 #   the examples                                            | FR-TB193/196/199 | FT-TB768
 #
 # stub_spec()

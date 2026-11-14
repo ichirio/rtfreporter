@@ -548,3 +548,17 @@ test_that("a fractional gutter is allowed, and frees width for the columns", {
   expect_gt(sum(vapply(hair$cols, function(cl) cl$width, integer(1L))),
             sum(vapply(wide_gutter$cols, function(cl) cl$width, integer(1L))))
 })
+
+test_that("FT-LS6401 [FR-LS211]: a fitted listing prints the header the same widths written by hand print, for a variable label with a line break of its own and for one without", {
+  for (b_label in c("Beta\nline2", "Beta")) {
+    d <- data.frame(A = c("aaa", "bbb"), B = c("cc", "dd"), stringsAsFactors = FALSE)
+    attr(d$A, "label") <- "Alpha label words"
+    attr(d$B, "label") <- b_label
+    fit <- fit_listing_widths(d, listing_spec(list(listing_col(c("A", "B"), name = "AB"))), total_width = 50)
+    by_hand <- listing_spec(list(listing_col(c("A", "B"), name = "AB", width = fit$cols[[1L]]$width)))
+    tf <- as_rtftables(d, listing = fit)
+    th <- as_rtftables(d, listing = by_hand)
+    expect_identical(tf[[1L]]$col_header, th[[1L]]$col_header)
+    expect_identical(tf, th)
+  }
+})

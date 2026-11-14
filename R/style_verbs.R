@@ -135,6 +135,34 @@
   v
 }
 
+# A fill colour (background): an unknown one is not drawn and warns (the
+# user's decision for FR-TB405, #999); NULL, NA and "" are not drawn, silently,
+# as before.  Returns NULL when nothing is to be drawn.
+.style_fill_color <- function(v, arg, verb) {
+  if (length(v) == 1L && (is.na(v) || identical(v, ""))) return(v)
+  if (!is.character(v) || length(v) != 1L || !grepl("^#[0-9A-Fa-f]{6}$", v)) {
+    shown <- if (is.character(v) && length(v) == 1L) sprintf("\"%s\"", v) else
+      "this value"
+    warning(sprintf(paste0("`%s(%s = )`: %s is not a 6-digit hex colour such ",
+                           "as \"#7F7F7F\", so it is not drawn."),
+                    verb, arg, shown), call. = FALSE)
+    return(NULL)
+  }
+  v
+}
+
+# A text colour: one "#RRGGBB", as every other colour argument takes.
+# A colour name or a short hex string used to reach the colour table as
+# \redNA... (#999).
+.style_check_color <- function(v, arg, verb) {
+  if (!is.character(v) || length(v) != 1L || is.na(v) ||
+      !grepl("^#[0-9A-Fa-f]{6}$", v)) {
+    stop(sprintf(paste0("`%s(%s = )` must be NULL or a 6-digit hex colour ",
+                        "such as \"#7F7F7F\"."), verb, arg), call. = FALSE)
+  }
+  v
+}
+
 # Promote a character labels row to the equivalent list of single-column
 # cells, copying each column's current header styling (header_align /
 # header_bold / header_italic) onto the cell so the rendered output stays the
@@ -161,17 +189,88 @@
   })
 }
 
+# Is `row` a labels row promoted to cells: by style_header(border = /
+# underline = ) above, or by the gt adapter for a column label with a
+# tab_style() border or underline.  Each cell is `{from, to, label, ...,
+# promoted = TRUE}`; a cell may span several columns (from < to).  The verbs
+# that address the labels row by column (stub_spec(label = ), named
+# set_col_header(), the header styling sync below) read it through this
+# (#1041).
+.is_promoted_row <- function(row) {
+  is.list(row) && length(row) > 0L &&
+    all(vapply(row, function(cell) is.list(cell) && isTRUE(cell$promoted),
+               logical(1L)))
+}
+
+# The cell put in front of a header cell row for a new first column (the
+# stub as_rtftables(stub = ) builds), in the row's own cell form: a `pos`
+# cell in a row of `pos` cells, a `from` / `to` cell in a row of those, and
+# a promoted cell in a promoted labels row (#1041).
+.header_lead_cell <- function(row, label) {
+  span_form <- length(row) > 0L && all(vapply(row, function(cell) {
+    is.list(cell) && is.null(cell$pos) && !is.null(cell$from)
+  }, logical(1L)))
+  if (!span_form) return(list(pos = 1L, label = label))
+  cell <- list(from = 1L, to = 1L, label = label)
+  if (.is_promoted_row(row)) cell$promoted <- TRUE
+  cell
+}
+
+# A fully named label row given to set_col_header() is a patch (FR-TB215).
+# When the table's bottom header row is a promoted labels row, the patch is
+# made on those cells: each named column's cell takes the new label and
+# keeps its border, styling and span; the other cells keep their labels.  A
+# cell spanning several columns takes the label of a named column it covers;
+# two names on one cell stop.  The result is the whole new header,
+# that one row, as set_col_header() replaces the whole header.  NULL when this
+# does not apply (any other header or row), so the caller goes on as before
+# (#1041).
+.patch_promoted_labels <- function(header, hdr, col_names) {
+  if (!is.character(header) || !length(header) || is.null(hdr) ||
+      is.character(hdr) || !length(hdr)) {
+    return(NULL)
+  }
+  nms <- names(header)
+  if (is.null(nms) || !all(nzchar(nms))) return(NULL)
+  row <- hdr[[length(hdr)]]
+  if (!.is_promoted_row(row)) return(NULL)
+  # the same checks (unknown name, a column named twice) as a plain row
+  .resolve_named_label_row(header, col_names)
+  hit <- rep(NA_character_, length(row))
+  for (i in seq_along(header)) {
+    j <- which(col_names == nms[i])
+    k <- which(vapply(row, function(cell) {
+      j >= as.integer(cell$from) && j <= as.integer(cell$to)
+    }, logical(1L)))
+    if (!length(k)) next
+    k <- k[1L]
+    if (!is.na(hit[k])) {
+      stop(sprintf(paste0(
+        "col_header: the header cell over columns %d-%d is targeted twice ",
+        "-- name \"%s\" and name \"%s\"."),
+        as.integer(row[[k]]$from), as.integer(row[[k]]$to), hit[k], nms[i]),
+        call. = FALSE)
+    }
+    hit[k] <- nms[i]
+    row[[k]]$label <- as.character(header[[i]])
+  }
+  list(row)
+}
+
 # A write of the columns' header styling (header_align / header_bold /
 # header_italic) also lands on the promoted label-row cells of those columns,
-# so a later verb wins whatever the order of the promotion (#872).  Applied
-# to `col_header` and to every entry of `col_header_list`.
+# so a later verb wins whatever the order of the promotion (#872).  A cell
+# spanning several columns is reached when its span intersects the columns
+# written, the rule style_header() targets cells by (#1041).  Applied to
+# `col_header` and to every entry of `col_header_list`.
 .style_sync_promoted <- function(x, cols_idx, align = NULL, bold = NULL,
                                  italic = NULL) {
   if (is.null(align) && is.null(bold) && is.null(italic)) return(x)
   sync_cell <- function(cell) {
     f <- as.integer(cell$from)
-    if (!isTRUE(cell$promoted) || f != as.integer(cell$to) ||
-        !f %in% cols_idx) {
+    t <- as.integer(cell$to)
+    if (!isTRUE(cell$promoted) || length(f) != 1L || length(t) != 1L ||
+        anyNA(c(f, t)) || !any(cols_idx >= f & cols_idx <= t)) {
       return(cell)
     }
     if (!is.null(align))  cell$align  <- align
@@ -467,6 +566,14 @@ style_cols.rtftable <- function(x, cols = NULL, align = NULL, bold = NULL,
     v <- get(arg)
     if (!is.null(v)) assign(arg, .style_check_flag(v, arg, "style_cols"))
   }
+  for (arg in c("color", "header_color")) {
+    v <- get(arg)
+    if (!is.null(v)) assign(arg, .style_check_color(v, arg, "style_cols"))
+  }
+  for (arg in c("background", "header_background")) {
+    v <- get(arg)
+    if (!is.null(v)) assign(arg, .style_fill_color(v, arg, "style_cols"))
+  }
   for (j in cols_idx) {
     spec <- x$col_spec[[j]]
     if (!is.null(align))         spec$align         <- align
@@ -524,6 +631,10 @@ style_body.rtftable <- function(x, rows = NULL, cols = NULL, bold = NULL,
   for (arg in c("bold", "italic", "underline")) {
     v <- get(arg)
     if (!is.null(v)) assign(arg, .style_check_flag(v, arg, "style_body"))
+  }
+  if (!is.null(color)) color <- .style_check_color(color, "color", "style_body")
+  if (!is.null(background)) {
+    background <- .style_fill_color(background, "background", "style_body")
   }
   if (!is.null(align))  align  <- .style_check_align(align, "style_body")
   if (!is.null(border)) border <- .style_check_border(border, "style_body")
@@ -704,6 +815,14 @@ add_header_row.list <- function(x, ...) {
 #' each label belongs to, so it may be shorter than the table and the columns
 #' it does not mention keep their own name.
 #'
+#' When the bottom header row is a label row promoted to cells (a gt column
+#' label with a `tab_style()` border, or `style_header(border = )`), the
+#' patch renames only the named columns' cells, each keeping its border and
+#' span, and the other cells keep their labels.  A cell spanning several
+#' columns takes the label of a named column it covers; naming two columns of
+#' one such cell is an error.  As with any row given, the header is replaced
+#' by that one row, so spanning rows above it are dropped.
+#'
 #' ```r
 #' rtf_columns(tbl)                              # row_label  g1  g2  Total
 #' tbl |> set_col_header(c(g1 = "Low", g2 = "High"))
@@ -815,7 +934,13 @@ set_col_header.rtftable <- function(x, ..., values = NULL, by = NULL,
   cn  <- names(ref)
   .check_col_header_width(header, nc, "set_col_header")
 
-  if (!is.null(x$data_list)) {
+  # A named patch on a labels row promoted to cells renames those cells.
+  promoted <- if (is.null(x$data_list)) {
+    .patch_promoted_labels(header, x$col_header, cn)
+  }
+  if (!is.null(promoted)) {
+    x$col_header <- promoted
+  } else if (!is.null(x$data_list)) {
     x$col_header_list <-
       .normalize_multi_col_header(header, length(x$data_list), nc, cn)
     x$col_header <- x$col_header_list[[1L]]

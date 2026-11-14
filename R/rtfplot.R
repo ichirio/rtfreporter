@@ -171,7 +171,10 @@
   # would leave a blank page rather than say what was wrong.
   if (is.null(x) || is.atomic(x)) {
     stop("A figure is one file path, or one plot object; got ",
-         if (is.null(x)) "NULL" else paste0("a ", class(x)[[1L]], " vector"),
+         if (is.null(x)) "NULL" else {
+           cl <- class(x)[[1L]]
+           paste0(if (grepl("^[aeiou]", cl)) "an " else "a ", cl, " vector")
+         },
          ".", call. = FALSE)
   }
   TRUE

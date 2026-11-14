@@ -265,29 +265,30 @@ test_that("structured toc table assigns entries to files in declaration order", 
   expect_identical(length(gregexpr("bkmkstart tfl_", txt)[[1L]]), 3L)
 })
 
-# ──────── Page-numbering modes ─────────────────────────────────────────────
+# ──────── Page numbering: one sequence from the first page (#1049) ────────
 
-test_that("toc_page_numbering = 'roman' inserts \\pgnlcrm and restarts body", {
+test_that("the removed toc_page_numbering stops, whatever its value (#1049)", {
   f1 <- .write_demo_rtf("X"); f2 <- .write_demo_rtf("Y")
   on.exit(unlink(c(f1, f2)), add = TRUE)
   out <- tempfile(fileext = ".rtf"); on.exit(unlink(out), add = TRUE)
-  assemble_rtf(c(f1, f2), out,
-               toc                = c("A", "B"),
-               toc_page_numbering = "roman",
-               overwrite          = TRUE)
-  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  expect_match(txt, "\\\\pgnlcrm")
-  expect_match(txt, "\\\\pgnrestart\\\\pgndec")    # body restart
+  for (pn in list("roman", "decimal", "none", NULL)) {
+    expect_error(assemble_rtf(c(f1, f2), out, toc = c("A", "B"),
+                              toc_page_numbering = pn, overwrite = TRUE),
+                 "unused argument (toc_page_numbering", fixed = TRUE)
+  }
+  expect_false(file.exists(out))
 })
 
-test_that("toc_page_numbering = 'none' (default) omits both restart and pgnlcrm", {
+test_that("a TOC and a cover write no page-number command: one sequence from the first page", {
   f1 <- .write_demo_rtf("X"); f2 <- .write_demo_rtf("Y")
   on.exit(unlink(c(f1, f2)), add = TRUE)
   out <- tempfile(fileext = ".rtf"); on.exit(unlink(out), add = TRUE)
-  assemble_rtf(c(f1, f2), out, toc = c("A", "B"), overwrite = TRUE)
+  assemble_rtf(c(f1, f2), out, toc = c("A", "B"), cover = list(title = "C"),
+               overwrite = TRUE)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  expect_false(grepl("\\\\pgnlcrm",            txt))
-  expect_false(grepl("\\\\pgnrestart\\\\pgndec", txt))
+  expect_false(grepl("\\\\pgnlcrm",    txt))
+  expect_false(grepl("\\\\pgnrestart", txt))
+  expect_false(grepl("\\\\pgndec",     txt))
 })
 
 # ──────── Cover page ──────────────────────────────────────────────────────
@@ -353,7 +354,6 @@ test_that("toc = NULL + cover = NULL is byte-identical to the legacy behaviour",
   assemble_rtf(c(f1, f2), out_old, overwrite = TRUE)
   assemble_rtf(c(f1, f2), out_new,
                toc = NULL, cover = NULL,
-               toc_page_numbering = "none",
                overwrite = TRUE)
   expect_identical(readLines(out_old, warn = FALSE),
                    readLines(out_new, warn = FALSE))
@@ -422,13 +422,12 @@ test_that("static {PAGE}/{TOTAL_PAGES} numbers survive when cover / toc are adde
   assemble_rtf(c(f1, f2), out,
                cover = list(title = "Demo"),
                toc   = c("Entry A", "Entry B"),
-               toc_page_numbering = "roman",
                overwrite = TRUE)
   joined <- paste(readLines(out, warn = FALSE), collapse = "\n")
 
   # The static "Page 1 of 2" / "Page 1 of 4" baked into the source
   # files is still verbatim in the assembled output — even though we
-  # added a cover page, a TOC, and Roman page numbering on top.
+  # added a cover page and a TOC on top.
   expect_match(joined, "Page 1 of 2")
   expect_match(joined, "Page 1 of 4")
 })
@@ -677,14 +676,13 @@ test_that(".count_rtf_pages does not mistake other \\page... words for a break",
   expect_equal(rtfreporter:::.count_rtf_pages(character(0)), 0L)
 })
 
-test_that("assemble_rtf TOC caches cumulative page numbers (decimal = continuous)", {
+test_that("assemble_rtf TOC caches cumulative page numbers (one sequence from the TOC)", {
   f1 <- .write_demo_rtf("First")
   f2 <- .write_demo_rtf("Second")
   out <- tempfile(fileext = ".rtf")
   assemble_rtf(c(f1, f2), out, overwrite = TRUE,
     toc = data.frame(file = c(f1, f2), label = c("First", "Second"),
-                     level = 1L, stringsAsFactors = FALSE),
-    toc_page_numbering = "decimal")
+                     level = 1L, stringsAsFactors = FALSE))
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
   # Each TOC entry caches its page number in the PAGEREF field's result.
   hits  <- regmatches(txt, gregexpr("PAGEREF.{1,60}?fldrslt [0-9]+", txt))[[1L]]
@@ -700,7 +698,7 @@ test_that("a TOC over 2 pages breaks itself and counts its pages (#767)", {
   toc <- data.frame(file    = c(f1, rep(f2, 59)),
                     label   = sprintf("Table 14.%d Summary", 1:60),
                     heading = "Tables", level = 2L, stringsAsFactors = FALSE)
-  assemble_rtf(c(f1, f2), out, overwrite = TRUE, toc = toc, toc_page_numbering = "decimal")
+  assemble_rtf(c(f1, f2), out, overwrite = TRUE, toc = toc)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
   n_toc <- max(rtfreporter:::.toc_entry_pages(rtfreporter:::.spec_to_toc(toc)))
   expect_gt(n_toc, 1L)

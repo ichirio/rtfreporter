@@ -2764,6 +2764,14 @@ plan_filter <- function(.plan, ..., any = TRUE, parents = c("keep", "drop"), by 
 #' A later `plan_compare()` replaces the earlier one as a whole: the last call
 #' says every comparison column.
 #'
+#' @section Package versions:
+#' The difference of event rates between two arms of a hierarchical ARD
+#' (the `"estimate"` records a table shows here, or sorts on with
+#' `plan_sort("-estimate@soc")`) comes from
+#' `cards::diff_ard_hierarchical()`, which cards has from 0.9.0.  The
+#' minimum cards in DESCRIPTION, 0.7.0, does not have it; with that cards,
+#' make those records yourself or install cards 0.9.0 or later.
+#'
 #' @param .plan A [table_plan()].  The dot keeps `p = `, the commonest
 #'   column here, from being taken for it.
 #' @param ... The columns, each named (the column's name, any name) and
@@ -3151,7 +3159,11 @@ plan_empty <- function(.plan, text = "No subjects met the criteria.",
 #'     \item{`"none"`}{none: a listing's records follow each other with no
 #'       blank row between them (`blank_row = FALSE`).}
 #'     \item{positions}{an integer vector, a blank row after each given row;
-#'       `0` before the first, `-1` after the last.  A fraction or a
+#'       `0` before the first, `-1` after the last.  The positions count
+#'       rows of the whole body, not of each page: a blank goes after that
+#'       body row on the page it lands on, once, and one after a row that
+#'       ends a page stays at that page's foot (not carried to the next).
+#'       A fraction or a
 #'       position past the body's last row stops at [plan_apply()], naming
 #'       the positions, as `as_rtftables(blank_rows = )` does.}
 #'     \item{a rule}{a [blank_rows_by_change()] or [blank_rows_by_rule()]
@@ -3437,7 +3449,7 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
 #'   Placebo   = c("86", "75.2 (8.59)", "53 (61.6)"),
 #'   Active    = c("84", "75.7 (8.29)", "50 (59.5)"))
 #'
-#' # Minimal: the clinical rules (a rule over and under the header, one
+#' # Minimal: the clinical rules (a rule over and under the header, none
 #' # under the last row)
 #' pages <- table_plan(tbl) |> plan_style(border = "tfl") |> plan_apply()
 #' class(pages[[1]]$border)
@@ -7331,10 +7343,16 @@ plan_template <- function(x, cols = NULL, hierarchy = character(),
   } else {
     # fixed: the base pipe is " |>", and "|" is alternation in a regex
     L[length(L)] <- sub(paste0(" ", op), "", L[length(L)], fixed = TRUE)
-    L <- c(L,
-           "# Several column keys: as_rtftables(header_sep = ) rebuilds the",
-           "# spanning header from the \"____\" in the names, so plan_col_header()",
-           "# is only needed for text the data does not carry.")
+    L <- c(L, if (length(f$cols) == 1L) {
+      # one column key but no denominators to show (#990)
+      c("# The ARD has no denominator (N) rows, so no \"N = \" header is written:",
+        "# the columns are headed by their values.  plan_col_header() sets",
+        "# other labels.")
+    } else {
+      c("# Several column keys: as_rtftables(header_sep = ) rebuilds the",
+        "# spanning header from the \"____\" in the names, so plan_col_header()",
+        "# is only needed for text the data does not carry.")
+    })
   }
 
   L <- c(L, "",

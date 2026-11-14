@@ -43,10 +43,6 @@ jobs:
           - {os: ubuntu-latest,  r: 'devel',     http-user-agent: 'release'}
           - {os: ubuntu-latest,  r: 'release'}
           - {os: ubuntu-latest,  r: 'oldrel-1'}
-          # the oldest R tested: a suggested package that cannot be installed
-          # on it (it, or what it needs, wants a newer R) is left out
-          # (`pkgs`), and the check lets a suggested package be missing
-          - {os: ubuntu-latest,  r: '4.2', pkgs: 'tern=?ignore-before-r=4.4.0 devEMF=?ignore-before-r=4.3.0', force-suggests: 'false'}
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
 
@@ -56,6 +52,21 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # One job only, so CI stays light: LibreOffice, pdffonts and a Japanese
+      # font for the LibreOffice test (test-font-slots.R), and a non-English
+      # time locale for the month-name test (test-tm-gaps-g2.R).  The other
+      # jobs skip those two tests.
+      - name: LibreOffice, pdffonts, a Japanese font and other time locales
+        if: matrix.config.os == 'ubuntu-latest' && matrix.config.r == 'release'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libreoffice-writer poppler-utils fonts-noto-cjk fontconfig locales
+          sudo locale-gen ja_JP.UTF-8 de_DE.UTF-8
+          soffice --version
+          pdffonts -v || true
+          fc-list :lang=ja family | head -n 3
+          locale -a | grep -E '^(ja_JP|de_DE)'
 
       - uses: r-lib/actions/setup-pandoc@v2
 
@@ -67,13 +78,11 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck ${{ matrix.config.pkgs }}
+          extra-packages: any::rcmdcheck
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
         id: check
-        env:
-          _R_CHECK_FORCE_SUGGESTS_: ${{ matrix.config.force-suggests || 'true' }}
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
@@ -91,11 +100,115 @@ jobs:
           name: env-${{ matrix.config.os }}-${{ matrix.config.r }}
           path: validation/env-out/
 
+  # The minimum environment: R at DESCRIPTION's `Depends` and every direct
+  # dependency at the minimum DESCRIPTION names (`pkg@<minimum>`); the
+  # suggested packages with no minimum, and every indirect dependency, come
+  # from CRAN as it was on PPM_DATE (a dated Posit Package Manager snapshot,
+  # the first with the newest minimum, devEMF 4.6).  The recommended
+  # environment -- the latest R with the latest packages -- is the matrix's
+  # release jobs.  Why each minimum: inst/validation/dependency-minimums.md.
+  minimum-environment:
+    runs-on: ubuntu-24.04
+
+    name: ubuntu-24.04 (R 4.3, minimum environment)
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+      R_MIN: '4.3'
+      PPM_DATE: '2026-06-05'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ env.R_MIN }}
+          use-public-rspm: false
+
+      # CRAN as it was on PPM_DATE, as binaries for this Ubuntu (noble); pak
+      # reads the repos option, and the user agent makes PPM serve binaries
+      - name: CRAN as on PPM_DATE
+        shell: bash
+        run: |
+          sudo tee -a "$(R RHOME)/etc/Rprofile.site" > /dev/null <<EOF
+          options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/noble/${PPM_DATE}"),
+                  HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(),
+                                          paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"])))
+          EOF
+          Rscript -e 'print(getOption("repos"))'
+
+      # pak refs from DESCRIPTION: `pkg@<minimum>` where it names a minimum,
+      # `any::pkg` where it does not; and R must be DESCRIPTION's minimum
+      - name: The minimum versions, from DESCRIPTION
+        id: pins
+        shell: Rscript {0}
+        run: |
+          d <- read.dcf("DESCRIPTION", fields = c("Depends", "Suggests"))[1, ]
+          r_min <- sub("^.*R [(]>= *([0-9.]+)[)].*$", "\\1", d[["Depends"]])
+          if (!identical(r_min, Sys.getenv("R_MIN")) ||
+              !identical(paste(R.version$major, sub("[.].*$", "", R.version$minor), sep = "."), r_min)) {
+            stop("R_MIN (", Sys.getenv("R_MIN"), ") and this R (", getRversion(),
+                 ") must be DESCRIPTION's Depends: R (>= ", r_min, ")")
+          }
+          s <- trimws(strsplit(d[["Suggests"]], ",")[[1L]])
+          s <- s[nzchar(s)]
+          pkg <- sub("\\s*[(].*$", "", s)
+          min <- ifelse(grepl("[(]>=", s), sub("^.*[(]>=\\s*([^)]+)[)].*$", "\\1", s), NA)
+          refs <- ifelse(is.na(min), paste0("any::", pkg), paste0(pkg, "@", min))
+          cat(paste(refs, collapse = "\n"), "\n")
+          cat(sprintf("refs=%s\n", paste(refs, collapse = " ")),
+              file = Sys.getenv("GITHUB_OUTPUT"), append = TRUE)
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          dependencies: '"hard"'
+          extra-packages: any::rcmdcheck ${{ steps.pins.outputs.refs }}
+          needs: check
+
+      - name: The repository and the versions installed
+        shell: Rscript {0}
+        run: |
+          print(getOption("repos"))
+          # what pak resolved from: the lockfile setup-r-dependencies wrote
+          lock <- tryCatch(readLines(".github/pkg.lock", warn = FALSE), error = function(e) character())
+          urls <- regmatches(lock, regexpr("https?://[^\"]+", lock))
+          cat("Where the lockfile's packages come from:\n")
+          print(table(sub("^(https?://[^/]+/[^/]+/[^/]+/[^/]+/[^/]+).*$", "\\1", urls)))
+          s <- read.dcf("DESCRIPTION", fields = "Suggests")[1, 1]
+          s <- trimws(strsplit(s, ",")[[1L]])
+          s <- s[nzchar(s)]
+          pkg <- sub("\\s*[(].*$", "", s)
+          ver <- vapply(pkg, function(p) tryCatch(as.character(utils::packageVersion(p)),
+                                                 error = function(e) "not installed"), "")
+          print(data.frame(suggests = s, installed = ver), row.names = FALSE)
+
+      - uses: r-lib/actions/check-r-package@v2
+        id: check
+        with:
+          upload-snapshots: true
+          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+
+      # a release or a run by hand: this environment, for the Quality Report
+      - name: This environment, for the Quality Report
+        if: always() && (github.event_name == 'release' || github.event_name == 'workflow_dispatch')
+        shell: bash
+        run: |
+          Rscript validation/env.R "ubuntu-24.04 (R ${R_MIN}, minimum environment)" ci "${{ steps.check.outcome }}" check
+
+      - uses: actions/upload-artifact@v4
+        if: always() && (github.event_name == 'release' || github.event_name == 'workflow_dispatch')
+        with:
+          name: env-minimum-environment
+          path: validation/env-out/
+
   # The Quality Report: every environment, the Traceability Matrix, the
   # deviations; one PDF and its attachments.  At a release they are attached
   # to it; by hand they are this run's artifact (and the report a DRAFT).
   quality-report:
-    needs: R-CMD-check
+    needs: [R-CMD-check, minimum-environment]
     if: always() && (github.event_name == 'release' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:
@@ -105,7 +218,11 @@ jobs:
       NOT_CRAN: true
 
     steps:
+      # the whole history: trace.R compares each local record's commit with
+      # this one (a record committed by its own PR is one commit behind)
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/download-artifact@v4
         with:

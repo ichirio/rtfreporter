@@ -7,9 +7,11 @@
 
 ## Test environments
 
-* local: Windows 11, R 4.4.2 and R 4.6.1
-* GitHub Actions: ubuntu-latest (devel, release, oldrel-1, 4.2),
-  macos-latest (release), windows-latest (release)
+* local: Windows 11, R 4.6.1 (and R 4.4.2)
+* GitHub Actions: ubuntu-latest (devel, release, oldrel-1),
+  macos-latest (release), windows-latest (release), and ubuntu-24.04
+  with R 4.3 and every dependency at the minimum version DESCRIPTION
+  names
 * win-builder: R-devel, R-release, R-oldrelease
 * R-hub: linux, macos-arm64, windows, and one sanitizer run
 

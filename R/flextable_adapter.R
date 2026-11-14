@@ -169,6 +169,10 @@
   span_rows <- list()
   if (want_spanned && nlh >= 2L) {
     spans <- x$header$spans$rows                 # nlh x ncol matrix (or NULL)
+    # each spanner aligned as flextable prints it: its first cell's text.align
+    hp <- as.data.frame(flextable::information_data_paragraph(x),
+                        stringsAsFactors = FALSE)
+    hp <- hp[hp$.part == "header", , drop = FALSE]
     for (h in seq_len(nlh - 1L)) {
       span_vec <- if (!is.null(spans) && nrow(spans) >= h)
                     spans[h, ] else rep(1L, ncol_t)
@@ -177,8 +181,8 @@
       # (1 = start, n = span n, 0 = covered) is read identically.
       segs  <- .rtables_header_segments(header_mat[h, ], span_vec)
       cells <- lapply(segs, function(sg) {
-        pos <- if (sg$from == sg$to) sg$from else c(sg$from, sg$to)
-        col_cell(pos = pos, label = sg$label)
+        a <- hp$text.align[hp$.row_id == h & hp$.col_id == col_keys[sg$from]]
+        .span_segment_cell(sg, if (length(a)) a[[1L]])
       })
       span_rows[[length(span_rows) + 1L]] <- cells
     }

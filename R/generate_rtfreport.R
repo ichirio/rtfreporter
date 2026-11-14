@@ -2218,7 +2218,7 @@
         bold      = if (is.null(r$bold)) def_bold else isTRUE(r$bold),
         italic    = isTRUE(r$italic),
         underline = isTRUE(r$underline),
-        color     = r$color,
+        color     = .check_hf_color(r$color, "color"),
         border    = r$border
       )
       if (!is.null(rec$border) && !inherits(rec$border, "rtf_border")) {
@@ -2573,9 +2573,9 @@
     report <- .rtfreport_add_page(report, segments = p$segments)
   }
 
-  # The document's style (#804): its rtf_style() over its deprecated
-  # default_format -- the shared level as the document defaults, each section
-  # into its modules where they left a key unset (R/rtf_style.R).
+  # The document's style (#804): its rtf_style() -- the shared level as the
+  # document defaults, each section into its modules where they left a key
+  # unset (R/rtf_style.R).
   .apply_style_to_report(report, pipe_doc$document)
 }
 
@@ -2798,7 +2798,8 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
 
   lines <- c(
     .font_header_rtf(doc_cmd$rtf_header_open, font_index_map),
-    .build_font_table_rtf(doc_fonts),
+    .build_font_table_rtf(
+      doc_fonts, attr(font_index_map, "charsets", exact = TRUE)[["east_asian"]]),
     color_table_str,
     .cmd_fmt(doc_cmd$page_settings_template, list(
       width_twips           = page_defaults$width_twips,

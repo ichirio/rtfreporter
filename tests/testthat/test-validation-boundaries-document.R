@@ -44,7 +44,6 @@
 #  page           | Inf                   | width_in = Inf     | error "`width_in` must be ..."   | FR-DC349
 #  page           | paper of length 2     | c(A4, A3)          | error "`paper_size` must be a single preset" | FR-DC349
 #  page           | unknown orientation   | "land"             | error "`orientation` must be"    | FR-DC349
-#  default_format | another type          | "x"                | error "`default_format` must be an rtf_default_format" | FR-DC350
 #  watermark      | valid string          | "DRAFT"            | DRAFT in a shape                 | FR-DC109
 #  watermark      | empty string          | ""                 | no shape                         | FR-DC109
 #  watermark      | NA                    | NA                 | no shape                         | FR-DC109
@@ -301,12 +300,12 @@
 .eb_bw <- paste0("\\{\\\\colortbl;\\\\red0\\\\green0\\\\blue0;",
                  "\\\\red255\\\\green255\\\\blue255;\\}")
 
-test_that("FT-DC281 [FR-DC102 FR-DC105 FR-DC106 FR-DC109 FR-DC110 FR-DC114 FR-DC116 FR-DC120 FR-DC122 FR-DC347 FR-DC348 FR-DC349 FR-DC350 FR-DC351]: rtf_document(): equivalence classes and boundaries of its arguments", {
+test_that("FT-DC281 [FR-DC102 FR-DC105 FR-DC106 FR-DC109 FR-DC110 FR-DC114 FR-DC116 FR-DC120 FR-DC122 FR-DC347 FR-DC348 FR-DC349 FR-DC351]: rtf_document(): equivalence classes and boundaries of its arguments", {
   C <- .eb_case
   cases <- .eb_cases(
     C("font_table", "valid", list(list(name = "Arial")), "ok:\\\\f0\\\\fnil\\\\fcharset0 Arial;"),
     C("font_table", "NULL", NULL, "ok:\\\\f0\\\\fnil\\\\fcharset0 Courier New;"),
-    C("font_table", "non-ASCII name", list(list(name = .eb_kanji2)), "ok:\\\\u26126\\?\\\\u26397\\?;"),
+    C("font_table", "non-ASCII name", list(list(name = .eb_kanji2)), "ok:\\\\fcharset128 \\\\'96\\\\'be\\\\'92\\\\'a9;"),
     C("font_table", "long name", list(list(name = strrep("F", 120))), paste0("ok:", strrep("F", 120), ";")),
     C("font_table", "another type", "Arial", "error:^`font_table` must be a non-empty list"),
     C("font_table", "length 0", list(), "error:^`font_table` must be a non-empty list"),
@@ -329,7 +328,6 @@ test_that("FT-DC281 [FR-DC102 FR-DC105 FR-DC106 FR-DC109 FR-DC110 FR-DC114 FR-DC
     C("page", "Inf", list(width_in = Inf), "error:^`width_in` must be a single positive number"),
     C("page", "paper of length 2", list(paper_size = c("A4", "A3")), "error:^`paper_size` must be a single preset name"),
     C("page", "unknown orientation", list(orientation = "land"), "error:^`orientation` must be"),
-    C("default_format", "another type", "x", "error:^`default_format` must be an rtf_default_format"),
     C("watermark", "valid", "DRAFT", "ok:DRAFT"),
     C("watermark", "empty string", "", "no:\\\\shp"),
     C("watermark", "NA", NA, "no:\\\\shp"),
@@ -475,7 +473,7 @@ test_that("FT-TB773 [FR-TB548 FR-TB549 FR-TB550 FR-TB551 FR-TB552 FR-TB555 FR-TB
     E("font_size_half_points", "0", 0, fs),
     E("font_size_half_points", "Inf", Inf, fs),
     E("font_size_half_points", "NA", NA, fs),
-    C("font", "non-ASCII", .eb_kanji2, "ok:\\\\u26126\\?\\\\u26397\\?;"),
+    C("font", "non-ASCII", .eb_kanji2, "ok:\\\\fcharset128 \\\\'96\\\\'be\\\\'92\\\\'a9;"),
     E("font", "empty string", "", fnt),
     E("font", "NA", NA_character_, fnt),
     E("font", "unnamed length 2", c("Arial", "Courier New"), fnt),

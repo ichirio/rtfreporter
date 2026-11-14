@@ -71,7 +71,7 @@ test_that("the cached total counts the front matter too", {
   out <- tempfile(fileext = ".rtf")
   on.exit(unlink(c(f1, f2, out)), add = TRUE)
   assemble_rtf(c(f1, f2), out, overwrite = TRUE,
-               toc = c("T1", "T2"), toc_page_numbering = "decimal",
+               toc = c("T1", "T2"),
                book_page = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
   # 3 + 2 body pages plus the TOC page.
   expect_match(.read(out), "NUMPAGES\\}\\{\\\\fldrslt 6\\}")

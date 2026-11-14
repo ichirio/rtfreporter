@@ -99,8 +99,9 @@
                   date = "2026-11-12", version = "v1.0",
                   meta = c("Confidential", "Prepared by Example Pharma"))
 
-# defaults, a cover, a table with headings, roman TOC pages (the fixture is
-# written by the code before toc_title / toc_style / label-from-title existed)
+# defaults, a cover, a table with headings (the fixture is written by the
+# code before toc_title / toc_style / label-from-title existed; since #1049
+# its pages run in one sequence from the cover)
 .tt_case_baseline <- function(dir, asm = assemble_rtf) {
   f <- .tt_inputs(dir, c(t_14_1_1 = "Table 14.1.1 Demographics",
                          t_14_2_1 = "Table 14.2.1 Adverse Events",
@@ -111,7 +112,7 @@
                               "Listing 16.1.1 Adverse events"),
                     level = c(2L, 2L, 3L))
   out <- file.path(dir, "assembled.rtf")
-  asm(f, out, cover = .tt_cover, toc = toc, toc_page_numbering = "roman")
+  asm(f, out, cover = .tt_cover, toc = toc)
   out
 }
 
@@ -128,9 +129,10 @@
   out
 }
 
-# a label that wraps (level 2 and level 3), the right tab and the leader on it
-.tt_long_label <- function() {
-  paste("Table 14.3.2 Summary of treatment-emergent adverse events by system",
+# a label that wraps (level 2 and level 3), the right tab and the leader on it;
+# `number` is the table's number ("14.3.2.1" for the level-3 entry)
+.tt_long_label <- function(number = "14.3.2") {
+  paste("Table", number, "Summary of treatment-emergent adverse events by system",
         "organ class, preferred term and maximum severity in the safety",
         "population, all randomised subjects who received at least one dose",
         "of study treatment, excluding those from site 99")
@@ -141,15 +143,14 @@
                          t_14_3_3 = "Table 14.3.3 Laboratory"))
   toc <- data.frame(file = f, label = c("Table 14.1.1 Demographics",
                                         .tt_long_label(),
-                                        .tt_long_label()),
+                                        .tt_long_label("14.3.2.1")),
                     level = c(2L, 2L, 3L))
   out <- file.path(dir, "assembled.rtf")
   assemble_rtf(f, out, toc = toc)
   out
 }
 
-# a TOC of two pages: a heading that would close page 1 goes over to page 2;
-# roman TOC numbering
+# a TOC of two pages: a heading that would close page 1 goes over to page 2
 .tt_case_multipage <- function(dir) {
   f <- .tt_inputs(dir, c(t_14_1_1 = "Table 14.1.1 Demographics",
                          t_14_2_1 = "Table 14.2.1 Adverse Events",
@@ -160,19 +161,19 @@
                     heading = c(rep(NA, 34L), "Safety", rep(NA, n - 35L)),
                     level = 2L)
   out <- file.path(dir, "assembled.rtf")
-  assemble_rtf(f, out, toc = toc, toc_page_numbering = "roman")
+  assemble_rtf(f, out, toc = toc)
   out
 }
 
-# a cover, then the TOC, then the body; roman TOC numbering
-.tt_case_coverroman <- function(dir) {
+# a cover, then the TOC, then the body, the pages in one sequence from the
+# cover
+.tt_case_cover <- function(dir) {
   f <- .tt_inputs(dir, c(t_14_1_1 = "Table 14.1.1 Demographics",
                          t_14_2_1 = "Table 14.2.1 Adverse Events",
                          t_14_3_1 = "Table 14.3.1 Laboratory"),
                   pages = c(2L, 1L, 3L))
   out <- file.path(dir, "assembled.rtf")
-  assemble_rtf(f, out, cover = .tt_cover, toc = "auto",
-               toc_page_numbering = "roman")
+  assemble_rtf(f, out, cover = .tt_cover, toc = "auto")
   out
 }
 
@@ -184,9 +185,46 @@
                          t_14_3_3 = "Table 14.3.3 Laboratory"))
   toc <- data.frame(file = f, label = c("Table 14.1.1 Demographics",
                                         .tt_long_label(),
-                                        .tt_long_label()),
+                                        .tt_long_label("14.3.2.1")),
                     level = c(2L, 2L, 3L))
   out <- file.path(dir, "assembled.rtf")
   assemble_rtf(f, out, toc = toc, toc_style = list(entry = list(hanging = TRUE)))
+  out
+}
+
+# labels that step one character at a time across the wrap point (#1068): a
+# number ("Table 14.2.<i>", "Table 14.2.<i>.1" at level 3), a space and words
+# cut to `len` characters in all (`len` of the title alone when `title_len`)
+.tt_border_label <- function(number, len, title_len = FALSE) {
+  words <- rep(c("Summary", "of", "Adverse", "Events", "by", "Visit", "and", "Arm"), 6L)
+  text  <- paste(words, collapse = " ")
+  n <- if (title_len) len else len - nchar(number) - 1L
+  t <- substr(text, 1L, n)
+  if (endsWith(t, " ")) t <- paste0(substr(t, 1L, n - 1L), "s")
+  paste(number, t)
+}
+
+# the borderline TOC: at levels 2 and 3, labels whose last (only) line ends
+# from 3 characters before to 3 after the width an entry wraps at, by the
+# estimate (Courier New 10 pt, 120 twips a character): 111 characters of a
+# whole label (14112 - 720 = 13392 twips, no level indent) in the default
+# style; with `hanging = TRUE`, 95 characters of a title beside the hang of
+# "Table 14.2.1.1" (14 x 120 + 200 = 1880; 13392 - 1880 = 11512 twips)
+.tt_case_borderline <- function(dir, hanging = FALSE) {
+  f <- .tt_inputs(dir, c(t_14_2_1 = "Table 14.2.1 A", t_14_2_2 = "Table 14.2.2 B",
+                         t_14_2_3 = "Table 14.2.3 C"))
+  lens <- (if (hanging) 95L else 111L) + (-3:3)
+  lab2 <- vapply(seq_along(lens), function(i)
+    .tt_border_label(paste0("Table 14.2.", i), lens[i], hanging), character(1L))
+  lab3 <- vapply(seq_along(lens), function(i)
+    .tt_border_label(paste0("Table 14.2.", i, ".1"), lens[i], hanging), character(1L))
+  n <- 2L * length(lens)
+  toc <- data.frame(file = f[rep_len(1:3, n)], label = c(lab2, lab3),
+                    heading = c("Level 2", rep(NA, length(lens) - 1L),
+                                "Level 3", rep(NA, length(lens) - 1L)),
+                    level = rep(2:3, each = length(lens)))
+  out <- file.path(dir, "assembled.rtf")
+  assemble_rtf(f, out, toc = toc,
+               toc_style = if (hanging) list(entry = list(hanging = TRUE)))
   out
 }

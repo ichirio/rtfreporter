@@ -92,6 +92,10 @@
                                  # holds these rows, the rest is paginated
                                  # as the other arguments say (R/flow.R)
                                  first_rows       = NULL,
+                                 # Explicit blank positions already resolved
+                                 # on this body (a page_by partition gets its
+                                 # share of the whole body's, #1028)
+                                 body_blanks      = NULL,
                                  ...) {
   # `split` is either one of the built-in strategy names (character) or a
   # user-supplied custom function that cuts the body into per-page chunks.
@@ -180,6 +184,22 @@
     return(.paginate_by_page(args, list(...)))
   }
 
+  # An explicit position in `blank_rows` counts rows of the WHOLE body, not of
+  # each page (#1028): `c(3, 12)` is one blank after body row 3 and one after
+  # body row 12, on whichever pages those rows land; 0 is before the body's
+  # first row and -1 after its last.  So the positions are resolved here, once,
+  # and carried to the pages by the body rows they follow; only the separator
+  # rules ("between_groups", blank_rows_by_change() / _by_rule()) are resolved
+  # per page.  A blank after a page's last row stays at that page's foot: it
+  # is not carried to the top of the next page.
+  bparts     <- .split_blank_spec(blank_rows)
+  is_pos     <- function(s) is.numeric(s) && !is.list(s)
+  body_pos   <- sort(unique(c(
+    as.integer(body_blanks),
+    .body_blank_positions(Filter(is_pos, bparts$explicit), nrow(x)))))
+  blank_rest <- c(bparts$separator, Filter(Negate(is_pos), bparts$explicit))
+  blank_rows <- if (length(blank_rest)) blank_rest else NULL
+
   # count_blank_rows: materialise the resolved blank positions as empty marker
   # rows BEFORE splitting, so they count toward `max_rows`.  Positions come from
   # the `blank_rows` spec (resolved on the full body, via set_blank_rows()) plus
@@ -214,11 +234,14 @@
                 "rtf_blank_rows", exact = TRUE)
       if (is.numeric(p)) as.integer(p) else integer(0)
     }
+    # The explicit positions are the whole body's (#1028), 0 included: a
+    # marker before the first row takes a row of page 1 like any other.
     in_attr  <- attr(x, "rtf_blank_rows", exact = TRUE)
+    in_attr  <- .body_blank_positions(
+      list(if (is.numeric(in_attr)) in_attr), nrow(x))
     sep_pos  <- grab(parts$separator)
-    exp_pos  <- c(grab(parts$explicit),
-                  if (is.numeric(in_attr)) as.integer(in_attr) else integer(0))
-    keep <- function(p) unique(p[p >= 1L & p <= nrow(x)])
+    exp_pos  <- c(body_pos, grab(parts$explicit), in_attr)
+    keep <- function(p) unique(p[p >= 0L & p <= nrow(x)])
     sep_pos <- keep(sep_pos)
     exp_pos <- setdiff(keep(exp_pos), sep_pos)   # an explicit hit wins nothing
     pos     <- sort(c(sep_pos, exp_pos))
@@ -227,6 +250,10 @@
                                       separator = pos %in% sep_pos)
       materialised_blanks <- TRUE
     }
+  } else if (length(body_pos)) {
+    # Each row remembers its place in the body, so a page knows which of the
+    # whole body's positions fall on it (a continuation row has none).
+    x[[.BODY_ROW]] <- seq_len(nrow(x))
   }
 
   # Preserve the input's class chain (so a tibble in → tibbles out).
@@ -418,6 +445,17 @@
   }
   strategy <- if (is_custom_split) "custom" else split
 
+  # A page the cut left holding counted blanks and nothing else -- position 0
+  # with no room beside the first group, say -- is not a page: its blanks had
+  # no room where they belong, and are dropped (#1028).
+  if (materialised_blanks && length(chunks) > 1L) {
+    only_blank <- vapply(chunks, function(ch) {
+      v <- suppressWarnings(as.integer(ch[[".__rtf_blank__"]]))
+      nrow(ch) > 0L && length(v) == nrow(ch) && all(!is.na(v) & v != .MARK_DATA)
+    }, logical(1L))
+    if (any(only_blank) && !all(only_blank)) chunks <- chunks[!only_blank]
+  }
+
   # Step 2: attach blank-row positions (via the standalone helper
   # set_blank_rows()) + paginate meta on each chunk.
   #
@@ -450,10 +488,16 @@
       # Collapse the materialised markers back to the public attribute; the
       # blank positions are already counted, so only blank_row_first/_end (page
       # furniture) are added on top here.
+      # A position the whole body names that the cut left at the top of a
+      # later page sits at the foot of the page before, which is full: it is
+      # not carried over (#1028).
       chunk <- .collapse_blank_markers(chunk,
                                        blank_row_first = blank_row_first,
-                                       blank_row_end   = blank_row_end)
+                                       blank_row_end   = blank_row_end,
+                                       top_explicit    = i == 1L)
     } else {
+      rows_in_body <- chunk[[.BODY_ROW]]
+      chunk[[.BODY_ROW]] <- NULL
       # A continuation row ("B (Cont.)") opens the group it continues, so
       # "between_groups" must not read a group change between it and B's
       # rows: give it B's value while the blanks are placed (#824).
@@ -473,6 +517,11 @@
         br <- attr(chunk, "rtf_blank_rows", exact = TRUE)
         chunk[[cidx]][1L] <- gv[1L]
         attr(chunk, "rtf_blank_rows") <- br
+      }
+      if (!is.null(rows_in_body)) {
+        br <- sort(unique(c(attr(chunk, "rtf_blank_rows", exact = TRUE),
+                            .body_blanks_local(body_pos, rows_in_body))))
+        attr(chunk, "rtf_blank_rows") <- if (length(br)) br else NULL
       }
     }
     if (length(collapse_idx)) {
@@ -732,24 +781,29 @@
     if (length(rest)) args$group_col <- rest[1L]
   }
 
-  # A blank-row attribute already on the input is in FULL-body coordinates:
-  # slice it into each partition's own.  The page edges (0 = before the first
-  # row, -1 = after the last) belong to every partition.
+  # Explicit blank positions, and a blank-row attribute already on the input,
+  # are in WHOLE-body coordinates (#1028): slice them into each partition's
+  # own.  0 (before the first row) falls in the partition that opens the body
+  # and -1 (after the last) in the one that closes it.
+  bparts  <- .split_blank_spec(args$blank_rows)
+  is_pos  <- function(s) is.numeric(s) && !is.list(s)
+  body_pos <- .body_blank_positions(Filter(is_pos, bparts$explicit), nrow(x))
+  rest    <- c(bparts$separator, Filter(Negate(is_pos), bparts$explicit))
+  args$blank_rows <- if (length(rest)) rest else NULL
   in_attr <- attr(x, "rtf_blank_rows", exact = TRUE)
-  in_attr <- if (is.numeric(in_attr)) as.integer(in_attr) else integer(0)
-  edges   <- in_attr[in_attr <= 0L]
-  inner   <- in_attr[in_attr > 0L]
+  in_attr <- .body_blank_positions(list(if (is.numeric(in_attr)) in_attr),
+                                   nrow(x))
 
   out <- list(); by_lab <- character(0); grp_lab <- character(0); by_val <- list()
   for (r in .page_by_runs(x, idx, args$collapse_record)) {
     part <- x[r$rows, , drop = FALSE]
     rownames(part) <- NULL
-    loc <- match(inner, r$rows)
-    pos <- c(edges, loc[!is.na(loc)])
+    pos <- .body_blanks_local(in_attr, r$rows)
     attr(part, "rtf_blank_rows") <- if (length(pos)) pos else NULL
 
     a <- args
     a$x               <- part
+    a$body_blanks     <- .body_blanks_local(body_pos, r$rows)
     a$cell_format     <- NULL      # both already applied, body-wide
     a$align_count_pct <- FALSE
     a$na              <- ""
@@ -1001,9 +1055,9 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
 
 # Insert empty "marker" rows into `df` at the given blank positions so the
 # split strategies count them toward max_rows.  `positions` are in the same
-# convention as set_blank_rows() (k = after data row k); 0 / nrow edge
-# positions are handled by the leading/trailing logic in the collapse step and
-# by blank_row_first/end, so only 1..nrow are materialised here.  A hidden
+# convention as set_blank_rows() (k = after data row k, 0 = before row 1); the
+# page-edge furniture is blank_row_first/end's, added in the collapse step, so
+# only the body's own 0..nrow positions are materialised here.  A hidden
 # logical column `.__rtf_blank__` flags the inserted rows.
 # The flag column is an integer code rather than a bare logical so a marker
 # remembers where it came from: 1 = a separator (subject to the page-edge rule),
@@ -1043,7 +1097,7 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
     return(TRUE)
   }
   cols <- setdiff(names(df),
-                  c(".__rtf_blank__", ".__rtf_sidx__", ignore))
+                  c(".__rtf_blank__", ".__rtf_sidx__", .BODY_ROW, ignore))
   if (length(cols) == 0L) return(TRUE)
   vals <- vapply(cols, function(k) {
     v <- df[[k]][[i]]
@@ -1059,7 +1113,9 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
 # prints blank -- a listing record's blank row.  A `blank_repeat` cell
 # (a collapse_repeats column) that repeats the row above is suppressed on the
 # page, so it reads as empty: a listing carries its key value into the
-# record's blank row (#742).  An explicit blank position is not a separator.
+# record's blank row (#742).  An explicit blank position counts here too: it
+# is the whole body's, after the row it follows, so it is not carried to the
+# next page either (#1028).
 # A group whose only rows past a cut are separators is not continued, and
 # those separators, which would open the next page, are dropped (#824, #859).
 .is_separator_row <- function(df, i, ignore = character(0),
@@ -1068,8 +1124,7 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
   mk <- df[[".__rtf_blank__"]]
   if (!is.null(mk) && !is.na(mk[[i]])) {
     code <- as.integer(mk[[i]])
-    if (code == .MARK_SEP) return(TRUE)
-    if (code != .MARK_DATA) return(FALSE)
+    if (code != .MARK_DATA) return(TRUE)
   }
   if (length(blank_repeat) && i > 1L) {
     same <- vapply(blank_repeat, function(k) {
@@ -1095,7 +1150,7 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
   ord <- order(as.integer(positions))
   positions <- as.integer(positions)[ord]
   separator <- rep_len(as.logical(separator), length(positions))[ord]
-  ok <- !duplicated(positions) & positions >= 1L & positions <= n
+  ok <- !duplicated(positions) & positions >= 0L & positions <= n
   positions <- positions[ok]; separator <- separator[ok]
   flag_col <- ".__rtf_blank__"
   df[[flag_col]] <- .MARK_DATA
@@ -1129,7 +1184,8 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
 # Returns the cleaned chunk; `extra` are additional positions (blank_row_first /
 # _end) to union in afterwards.
 .collapse_blank_markers <- function(chunk, blank_row_first = FALSE,
-                                    blank_row_end = FALSE) {
+                                    blank_row_end = FALSE,
+                                    top_explicit = TRUE) {
   flag_col <- ".__rtf_blank__"
   if (!flag_col %in% names(chunk)) return(chunk)
   code <- suppressWarnings(as.integer(chunk[[flag_col]]))
@@ -1149,7 +1205,11 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
   # and the edges belong to blank_row_first / blank_row_end (#332).  An
   # explicitly named position is honoured wherever it lands.
   n <- nrow(data)
-  pos <- c(.trim_page_edges(pos[is_sep], n), pos[!is_sep])
+  # The whole body's positions (#1028): one at the top of a later page is a
+  # blank after the previous page's last row, and is not carried over.
+  exp <- pos[!is_sep]
+  if (!isTRUE(top_explicit)) exp <- exp[exp > 0L]
+  pos <- c(.trim_page_edges(pos[is_sep], n), exp)
 
   if (isTRUE(blank_row_first)) pos <- c(0L, pos)
   if (isTRUE(blank_row_end))   pos <- c(pos, n)
@@ -1540,11 +1600,34 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
 # separates nothing (#332).
 #
 # Explicit integer positions are NOT separators and never come through here:
-# `blank_rows = 3` is a direct request for "after row 3 of each page" and is
-# honoured even when the page has exactly three rows.
+# `blank_rows = 3` is a direct request for "after row 3 of the body" and is
+# honoured on the page that row lands on, at its foot if it ends the page.
 .trim_page_edges <- function(pos, n) {
   pos <- pos[!is.na(pos)]
   pos[pos > 0L & pos < n]
+}
+
+# The hidden column that carries each row's place in the body through the
+# split, so a page can find the whole body's blank positions on it (#1028).
+.BODY_ROW <- ".__rtf_brow__"
+
+# The explicit positions of `items` (numeric vectors) on a body of `n` rows:
+# -1 read as after the last row, NA and anything outside 0..n dropped
+# (as_rtftables() has already stopped on those, #853), sorted and unique.
+.body_blank_positions <- function(items, n) {
+  p <- as.integer(unlist(items, use.names = FALSE))
+  p <- p[!is.na(p)]
+  p[p == -1L] <- as.integer(n)
+  sort(unique(p[p >= 0L & p <= n]))
+}
+
+# The whole body's positions `pos` on a page (or partition) whose rows are the
+# body rows `rows` (NA for a row the split added, a continuation row): a blank
+# after body row k goes after that row where it lands, 0 before body row 1.
+.body_blanks_local <- function(pos, rows) {
+  if (!length(pos) || !length(rows)) return(integer(0))
+  at <- ifelse(pos == 0L, match(1L, rows) - 1L, match(pos, rows))
+  sort(unique(as.integer(at[!is.na(at)])))
 }
 
 .resolve_pagewise_blanks <- function(spec, chunk, group_idx,

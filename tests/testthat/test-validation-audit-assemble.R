@@ -31,8 +31,8 @@
 #   a table without file / label; missing files; other toc  | FR-AS118/119, FR-AS123/124 | FT-AS053, FT-AS067, FT-AS119
 #   HYPERLINK to a bookmark, PAGEREF for the page           | FR-AS125/126| FT-AS011-FT-AS014, FT-AS022, FT-AS126
 #   toc_title; toc_leader "dot" / "none"                    | FR-AS127-129| FT-AS048, FT-AS054, FT-AS119
-#   toc_page_numbering none / roman / decimal; a cover      | FR-AS130-132, FR-AS235 | FT-AS014, FT-AS049, FT-AS050, FT-AS126
-#     keeps Arabic and is not counted                       |             |
+#   one page sequence from the first page, a cover and the  | FR-AS130, FR-AS235, FR-AS270, FR-AS272 | FT-AS014, FT-AS049, FT-AS126, FT-AS7201-FT-AS7203
+#     contents counted (#1049); toc_page_numbering removed  | FR-AS271    | FT-AS050, FT-AS7204
 #   bookmark_prefix; unique bookmark names                  | FR-AS133/134| FT-AS026, FT-AS031, FT-AS032
 #   the outline paragraph; no format leaks; escaping        | FR-AS135-137| FT-AS025, FT-AS030, FT-AS033-FT-AS035, FT-AS039, FT-AS044, FT-AS128
 #   book_page: the {BOOK_PAGE} slots, NULL empty; static    | FR-AS138/139| FT-AS059-FT-AS061, FT-AS063
@@ -53,7 +53,7 @@
 #   spec_file: .xlsx / .csv saved; NULL in memory only      | FR-AS153/154| FT-AS052, FT-AS065, FT-AS066
 #   ... written, never read back                            | FR-AS237    | FT-AS132
 #   recursive; a missing dir; no .rtf file                  | FR-AS155/156| FT-AS065, FT-AS120
-#   toc_* and overwrite as assemble_rtf(), "decimal"; ...   | FR-AS157/158| FT-AS052, FT-AS120
+#   toc_* and overwrite as assemble_rtf(); ...              | FR-AS157/158| FT-AS052, FT-AS120
 #   an edited table handed to assemble_rtf(toc = )          | FR-AS159    | FT-AS053
 #
 # rtf_figures()
@@ -169,10 +169,15 @@ test_that("FT-AS133 [FR-AS238]: the level of a table of contents row is a whole 
   toc <- assemble_folder(d)
   out <- tempfile("a7out", fileext = ".rtf")
   toc$level <- c(1, 3)
-  assemble_rtf(toc = toc, output_file = out)
+  # (the levels are indented 600 twips each with toc_style indent = 600)
+  assemble_rtf(toc = toc, output_file = out, toc_style = list(indent = 600))
   txt <- readLines(out, warn = FALSE)
-  expect_true(any(grepl("{\\pard\\fs20\\tqr", txt, fixed = TRUE)))        # level 1: no indent
-  expect_true(any(grepl("{\\pard\\li1200\\fs20\\tqr", txt, fixed = TRUE))) # level 3
+  expect_true(any(grepl("{\\pard\\ri720\\keep\\fs20\\tqr", txt, fixed = TRUE)))        # level 1: no indent
+  expect_true(any(grepl("{\\pard\\li1200\\ri720\\keep\\fs20\\tqr", txt, fixed = TRUE))) # level 3
+  # by default both levels start flush left: no \li on either entry
+  assemble_rtf(toc = toc, output_file = out, overwrite = TRUE)
+  txt <- readLines(out, warn = FALSE)
+  expect_identical(sum(grepl("{\\pard\\ri720\\keep\\fs20\\tqr", txt, fixed = TRUE)), 2L)
   for (bad in list(4, 0, 2.5)) {
     toc$level <- c(2, bad)
     expect_error(assemble_rtf(toc = toc, output_file = out, overwrite = TRUE),
@@ -241,16 +246,18 @@ test_that("FT-AS137 [FR-AS242]: assemble_folder() reads the rtf_titles() title b
   titled("t14_1_1.rtf", c("Table 14.1.1", "Safety Population"))
   # a header-based file still sorts and reads as before
   .a7_tbl(d, "a_hdr.rtf", "14.1.5", "Vital Signs")
-  # the header's "Table N" wins over the title block
+  # the header's "Table N" wins over the title block for the number and the
+  # order; the label is the file's title (#1030)
   titled("b_both.rtf", c("Table 99.9", "Body Title"), header = "Table 14.1.3")
-  # no "Table N" anywhere: by file name, after the numbered files
+  # no "Table N" anywhere: ordered by file name, after the numbered files,
+  # and labelled by its title (#1030)
   titled("l16_1.rtf", c("Listing 16.1", "Subject Listing"))
   spec <- assemble_folder(d)
   expect_identical(basename(spec$file),
                    c("t14_1_1.rtf", "b_both.rtf", "a_hdr.rtf", "t14_2_1.rtf", "l16_1.rtf"))
   expect_identical(spec$table, c("14.1.1", "14.1.3", "14.1.5", "14.2.1", NA))
   expect_identical(spec$label,
-                   c("Table 14.1.1  Safety Population", "Table 14.1.3",
+                   c("Table 14.1.1  Safety Population", "Table 99.9  Body Title",
                      "Table 14.1.5  Vital Signs", "Table 14.2.1  Safety Population",
-                     "l16_1"))
+                     "Listing 16.1  Subject Listing"))
 })

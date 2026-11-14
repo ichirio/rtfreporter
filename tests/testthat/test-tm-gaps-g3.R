@@ -201,6 +201,29 @@ test_that("FT-IX3007 [FR-IX318 FR-IX351]: a listing supplies defaults only; the 
   expect_identical(as_rtftables(df, listing = spec,
                                 col_rel_width = c(5, 1, 5, 1, 5))[[1L]]$col_rel_width,
                    c(5, 1, 5, 1, 5))
+  # group_by: the listing sets "value"; a group_by the caller passes wins.  With
+  # group_col = "S" and max_rows = 5 the body is 12 rows (6 records, each followed
+  # by a blank row whose S is empty).  "value" starts a group at every change of S,
+  # so each row is its own group and the pages fill to 5, 5, 2; "indent" starts a
+  # group at each non-empty S, so a group is a record and its blank row (2 rows),
+  # two groups to a page: 4, 4, 4.
+  rows_of <- function(...) {
+    vapply(as_rtftables(df, listing = spec, max_rows = 5, group_col = "S", ...),
+           function(p) nrow(p$data), 1L, USE.NAMES = FALSE)
+  }
+  expect_identical(rows_of(), c(5L, 5L, 2L))
+  expect_identical(rows_of(group_by = "indent"), c(4L, 4L, 4L))
+  # collapse_repeats: the column the listing marks prints its value once per run
+  # (S1, then empty for the three other rows of the run); the caller's own
+  # collapse_repeats replaces that, so S is printed on every row
+  mark <- listing_spec(list(listing_col("S", width = 6, collapse_repeats = TRUE),
+                            listing_col("A", width = 6), listing_col("B", width = 3)))
+  marked <- as_rtftables(df, listing = mark, max_rows = 20)[[1L]]$data$S
+  expect_identical(sum(!is.na(marked)), 3L)
+  expect_identical(marked[c(1L, 5L, 9L)], c("S1", "S2", "S3"))
+  given <- as_rtftables(df, listing = mark, max_rows = 20,
+                        collapse_repeats = "A")[[1L]]$data$S
+  expect_identical(given, rep(c("S1", "S2", "S3"), each = 4L))
 })
 
 test_that("FT-IX3008 [FR-IX319]: column_widths_twips wins outright over table_width_twips and col_rel_width", {
@@ -280,6 +303,29 @@ test_that("FT-IX3011 [FR-IX323]: sort_by is applied first: group detection, cont
   expect_identical(pg[[2L]]$data$G[1L], "a(cont.)")
   expect_identical(pg[[2L]]$data$V, c("", "v5", "v6"))
   expect_identical(pg[[3L]]$data$G, c("b", "b"))
+  # cell_styles follow their rows: the style of input row i is bold on column 1
+  # when i is odd and on column 2 when i is 4; the sorted order is input rows
+  # 2, 4, 5, 6, 1, 3, and the style list comes out in that order
+  cs <- lapply(1:6, function(i) list(bold = c(i %% 2 == 1, i == 4L)))
+  styled <- as_rtftables(df, sort_by = "G", group_col = "G",
+                         blank_rows = "between_groups", cell_styles = cs)[[1L]]
+  expect_identical(styled$data$V, c("v2", "v4", "v5", "v6", "v1", "v3"))
+  expect_identical(styled$cell_styles, cs[c(2L, 4L, 5L, 6L, 1L, 3L)])
+  # ... and on the paginated pages: page 2 holds the continuation row (no style)
+  # then input rows 5 and 6, page 3 input rows 1 and 3
+  paged <- as_rtftables(df, sort_by = "G", group_col = "G", max_rows = 3,
+                        split = "group_force", cont_label = "(cont.)",
+                        cell_styles = cs)
+  expect_identical(paged[[2L]]$cell_styles, list(NULL, cs[[5L]], cs[[6L]]))
+  expect_identical(paged[[3L]]$cell_styles, cs[c(1L, 3L)])
+  # a sort key listed in drop_cols orders the rows but is not printed; its
+  # entry leaves the styles with the column (bold has one element per column)
+  hidden <- as_rtftables(df, sort_by = "G", drop_cols = "G", cell_styles = cs)[[1L]]
+  expect_identical(names(hidden$data), "V")
+  expect_identical(hidden$data$V, c("v2", "v4", "v5", "v6", "v1", "v3"))
+  expect_identical(hidden$cell_styles,
+                   lapply(cs[c(2L, 4L, 5L, 6L, 1L, 3L)],
+                          function(s) list(bold = s$bold[2L])))
 })
 
 test_that("FT-IX3012 [FR-IX326]: paginate_cols(order) decides how many sections auto_section opens", {
@@ -834,6 +880,47 @@ test_that("FT-IX3037 [FR-IX404]: fmt_numeric(): a rule's own small, an all-missi
   # checked (neither signif nor digits given)
   expect_identical(fmt_numeric(d, "w"), d)
   expect_identical(fmt_numeric(d, "w", by = "stat"), d)
+  # the modes, cell by cell, with the columns left as they were
+  d2 <- data.frame(stat = c("n", " Mean ", "SD", "Other"),
+                   a = c(24, 902.3312, 230.1234, 0.5), b = c(1.5, 2.5, NA, 3.5),
+                   s = c("x", "y", "z", "w"), o = c(1.23456, 2, 3, 4),
+                   stringsAsFactors = FALSE)
+  # one signif for every cell: 3 significant digits
+  sg <- fmt_numeric(d2, c("a", "b", "s"), signif = 3)
+  expect_identical(sg$a, c("24.0", "902", "230", "0.500"))
+  expect_identical(sg$b, c("1.50", "2.50", "", "3.50"))
+  expect_identical(sg$a, fmt_signif(d2$a, 3))
+  # a selected column that is not numeric (s) and a column outside cols (o,
+  # stat) are as they were
+  expect_identical(sg$s, d2$s)
+  expect_identical(sg$o, d2$o)
+  expect_identical(sg$stat, d2$stat)
+  # one digits for every cell, and na on every missing cell
+  dg <- fmt_numeric(d2, c("a", "b"), digits = 1, na = "--")
+  expect_identical(dg$a, c("24.0", "902.3", "230.1", "0.5"))
+  expect_identical(dg$b, c("1.5", "2.5", "--", "3.5"))
+  expect_identical(dg$a, fmt_round(d2$a, 1))
+  # rounding applies to every cell: b at 0 places, 1.5 and 2.5 and 3.5 are
+  # ties -- "r" goes to even (2, 2, 4), "sas" away from zero (2, 3, 4)
+  expect_identical(fmt_numeric(d2, "b", digits = 0)$b, c("2", "2", "", "4"))
+  expect_identical(fmt_numeric(d2, "b", digits = 0, rounding = "sas")$b,
+                   c("2", "3", "", "4"))
+  expect_identical(fmt_numeric(d2, "b", by = "stat", rounding = "sas",
+                               formats = list(.default = list(digits = 0)))$b,
+                   c("2", "3", "", "4"))
+  # by: the rule of the row's trimmed key (" Mean " is Mean), else .default;
+  # a: n 0 places "24", Mean 4 significant "902.3", SD 2 significant with its own
+  # small = "fixed" "230", Other has no rule: .default 2 places "0.50";
+  # b: 1.5 at 0 places "2" (ties to even), 2.5 at 4 significant "2.500", the
+  # missing cell takes na, 3.5 at 2 places "3.50"
+  rules <- list(n = list(digits = 0), Mean = list(signif = 4),
+                SD = list(signif = 2, small = "fixed"), .default = list(digits = 2))
+  by_rule <- fmt_numeric(d2, c("a", "b", "s"), by = "stat", formats = rules, na = "NA!")
+  expect_identical(by_rule$a, c("24", "902.3", "230", "0.50"))
+  expect_identical(by_rule$b, c("2", "2.500", "NA!", "3.50"))
+  expect_identical(by_rule$s, d2$s)
+  expect_identical(by_rule$o, d2$o)
+  expect_identical(by_rule$stat, d2$stat)
 })
 
 # ------------------------------------------------------------------- LS
@@ -1060,6 +1147,10 @@ test_that("FT-LS3011 [FR-LS182 FR-LS183]: listing_wrap_code() is rtf_listing_cod
   expect_true(any(grepl("listing_disp_width(", lines, fixed = TRUE)))
   expect_true(any(grepl("listing_split_after(", lines, fixed = TRUE)))
   expect_false(any(grepl(":::", lines, fixed = TRUE)))
+  # no internal function, no copy of the measures: only the exported ones are called
+  expect_false(any(grepl(".listing_", lines, fixed = TRUE)))
+  expect_false(any(grepl("shared_disp_width", lines, fixed = TRUE)))
+  expect_false(any(grepl("^[[:space:]]*(listing_disp_width|listing_take|listing_split_after) <- function", lines)))
   env <- new.env()
   eval(parse(text = lines), env)
   expect_setequal(ls(env), c("my_wrap", "my_wrap_flow", "my_wrap_words"))
@@ -1316,6 +1407,8 @@ test_that("FT-PL3003 [FR-PL117 FR-PL126 FR-PL128]: an edited normalized frame is
   expect_identical(inp, f)
   expect_identical(inp$stat_fmt[2L], "edited")
   expect_false(identical(inp, plan_apply(table_plan(d, cols = "TRT"), "input")))
+  # the frame straight from normalize_ard(): the input stage is it, unchanged
+  expect_identical(plan_apply(table_plan(d, cols = "TRT"), "input"), d)
   # not a data frame
   expect_error(table_plan(1:3, cols = "TRT"), "NORMALIZED frame", fixed = TRUE)
   expect_error(table_plan(list(a = 1), cols = "TRT"), "NORMALIZED frame", fixed = TRUE)

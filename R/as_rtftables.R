@@ -67,9 +67,10 @@
 }
 
 # Is the "labels" metadata token enabled for a plain data.frame input?
-# data.frame token resolution is deliberately LENIENT (unknown tokens are
-# ignored, not an error): a `list(gt_tbl, df)` input shares one `read_meta`,
-# so adapter-only tokens must not error on the data.frame elements.
+# data.frame token resolution skips the tokens of the other adapters (not an
+# error): a `list(gt_tbl, df)` input shares one `read_meta`, so adapter-only
+# tokens must not error on the data.frame elements.  A token no adapter knows
+# stops (.resolve_meta_tokens(), called in the data.frame branch).
 .df_labels_enabled <- function(read_meta) {
   isTRUE(read_meta) || (is.character(read_meta) && "labels" %in% read_meta)
 }
@@ -94,7 +95,10 @@
 # huxtable), each of which wraps this with its own allowed-token set and label:
 #   FALSE / NULL      -> character(0) (read no metadata)
 #   TRUE              -> `allowed`    (read everything the adapter offers)
-#   character vector  -> itself, after validating it is a subset of `allowed`
+#   character vector  -> the tokens of it that are in `allowed`; a token that
+#                        only ANOTHER adapter knows is skipped (a list mixing
+#                        adapters shares one `read_meta`, FR-TB119), and a
+#                        token that NO adapter knows stops
 # `label` names the adapter in the "unknown token" error.
 .resolve_meta_tokens <- function(read, allowed, label) {
   if (is.null(read) || isFALSE(read)) return(character(0))
@@ -105,13 +109,27 @@
   }
   bad <- setdiff(read, allowed)
   if (length(bad)) {
-    stop(sprintf("Unknown %s `read_meta` token(s): %s.  Allowed: %s",
-                 label,
-                 paste(sQuote(bad),     collapse = ", "),
-                 paste(sQuote(allowed), collapse = ", ")),
-         call. = FALSE)
+    unknown <- setdiff(bad, .all_meta_tokens())
+    if (length(unknown)) {
+      stop(sprintf(
+        "Unknown %s `read_meta` token(s): %s.  Allowed: %s; tokens only another adapter reads are skipped: %s",
+        label,
+        paste(sQuote(unknown), collapse = ", "),
+        paste(sQuote(allowed), collapse = ", "),
+        paste(sQuote(setdiff(.all_meta_tokens(), allowed)), collapse = ", ")),
+        call. = FALSE)
+    }
+    read <- read[!read %in% bad]
   }
   read
+}
+
+# Every `read_meta` token some adapter reads (gt, rtables, rlistings, flextable,
+# huxtable, and the data.frame "labels").  An adapter skips a token in this set
+# that is not its own and stops on one outside it.
+.all_meta_tokens <- function() {
+  unique(c(.GT_META_TOKENS, .RTABLES_TOKENS_ALL, .RLISTINGS_TOKENS_ALL,
+           .FLEXTABLE_TOKENS_ALL, .HUXTABLE_TOKENS_ALL, "labels"))
 }
 
 #' Convert a table object into rtfreporter table pages
@@ -136,7 +154,9 @@
 #' Supported inputs: `gt_tbl`, `gt_group` (gt's multi-table container from
 #' [gt::gt_group()] / [gt::gt_split()] -- and what tfrmt's `print_to_gt()`
 #' returns when the spec has a `page_plan`; expanded to one page set per
-#' member table), gtsummary tables (including a `tbl_split` container from
+#' member table; a style on a cell of a row-split member,
+#' `gt::gt_split(row_every_n = )`, needs gt 1.4.0 or later, as older gt
+#' stops on it), gtsummary tables (including a `tbl_split` container from
 #' `gtsummary::tbl_split_by_rows()` / `tbl_split_by_columns()`, likewise
 #' expanded member by member), rtables/tern `VTableTree`
 #' tables, rlistings `listing_df` listings,
@@ -159,7 +179,11 @@
 #' `row_grp_plan(label_loc = element_row_grp_loc(location = "column"))` layout --
 #' is read from the table's own `_data` / `_boxhead` slots instead, as
 #' `gt::extract_body()` does not support multiple stub columns; the group and
-#' label columns then come through as ordinary columns.  A gt table grouped by
+#' label columns then come through as ordinary columns, each headed as gt
+#' prints it: by its own stubhead label when the stubhead has one per stub
+#' column (`gt::tab_stubhead()`, or a tfrmt `col_plan()` that renames them),
+#' the first by a single stubhead label and the others empty, and all empty
+#' when no stubhead is set -- never by the variable name.  A gt table grouped by
 #' several columns, `gt(groupname_col = c("ARM", "SEX"))`, gets one group row
 #' per combination, named as gt names it: "A - F".)  On top of that body the
 #' following *metadata* is read:
@@ -170,9 +194,9 @@
 #'   Per-column alignment        \tab yes \tab yes \tab yes \tab yes \cr
 #'   Spanning headers            \tab yes \tab yes \tab yes \tab yes \cr
 #'   Column widths               \tab yes (px/pct) \tab -- \tab -- \tab -- \cr
-#'   Title + subtitle            \tab yes \tab yes \tab yes (caption) \tab yes (caption) \cr
+#'   Title + subtitle            \tab yes (caption too) \tab yes \tab yes (caption) \tab yes (caption) \cr
 #'   Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab yes (`add_footnote()` rows) \cr
-#'   In-cell footnote marks      \tab yes (superscript) \tab yes (superscript) \tab as text \tab -- \cr
+#'   In-cell footnote marks      \tab yes (superscript, labels and footnote lines too) \tab yes (superscript) \tab as text \tab -- \cr
 #'   Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab group rows, no indent \tab as typed, no indent \cr
 #'   `tab_style()` cell styles   \tab yes (see below) \tab -- \tab -- \tab -- \cr
 #' }
@@ -189,6 +213,24 @@
 #' fonts and sizes, header text colour, and gt's **theme** borders
 #' (`tab_options()`) -- those describe gt's own default look; rtfreporter's
 #' `border` presets govern the frame instead.
+#'
+#' **A spanner is aligned as its source prints it**, not after the columns
+#' under it: gt and gtsummary (and tfrmt, through gt) centre it, unless
+#' `tab_style(cell_text(align = ), locations = cells_column_spanners())` sets
+#' it (with the `"styles"` token); rtables / tern centre it; flextable takes
+#' the alignment of its first header cell (`align(part = "header")`); huxtable
+#' the `align()` of its first cell (`"."`, decimal alignment, as right).  A
+#' spanner you write yourself ([col_cell()], [set_col_header()],
+#' `plan_col_header()`, or one rebuilt from a data frame's names with
+#' `header_sep`) takes its leftmost column's header alignment unless
+#' `col_cell(align = )` is given.
+#'
+#' A gt caption (`gt::tab_caption()`, and so gtsummary's `modify_caption()`)
+#' is the first row of the page title, above the `tab_header()` title and
+#' subtitle, as gt prints it; on a `gt_group` / `gt_split` each member's own
+#' caption is read.  It is read with the `"titles"` token, so titles you give
+#' yourself (`rtf_tables(titles = )`, [rtf_titles()]) replace it as they
+#' replace the gt title.
 #'
 #' For flextable the *displayed* text is read (header labels set via
 #' `set_header_labels()` and `colformat_*()` formatting included), not the raw
@@ -209,14 +251,23 @@
 #' **Not carried** (RTF cannot reproduce these, or they belong to the
 #' source's own theme): cell background colours / fills, font and size
 #' styling, gt theme borders (`tab_options()`), header text colour, and
-#' Markdown formatting inside labels or titles (a `gt::html()` label is read
-#' as its text, a `<br>` as a line break).  For a plain `data.frame` / tibble two pieces of
+#' Markdown formatting inside labels, titles or a caption (its bold markers
+#' go: `**Table 9** Summary` is read as `Table 9 Summary`; a
+#' `gt::html()` label is read as its text, a `<br>` as a line break).  For a plain `data.frame` / tibble two pieces of
 #' metadata are read: column `label` attributes become header labels (the
 #' `"labels"` token, see `read_meta`), and delimited column names are
 #' reconstructed into a spanning header (see `header_sep`); everything else
 #' (`col_spec`, widths, ...) you set yourself.  See also [stub_cols()] for
 #' finishing a tidy hierarchy-column data.frame into the indented stub
 #' layout beforehand.
+#'
+#' @section Package versions:
+#' The minimum gt in DESCRIPTION, 1.1.0, does all of the above except two
+#' things that need gt 1.4.0 or later:
+#' * a cell style on a member of `gt::gt_split(row_every_n = )`: gt before
+#'   1.4.0 stops on it;
+#' * rows hidden with `gt::rows_hide()`, which gt has from 1.4.0: they are
+#'   left out of the pages, on every member of a `gt_split()` as well.
 #'
 #' @param x A `gt_tbl`, a `gt_group`, a gtsummary table (or `tbl_split`
 #'   container), an rtables/tern `VTableTree`, an rlistings `listing_df`, a
@@ -233,7 +284,12 @@
 #'   The tokens:
 #'   \describe{
 #'     \item{gt / gtsummary}{`"col_header"`, `"alignment"`, `"spanning"`,
-#'       `"widths"`, `"titles"`, `"footnotes"`, `"styles"` (explicit
+#'       `"widths"`, `"titles"`, `"footnotes"`, `"footnote_marks"` (the
+#'       footnote marks gt prints on the column labels, spanning headers,
+#'       title, subtitle and row-group labels, as `^{N}` after the text, and
+#'       each footnote line starting with its
+#'       mark, `^{N}` then the note, in gt's order; the marks in the body
+#'       cells are always written), `"styles"` (explicit
 #'       `tab_style()` borders and text styles; see *What is carried*).}
 #'     \item{rtables / tern}{`"col_header"`, `"alignment"`, `"spanning"`,
 #'       `"titles"`, `"footnotes"`, `"footnote_marks"` (the indentation is
@@ -247,9 +303,11 @@
 #'     \item{data.frame / tibble}{The single token `"labels"`: a column's
 #'       `label` attribute (the haven / labelled / xportr convention) is
 #'       used as its header label (columns without one keep their name).
-#'       Unknown tokens are *ignored* for data.frames -- a `list()` mixing
-#'       table objects and data.frames shares one `read_meta`, so adapter
-#'       tokens must not error on the data.frame elements.}
+#'       Tokens that only another source reads are *skipped* for data.frames
+#'       (and every other source skips the data.frame's `"labels"`) -- a
+#'       `list()` mixing table objects and data.frames shares one
+#'       `read_meta`, so a token must not error on the elements that do not
+#'       read it.  A token that no source reads (a typo) is an error.}
 #'   }
 #' @param split How to break the body into pages. A strategy name (a unique
 #'   prefix such as `"group_s"` is enough; another value is an error):
@@ -298,7 +356,9 @@
 #'   Ignored by `"none"` and `"rows"` (which cuts at the positions in
 #'   `split_rows`).  Optional for `"by_value"`: a value's page longer than
 #'   `max_rows` is cut as `"group_force"` cuts, its pages named by the value
-#'   with the `"...n"` tail (`"A...1"`, `"A...2"`).
+#'   with the `"...n"` tail (`"A...1"`, `"A...2"`).  For a `listing` and for
+#'   an rlistings listing, `max_rows` alone switches `split` to
+#'   `"group_safe"` (see `listing`).
 #' @param split_rows Integer vector or `NULL`.  Row **positions** to cut
 #'   before, for `split = "rows"` (required by it; ignored otherwise).
 #'   `split_rows = c(20, 40)` yields pages `1:19`, `20:39`, `40:nrow`.  It is
@@ -310,7 +370,8 @@
 #'   detect groups on, given by name or position (a whole number in
 #'   `1..ncol`; `TRUE`, a fraction or a factor is an error, as in every
 #'   column argument).  `NULL` (default) uses
-#'   **column 1**.  This selects only the *column*; how a group boundary is
+#'   **column 1** (for an rlistings listing, its first key column; see
+#'   `listing`).  This selects only the *column*; how a group boundary is
 #'   found on it is set by `group_by`.
 #'   \describe{
 #'     \item{Naming it}{For gt / gtsummary the body keeps gt's column
@@ -395,6 +456,18 @@
 #'       body sorted first would be SAS's contract, not R's, so a merely
 #'       interleaved body loses nothing; use `sort_by` when you want an
 #'       order, not to make the pages whole.}
+#'     \item{A row without a BY value}{a row whose `page_by` value is `NA`
+#'       or blank (`""`) is not given a page of its own: it takes the next
+#'       value in the body, or -- at the foot of the body, where there is
+#'       none -- the one before it, and prints on that value's page under
+#'       its title and header.  A body with no value at all is one page,
+#'       named `""`.  This is meant for a stub's label rows (a row without
+#'       its own BY value belongs to the group around it), so a real
+#'       missing value in a data frame lands on a neighbouring value's page.
+#'       To give it a page of its own, fill the value first, e.g.
+#'       `lab$period[is.na(lab$period)] <- "Missing"`.  A listing cut with
+#'       [plan_paginate_rows()] `(page_by = )` does the opposite: a record
+#'       with a blank BY value is a page of its own, named by `na_label`.}
 #'   }
 #'   `page_by` does **not** imply `drop_cols`: name the column there too to
 #'   keep it out of the printed table.  Like `group_col` / `sort_by` /
@@ -444,8 +517,17 @@
 #'       row (e.g. `c(0, 5, -1)`).  A position is a whole number in
 #'       `-1..nrow` of the whole body (after `stub`, before pagination): a
 #'       fraction, `NA`, or a position past the body's last row (or below
-#'       `-1`) stops, naming the positions.  On a page shorter than `k`, a
-#'       position `k` within the body puts no blank on that page.}
+#'       `-1`) stops, naming the positions.  The positions count rows of
+#'       the whole body, not of each page: `c(3, 12)` puts one blank after
+#'       body row 3 and one after body row 12, once each, on the pages those
+#'       rows land on, and a page that no position falls on gets none.  `0`
+#'       is before the body's first row (top of page 1) and `-1` after its
+#'       last (foot of the last page).  A blank after a row that ends a page
+#'       stays at the foot of that page; it is not carried to the top of the
+#'       next one.  Under `count_blank_rows = TRUE` the blank takes a row of
+#'       the page, so where its page has no room for it (its row fills the
+#'       page to `max_rows`, or `0` does not fit beside the first group) it
+#'       is dropped, not carried over.}
 #'     \item{`"between_groups"`}{a blank at every group transition on `group_col`,
 #'       using this call's `group_by` detection (auto / indent / value / filled).}
 #'     \item{a [blank_rows_by_change()] object}{insert a blank whenever the group
@@ -506,8 +588,12 @@
 #'   }
 #'   Under `TRUE` the blank positions resolved from `blank_rows` (and from any
 #'   `rtf_blank_rows` attribute already on the input) are materialised before
-#'   the split and re-attached per page afterwards, with a leading blank
-#'   suppressed at the top of each page.
+#'   the split and re-attached per page afterwards.  A separator blank is
+#'   never left at a page's top or foot; an integer position is the whole
+#'   body's, so `0` takes a row at the top of page 1 only, and a position
+#'   that the cut leaves at the top of a later page (it follows the previous
+#'   page's last row) is dropped rather than carried over; no page is made
+#'   of blank rows alone.
 #' @param cell_format Optional cell re-formatter applied column-by-column to
 #'   the body **before** pagination, for monospaced alignment.
 #'   \describe{
@@ -639,6 +725,17 @@
 #'       up and passing `listing` as well is an error.  An rlistings
 #'       `listing_df` is rejected: it is already laid out, and needs no
 #'       `listing` argument.}
+#'     \item{An rlistings listing}{Pages by its first key column instead:
+#'       `split` becomes `"group_safe"` when `max_rows` is set, and a
+#'       group-aware split gets `group_col` on the listing's first key column
+#'       -- found by name among the display columns, wherever
+#'       `listing_dispcols()` puts it -- with `group_by = "filled"`, since
+#'       rlistings prints a key once per run.  A subject's rows then stay on
+#'       one page when they fit; a longer one is cut as `"group_safe"` cuts
+#'       it, the key repeated with `cont_label`.  A listing with no key
+#'       columns groups on column 1.  These are **defaults** too: `split`,
+#'       `group_col` and `group_by` you pass yourself win, and without
+#'       `max_rows` the listing is one page.}
 #'   }
 #' @param stub Row-stub settings, as a [stub_spec()] object -- or, as a
 #'   shorthand for `stub_spec(vars)`, a bare vector of hierarchy columns
@@ -949,8 +1046,16 @@ as_rtftables.default <- function(x,
     in_names <- names(x)
     out <- list()
     for (i in seq_along(x)) {
-      chunks <- as_rtftables(
-        x[[i]], read_meta = read_meta, max_rows = max_rows, split = split,
+      # An rlistings listing fills in `split` and `group_by` only when the
+      # caller left them out (#1045), and so does a data frame given a
+      # `listing` or built by build_listing() (#1052), with `blank_row_first`
+      # as well; so they are left out here too.
+      lst_default <- .is_rlistings_tbl(x[[i]])
+      spec_default <- is.data.frame(x[[i]]) && !lst_default &&
+        (!is.null(listing) ||
+           !is.null(attr(x[[i]], "rtf_listing", exact = TRUE)))
+      args <- list(
+        read_meta = read_meta, max_rows = max_rows, split = split,
         split_rows = split_rows, group_col = group_col, group_by = group_by,
         page_by = page_by, sort_by = sort_by, sort_desc = sort_desc,
         cont_label = cont_label, min_group_rows = min_group_rows,
@@ -965,7 +1070,13 @@ as_rtftables.default <- function(x,
         stub = stub_spec_obj,
         header_sep = header_sep,
         auto_width = auto_width, table_width_twips = table_width_twips,
-        border = border, style = style, ...)
+        border = border, style = style)
+      if ((lst_default || spec_default) && !split_given) args$split <- NULL
+      if ((lst_default || spec_default) && !group_by_given) {
+        args$group_by <- NULL
+      }
+      if (spec_default && !blank_row_first_given) args$blank_row_first <- NULL
+      chunks <- do.call(as_rtftables, c(list(x[[i]]), args, list(...)))
       if (!is.null(in_names) && nzchar(in_names[i])) {
         base <- in_names[i]
         if (length(chunks) == 1L) {
@@ -1086,6 +1197,23 @@ as_rtftables.default <- function(x,
     cell_styles     <- kw$cell_styles
     titles_block    <- kw$titles_block
     footnotes_block <- kw$footnotes_block
+    # A listing pages by subject (#1045): `max_rows` alone gives a
+    # "group_safe" split on the first key column, so a subject's rows stay
+    # together when they fit -- the default a `listing =` listing has, on
+    # the listing's own key.  rlistings prints a key once per run, so a
+    # group starts at a filled cell.  Defaults only: what the caller set
+    # stays.
+    if (!split_given && !is.function(split) && identical(split, "none") &&
+        !is.null(max_rows)) {
+      split <- "group_safe"
+    }
+    if (is.function(split) || !split %in% c("none", "rows")) {
+      key_pos <- if (is.null(group_col)) .rlistings_first_key_pos(x)
+      if (!is.null(key_pos)) {
+        group_col <- key_pos
+        if (!group_by_given) group_by <- "filled"
+      }
+    }
   } else if (.is_flextable_tbl(x)) {
     tokens          <- .resolve_flextable_tokens(read_meta)
     kw              <- .flextable_to_rtftable_kwargs(x, tokens = tokens)
@@ -1103,6 +1231,8 @@ as_rtftables.default <- function(x,
     titles_block    <- kw$titles_block
     footnotes_block <- kw$footnotes_block
   } else if (is.data.frame(x)) {
+    # checks the tokens (a typo stops, another adapter's token is skipped)
+    .resolve_meta_tokens(read_meta, "labels", "data.frame")
     body            <- x
     kw              <- list()
     cell_styles     <- NULL
@@ -1200,8 +1330,8 @@ as_rtftables.default <- function(x,
 
     # ---- blank_rows positions: whole numbers within the body (#853) -----
     # Checked once on the whole body, before pagination: a position past its
-    # last row reaches no page.  Within the body it is "after row k of each
-    # page", so a page shorter than k simply has none.
+    # last row reaches no page.  Within the body it is "after body row k",
+    # placed on the page that row lands on (#1028).
     # With no `blank_rows`, the positions an rtf_blank_rows attribute on the
     # input names (set_blank_rows()) are the ones placed.
     if (is.null(blank_rows)) {

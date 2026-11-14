@@ -653,18 +653,21 @@ still push a page past `max_rows`.)
 
 ### Adding blank rows while paginating
 
-`as_rtftables()` takes the blank-row controls alongside the split arguments;
-they are applied to every page:
+`as_rtftables()` takes the blank-row controls alongside the split arguments:
 
 - `blank_rows = "between_groups"` -- a blank at each group transition on a page;
 - `blank_rows = c(0, 3)` -- explicit positions (`0` = before the first row,
-  `k` = after row `k`), relative to each page;
+  `k` = after row `k`, `-1` = after the last row), counted on the whole body,
+  not on each page: a blank goes after that body row on the page it lands on,
+  once.  A blank after a row that ends a page stays at the foot of that page;
+  it is not carried to the top of the next one;
 - `blank_row_first = TRUE` / `blank_row_end = TRUE` -- a blank at the top /
   bottom of every page.
 
 ### Paginating yourself: `set_blank_rows()`
 
-`set_blank_rows()` is the helper `as_rtftables()` calls on every chunk. If you do
+`set_blank_rows()` is the helper `as_rtftables()` calls on every chunk for the
+separator rules. If you do
 your own splitting, use it to attach the blank positions to a page-sized
 data.frame; `rtftable(read_attributes = TRUE)` (the default) then picks them up:
 

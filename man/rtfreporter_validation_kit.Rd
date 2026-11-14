@@ -43,8 +43,20 @@ Plan and Functional Requirements, for reference.}
 }
 
 The example content is fictional (a company "Example Pharma"); replace it
-with your own.  The package's Quality Report and its attachments are on
-each GitHub release of rtfreporter.
+with your own.
+
+From 0.9.0 on, the package's Quality Report is attached to each GitHub
+release of rtfreporter as \verb{quality-report-<tag>.pdf}.  It states the
+results (overall and by area, with the reason for each skipped test), the
+environments the tests ran on and how they stand for the environments the
+package supports, the deviations, and the conclusion.  Use the report of
+the release you install: a report from a CI run started by hand is marked
+DRAFT and concludes nothing.  The same release carries the evidence, each
+file's name ending in the tag: \verb{traceability_matrix-<tag>.xlsx} (which
+tests check each requirement), \verb{environments-<tag>.txt} (every
+environment's sessionInfo and test log), \verb{test-log-<tag>.txt} (the mapped
+tests' log) and the tables behind the results, \verb{ft-<tag>.csv},
+\verb{functions-<tag>.csv} and \verb{candidates-<tag>.csv}.
 }
 \examples{
 kit <- rtfreporter_validation_kit(file.path(tempdir(), "rtfreporter-validation"))
@@ -52,6 +64,8 @@ basename(kit)
 unlink(dirname(kit[1]), recursive = TRUE)
 }
 \seealso{
-The article "Validating rtfreporter in your environment",
-\url{https://ichirio.github.io/rtfreporter/articles/validation.html}.
+The articles "Validating rtfreporter in your environment",
+\url{https://ichirio.github.io/rtfreporter/articles/validation.html}, and
+"How rtfreporter is validated",
+\url{https://ichirio.github.io/rtfreporter/articles/validation-approach.html}.
 }

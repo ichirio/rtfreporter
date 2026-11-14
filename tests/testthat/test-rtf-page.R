@@ -1,9 +1,5 @@
-# rtf_page() / rtf_default_format(): structured settings with visible defaults
-# whose unset arguments still fall back to the rtfreporter.* options (#111, #152).
-
-# rtf_default_format() / default_format = are deprecated (#804): these tests
-# check what they still do, not the warning (test-rtf-style.R does).
-silence_deprecation("rtf_default_format")
+# rtf_page(): structured settings with visible defaults whose unset
+# arguments still fall back to the rtfreporter.* options (#111, #152).
 
 test_that("rtf_page() defaults equal the factory baseline and carry the class", {
   p <- rtf_page()
@@ -35,22 +31,11 @@ test_that("an unset rtf_page() arg falls back to the rtfreporter.* option (#111)
   expect_identical(rtf_page(orientation = "landscape")$orientation, "landscape") # explicit wins
 })
 
-test_that("rtf_default_format() defaults equal the factory baseline", {
-  d <- rtf_default_format()
-  expect_s3_class(d, "rtf_default_format")
-  expect_identical(d$font_size_half_points,
-                   as.integer(rtfreporter:::.opt("rtfreporter.font_size_half_points")))
-  expect_identical(d$markup,          rtfreporter:::.opt("rtfreporter.markup"))
-  expect_identical(d$title_format,    rtfreporter:::.opt("rtfreporter.title_format"))
-  expect_identical(d$footnote_format, rtfreporter:::.opt("rtfreporter.footnote_format"))
-  expect_null(d$row_height_twips)
-})
-
-test_that("rtf_default_format() validates and resolves tokens", {
-  expect_setequal(rtf_default_format(markup = "all")$markup, c("script", "relational"))
-  expect_error(rtf_default_format(markup = "bogus"), "subset")
-  expect_error(rtf_default_format(title_format = "fancy"), "text.*table")
-  expect_error(rtf_default_format(font_size_half_points = 0), "positive")
+test_that("rtf_style() validates and resolves tokens", {
+  expect_setequal(rtf_style(markup = "all")$markup, c("script", "relational"))
+  expect_error(rtf_style(markup = "bogus"), "subset")
+  expect_error(rtf_style(title_format = "fancy"), "text.*table")
+  expect_error(rtf_style(font_size_half_points = 0), "positive")
 })
 
 test_that("rtf_document() accepts the constructors and renders identically to a list", {
@@ -70,9 +55,9 @@ test_that("rtf_document() accepts the constructors and renders identically to a 
   expect_identical(obj, lst)                # constructor == list
 })
 
-test_that("rtf_default_format() flows through to the rendered document", {
+test_that("rtf_style() flows through to the rendered document", {
   df  <- data.frame(A = "x", stringsAsFactors = FALSE)
-  doc <- rtf_document(default_format = rtf_default_format(font_size_half_points = 22L)) |>
+  doc <- rtf_document(style = rtf_style(font_size_half_points = 22L)) |>
     rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
     rtf_tables(as_rtftables(df))
   f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)

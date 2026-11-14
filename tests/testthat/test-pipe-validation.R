@@ -1,9 +1,5 @@
 # Pipe API: argument-validation and deprecated-formatter pass-through.
 
-# rtf_default_format() / default_format = are deprecated (#804): these tests
-# check what they still do, not the warning (test-rtf-style.R does).
-silence_deprecation("rtf_default_format")
-
 # ──────── rtf_config validation + branches ────────────────────────────────
 
 test_that("rtf_config rejects non-rtf_document `doc`", {
@@ -15,11 +11,11 @@ test_that("rtf_config updates only supplied fields, NULLs are no-op", {
     font_table     = list(list(name = "Arial")),
     color_table    = c("#FF0000"),
     page           = list(orientation = "portrait"),
-    default_format = list(font_size_half_points = 22L))
+    style = rtf_style(font_size_half_points = 22L))
   expect_identical(d$document$font_table[[1L]]$name, "Arial")
   expect_identical(d$document$color_table,           "#FF0000")
   expect_identical(d$document$page$orientation,      "portrait")
-  expect_identical(d$document$default_format$font_size_half_points, 22L)
+  expect_identical(d$document$style$font_size_half_points, 22L)
 })
 
 # ──────── rtf_tables -- validation branches ───────────────────────────────

@@ -45,9 +45,9 @@
 #  toc            | length 0 / wrong length | character(0) / "x" | error, same                    | FR-AS114
 #  toc            | an NA label           | c("x", NA)         | error "`toc` labels must not be NA" | FR-AS246
 #  toc            | a number / TRUE       | 1 / TRUE           | error "`toc` must be NULL, \"auto\"" | FR-AS124
-#  toc (table)    | level 1 (min) / 3 (max) | 1 / 3            | written; level 3 indented 1200   | FR-AS116 FR-AS238
+#  toc (table)    | level 1 (min) / 3 (max) | 1 / 3            | written; level 3 indented 1200 with toc_style indent 600 | FR-AS116 FR-AS238
 #  toc (table)    | level 0 / 4 / 2.5 / -1 / Inf |             | error "`level` must be a whole number from 1 to 3" | FR-AS238
-#  toc (table)    | level NA              | NA                 | the default, 2 (indent 600)      | FR-AS115
+#  toc (table)    | level NA              | NA                 | the default, 2 (600 with indent 600) | FR-AS115
 #  toc (table)    | an NA label           | c(NA, "y")         | the file's title as its label    | FR-AS258
 #  toc (table)    | no label column       |                    | the titles as labels             | FR-AS258
 #  toc (table)    | no file column / 0 rows / a missing file |  | error (FR-AS118 / FR-AS102 / FR-AS119) | FR-AS102 FR-AS118 FR-AS119
@@ -56,8 +56,7 @@
 #  toc_title      | NA / length 2 / length 0 / a number / NULL | | error "`toc_title` must be a single string" | FR-AS244
 #  toc_leader     | "none" / prefix "d"   |                    | no leader / a dot leader         | FR-AS128
 #  toc_leader     | unknown / NA          |                    | error (match.arg)                | FR-AS129
-#  toc_page_numbering | "roman" / prefix "rom" |               | \pgnlcrm                         | FR-AS131
-#  toc_page_numbering | another case / "" / NA / length 2 |    | error (match.arg)                | FR-AS129
+#  toc_page_numbering | "roman" / "none" (removed) |           | error "unused argument"          | FR-AS271
 #  bookmark_prefix | "" / "studyX_"       |                    | the bookmark name                | FR-AS133
 #  bookmark_prefix | NA / a space / length 2 / a number / non-ASCII | | error "`bookmark_prefix` must be a single string of letters" | FR-AS244
 #  book_page      | valid                 | "Page {AUTO_PAGE}" | written                          | FR-AS138
@@ -75,7 +74,8 @@
 #  spec_file      | ".csv" / ".CSV"       |                    | written                          | FR-AS153
 #  spec_file      | ".txt" / no extension / "" / NA / a number | | error "`spec_file` must end in .xlsx or .csv." | FR-AS154
 #  recursive      | TRUE / FALSE          |                    | three rows / two rows            | FR-AS155
-#  toc_page_numbering | default / "roman" / unknown |          | decimal / \pgnlcrm / error       | FR-AS157 FR-AS129
+#  toc_title      | default               |                    | no page-number command (\pgn...) | FR-AS157
+#  toc_page_numbering | "decimal" with output_file (removed) |  | error "unused argument"          | FR-AS271
 #  ...            | cover / an unknown argument |              | passed on / error "unused argument" | FR-AS158
 #  toc levels     | the table's level 0 / 4 | spec$level       | error "`level` must be a whole number" | FR-AS238
 #  (dir NA / two folders / a number, recursive NA / "yes", spec_file of two
@@ -386,7 +386,7 @@
 }
 .eb3_read <- function(f) paste(readLines(f, warn = FALSE), collapse = "\n")
 
-test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS110 FR-AS112 FR-AS114 FR-AS115 FR-AS116 FR-AS118 FR-AS119 FR-AS124 FR-AS127 FR-AS128 FR-AS129 FR-AS131 FR-AS133 FR-AS134 FR-AS139 FR-AS238 FR-AS244 FR-AS245 FR-AS246 FR-AS258]: assemble_rtf(): equivalence classes and boundaries of its arguments", {
+test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS110 FR-AS112 FR-AS114 FR-AS115 FR-AS116 FR-AS118 FR-AS119 FR-AS124 FR-AS127 FR-AS128 FR-AS129 FR-AS133 FR-AS134 FR-AS139 FR-AS238 FR-AS244 FR-AS245 FR-AS246 FR-AS258 FR-AS271]: assemble_rtf(): equivalence classes and boundaries of its arguments", {
   C <- .eb3_case
   E <- .eb3_err
   f <- .eb3_files()
@@ -454,9 +454,11 @@ test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS
     E("toc", "an NA label", c("x", NA), "^`toc` labels must not be NA"),
     E("toc", "a number", 1, "^`toc` must be NULL, \"auto\""),
     E("toc", "TRUE", TRUE, "^`toc` must be NULL, \"auto\""),
-    C("toc", "table, level 1 (min)", tab(level = 1), "no:\\\\li600"),
-    C("toc", "table, level 3 (max)", tab(level = 3), "ok:\\\\li1200"),
-    C("toc", "table, level NA (default 2)", tab(level = NA), "ok:\\\\li600"),
+    C("toc", "table, level 1 (min)", tab(level = 1), "no:\\\\li[1-9]"),
+    C("toc", "table, level 3 (max)", tab(level = 3), "ok:\\\\li1200",
+      more = list(toc_style = list(indent = 600))),
+    C("toc", "table, level NA (default 2)", tab(level = NA), "ok:\\\\li600",
+      more = list(toc_style = list(indent = 600))),
     E("toc", "table, level 0", tab(level = 0), lvl),
     E("toc", "table, level 4", tab(level = 4), lvl),
     E("toc", "table, level 2.5", tab(level = 2.5), lvl),
@@ -486,12 +488,10 @@ test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS
     C("toc_leader", "prefix", "d", "ok:tldot", more = list(toc = "auto")),
     E("toc_leader", "unknown", "bogus", ma),
     E("toc_leader", "NA", NA, mn),
-    C("toc_page_numbering", "roman", "roman", "ok:pgnlcrm", more = list(toc = "auto")),
-    C("toc_page_numbering", "prefix", "rom", "ok:pgnlcrm", more = list(toc = "auto")),
-    E("toc_page_numbering", "another case", "Roman", ma),
-    E("toc_page_numbering", "empty string", "", ma),
-    E("toc_page_numbering", "NA", NA, mn),
-    E("toc_page_numbering", "length 2", c("none", "roman"), "^'arg' must be of length 1"),
+    E("toc_page_numbering", "removed: roman", "roman", "unused argument \\(toc_page_numbering",
+      more = list(toc = "auto")),
+    E("toc_page_numbering", "removed: none", "none", "unused argument \\(toc_page_numbering",
+      more = list(toc = "auto")),
     C("bookmark_prefix", "empty string", "", "ok:bkmkstart t14_1_1\\}", more = list(toc = "auto")),
     C("bookmark_prefix", "valid", "studyX_", "ok:bkmkstart studyX_t14_2_1", more = list(toc = "auto")),
     E("bookmark_prefix", "NA", NA_character_, bp),
@@ -516,7 +516,7 @@ test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS
   })
 })
 
-test_that("FT-AS141 [FR-AS129 FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS156 FR-AS157 FR-AS158 FR-AS238]: assemble_folder(): equivalence classes and boundaries of its arguments", {
+test_that("FT-AS141 [FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS156 FR-AS157 FR-AS158 FR-AS238 FR-AS271]: assemble_folder(): equivalence classes and boundaries of its arguments", {
   C <- .eb3_case
   E <- .eb3_err
   O <- .eb3_obj
@@ -557,11 +557,10 @@ test_that("FT-AS141 [FR-AS129 FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS
     E("spec_file", "a number", 1, sf),
     O("recursive", "TRUE", TRUE, nrows(3), more = list(dir = top)),
     O("recursive", "FALSE (default)", FALSE, nrows(2), more = list(dir = top)),
-    C("toc_page_numbering", "default (decimal)", "decimal", "no:pgnlcrm",
+    C("toc_title", "default", "Table of Contents", "no:\\\\pgn",
       more = list(output_file = tempfile(fileext = ".rtf"))),
-    C("toc_page_numbering", "roman", "roman", "ok:pgnlcrm",
-      more = list(output_file = tempfile(fileext = ".rtf"))),
-    E("toc_page_numbering", "unknown", "bogus", "^'arg' should be one of",
+    E("toc_page_numbering", "removed, with output_file", "decimal",
+      "unused argument \\(toc_page_numbering",
       more = list(output_file = tempfile(fileext = ".rtf"))),
     C("cover", "passed on (...)", list(title = "STUDY-EB3"), "ok:STUDY-EB3",
       more = list(output_file = tempfile(fileext = ".rtf"))),

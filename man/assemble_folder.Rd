@@ -11,7 +11,6 @@ assemble_folder(
   recursive = FALSE,
   toc_title = "Table of Contents",
   toc_leader = "dot",
-  toc_page_numbering = "decimal",
   overwrite = FALSE,
   ...
 )
@@ -36,9 +35,14 @@ before any file is read or written.}
 \item{recursive}{Recurse into sub-directories when scanning?  \code{TRUE} or
 \code{FALSE} (default); another value is an error.}
 
-\item{toc_title, toc_leader, toc_page_numbering, overwrite, ...}{Passed through
-to \code{\link[=assemble_rtf]{assemble_rtf()}}; \code{toc_page_numbering} defaults to \code{"decimal"} here
-(\code{"none"} in \code{\link[=assemble_rtf]{assemble_rtf()}}).}
+\item{toc_title, toc_leader, overwrite, ...}{Passed through to
+\code{\link[=assemble_rtf]{assemble_rtf()}} (\code{cover}, \code{book_page}, \code{toc_style} ... go in \code{...}).
+An argument in \code{...} that \code{\link[=assemble_rtf]{assemble_rtf()}} does not take, or one without
+a name, is an error ("unused argument"), with or without an
+\code{output_file}, checked before any file is read or written.
+The assembled file's pages are numbered as \code{\link[=assemble_rtf]{assemble_rtf()}} numbers them
+(its \strong{Page numbering}): one Arabic sequence from the first page, a
+cover and the table of contents included, and the total is all pages.}
 }
 \value{
 Without \code{output_file}, the table of contents.  With one,
@@ -48,10 +52,11 @@ table of contents used).
 \description{
 Scans \code{dir} for \code{.rtf} files (natural-sorted, so \code{t2} comes before \code{t10})
 and reads each file's table number and title into a \strong{table of
-contents}: a \code{data.frame} with one row per file.  The number and title
-come from the running header (\code{rtf_header()}) when it has a \code{"Table N"}
-line, otherwise from the title block that \code{\link[=rtf_titles]{rtf_titles()}} writes at the top
-of the body.  With an
+contents}: a \code{data.frame} with one row per file.  The number comes from
+the running header (\code{rtf_header()}) when it has a \code{"Table N"} line,
+otherwise from the title block that \code{\link[=rtf_titles]{rtf_titles()}} writes at the top of
+the body; the label is the file's title, read as
+\code{assemble_rtf(toc = "auto")} reads it.  With an
 \code{output_file} it assembles the deliverable with that table of contents
 (\code{\link[=assemble_rtf]{assemble_rtf()}}); without one it only returns the table, to edit
 (rename labels, fill \code{heading} to group entries, change \code{level}, reorder
@@ -72,8 +77,18 @@ The table has the columns \code{order} (the assembly order), \code{file}, \code{
 (the table number read from the header or the titles, or \code{NA}), \code{heading}
 (a heading
 printed above the entry whenever it changes; \code{NA} = none), \code{label} (the
-entry text, \code{"Table N  <title>"}), \code{level} (the entry's indent, a whole
-number from 1 to 3, default 2) and \code{pages} (informational).
+entry text: the file's title, read as \code{assemble_rtf(toc = "auto")} reads
+it -- its title rows joined with two spaces, a line break inside a row
+too, as \code{"Table 14.1.1  Safety Population"}; a figure or a listing is
+labelled by its title as a table is; a file with no title rows takes its
+running header's \code{"Table N"} line, the title written after the number
+winning over the centred lines below it, and a file with neither, its file
+name without \code{.rtf}; one row a file, so a file whose titles change from
+page to page with \code{page_by} (\code{"Summary of {PARAM}"}) is labelled by its
+first page's title), \code{level} (the entry's level, a whole
+number from 1 to 3, default 2; the levels start at the same left position
+unless \code{toc_style = list(indent = )}, in \code{...}, indents them) and \code{pages}
+(informational).
 }
 \examples{
 # two TFL files in a folder, as a study's output
