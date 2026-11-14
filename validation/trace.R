@@ -641,6 +641,15 @@ below_tier <- if (!length(below_min)) character() else {
   t <- if (is.null(envs)) rep(NA_character_, length(e)) else envs$tier[match(e, envs$environment)]
   ifelse(is.na(t), "additional", t)
 }
+# a required record below a minimum stops the verdict (criterion 3): that
+# environment was not made as the Quality Plan says
+below_req <- below_min[below_tier == "required"]
+if (length(below_req)) {
+  env_ok <- FALSE
+  ready <- FALSE
+  blockers <- c(blockers, sprintf("a required environment ran a version older than DESCRIPTION's minimum (%s)",
+                                  paste(below_req, collapse = "; ")))
+}
 sup_lines <- c(
   sprintf("What the package says it supports, read from DESCRIPTION: R (>= %s); %s; %d suggested packages, %d with a minimum version.",
           r_min[1L],
@@ -663,7 +672,7 @@ sup_lines <- c(
   if (!is.na(at_min)) c("", sprintf("%d of the %d suggested packages with a minimum version were run at that minimum in at least one environment%s.",
                                     at_min, sum(nzchar(sug_min)),
                                     if (at_min < sum(nzchar(sug_min))) "; the others ran only with another version" else "")),
-  if (any(below_tier == "required")) c("", sprintf("**Run with a version older than DESCRIPTION's minimum in a required environment** (a record made before the minimum was raised): %s.",
+  if (any(below_tier == "required")) c("", sprintf("**Run with a version older than DESCRIPTION's minimum in a required environment** (criterion 3 does not hold until that environment is made again): %s.",
                                                    paste(below_min[below_tier == "required"], collapse = "; "))),
   if (any(below_tier == "additional")) c("", sprintf("Run with a version older than DESCRIPTION's minimum in an additional environment (named only; it counts against nothing): %s.",
                                                      paste(below_min[below_tier == "additional"], collapse = "; "))),
@@ -746,12 +755,13 @@ sm <- c(
             sprintf("No environment was gathered in this run; the CI run of the release gathers every one (required: %d in CI, %d local).",
                     expected_env[["ci"]], expected_env[["local"]])
           } else {
-            sprintf("**Not every required environment is gathered, passing, of this version and of this code** (gathered: %d of %d in CI, %d of %d local%s%s%s%s): see Environments.",
+            sprintf("**Not every required environment is gathered, passing, of this version and of this code, at or above every minimum** (gathered: %d of %d in CI, %d of %d local%s%s%s%s%s): see Environments.",
                     n_env[["ci"]], expected_env[["ci"]], n_env[["local"]], expected_env[["local"]],
                     if (length(env_missing)) paste0("; missing: ", paste(env_missing, collapse = "; ")) else "",
                     if (length(env_failing)) paste0("; failing: ", paste(env_failing, collapse = "; ")) else "",
                     if (length(env_stale)) paste0("; of another version: ", paste(env_stale, collapse = "; ")) else "",
-                    if (length(env_other_req)) paste0("; of other code: ", paste(env_other_req, collapse = "; ")) else "")
+                    if (length(env_other_req)) paste0("; of other code: ", paste(env_other_req, collapse = "; ")) else "",
+                    if (length(below_req)) paste0("; below a minimum: ", paste(below_req, collapse = "; ")) else "")
           },
           if (is.null(envs)) "" else
             sprintf(" That R CMD check succeeds on every CI job is a condition of the release procedure (the Quality Plan, section 7), not of this verdict: %s.",
