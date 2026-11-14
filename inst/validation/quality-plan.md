@@ -244,7 +244,8 @@ The other environments are **additional**, for reference: they are run and
 reported in a table of their own, and a failure there is named with its
 reason, but it does not enter the verdict.  A dependency below its minimum
 in an additional environment (a local R that cannot install the latest
-version of a package) is named only.
+version of a package) is named only.  In a required environment it stops
+the verdict: that environment was not made as this plan says.
 
 | Tier | Supported | Stands for it | Why that is enough |
 |---|---|---|---|
@@ -322,7 +323,8 @@ when all of these hold:
    why) and the reason it is accepted; there is no high-risk deviation
    without a reason, and none not yet assessed;
 3. the tests pass on every **required** environment of section 5 (each
-   one's record complete, of this version and of this code);
+   one's record complete, of this version and of this code, and no
+   dependency there older than the minimum DESCRIPTION names);
 4. the changes were made under the responsibilities of section 7.
 
 Line coverage and the arguments the tests give are aids, not criteria.
