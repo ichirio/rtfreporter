@@ -924,8 +924,7 @@ becomes `plan_blanks(where =)`, and `split = "by_value", group_col` becomes
 `plan_col_header(header_sep =)`, `style =` `plan_style(<its fields>)`, and
 `na` `plan_cells(na =)`. Not carried over, by design: `read_meta` /
 `read_attributes` (a plan's input has no adapter metadata; the plan sets
-the attributes itself), and `spanning_header` (a row of
-`plan_col_header()`). The stub is `stub =` / `stub_spec()`, which becomes
+the attributes itself). The stub is `stub =` / `stub_spec()`, which becomes
 `plan_stub()`.
 
 ### Looking inside
