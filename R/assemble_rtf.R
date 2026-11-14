@@ -460,9 +460,12 @@
 
 # ── TOC rendering ──────────────────────────────────────────────────────────
 
-# Indent in twips per TOC level (1 = flush left, 2 = +600 twips, ...).
-.toc_indent_for_level <- function(level) {
-  600L * (max(1L, as.integer(level)) - 1L)
+# A TOC level's indent in twips: `indent` (toc_style = list(indent = ),
+# twips per level; 0 by default) for each level below 1, so level 1 is flush
+# left and every level is when `indent` is 0 (#1068).  600 gives the layout
+# before #1068: 0, 600 and 1200 for levels 1 to 3.
+.toc_indent_for_level <- function(level, indent = 0L) {
+  as.integer(indent) * (max(1L, as.integer(level)) - 1L)
 }
 
 # The TOC page each entry goes on (#767).  The TOC section is landscape
@@ -494,9 +497,9 @@
     ri <- if (identical(e$type, "heading")) 720L else .toc_entry_ri(hp)
     sp <- if (hang > 0L && isTRUE(style$entry$hanging)) .toc_split_label(e$label, e$number)
     n  <- if (!is.null(sp)) {
-      .toc_label_lines(sp[["title"]], e$level, hp, 0L, ri + hang)
+      .toc_label_lines(sp[["title"]], e$level, hp, 0L, ri + hang, style$indent)
     } else {
-      .toc_label_lines(e$label, e$level, hp, hang, ri)
+      .toc_label_lines(e$label, e$level, hp, hang, ri, style$indent)
     }
     h  <- n * line(hp)
     if (used + h > room && used > 0) {
@@ -580,10 +583,12 @@
 # The lines a label takes at `hp` half-points: it wraps at Courier New's width
 # beside its level's indent and the page-number column (`ri` twips: an entry's
 # right indent, .toc_entry_ri(); 720 for a heading); the lines after the first
-# have `hang` twips less width (a hanging indent).
-.toc_label_lines <- function(label, level, hp, hang = 0L, ri = 720L) {
+# have `hang` twips less width (a hanging indent).  `indent` is the twips per
+# level of toc_style (.toc_indent_for_level()).
+.toc_label_lines <- function(label, level, hp, hang = 0L, ri = 720L,
+                             indent = 0L) {
   char  <- .char_width_in("courier_new", 10) * 1440  # a 10 pt character, twips
-  width <- .TOC_TEXT_W - .toc_indent_for_level(level) - ri
+  width <- .TOC_TEXT_W - .toc_indent_for_level(level, indent) - ri
   len   <- nchar(label %||% "")
   n <- max(1, ceiling(len * char * hp / 20 / width))
   if (hang > 0L && n > 1) {
@@ -597,12 +602,15 @@
 # -- The TOC's text styles (assemble_rtf(toc_style = )) ----------------------
 
 # Today's sizes: the title 14 pt bold, a heading 11 pt bold, an entry 10 pt,
-# and the blank line below the title 9 pt (`gap`, a size only).
+# and the blank line below the title 9 pt (`gap`, a size only); `indent`, the
+# twips each level is indented more than the one above it, 0: every level
+# flush left (#1068).
 .TOC_STYLE_DEFAULT <- list(
   title   = list(size = 14, bold = TRUE),
   heading = list(size = 11, bold = TRUE),
   entry   = list(size = 10, bold = FALSE, hanging = FALSE),
-  gap     = list(size = 9)
+  gap     = list(size = 9),
+  indent  = 0L
 )
 
 # A style item's size in half-points (the `\fs` unit)
@@ -616,7 +624,8 @@
 }
 
 # `toc_style` (NULL, or a list of list(size = , bold = ) by title / heading /
-# entry / gap) merged over the defaults, key by key; anything else an error.
+# entry / gap, and indent: a whole number of twips >= 0) merged over the
+# defaults, key by key; anything else an error.
 .toc_style <- function(x = NULL, where = "toc_style") {
   out <- .TOC_STYLE_DEFAULT
   if (is.null(x)) return(out)
@@ -635,6 +644,16 @@
   for (k in names(x)) {
     v <- x[[k]]
     w <- sprintf("`%s$%s`", where, k)
+    if (identical(k, "indent")) {
+      if (!is.numeric(v) || length(v) != 1L || !is.finite(v) || v < 0 ||
+          v != round(v)) {
+        stop(w, " must be a whole number of twips >= 0, the indent of each ",
+             "level below level 1 (0, the default, puts every level flush ",
+             "left; 600 indents each level 600 twips more).", call. = FALSE)
+      }
+      out$indent <- as.integer(v)
+      next
+    }
     fields <- names(out[[k]])
     if (!is.list(v) || (length(v) && (is.null(names(v)) || any(!nzchar(names(v)))))) {
       stop(w, " must be a list with ", paste(fields, collapse = " and "),
@@ -756,7 +775,7 @@
   hang_all <- .toc_hang(toc_entries, style$entry, em)
   for (k in seq_along(toc_entries)) {
     e          <- toc_entries[[k]]
-    indent     <- .toc_indent_for_level(e$level)
+    indent     <- .toc_indent_for_level(e$level, style$indent)
     indent_cmd <- if (indent > 0L) sprintf("\\li%d", indent) else ""
     hang <- if (e$type == "heading") 0L else hang_all
     if (hang > 0L) indent_cmd <- sprintf("\\li%d\\fi-%d", indent + hang, hang)
@@ -784,11 +803,14 @@
     tabs <- ""
     if (!is.null(sp)) {
       txt  <- paste0(.toc_escape(sp[["number"]]), "\\tab ", .toc_escape(sp[["title"]]))
-      # the stop at the hang, and two more 2 and 4 em after it: a number
-      # wider than the hang tabs to the next of them, never to the page
-      # number's right tab (Word has no default stops left of the last one)
-      em_tw <- as.integer(round(style$entry$size * 20))
-      tabs  <- paste(sprintf("\\tx%d", indent + hang + c(0L, 2L, 4L) * em_tw), collapse = "")
+      # one left stop, at the hang (no number is wider: the hang is the
+      # widest number and 1 em).  It is where every wrapped line starts, so
+      # a tab before the page number that wraps to a line of its own (a
+      # title that just fills its last line) has no left stop after it and
+      # goes on to the right tab: the number stays in the right-hand column
+      # (#1068; with stops 2 and 4 em after the hang it landed there, at
+      # the left).
+      tabs  <- sprintf("\\tx%d", indent + hang)
     }
     pg  <- if (!is.null(entry_pages) && e$file_idx <= length(entry_pages) &&
                !is.na(entry_pages[e$file_idx])) {
@@ -883,8 +905,9 @@
 #'     optionally `label` (the entry text; a row with no `label`, or an `NA`
 #'     one, takes its file's title, read as `"auto"` reads it), `heading` (a
 #'     heading printed above the row's entry whenever it changes; `NA` =
-#'     none), `level` (the entry's indent, a whole number from 1 to 3,
-#'     default 2) and `order`.  [assemble_folder()] makes one from a
+#'     none), `level` (the entry's level, a whole number from 1 to 3,
+#'     default 2; every level starts at the same left position unless
+#'     `toc_style = list(indent = )` indents them) and `order`.  [assemble_folder()] makes one from a
 #'     folder, ready to edit.  `input_files` can then be left out: the
 #'     table's `file` column is used.}
 #'   \item{the path of such a table}{an `.xlsx` or `.csv` file, e.g. the one
@@ -904,7 +927,18 @@
 #' The page number and its leader stay on the label's last line, at the
 #' margin.  Every level has it, with or without a hanging indent; headings do
 #' not.  An entry is also kept on one page (`\keep`): Word never splits it
-#' across two TOC pages.
+#' across two TOC pages.  The right tab is the only tab stop to the right of
+#' where a wrapped line starts, so when a label just fills its last line and
+#' the viewer moves the tab and the page number to a line of their own, the
+#' number still goes to the right margin with its leader, never to the left.
+#'
+#' A row's level does not move it by default: every heading and entry, at
+#' levels 1, 2 and 3 alike, starts at the same left position (the left
+#' margin).  `toc_style = list(indent = 600)` indents each level 600 twips
+#' more than the one above it (levels 1, 2 and 3 at 0, 600 and 1200 twips);
+#' any whole number of twips may be given, and a label that wraps then wraps
+#' at its level's width.  A hanging indent (below) is added to the level's
+#' indent.
 #'
 #' With a hanging indent (`toc_style = list(entry = list(hanging = TRUE))`)
 #' an entry is its number, a tab and its title (`"Table 14.3.2"`, then
@@ -912,10 +946,10 @@
 #' line does, after the number.  The hang is the width of the widest number
 #' in the TOC and a gap of 1 em at the entry's size: a character is 0.6 em
 #' in Courier New (exact) and is taken as 0.75 em in any other font (a
-#' generous estimate: a wrong one leaves a little too much room).  Two more
-#' tab stops follow the hang, 2 and 4 em after it, so a number wider than
-#' the hang puts its title at the next of them, never at the page number's
-#' tab.  With `"auto"` and [assemble_folder()] the
+#' generous estimate: a wrong one leaves a little too much room), so no
+#' number is wider than the hang.  The hang is the entry's one left tab
+#' stop, where its wrapped lines start: a tab that wraps to a line of its
+#' own goes on from there to the page number's right tab.  With `"auto"` and [assemble_folder()] the
 #' number is the one the file's title is read with (`"Table 14.1.1"`); a
 #' label given as text is split when it starts with `Table`, `Figure` or
 #' `Listing` and a number (`14.3.2`, `14.3.2.1`, `14.1.1a`).  A label that
@@ -994,10 +1028,12 @@
 #'       slot sits in one band shared by every page of a section, so a
 #'       single substitution cannot give each page its own number.}
 #'   }
-#' @param toc_style The size and boldness of the TOC's text: `NULL` (the
-#'   built-in sizes) or a list with the keys `title`, `heading` and `entry`,
-#'   each `list(size = <points>, bold = TRUE/FALSE)`, and `gap`
-#'   (`list(size = )`: the blank line below the title).  A list is merged over
+#' @param toc_style The size and boldness of the TOC's text and the indent of
+#'   its levels: `NULL` (the
+#'   built-in values) or a list with the keys `title`, `heading` and `entry`,
+#'   each `list(size = <points>, bold = TRUE/FALSE)`, `gap`
+#'   (`list(size = )`: the blank line below the title) and `indent` (twips per
+#'   level, below).  A list is merged over
 #'   the built-in values key by key, so `list(entry = list(size = 9))` changes
 #'   the entries' size only.  Built in: title 14 pt bold, heading 11 pt bold,
 #'   entry 10 pt, gap 9 pt.  A size is a positive number of points, whole or
@@ -1005,11 +1041,17 @@
 #'   entry's wrapped lines at the indent of its first line; `TRUE` lines them
 #'   up where the title starts, after the number (see **Table of Contents**),
 #'   and a positive whole number of twips hangs them that far in, the label
-#'   written whole (`list(entry = list(hanging = 360))`).  Headings are not affected.  Default `getOption("rtfreporter.toc_style")`.  The font is
+#'   written whole (`list(entry = list(hanging = 360))`).  Headings are not affected.
+#'   `indent` is the indent of the levels, in twips per level: `0` (default)
+#'   starts every heading and entry, at every level, at the same left
+#'   position; a whole number above 0 indents each level that many twips more
+#'   than the one above it, level 1 flush left (`list(indent = 600)`: levels
+#'   1, 2 and 3 at 0, 600 and 1200 twips).  It applies to headings and
+#'   entries alike, and a hanging indent is added to it.  Default `getOption("rtfreporter.toc_style")`.  The font is
 #'   the document's (that of the first input file).  Another key, a size that
-#'   is not a positive number, a `bold` that is not `TRUE` / `FALSE` or a
-#'   `hanging` that is not `TRUE` / `FALSE` / a positive whole number is an
-#'   error.
+#'   is not a positive number, a `bold` that is not `TRUE` / `FALSE`, a
+#'   `hanging` that is not `TRUE` / `FALSE` / a positive whole number or an
+#'   `indent` that is not one whole number of 0 or more is an error.
 #'
 #'
 #' @return Invisibly returns `output_file`.

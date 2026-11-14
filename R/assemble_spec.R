@@ -481,8 +481,10 @@
 #' winning over the centred lines below it, and a file with neither, its file
 #' name without `.rtf`; one row a file, so a file whose titles change from
 #' page to page with `page_by` (`"Summary of {PARAM}"`) is labelled by its
-#' first page's title), `level` (the entry's indent, a whole
-#' number from 1 to 3, default 2) and `pages` (informational).
+#' first page's title), `level` (the entry's level, a whole
+#' number from 1 to 3, default 2; the levels start at the same left position
+#' unless `toc_style = list(indent = )`, in `...`, indents them) and `pages`
+#' (informational).
 #'
 #' @param dir Directory of `.rtf` files to assemble: one folder path.  A
 #'   value that is not one non-empty string is an error, as is a folder that

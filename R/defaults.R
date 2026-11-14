@@ -126,7 +126,8 @@
 #'
 #' One is about the table of contents of [assemble_rtf()]:
 #' \describe{
-#'   \item{`rtfreporter.toc_style`}{The size and boldness of its text, the
+#'   \item{`rtfreporter.toc_style`}{The size and boldness of its text and the
+#'     indent of its levels, the
 #'     default of `assemble_rtf(toc_style = )`: a list with the keys `title`,
 #'     `heading` and `entry` (each `list(size = <points>, bold = TRUE/FALSE)`)
 #'     and `gap` (`list(size = )`, the blank line below the title), merged over
@@ -134,7 +135,11 @@
 #'     heading 11 pt bold, entry 10 pt, gap 9 pt).  `entry` also takes
 #'     `hanging` (`FALSE`, `TRUE` for the title's wrapped lines lined up after
 #'     its number, or a positive whole number of twips): a hanging indent for
-#'     an entry's wrapped lines.}
+#'     an entry's wrapped lines.  The key `indent` is the indent of the
+#'     levels in twips per level: `0` (factory) starts every heading and
+#'     entry at the same left position, whatever its level; a whole number
+#'     above 0 indents each level that much more than the one above it
+#'     (`list(indent = 600)`: 0, 600 and 1200 twips for levels 1 to 3).}
 #' }
 #'
 #' @return A named list of resolved default values.

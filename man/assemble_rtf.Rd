@@ -78,10 +78,12 @@ slot sits in one band shared by every page of a section, so a
 single substitution cannot give each page its own number.}
 }}
 
-\item{toc_style}{The size and boldness of the TOC's text: \code{NULL} (the
-built-in sizes) or a list with the keys \code{title}, \code{heading} and \code{entry},
-each \verb{list(size = <points>, bold = TRUE/FALSE)}, and \code{gap}
-(\code{list(size = )}: the blank line below the title).  A list is merged over
+\item{toc_style}{The size and boldness of the TOC's text and the indent of
+its levels: \code{NULL} (the
+built-in values) or a list with the keys \code{title}, \code{heading} and \code{entry},
+each \verb{list(size = <points>, bold = TRUE/FALSE)}, \code{gap}
+(\code{list(size = )}: the blank line below the title) and \code{indent} (twips per
+level, below).  A list is merged over
 the built-in values key by key, so \code{list(entry = list(size = 9))} changes
 the entries' size only.  Built in: title 14 pt bold, heading 11 pt bold,
 entry 10 pt, gap 9 pt.  A size is a positive number of points, whole or
@@ -89,11 +91,17 @@ half (\code{10.5}).  \code{entry} also takes \code{hanging}: \code{FALSE} (defau
 entry's wrapped lines at the indent of its first line; \code{TRUE} lines them
 up where the title starts, after the number (see \strong{Table of Contents}),
 and a positive whole number of twips hangs them that far in, the label
-written whole (\code{list(entry = list(hanging = 360))}).  Headings are not affected.  Default \code{getOption("rtfreporter.toc_style")}.  The font is
+written whole (\code{list(entry = list(hanging = 360))}).  Headings are not affected.
+\code{indent} is the indent of the levels, in twips per level: \code{0} (default)
+starts every heading and entry, at every level, at the same left
+position; a whole number above 0 indents each level that many twips more
+than the one above it, level 1 flush left (\code{list(indent = 600)}: levels
+1, 2 and 3 at 0, 600 and 1200 twips).  It applies to headings and
+entries alike, and a hanging indent is added to it.  Default \code{getOption("rtfreporter.toc_style")}.  The font is
 the document's (that of the first input file).  Another key, a size that
-is not a positive number, a \code{bold} that is not \code{TRUE} / \code{FALSE} or a
-\code{hanging} that is not \code{TRUE} / \code{FALSE} / a positive whole number is an
-error.}
+is not a positive number, a \code{bold} that is not \code{TRUE} / \code{FALSE}, a
+\code{hanging} that is not \code{TRUE} / \code{FALSE} / a positive whole number or an
+\code{indent} that is not one whole number of 0 or more is an error.}
 }
 \value{
 Invisibly returns \code{output_file}.
@@ -172,8 +180,9 @@ multi-level (chapter / table) layouts: \code{file} (the path), and
 optionally \code{label} (the entry text; a row with no \code{label}, or an \code{NA}
 one, takes its file's title, read as \code{"auto"} reads it), \code{heading} (a
 heading printed above the row's entry whenever it changes; \code{NA} =
-none), \code{level} (the entry's indent, a whole number from 1 to 3,
-default 2) and \code{order}.  \code{\link[=assemble_folder]{assemble_folder()}} makes one from a
+none), \code{level} (the entry's level, a whole number from 1 to 3,
+default 2; every level starts at the same left position unless
+\code{toc_style = list(indent = )} indents them) and \code{order}.  \code{\link[=assemble_folder]{assemble_folder()}} makes one from a
 folder, ready to edit.  \code{input_files} can then be left out: the
 table's \code{file} column is used.}
 \item{the path of such a table}{an \code{.xlsx} or \code{.csv} file, e.g. the one
@@ -193,7 +202,18 @@ a page number has more digits), 720 twips (0.5 in) at the default 10 pt.
 The page number and its leader stay on the label's last line, at the
 margin.  Every level has it, with or without a hanging indent; headings do
 not.  An entry is also kept on one page (\verb{\\keep}): Word never splits it
-across two TOC pages.
+across two TOC pages.  The right tab is the only tab stop to the right of
+where a wrapped line starts, so when a label just fills its last line and
+the viewer moves the tab and the page number to a line of their own, the
+number still goes to the right margin with its leader, never to the left.
+
+A row's level does not move it by default: every heading and entry, at
+levels 1, 2 and 3 alike, starts at the same left position (the left
+margin).  \code{toc_style = list(indent = 600)} indents each level 600 twips
+more than the one above it (levels 1, 2 and 3 at 0, 600 and 1200 twips);
+any whole number of twips may be given, and a label that wraps then wraps
+at its level's width.  A hanging indent (below) is added to the level's
+indent.
 
 With a hanging indent (\code{toc_style = list(entry = list(hanging = TRUE))})
 an entry is its number, a tab and its title (\code{"Table 14.3.2"}, then
@@ -201,10 +221,10 @@ an entry is its number, a tab and its title (\code{"Table 14.3.2"}, then
 line does, after the number.  The hang is the width of the widest number
 in the TOC and a gap of 1 em at the entry's size: a character is 0.6 em
 in Courier New (exact) and is taken as 0.75 em in any other font (a
-generous estimate: a wrong one leaves a little too much room).  Two more
-tab stops follow the hang, 2 and 4 em after it, so a number wider than
-the hang puts its title at the next of them, never at the page number's
-tab.  With \code{"auto"} and \code{\link[=assemble_folder]{assemble_folder()}} the
+generous estimate: a wrong one leaves a little too much room), so no
+number is wider than the hang.  The hang is the entry's one left tab
+stop, where its wrapped lines start: a tab that wraps to a line of its
+own goes on from there to the page number's right tab.  With \code{"auto"} and \code{\link[=assemble_folder]{assemble_folder()}} the
 number is the one the file's title is read with (\code{"Table 14.1.1"}); a
 label given as text is split when it starts with \code{Table}, \code{Figure} or
 \code{Listing} and a number (\verb{14.3.2}, \verb{14.3.2.1}, \verb{14.1.1a}).  A label that

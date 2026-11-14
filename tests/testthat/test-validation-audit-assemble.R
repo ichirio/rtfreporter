@@ -169,10 +169,15 @@ test_that("FT-AS133 [FR-AS238]: the level of a table of contents row is a whole 
   toc <- assemble_folder(d)
   out <- tempfile("a7out", fileext = ".rtf")
   toc$level <- c(1, 3)
-  assemble_rtf(toc = toc, output_file = out)
+  # (the levels are indented 600 twips each with toc_style indent = 600)
+  assemble_rtf(toc = toc, output_file = out, toc_style = list(indent = 600))
   txt <- readLines(out, warn = FALSE)
   expect_true(any(grepl("{\\pard\\ri720\\keep\\fs20\\tqr", txt, fixed = TRUE)))        # level 1: no indent
   expect_true(any(grepl("{\\pard\\li1200\\ri720\\keep\\fs20\\tqr", txt, fixed = TRUE))) # level 3
+  # by default both levels start flush left: no \li on either entry
+  assemble_rtf(toc = toc, output_file = out, overwrite = TRUE)
+  txt <- readLines(out, warn = FALSE)
+  expect_identical(sum(grepl("{\\pard\\ri720\\keep\\fs20\\tqr", txt, fixed = TRUE)), 2L)
   for (bad in list(4, 0, 2.5)) {
     toc$level <- c(2, bad)
     expect_error(assemble_rtf(toc = toc, output_file = out, overwrite = TRUE),
