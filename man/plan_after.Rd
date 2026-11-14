@@ -40,7 +40,7 @@ goes into a workbook:
 \item \code{set_col_header()} / \code{rtf_col_header()} is declared as \code{plan_col_header()}
 \item \code{as_rtftables(align_count_pct = TRUE)} is declared as \code{plan_style(align_count_pct = TRUE)}
 \item \code{fmt_numeric()} is declared as \verb{plan_digits(<column> = 2)}, \code{plan_digits(.rows = c(Mean = 1))}
-\item \code{paginate()} is declared as \code{plan_paginate_rows()}
+\item \code{as_rtftables(x, max_rows = )} is declared as \code{plan_paginate_rows()}
 \item \code{style_header(x, ...)} is declared as \code{plan_cell_style(header = TRUE, ...)}
 \item \code{style_cols(x, ...)} is declared as \code{plan_cell_style(cols = , ...)}
 \item bold / colour / alignment of body cells, by condition is declared as \code{plan_cell_style(where = ~ ..., ...)}
