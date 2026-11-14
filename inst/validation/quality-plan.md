@@ -216,8 +216,17 @@ Report states the figure from the release's run.
 ### The environment strategy
 
 Section 5 lists the environments.  They are chosen to stand for the range
-the package supports.  The two ends of that range each have their own
-environment:
+the package supports.  Support has two tiers (decided by the maintainers
+on 2026-11-14):
+
+- **The minimum versions**: the main features work.  A suggested package
+  with a known problem at its minimum is noted in the manual / help.
+- **The recommended versions**: the latest at the time of development,
+  with every suggested package; everything works.
+
+Each tier has its own environment, and those are the **required**
+environments, the only ones the Quality Report's verdict rests on
+(section 4, criterion 3):
 
 - **the minimum environment**: R at the minimum `DESCRIPTION` names
   (`Depends: R (>= 4.3)`) and every direct dependency at the minimum
@@ -227,15 +236,24 @@ environment:
   the first date on which every minimum had been released.  It adds no
   condition beyond `DESCRIPTION`; it is CRAN as a user could have found it
   that day.  The date is recorded in `inst/validation/dependency-minimums.md`;
-- **the recommended environment**: the latest R with the latest packages.
+- **the recommended environment**: the latest R with the latest packages:
+  the CI release jobs on Ubuntu, Windows and macOS (which also cover the
+  three systems), and the local R 4.6.1.
 
-| Supported | Stands for it | Why that is enough |
-|---|---|---|
-| The minimum environment: R and every dependency at the minimum `DESCRIPTION` names | Ubuntu, R 4.3, each direct dependency at its minimum, the rest from CRAN as on the snapshot date (the CI job *minimum environment*) | The use of an R feature or a dependency's feature newer than its minimum fails here. |
-| The recommended environment: the latest R with the latest packages | Ubuntu, Windows and macOS, R release, with the newest packages | A new version of R or of a dependency that breaks the package shows here. |
-| The R versions in use now | Ubuntu, R oldrel-1 and release; Windows and macOS, release; the local R 4.4.2 and 4.6.1 | Between them they run the current and the previous release of R. |
-| The next R | Ubuntu, R devel | A change in R that will break the package shows here first. |
-| Windows, macOS and Linux | Windows, macOS and Ubuntu, each with at least one CI job | Each system is run, with the tests and R CMD check. |
+The other environments are **additional**, for reference: they are run and
+reported in a table of their own, and a failure there is named with its
+reason, but it does not enter the verdict.  A dependency below its minimum
+in an additional environment (a local R that cannot install the latest
+version of a package) is named only.
+
+| Tier | Supported | Stands for it | Why that is enough |
+|---|---|---|---|
+| Required | The minimum versions: R and every dependency at the minimum `DESCRIPTION` names; the main features work | Ubuntu, R 4.3, each direct dependency at its minimum, the rest from CRAN as on the snapshot date (the CI job *minimum environment*) | The use of an R feature or a dependency's feature newer than its minimum fails here. |
+| Required | The recommended versions: the latest R with every suggested package at its latest; everything works | Ubuntu, Windows and macOS, R release, with the newest packages (the CI release jobs), and the local R 4.6.1 | A new version of R or of a dependency that breaks the package shows here, on CI and on a maintainer's PC. |
+| Required | Windows, macOS and Linux | Windows, macOS and Ubuntu, each with a CI release job | Each system is run with the latest versions, with the tests and R CMD check. |
+| Additional | The previous release of R | Ubuntu, R oldrel-1 | Adds a version between the two ends: a break with the R many users still run shows here. |
+| Additional | The next R | Ubuntu, R devel | Adds a look ahead: a change in R that will break the package shows here first.  CRAN checks R-devel too. |
+| Additional | An older R on a maintainer's PC | Windows 11, the local R 4.4.2, with the newest packages that R can install | Adds an older R on Windows, with what a user of it can install; a package below its minimum there is named, not judged. |
 
 The package imports only packages that ship with R (`DESCRIPTION`), so
 there is no range of imported versions to cover.  The suggested packages
@@ -245,9 +263,9 @@ function adapts to them, and by the tests that need them.  Each minimum in
 package and its tests use; `inst/validation/dependency-minimums.md` gives,
 for each package, what needs which version and where that is recorded.  So
 the two ends of each range are tested: the minimums, in the minimum
-environment, and the latest versions, in the recommended environment (and
-the other jobs and the local runs, which also install the newest versions
-their R allows).  When a test fails in the minimum environment, the minimum
+environment, and the latest versions, in the recommended environment (the
+additional environments also install the newest versions their R allows,
+for reference).  When a test fails in the minimum environment, the minimum
 is raised; when a dependency cannot be installed there on R's minimum, R's
 minimum is raised, and the table says which package forced it.
 
@@ -259,7 +277,8 @@ What is not tested, and the risk accepted:
   (`skip_if_not_installed()`).  The risk is a failure on a system without
   one that no job shows.
 - **Versions between the minimum and the latest** of R or of a dependency,
-  and a mix of them other than the two ends tested.
+  and a mix of them other than the two ends tested.  The additional
+  environments run a few of them, for reference only.
 - **Other versions of an operating system**, other architectures, and other
   locales than those of the CI images and the maintainers' PC.
 - **Another RTF reader.**  The tests compare the RTF text.  They do not open
@@ -270,9 +289,10 @@ and the Quality Report names them again for each release.
 
 The Quality Report's sections on the test environments and on the supported
 environments (the report is made at a release) list each environment
-actually run, with its versions and result, and say which one stands for
-which supported range.  Section 4, criterion 3, requires the tests to pass
-on every one of them.
+actually run, with its versions and result, in two tables (required, and
+additional), and say which one stands for which supported range.  Section
+4, criterion 3, requires the tests to pass on every required one; the
+additional ones are reported, not judged.
 
 ### Residual risk, and how a deviation is accepted
 
@@ -301,11 +321,15 @@ when all of these hold:
    `inst/validation/deviations.csv` with its risk (high, medium, low, and
    why) and the reason it is accepted; there is no high-risk deviation
    without a reason, and none not yet assessed;
-3. the tests pass on every environment of section 5, and R CMD check
-   succeeds on every CI environment;
+3. the tests pass on every **required** environment of section 5 (each
+   one's record complete, of this version and of this code);
 4. the changes were made under the responsibilities of section 7.
 
 Line coverage and the arguments the tests give are aids, not criteria.
+The additional environments of section 5 are run and reported, not judged:
+a failure there is named with its reason and does not enter the verdict.
+That R CMD check succeeds on every CI job is a condition of the release
+procedure (section 7), not of this verdict.
 
 Only the CI run of a published release can conclude *validation-ready*.  A
 run on a maintainer's PC, or a CI run started by hand, writes the same
@@ -315,21 +339,33 @@ maintainers' own; no third-party audit is made.
 
 ## 5. Environments
 
-- **CI** (6): the R-CMD-check workflow's matrix -- Ubuntu (R devel,
-  release, oldrel-1), macOS (release), Windows (release); the release jobs
-  are the recommended environment -- and its job *minimum environment*
-  (Ubuntu, R 4.3, every dependency at the minimum `DESCRIPTION` names, the
-  rest from CRAN as on the snapshot date), at the release's commit; the
-  tests and R CMD check.
-- **Local** (2): the maintainers' PC, two versions of R (now 4.4.2 and
-  4.6.1), the tests run by hand with `validation/env.R` before the release;
-  the records are committed in `validation/env-local/`.
+Every CI job runs the tests and R CMD check at the release's commit (the
+R-CMD-check workflow); a local one runs the tests by hand with
+`validation/env.R` on the maintainers' PC before the release, and its
+record is committed in `validation/env-local/`.
+
+**Required** (the verdict rests on these, section 4, criterion 3): 4 in CI
+and 1 local.
+
+- CI *minimum environment*: Ubuntu, R 4.3, every dependency at the minimum
+  `DESCRIPTION` names, the rest from CRAN as on the snapshot date (the
+  minimum versions);
+- CI *ubuntu-latest*, *windows-latest* and *macos-latest*, R release (the
+  recommended versions, on the three systems);
+- local: Windows 11, R 4.6.1 (the recommended versions).
+
+**Additional** (for reference; run and reported in their own table, not
+judged): 2 in CI and 1 local.
+
+- CI *ubuntu-latest*, R oldrel-1 (the previous release of R);
+- CI *ubuntu-latest*, R devel (the next R; CRAN checks R-devel too);
+- local: Windows 11, R 4.4.2 (an older R, with the packages it can install).
 
 ## 6. The documents, and when
 
 | When | Plan | Report |
 |---|---|---|
-| The first release under this plan, and each major version | this **Quality Plan** (by hand) | the **Quality Report** (`quality-report-<tag>.pdf`), from 0.9.0 on: made by CI at the published release from the records -- the results (overall and by area, the skipped tests with their reasons), the environments' table, the supported environments and the tested ones that stand for them, the deviations and why accepted, the conclusion against section 4, how to read the attachments; a CI run started by hand makes it marked DRAFT (kept as the run's artifact `quality-report`, not attached to a release); attached to the release with the Traceability Matrix (`traceability_matrix-<tag>.xlsx`), every environment's sessionInfo and tests' log (`environments-<tag>.txt`), the tests' log of the mapped tests (`test-log-<tag>.txt`) and the tables behind the results (`ft-<tag>.csv`, `functions-<tag>.csv`, `candidates-<tag>.csv`) |
+| The first release under this plan, and each major version | this **Quality Plan** (by hand) | the **Quality Report** (`quality-report-<tag>.pdf`), from 0.9.0 on: made by CI at the published release from the records -- the results (overall and by area, the skipped tests with their reasons), the environments' tables (required, and additional), the supported environments and the tested ones that stand for them, the deviations and why accepted, the conclusion against section 4, how to read the attachments; a CI run started by hand makes it marked DRAFT (kept as the run's artifact `quality-report`, not attached to a release); attached to the release with the Traceability Matrix (`traceability_matrix-<tag>.xlsx`), every environment's sessionInfo and tests' log (`environments-<tag>.txt`), the tests' log of the mapped tests (`test-log-<tag>.txt`) and the tables behind the results (`ft-<tag>.csv`, `functions-<tag>.csv`, `candidates-<tag>.csv`) |
 | Releases between them | the **Change Request Plan**: the release's GitHub milestone, each issue with its impact, risk and related FRs | the **Change Report**: made from the merged pull requests and issues, the FRs added or changed, the regression evidence (the tests, the byte comparison of the reference outputs), the environments; the deviations' reasons by hand |
 
 What GitHub already records -- issues, pull requests, the CI runs, the
@@ -356,4 +392,4 @@ there and in `NEWS.md`.
 |---|---|
 | Development team | Evaluating each issue and deciding whether it is taken up. |
 | Contributor (works from a fork) or collaborator (works in the repository): the developer making the change | Making the change with its tests and requirements, mapping the tests to the requirements, running the tests, and opening a pull request. |
-| Author / maintainer | Reviewing and approving a contributor's pull request. Merging a change into the release branch only after all tests, of the change and for regression, have passed in all CI environments. Running the local environments of section 5 before a release, accepting any deviation, making the release, and the conclusion of the Quality Report. |
+| Author / maintainer | Reviewing and approving a contributor's pull request. Merging a change into the release branch only after all tests, of the change and for regression, have passed in all CI environments. Running the local environments of section 5 before a release, accepting any deviation, making the release, and the conclusion of the Quality Report. Making a release only when R CMD check succeeds on every CI job of section 5, required and additional (a condition of the release procedure, not of the Quality Report's verdict). |
