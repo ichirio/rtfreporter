@@ -4145,7 +4145,7 @@ plan_footnotes <- function(.plan, ..., pages = NULL, border = NULL) {
 #' * `set_col_header()` / `rtf_col_header()` is declared as `plan_col_header()`
 #' * `as_rtftables(align_count_pct = TRUE)` is declared as `plan_style(align_count_pct = TRUE)`
 #' * `fmt_numeric()` is declared as `plan_digits(<column> = 2)`, `plan_digits(.rows = c(Mean = 1))`
-#' * `paginate()` is declared as `plan_paginate_rows()`
+#' * `as_rtftables(x, max_rows = )` is declared as `plan_paginate_rows()`
 #' * `style_header(x, ...)` is declared as `plan_cell_style(header = TRUE, ...)`
 #' * `style_cols(x, ...)` is declared as `plan_cell_style(cols = , ...)`
 #' * bold / colour / alignment of body cells, by condition is declared as `plan_cell_style(where = ~ ..., ...)`

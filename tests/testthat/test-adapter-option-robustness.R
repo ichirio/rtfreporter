@@ -529,6 +529,7 @@ test_that("huxtable: NA, na_string, and cell text that only looks like markup", 
 
 test_that("huxtable: shape edge cases read to the right number of rows and columns", {
   skip_if_not_installed("huxtable")
+  skip_if_not_installed("tibble")
   hx <- .opt_hx()
 
   zr <- as_rtftable(huxtable::as_hux(.opt_ft_df()[0, ]))   # columns, no rows
