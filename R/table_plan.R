@@ -2764,6 +2764,14 @@ plan_filter <- function(.plan, ..., any = TRUE, parents = c("keep", "drop"), by 
 #' A later `plan_compare()` replaces the earlier one as a whole: the last call
 #' says every comparison column.
 #'
+#' @section Package versions:
+#' The difference of event rates between two arms of a hierarchical ARD
+#' (the `"estimate"` records a table shows here, or sorts on with
+#' `plan_sort("-estimate@soc")`) comes from
+#' `cards::diff_ard_hierarchical()`, which cards has from 0.9.0.  The
+#' minimum cards in DESCRIPTION, 0.7.0, does not have it; with that cards,
+#' make those records yourself or install cards 0.9.0 or later.
+#'
 #' @param .plan A [table_plan()].  The dot keeps `p = `, the commonest
 #'   column here, from being taken for it.
 #' @param ... The columns, each named (the column's name, any name) and

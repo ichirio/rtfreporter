@@ -261,6 +261,14 @@
 #' finishing a tidy hierarchy-column data.frame into the indented stub
 #' layout beforehand.
 #'
+#' @section Package versions:
+#' The minimum gt in DESCRIPTION, 1.1.0, does all of the above except two
+#' things that need gt 1.4.0 or later:
+#' * a cell style on a member of `gt::gt_split(row_every_n = )`: gt before
+#'   1.4.0 stops on it;
+#' * rows hidden with `gt::rows_hide()`, which gt has from 1.4.0: they are
+#'   left out of the pages, on every member of a `gt_split()` as well.
+#'
 #' @param x A `gt_tbl`, a `gt_group`, a gtsummary table (or `tbl_split`
 #'   container), an rtables/tern `VTableTree`, an rlistings `listing_df`, a
 #'   `flextable`, a `huxtable`, a `data.frame` / tibble, or a `list` of these.
