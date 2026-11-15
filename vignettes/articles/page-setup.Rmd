@@ -266,13 +266,8 @@ doc <- rtf_document(style = rtf_style(font_size_half_points = 22L)) |>  # 11pt
 ```
 
 The font size also **drives the default row height**: taller text needs taller
-rows, so rtfreporter picks a sensible default row height for the chosen size.
-
-```{r rowheight-default}
-# Internal lookup, shown here to illustrate the cascade:
-rtfreporter:::.default_row_height_twips(18L)   # 9pt  -> 230 twips
-rtfreporter:::.default_row_height_twips(22L)   # 11pt -> 270 twips
-```
+rows, so rtfreporter picks a sensible default row height for the chosen size:
+for example 230 twips at 9 pt and 270 twips at 11 pt.
 
 
 ## Default cell / row height

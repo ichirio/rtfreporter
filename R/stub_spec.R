@@ -21,10 +21,8 @@
 #' per setting.  The arguments are `stub_cols()`'s own, so the two never drift
 #' apart.
 #'
-#' It replaces the `stub_vars` / `stub_label` / `stub_indent` /
-#' `stub_group_summary` arguments of [as_rtftables()], which were removed in
-#' 0.9.0: passing one of them is now an error.  New stub settings are only
-#' added here.
+#' All stub settings are given here, not as separate arguments of
+#' [as_rtftables()].
 #'
 #' @param vars The hierarchy columns, **parent first, leaf last**.  One
 #'   column is the stub as it is, renamed to `label` when one is given.  See
