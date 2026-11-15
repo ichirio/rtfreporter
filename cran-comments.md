@@ -23,6 +23,8 @@
   run only in an interactive session.  Examples that use a suggested
   package (gt, gtsummary) run only when it is installed.
 * Tests and vignettes that use a suggested package skip without it.  No
-  test reaches the network or an external program.
+  test reaches the network.  The few tests that call an external program
+  (LibreOffice to render an RTF, git in a source checkout) skip on CRAN
+  and wherever the program is absent.
 * The screenshots of the example RTF output are not part of the package
   (they are on the package's website); the example `.rtf` files are.
