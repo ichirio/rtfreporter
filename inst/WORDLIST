@@ -23,6 +23,7 @@
 9pt
 ADaM
 ADaM's
+ADLB
 adsl
 AE
 AE's
@@ -40,10 +41,12 @@ ARDs
 arg
 args
 ARS
+artifact
 assertable
 AST
 backreferences
 backticked
+Batang
 Behavior
 BIGN
 BL
@@ -108,6 +111,7 @@ gt
 gt's
 gtsummary
 gtsummary's
+Hangul
 hardcoded
 hdr
 HGB
@@ -123,6 +127,7 @@ int
 io
 ja
 JFIF
+JhengHei
 JIS
 JPEG's
 kind's
@@ -137,9 +142,12 @@ Lifecycle
 lifecycle
 LLOQ
 macOS's
+Malgun
 markup's
 MatrixPrintForm
 md
+Meiryo
+Mincho
 mis
 mL
 monospace
@@ -163,14 +171,19 @@ paren
 pasteable
 pbo
 pct
+percents
+PGothic
 Pharma
 Pharmaverse
 pharmaverse
 pharmaverseadam
 pipeable
 pkgdown
+PMincho
+PMingLiU
 PNG's
 pos
+preset's
 PTs
 px
 Quickstart
@@ -221,6 +234,8 @@ serialisable
 sessionInfo
 SEX's
 shorthands
+SimHei
+SimSun
 SOC
 SOC's
 SOCs
@@ -249,6 +264,7 @@ Tidyverse
 TLG
 TLGs
 TOC
+TOC's
 Tplyr
 trt
 twip
@@ -295,3 +311,4 @@ maintainer's
 pre
 rtfreporter
 tflplanner's
+Yu
