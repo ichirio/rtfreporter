@@ -2632,8 +2632,8 @@ plan_nest <- function(.plan, ...) {
 #'       grade), placed among that arm's grades.}
 #'     \item{`"rows"`}{the Total **row**, a shift table's margin: read
 #'       from the column key tabulated by the row keys, without the body's
-#'       variable (`ard_tabulate(adlb, variables = BTOXGR, by = PARAM)`
-#'       beside the body's `variables = ATOXGR, by = c(PARAM, BTOXGR)`),
+#'       variable (`ard_tabulate(x, variables = base_gr, by = PARAM)`
+#'       beside the body's `variables = worst_gr, by = c(PARAM, base_gr)`),
 #'       labelled `label` and placed by `position`.}
 #'     \item{`"both"`}{both, with the corner (a row key's own tabulation)
 #'       as the Total row's Total column.}
@@ -4691,12 +4691,13 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
 }
 
 # plan_total(direction = "rows" / "both"): the margins of a shift table --
-# a tabulation of a key of the table (BTOXGR by PARAM; ATOXDIR by PARAM),
-# the body's analysis variable (ATOXGR) left out -- become the body's Total
+# a tabulation of a key of the table (base_gr by PARAM and tox_dir;
+# tox_dir by PARAM), the body's analysis variable (worst_gr) left out --
+# become the body's Total
 # row, last (or first) in each block.  normalize_ard() marks them as the
 # key's own tabulation; their shape says what they are: a key-own record
 # whose variable is a key of this table.  A record with no value of the
-# column key as well (ATOXDIR by PARAM) is then the Total row's Total
+# column key as well (tox_dir by PARAM) is then the Total row's Total
 # column, folded as any overall record.
 .plan_total_margins <- function(plan, d, tt, cols) {
   own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else rep(FALSE, nrow(d))

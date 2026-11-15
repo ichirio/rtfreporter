@@ -27,8 +27,8 @@ total column from its records with no \code{AESEV} (an AE at any
 grade), placed among that arm's grades.}
 \item{\code{"rows"}}{the Total \strong{row}, a shift table's margin: read
 from the column key tabulated by the row keys, without the body's
-variable (\code{ard_tabulate(adlb, variables = BTOXGR, by = PARAM)}
-beside the body's \verb{variables = ATOXGR, by = c(PARAM, BTOXGR)}),
+variable (\code{ard_tabulate(x, variables = base_gr, by = PARAM)}
+beside the body's \verb{variables = worst_gr, by = c(PARAM, base_gr)}),
 labelled \code{label} and placed by \code{position}.}
 \item{\code{"both"}}{both, with the corner (a row key's own tabulation)
 as the Total row's Total column.}
