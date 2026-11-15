@@ -13,7 +13,8 @@ normalize_ard(
   drop_key_variables = FALSE,
   stack = NULL,
   stack_sep = " / ",
-  stack_nest = FALSE
+  stack_nest = FALSE,
+  combine = NULL
 )
 }
 \arguments{
@@ -93,6 +94,25 @@ their own, \verb{<name>_outer} (\code{65-80}), and its innermost in \verb{<name>
 under it, \code{F} under that --- while a single layer, whose outer key is
 \code{NA}, keeps its two levels with no empty heading.  \code{FALSE} (default):
 the joined form, \code{65-80 / F}.}
+
+\item{combine}{Variables the data keeps apart, read as one table
+dimension: a named list, each name a new name and each element the two
+or more variables read under it.  The use is a lab shift table by
+direction: ADaM keeps the grade toward low and toward high in
+\code{ATOXGRL} / \code{ATOXGRH} (and \code{BTOXGRL} / \code{BTOXGRH} at baseline), the ARD
+is tabulated per direction under those names with a direction column of
+its own (\code{tox_dir}), and \code{combine = list(worst_gr = c("ATOXGRL", "ATOXGRH"), base_gr = c("BTOXGRL", "BTOXGRH"))} makes one column dimension
+(\code{base_gr}) and one row variable (\code{worst_gr}) of them.  It renames only:
+an old name in \code{variable} becomes the new one, and old key columns fold
+into one key under the new name, at the first one's place, its levels
+the union of theirs in the order written (a factor where any was one).
+It knows nothing about directions.  Stops on a row that has values of
+two variables of one element, a variable in two elements or in
+\code{hierarchy}, a variable the ARD does not have, and a new name that is
+already a column, a variable or a \code{stack} name.  Done before \code{stack},
+so a stacked key may name a combined one.  \code{NULL} (default): nothing is combined.
+The whole table is in the article \emph{Tables from an ARD, step by step},
+\emph{Lab shift table by direction}.}
 }
 \value{
 A data frame with one row per ARD statistic.  The analysis
@@ -173,6 +193,24 @@ if (requireNamespace("cards", quietly = TRUE)) {
     cards::ard_tabulate(variables = SEX))
   flat <- normalize_ard(ard)    # one row per statistic, keys as columns
   head(flat[, c("ARM", "variable", ".label", "stat_name", "stat", ".kind")])
+}
+
+# combine: ADaM's Low and High grades as one dimension of a shift table
+if (requireNamespace("cards", quietly = TRUE)) {
+  gr <- function(x) factor(x, levels = c("0", "1", "2"))
+  adlb <- data.frame(USUBJID = c("01", "02", "03"),
+                     BTOXGRL = gr(c("0", "1", NA)), ATOXGRL = gr(c("1", "1", NA)),
+                     BTOXGRH = gr(c(NA, "0", "0")), ATOXGRH = gr(c(NA, "2", "0")))
+  lo <- adlb[!is.na(adlb$BTOXGRL), ]
+  lo$tox_dir <- "Low"
+  hi <- adlb[!is.na(adlb$BTOXGRH), ]
+  hi$tox_dir <- "High"
+  ard <- cards::bind_ard(
+    cards::ard_tabulate(lo, variables = ATOXGRL, by = c(tox_dir, BTOXGRL)),
+    cards::ard_tabulate(hi, variables = ATOXGRH, by = c(tox_dir, BTOXGRH)))
+  shift <- normalize_ard(ard, combine = list(worst_gr = c("ATOXGRL", "ATOXGRH"),
+                                             base_gr  = c("BTOXGRL", "BTOXGRH")))
+  shift[shift$stat_name == "n", c("tox_dir", "base_gr", "variable", ".label", "stat")]
 }
 
 }
