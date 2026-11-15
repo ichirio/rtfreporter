@@ -603,6 +603,87 @@ names(plan_apply(p_orr))    # one section per arm
 .shot("t_orr.png")
 ```
 
+## Lab shift table by direction: `combine =`
+
+ADaM keeps a lab grade toward low and toward high in separate variables:
+`ATOXGRL` and `BTOXGRL` (the worst post-baseline grade and the baseline
+grade, low) and `ATOXGRH` and `BTOXGRH` (high). A shift table by direction
+shows them as one table: the baseline grade across, the worst grade down, a
+block for Low and a block for High under each parameter.
+
+The data here is a small fictional ADLB (Example Pharma), one record per
+subject and parameter. Albumin has a grade toward low only; potassium has
+both.
+
+```{r data-shift, fold = "closed"}
+set.seed(1081)
+ex_adsl <- data.frame(USUBJID = sprintf("EX-%03d", 1:40))
+grade <- function(n) {
+  factor(sample(0:3, n, replace = TRUE, prob = c(0.6, 0.2, 0.12, 0.08)),
+         levels = 0:4)
+}
+ex_adlb <- rbind(
+  data.frame(USUBJID = ex_adsl$USUBJID, PARAM = "Albumin (g/L)",
+             BTOXGRL = grade(40), ATOXGRL = grade(40),
+             BTOXGRH = factor(NA, levels = 0:4), ATOXGRH = factor(NA, levels = 0:4)),
+  data.frame(USUBJID = ex_adsl$USUBJID, PARAM = "Potassium (mmol/L)",
+             BTOXGRL = grade(40), ATOXGRL = grade(40),
+             BTOXGRH = grade(40), ATOXGRH = grade(40)))
+```
+
+The ARD keeps ADaM's names. For each direction the records are filtered and
+one column is added, the direction `tox_dir`; then four tabulations: the
+cells, the Total column, the Total row and the corner.
+
+```{r ard-shift}
+lo <- ex_adlb[!is.na(ex_adlb$BTOXGRL) & !is.na(ex_adlb$ATOXGRL), ]
+lo$tox_dir <- "Low"
+hi <- ex_adlb[!is.na(ex_adlb$BTOXGRH) & !is.na(ex_adlb$ATOXGRH), ]
+hi$tox_dir <- "High"
+ard_shift <- bind_ard(
+  ard_total_n(ex_adsl),
+  ard_tabulate(lo, variables = ATOXGRL, by = c(PARAM, tox_dir, BTOXGRL), denominator = ex_adsl),
+  ard_tabulate(lo, variables = ATOXGRL, by = c(PARAM, tox_dir), denominator = ex_adsl),
+  ard_tabulate(lo, variables = BTOXGRL, by = c(PARAM, tox_dir), denominator = ex_adsl),
+  ard_tabulate(lo, variables = tox_dir, by = PARAM, denominator = ex_adsl),
+  ard_tabulate(hi, variables = ATOXGRH, by = c(PARAM, tox_dir, BTOXGRH), denominator = ex_adsl),
+  ard_tabulate(hi, variables = ATOXGRH, by = c(PARAM, tox_dir), denominator = ex_adsl),
+  ard_tabulate(hi, variables = BTOXGRH, by = c(PARAM, tox_dir), denominator = ex_adsl),
+  ard_tabulate(hi, variables = tox_dir, by = PARAM, denominator = ex_adsl))
+```
+
+```{r plan-shift, fold = "open"}
+grades <- c("0" = "Grade 0", "1" = "Grade 1", "2" = "Grade 2",
+            "3" = "Grade 3", "4" = "Grade 4")
+p_shift <- ard_shift |>
+  normalize_ard(combine = list(worst_gr = c("ATOXGRL", "ATOXGRH"),
+                               base_gr  = c("BTOXGRL", "BTOXGRH"))) |>
+  table_plan(cols = "base_gr", rows = c(PARAM = "PARAM", tox_dir = "tox_dir"),
+             label = c(is.na(.label) ~ "Total", ~ "{.label}")) |>
+  plan_levels(tox_dir = c("Low", "High")) |>
+  plan_cells("{n:.0f} ({p:.1f%})", notes = FALSE) |>
+  plan_total(label = "Total", direction = "both") |>
+  plan_labels(base_gr = grades, worst_gr = grades)
+```
+
+* `normalize_ard(combine = )` reads the Low and High variables as one: the
+  rows of `ATOXGRL` and `ATOXGRH` become those of `worst_gr`, and the key
+  columns `BTOXGRL` and `BTOXGRH` become one key, `base_gr`, with the levels
+  of both. It only renames, and the new names are yours. It knows nothing
+  about directions: the direction is the ARD's own `tox_dir`.
+* `plan_total(direction = "both")` makes the Total column (the worst grade by
+  parameter and direction), the Total row (the baseline grade) and the
+  corner (the direction by parameter) from the ARD. Nothing is computed.
+* The rows have two keys, the parameter and the direction, so
+  `plan_levels(tox_dir = )` puts Low before High in every parameter.
+* The grades are factors, so a grade nobody has still shows as 0.
+  `tox_dir` is not a factor: one with both levels would give each
+  direction's ARD rows of the other direction too.
+
+```{r apply-shift}
+as.data.frame(plan_apply(p_shift, "table"))
+```
+
 ## Writing a plan with an AI assistant
 
 rtfreporter is newer than what a chat model has learned. Give it the manual
