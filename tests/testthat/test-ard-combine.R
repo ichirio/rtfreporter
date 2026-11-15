@@ -1,7 +1,7 @@
 # normalize_ard(combine = ) (#1081): ADaM's Low / High variables read as one
 # table dimension.  The data is the fictional ADLB of helper-lab-shift.R.
 
-test_that("FT-AR8001 [FR-AR255]: normalize_ard(combine = ) renames the variables and folds their key columns into one at the first one's place, its levels and the bookkeeping kept, and stops on what it cannot read", {
+test_that("FT-AR8001 [FR-AR255]: normalize_ard(combine = ) renames the variables and folds their key columns into one at the first one's place, its levels and the bookkeeping kept", {
   skip_if_not_installed("cards")
   ard <- .shift_ard()
   nd0 <- normalize_ard(ard)
@@ -38,36 +38,6 @@ test_that("FT-AR8001 [FR-AR255]: normalize_ard(combine = ) renames the variables
   ndc <- normalize_ard(.shift_ard(x), combine = .shift_combine)
   expect_type(ndc$base_gr, "character")
   expect_identical(sort(unique(ndc$base_gr[!is.na(ndc$base_gr)])), as.character(0:3))
-  # what it refuses
-  shape <- "`combine` is a named list: a new name and the two or more variables"
-  expect_error(normalize_ard(ard, combine = list(c("ATOXGRL", "ATOXGRH"))), shape, fixed = TRUE)
-  expect_error(normalize_ard(ard, combine = list(a = "ATOXGRL")), shape, fixed = TRUE)
-  expect_error(normalize_ard(ard, combine = list(a = 1:2)), shape, fixed = TRUE)
-  expect_error(normalize_ard(ard, combine = c(a = "ATOXGRL", b = "ATOXGRH")), shape, fixed = TRUE)
-  blank <- list(c("ATOXGRL", "ATOXGRH"))
-  names(blank) <- ""
-  expect_error(normalize_ard(ard, combine = blank), shape, fixed = TRUE)
-  expect_error(normalize_ard(ard, combine = list(a = c("ATOXGRL", "ATOXGRL"))), shape, fixed = TRUE)
-  expect_error(normalize_ard(ard, combine = list(a = c("ATOXGRL", "ATOXGRH"),
-                                                 a = c("BTOXGRL", "BTOXGRH"))),
-               "`combine`: the new name 'a' is given twice.", fixed = TRUE)
-  expect_error(normalize_ard(ard, combine = list(a = c("ATOXGRL", "ATOXGRH"),
-                                                 b = c("ATOXGRL", "BTOXGRL"))),
-               "`combine`: 'ATOXGRL' is in two elements; a variable is read under one name.",
-               fixed = TRUE)
-  expect_error(normalize_ard(ard, combine = list(a = c("ATOXGRL", "ATOXGRZ"))),
-               "`combine`: no variable 'ATOXGRZ' in this ARD.", fixed = TRUE)
-  expect_error(normalize_ard(ard, combine = list(PARAM = c("ATOXGRL", "ATOXGRH"))),
-               "`combine`: 'PARAM' is a column, a variable or a stacked key already", fixed = TRUE)
-  expect_error(normalize_ard(ard, combine = list(a = c("ATOXGRL", "ATOXGRH")),
-                             stack = list(a = "tox_dir")),
-               "`combine`: 'a' is a column, a variable or a stacked key already", fixed = TRUE)
-  expect_error(normalize_ard(ard, hierarchy = "BTOXGRL",
-                             combine = list(a = c("BTOXGRL", "BTOXGRH"))),
-               "`combine`: 'BTOXGRL' is in `hierarchy`.", fixed = TRUE)
-  # the cells hold the worst grade and the baseline grade: never one dimension
-  expect_error(normalize_ard(ard, combine = list(a = c("ATOXGRL", "BTOXGRL"))),
-               "rows have values of 'ATOXGRL' and 'BTOXGRL' together", fixed = TRUE)
 })
 
 test_that("FT-AR8002 [FR-AR255]: a lab shift table by direction from ADaM's names and combine, with its Total row, Total column and corner, is the reference table and RTF", {
@@ -106,4 +76,39 @@ test_that("FT-AR8003 [FR-AR255 FR-AR124]: a stacked key may name a combined one"
   expect_true(all(nd$s[g] == "tox_dir / base_gr"))
   expect_identical(as.character(nd$s_level[g]),
                    paste(nd$tox_dir[g], nd$base_gr[g], sep = " / "))
+})
+
+test_that("FT-AR8004 [FR-AR256 FR-AR257 FR-AR258 FR-AR259 FR-AR260 FR-AR261 FR-AR262]: normalize_ard(combine = ) stops on what it cannot read", {
+  skip_if_not_installed("cards")
+  ard <- .shift_ard()
+  # what it refuses
+  shape <- "`combine` is a named list: a new name and the two or more variables"
+  expect_error(normalize_ard(ard, combine = list(c("ATOXGRL", "ATOXGRH"))), shape, fixed = TRUE)
+  expect_error(normalize_ard(ard, combine = list(a = "ATOXGRL")), shape, fixed = TRUE)
+  expect_error(normalize_ard(ard, combine = list(a = 1:2)), shape, fixed = TRUE)
+  expect_error(normalize_ard(ard, combine = c(a = "ATOXGRL", b = "ATOXGRH")), shape, fixed = TRUE)
+  blank <- list(c("ATOXGRL", "ATOXGRH"))
+  names(blank) <- ""
+  expect_error(normalize_ard(ard, combine = blank), shape, fixed = TRUE)
+  expect_error(normalize_ard(ard, combine = list(a = c("ATOXGRL", "ATOXGRL"))), shape, fixed = TRUE)
+  expect_error(normalize_ard(ard, combine = list(a = c("ATOXGRL", "ATOXGRH"),
+                                                 a = c("BTOXGRL", "BTOXGRH"))),
+               "`combine`: the new name 'a' is given twice.", fixed = TRUE)
+  expect_error(normalize_ard(ard, combine = list(a = c("ATOXGRL", "ATOXGRH"),
+                                                 b = c("ATOXGRL", "BTOXGRL"))),
+               "`combine`: 'ATOXGRL' is in two elements; a variable is read under one name.",
+               fixed = TRUE)
+  expect_error(normalize_ard(ard, combine = list(a = c("ATOXGRL", "ATOXGRZ"))),
+               "`combine`: no variable 'ATOXGRZ' in this ARD.", fixed = TRUE)
+  expect_error(normalize_ard(ard, combine = list(PARAM = c("ATOXGRL", "ATOXGRH"))),
+               "`combine`: 'PARAM' is a column, a variable or a stacked key already", fixed = TRUE)
+  expect_error(normalize_ard(ard, combine = list(a = c("ATOXGRL", "ATOXGRH")),
+                             stack = list(a = "tox_dir")),
+               "`combine`: 'a' is a column, a variable or a stacked key already", fixed = TRUE)
+  expect_error(normalize_ard(ard, hierarchy = "BTOXGRL",
+                             combine = list(a = c("BTOXGRL", "BTOXGRH"))),
+               "`combine`: 'BTOXGRL' is in `hierarchy`.", fixed = TRUE)
+  # the cells hold the worst grade and the baseline grade: never one dimension
+  expect_error(normalize_ard(ard, combine = list(a = c("ATOXGRL", "BTOXGRL"))),
+               "rows have values of 'ATOXGRL' and 'BTOXGRL' together", fixed = TRUE)
 })
