@@ -27,10 +27,12 @@ Language: en-GB
 Depends:
     R (>= 4.3)
 Imports:
+    graphics,
     grDevices,
     grid,
     methods,
     stats,
+    tools,
     utils
 Suggests:
     knitr,

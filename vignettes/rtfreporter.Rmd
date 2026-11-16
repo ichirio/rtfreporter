@@ -39,7 +39,7 @@ has_cards <- requireNamespace("cards", quietly = TRUE)
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE, eval = has_cards)
 knitr::opts_knit$set(root.dir = Sys.getenv("RTFREPORTER_ARTICLE_OUT", tempdir()))
-options(width = 100)
+old_options <- options(width = 100)
 ```
 
 rtfreporter writes clinical **tables, listings and figures** (TFLs) as RTF
@@ -299,3 +299,7 @@ framework* articles for [demographics](showcase-dm.html) and
 * Figures: [From a plot object to a page](figures.html).
 * Joining finished files into one deliverable with a table of contents:
   [Rendering, post-processing and assembly](output.html).
+
+```{r restore-options, include = FALSE, eval = TRUE}
+options(old_options)
+```

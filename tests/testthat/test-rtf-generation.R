@@ -59,3 +59,55 @@ test_that("generate_rtfreport() rejects unsupported report types", {
   expect_error(generate_rtfreport(list(foo = 1), tempfile()),
                "rtf_document.*rtfreport")
 })
+
+test_that("FT-DC6802 [FR-DC386]: generate_rtfreport() reads its resource files from the installed package only, never from a folder's inst/resources", {
+  skip_on_cran()
+  rscript <- file.path(R.home("bin"),
+                       if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
+  if (!file.exists(rscript)) skip("no Rscript to start a child R")
+  pkg <- find.package("rtfreporter")
+  if (!file.exists(file.path(pkg, "Meta", "package.rds"))) {
+    skip("rtfreporter is not installed (tests run from source): nothing to give a child R")
+  }
+  tmp <- tempfile("ft-dc6802-")
+  dir.create(tmp)
+  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+
+  df <- data.frame(Event = c("Headache", "Nausea"), N = c(5, 3))
+  doc <- rtf_tables(rtf_document(), list(rtftable(df, border = "tfl")))
+  ref <- file.path(tmp, "ref.rtf")
+  generate_rtfreport(doc, ref, overwrite = TRUE)
+  expect_gt(file.info(ref)$size, 0L)
+
+  # a working folder with a file of each name, at both places the old lookup tried
+  # (each would stop, or change the row height, if it were read)
+  for (d in c(file.path("work", "inst", "resources"),
+              file.path("work", "r", "rtfreporter", "inst", "resources"))) {
+    dir.create(file.path(tmp, d), recursive = TRUE)
+    writeLines("stop(\"read from the working folder\")",
+               file.path(tmp, d, "rtf_commands.R"))
+    writeLines("rtfreporter_defaults <- list(default_row_height_twips_min = 9999L)",
+               file.path(tmp, d, "rtfreporter_defaults.R"))
+  }
+
+  # a fresh R, so the package has not read its files yet, started in that folder
+  input <- file.path(tmp, "input.rds")
+  out <- file.path(tmp, "out.rtf")
+  script <- file.path(tmp, "child.R")
+  saveRDS(doc, input)
+  writeLines(c(
+    "args <- commandArgs(trailingOnly = TRUE)",
+    ".libPaths(strsplit(args[1], args[5], fixed = TRUE)[[1]])",
+    "setwd(args[2])",
+    "rtfreporter::generate_rtfreport(readRDS(args[3]), args[4], overwrite = TRUE)"),
+    script)
+  res <- suppressWarnings(system2(
+    rscript, c(shQuote(script), shQuote(paste(.libPaths(), collapse = .Platform$path.sep)),
+               shQuote(file.path(tmp, "work")),
+               shQuote(input), shQuote(out), shQuote(.Platform$path.sep)),
+    stdout = TRUE, stderr = TRUE))
+  expect_null(attr(res, "status"))
+  expect_true(file.exists(out))
+  expect_identical(readBin(out, "raw", file.info(out)$size),
+                   readBin(ref, "raw", file.info(ref)$size))
+})

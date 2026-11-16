@@ -241,7 +241,7 @@ fmt_right_align <- function(x, nbsp = "\u00a0", na = "") {
 #' @param bare `FALSE` (default) leaves a cell with no parentheses as it is;
 #'   `TRUE` also pads a **bare integer count** (a lone `"0"`, a raw event
 #'   total) into the count field, so it lines up under the parenthetical
-#'   cells.  (It was `fmt_count_paren_bare()`, removed in 0.9.0.)
+#'   cells.
 #'
 #' @seealso [fmt_value_paren()] (any text before the parenthesis),
 #'   [fmt_right_align()], and the `cell_format` argument of [as_rtftables()].

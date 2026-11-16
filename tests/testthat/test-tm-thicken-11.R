@@ -34,6 +34,7 @@ test_that("FT-TB6101 [FR-TB102]: as_rtftable(x = ) takes a gt_tbl, a gtsummary t
   skip_if_not_installed("rlistings")
   skip_if_not_installed("flextable")
   skip_if_not_installed("huxtable")
+  skip_if_not_installed("tibble")
   d <- .t11_df()
   one <- function(x) as_rtftable(x)
   g <- one(gt::gt(d))

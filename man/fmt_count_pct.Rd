@@ -61,10 +61,6 @@ branches -- a count only, a percentage below 10, 10 to 99, 100 or more,
 and a missing count (\code{na}) -- match the convention in the rtfreporter
 Issue #2 reference helper.
 }
-\details{
-\code{fmt_count_pct()} was called \code{format_count_pct()}, the one cell formatter
-not named \code{fmt_}; the old name was removed in 0.9.0.
-}
 \examples{
 # Fractions (the default)
 fmt_count_pct(c(5L, 14L, 30L), c(0.05, 0.50, 1.00))

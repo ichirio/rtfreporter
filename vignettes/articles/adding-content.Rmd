@@ -103,8 +103,7 @@ doc <- rtf_document() |> rtf_tables(tbl)
 ```
 
 The options (`border`, `col_rel_width`, `row_height_twips`, `col_spec`, ...)
-are documented on `?rtftable`.  (`rtf_tables()` used to take copies of them;
-those are deprecated and removed in 0.9.0.)
+are documented on `?rtftable`.
 
 ### Column alignment and `row_title`
 

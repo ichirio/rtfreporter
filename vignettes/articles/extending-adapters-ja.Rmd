@@ -198,7 +198,7 @@ rlistings がそうです）は、この分岐を `is.data.frame(x)` の分岐�
 `mypkg (>= x.y)` と書きます。最低版を書く場所はここだけです。`.need_pkg()` が
 実行時に rtfreporter の `DESCRIPTION` から読むので、R のコードにバージョン番号は
 現れません。`Imports:` には**絶対に入れない**こと。`Imports:` には R に同梱の
-パッケージ（grDevices, grid, methods, stats, utils）だけを置きます。`mypkg` が
+パッケージ（graphics, grDevices, grid, methods, stats, tools, utils）だけを置きます。`mypkg` が
 未インストールのときのエラーは、ステップ 3 の `.need_pkg()` が出します。
 
 ## ステップ 6 — テストとドキュメント

@@ -659,18 +659,16 @@ value-based (or the input was a named list) the list is named.
 \description{
 \code{as_rtftables()} is the single entry point for turning a \emph{table object}
 into a list of \code{\link[=rtftable]{rtftable()}} objects -- one per RTF page -- ready to hand
-straight to \code{\link[=rtf_tables]{rtf_tables()}}.  It unifies two jobs that used to be split
-across \code{paginate()} (page splitting) and \code{rtf_tables(read_gt = )} (metadata
-extraction), both removed in 0.9.0:
+straight to \code{\link[=rtf_tables]{rtf_tables()}}.  It does two jobs:
 }
 \details{
 \enumerate{
 \item \strong{Read the table's metadata} (only the parts the RTF renderer can use;
 see \emph{What is carried} below).
 \item \strong{Paginate.}  The rendered body is split into per-page chunks using
-the same strategies the old \code{paginate()} offered (\code{split}, \code{max_rows},
-\code{group_col}, blank-row controls, ...).  The shared header / width /
-spanning metadata is replicated onto every page.
+the strategies \code{split}, \code{max_rows}, \code{group_col}, blank-row controls and
+so on.  The shared header /
+width / spanning metadata is replicated onto every page.
 }
 
 The page-level title / source-note blocks travel with each returned

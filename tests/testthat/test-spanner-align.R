@@ -94,6 +94,7 @@ test_that("FT-TB7404 [FR-TB635]: a tfrmt spanner is centred, with or without the
 
 test_that("FT-TB7405 [FR-TB636]: an rtables spanner is centred, as rtables prints it, over right-aligned columns too", {
   skip_if_not_installed("rtables")
+  skip_if_not_installed("formatters")
   d <- data.frame(grp = rep(c("X", "Y"), each = 4), trt = rep(c("A", "B"), 4),
                   age = c(41, 52, 38, 60, 47, 55, 33, 49))
   lyt <- rtables::basic_table() |> rtables::split_cols_by("grp") |>
