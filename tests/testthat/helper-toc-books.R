@@ -326,7 +326,7 @@
   add(table_report("t_14_2_7", "Table 14.2.7", "Blood Pressure by Visit: Summary Statistics", fas,
                    visit_pages(c("Systolic BP (mmHg)", "Diastolic BP (mmHg)"),
                                c("Baseline", "Week 4", "Week 12", "Week 24"))), h)
-  add(table_report("t_14_2_8", "Table 14.2.8", "Sensitivity Analysis of the Primary Endpoint: Per-Protocol Set", "Per-Protocol Set",
+  add(table_report("t_14_2_8", "Table 14.2.8", "Sensitivity Analysis of the Primary Endpoint", "Per-Protocol Set",
                    count_pages(c("Week 24", "  Responders", "  Non-responders"))), h)
 
   # SAFETY
