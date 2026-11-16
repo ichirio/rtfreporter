@@ -252,9 +252,9 @@ navbar:
         - text: "AI agents: VS Code with Copilot"
           href: articles/ai-agents-vscode-copilot.html
         - text: "AI user manual"
-          href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.8.2.md
+          href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.9.0.md
         - text: "AI developer manual"
-          href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-dev-manual-0.8.2.md
+          href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-dev-manual-0.9.0.md
         # ── Validation ──────────────────────────────────────────────────
         - text: -------
         - text: "Validation"

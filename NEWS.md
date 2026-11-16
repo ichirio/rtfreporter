@@ -1,1209 +1,163 @@
-# rtfreporter (development version)
+# rtfreporter 0.9.0
 
-- **`plan_listing()` takes `align` and `record`** (0.8.2.9097, #720), as
-  `listing_spec()` does: `align` is the alignment of the columns that set
-  none of their own (`listing_col(align = )`), `record` the hidden record
-  column (`FALSE` none, a string its name).  A plan can now write every
-  argument of a listing (a blank row at the top of each page was already
-  `plan_blanks(first = TRUE)`); not given, the listing is as before.
+First CRAN release.  rtfreporter writes clinical tables, listings and figures
+as RTF files.  It starts from an analysis results dataset (ARD), maps it to a
+table with a plan, and renders the result into RTF documents that can be
+assembled into one deliverable.  It also reads tables from gt, gtsummary,
+rtables, tfrmt, flextable and huxtable.
 
-- **`rtf_figures()` takes `render_width`, `render_height`, `render_dpi`
-  and `png_device`** (0.8.2.9096), so the drawing settings are given in
-  one place:
-  `rtf_figures(doc, list(p1, p2), render_width = 9, render_height = 5, render_dpi = 600)`.
-  They apply to the plot objects in `figures`, as `rtfplot()` takes them;
-  `NULL` (the default) keeps `rtfplot()`'s own default (6.5 x 4.5 in,
-  300 dpi, the `rtfreporter.png_device` option).  A figure already built
-  with `rtfplot()` keeps its settings, and a file path ignores them.  The
-  new arguments come after the existing ones, and a call without them
-  writes the same RTF as before.
+rtfreporter needs R 4.3 or later.
 
-- **Plot objects are drawn with ragg when it is installed, as
-  `ggplot2::ggsave()` does** (0.8.2.9095).  `rtfplot()` and
-  `rtf_figures()` draw a ggplot2 plot, patchwork, grob, recorded plot or
-  drawing function with `ragg::agg_png()` when ragg is installed, and with
-  `grDevices::png()` otherwise -- same inches, same `render_dpi`, so the
-  figure's `\picwgoal` / `\pichgoal` do not change.  The new option
-  `rtfreporter.png_device` (`"auto"`, the default; `"ragg"`, an error
-  without ragg; `"png"`, the previous behaviour) and `rtfplot()`'s new
-  `png_device =` argument choose:
-  `options(rtfreporter.png_device = "png")` keeps the base device's
-  bytes, `rtfplot(p, png_device = "ragg")` asks for ragg.  Files given as
-  paths are embedded as they are.  ragg is in Suggests.
+## Main features
 
-- **A font per script slot: `latin` / `east_asian` / `complex`, and
-  `font_lang`** (0.8.2.9094).  Every `font =` (table, header/footer band,
-  titles, footnotes, watermark, `plan_style()`, `font_table` entries and
-  `options(rtfreporter.font =)`) also takes a named vector, so Japanese
-  text is set in a Japanese font in Word and LibreOffice:
-  `rtftable(df, font = c(latin = "Times New Roman", east_asian = "MS Mincho"))`
-  with `rtf_document(font_lang = c(east_asian = "ja"))`.  Each run writes
-  `\rtlch\af \ltrch\hich\af \dbch\af \loch\f` (optional `hansi`
-  overrides `latin` for high-ANSI); `font_lang` (also
-  `rtf_config(font_lang =)` and `options(rtfreporter.font_lang =)`; `ja`,
-  `zh-Hans`, `zh-Hant`, `ko`, `ar`, `he`, `en`) sets that slot's font-table
-  charset (`ja` = `\fcharset128`) and `\langfe` / `\lang` `\langnp` /
-  `\alang`, plus `\deflangfe` / `\adeflang`.  A slotted document default
-  also writes `\adeff` and `\stshfdbch` / `\stshfloch` / `\stshfhich` /
-  `\stshfbi`.  A vector must name `latin` (there is no fall-back to the
-  document default: an unknown slot, an empty name or no `latin` is an
-  error); a slot an element leaves out takes the document default's, else
-  its own `latin`.  With an `east_asian` font, `text_width_in()` (and so
-  `auto_col_widths()`) counts East Asian wide / fullwidth characters as two
-  columns.  A single string keeps its meaning and writes exactly the same
-  RTF; the default font stays `"Courier"`.
+Data in
 
-- **`page_break = FALSE` measures nothing; `first_rows` says the rows the
-  shared page takes** (0.8.2.9093).  A table or a figure with
-  `page_break = FALSE` goes on under the content before it as it is; what
-  does not fit, the reader carries to the next page by itself (no title,
-  header or footnote there) -- fitting a page is the program's to arrange.
-  `rtf_tables(page_break = FALSE, first_rows = n)` puts the table's first
-  `n` rows on the shared page and paginates the rest by the table's own
-  `max_rows` / `split` (a plan's `plan_paginate_rows()`), each page with
-  its title, column header and footnote; `cont_title` titles those pages.
-  `as_rtftables(first_rows = )` does the same for pages built there.  The
-  estimate and the cut of 0.8.2.9091 / 9092 (`min_rows`) are gone.
-  `page_break = TRUE`, the default, writes every document as before.
-
-- **`rtf_figures(page_break = FALSE)`: a figure under the content before
-  it** (0.8.2.9092; flow placement, phase 2).  It goes on what is left of
-  that page when the page holds its title, image and footnote, else it
-  begins the next page -- a figure is not cut.  `space_before` as
-  `rtf_tables()`'s.  `page_break = TRUE`, the default, writes every
-  document as before.
-
-- **`rtf_tables(page_break = FALSE)`: a table on what is left of the page
-  before it** (0.8.2.9091; flow placement, phase 1: tables).  A listing
-  goes under its summary table, its first rows on the summary's page and
-  the rest on the next pages with the column headers again.  `min_rows`
-  (3): fewer body rows left than that and the table begins a new page;
-  `space_before`: empty lines between the two; `cont_title`: a line under
-  the title of the page a cut table goes on to (`"(continued)"`).  A
-  table's own later pages, and the document's first content, always begin
-  a page; a table that goes on the page before it opens no `auto_section`.
-  Where it fits is estimated from the page and the rows (their wrapping
-  text), on the side of a new page.  `page_break = TRUE`, the default,
-  writes every document byte for byte as before.
-
-- **The header reads each arm's N over `plan_stat_groups()` columns**
-  (0.8.2.9090, #709).  A table that splits one record into several
-  columns per arm (`cols = c(ARM, ".stat_group")`) left `{n}` / `{n1}`
-  "NOT resolved": the `.stat_group` key, made when the plan runs, is not
-  in the ARD.  The N is now read without it -- the arm's -- and each of the
-  arm's columns has that number; `{n:sum}` counts each arm once.
-
-- **The study total survives a `mutate()` after `normalize_ard()`**
-  (0.8.2.9089).  The total `cards::ard_total_n()` states is now also the
-  column `.total_n`, which `dplyr::mutate()` and base `transform()` keep
-  (they drop the attribute it was only in): the header's `{n}` no longer
-  turns `NA` after reshaping the normalized frame.
-- **`plan_n_candidates()` with nothing to read returns no row** (a data
-  frame of none) instead of an internal error (`arguments imply differing
-  number of rows`).
-
-- **`plan_total(direction = )`: a shift table's Total row and corner**
-  (0.8.2.9088).  `direction = "rows"` / `"both"` places cards' plain
-  margins in the body: with the cells `ard_tabulate(adlb, variables =
-  ATOXGR, by = c(PARAM, BTOXGR))`, the column key tabulated by the row keys
-  (`variables = BTOXGR, by = PARAM`) is each column's Total row, and a row
-  key's own (`variables = PARAM`) the corner -- the ARD in ADaM's values,
-  no Total level made in the data, no rewriting of `variable`.  The
-  header's `{n}` is read as before.  `"cols"`, the default, is the Total
-  column as before.
-- **`table_plan(label = c(label = c(f1, f2)))` stops with what to write**:
-  `c()` numbers a name given around a vector of formulas (`label1`,
-  `label2`), which then failed deep in the header (`invalid 'times'
-  argument`); the message gives `label = c(is.na(.label) ~ "Total", ~
-  "{.label}")`.
-
-- **Tests: coverage raised from 95.5% to 95.8%; spelling wordlist**
-  (#699, 0.8.2.9087).  New tests for the least-covered exported functions,
-  and `inst/WORDLIST` takes the words `spelling` flagged.  One fix they
-  found: `style_header()` on a table of several data frames restyled only
-  the first frame's header; every frame sharing that header now takes it.
-
-- **`plan_stat_groups()` tables pick a cell's template per record**
-  (0.8.2.9086).  A split variable's record takes its group's template
-  before a context's or kind's, and a record gone whole to `.others` its
-  context's first: a plan-wide `plan_cells(categorical = )` (a study's
-  default) no longer empties the rate and CI beside a block of counts, and
-  the counts no longer take the rate's template.  Tables without
-  `plan_stat_groups()` are unchanged.
-
-- **A one-column stub is the stub as it is** (#701, 0.8.2.9085).
-  `stub_cols()` (and `plan_stub()`, `as_rtftables(stub_vars = )`) with one
-  row key stopped ("`vars` needs at least two columns"): a table of one
-  row heading in a study whose standard says `plan_stub(name =
-  "row_label")` could not be drawn.  That column is now the stub, renamed,
-  every row its own; nothing to fold.  And a `plan_col_header()` cell that
-  names a column the stub folded (`group`) is the stub column it became.
-
-- **The header's N with `variable` as a column key** (#697, 0.8.2.9084).
-  With `table_plan(cols = c(TRT01A, "variable"))` (each arm's value and
-  change side by side), a spanner's `{n}` now shows the arm's N, read from
-  the arms' own count, instead of `NA`.
-
-- **`plan_sort()`: a group's own row comes before its members** (#695,
-  0.8.2.9083).  With a row key among the sort keys, the row of a group
-  itself (its lower key empty: a SOC's own counts over its PTs, the overall
-  rows) sorted after the group's members.  It comes first now, the key
-  ascending or descending, and by a group's statistic (`-n@pt`); tables of
-  two levels, whose parent was already
-  first through `.depth`, are as they were.
-
-- **`plan_total()` with two column keys** (#695): the innermost key is
-  folded -- `cols = c(TRTA, AESEV)` gives each arm a total column (an AE's
-  count at any grade) from its records with no `AESEV`, placed by
-  `position` among that arm's columns.  It stopped before.
-
-- **`plan_sort()`'s key `levels(<key>)`** (#695): the values
-  `plan_levels()` names for a row key first, in its order, the others tied
-  for the next keys -- `plan_levels(soc = "Any TEAE")` with
-  `c("levels(soc)", "-n@soc", "soc")` keeps that block first, even when a
-  SOC has its count, and the other SOCs by theirs.
-
-- **`rtfreporter_ai_manual(shell = "shell.txt")`: a sheet copied from
-  Excel** (#692, 0.8.2.9082).  A shell's sheet copied from Excel, pasted
-  into Notepad and saved comes in as it is -- its tabs kept, the empty
-  cells' trailing tabs and a UTF-8 BOM dropped, CRLF or LF.  A file saved
-  as Shift-JIS (ANSI on a Japanese Windows) or UTF-16 ("Unicode") stops
-  with how to save it as UTF-8, rather than going to the chat garbled.
-
-- **`plan_empty()`: a table of no events says so** (#691).  When the table
-  has no row but its overall row, or its overall row (`normalize_ard(overall
-  = )`) is 0 in every column, one row says so (`"No subjects met the
-  criteria."` by default) -- after the rows (the overall row's 0 stays),
-  before them, or instead of them -- and `footnote =` adds a line to the
-  table's footnotes, on an empty table only.  A table with events is as it
-  was, so the study's defaults can hold it for every table.
-
-- **`table_plan()` without `cols`: one column** (#689).  A one-arm table
-  (a single cohort) written with no column key -- as people and AI chats
-  write it -- stopped with "`cols` is required".  Now, when the ARD has no
-  group to spread, the table is one column, `All`, and a header's `{n}` is
-  the ARD's total (`cards::ard_total_n()`).  An ARD that has a group still
-  needs `cols`, and the message names the group.
-
-- **`rtfreporter_ai_manual()`: one file to paste, the shell in it, a short
-  size** (#687).  The kit now comes with `PASTE.md`, its files as one text
-  for a chat that takes no attachment (the article's joining code goes).
-  `shell =` (the shell's text, or a `.txt` / `.md` file) puts the table's
-  shell at its end and in `07_shell.md`; `size = "short"` keeps it to what a
-  table's program needs -- `00_START_HERE.md`, the manual's sections 0, 17,
-  17a and 18, the one example closest to the ARD (adverse events for a
-  hierarchical ARD, the ORR for a confidence interval, else demographics)
-  and the ARD's shape: about 40,000 characters, against 80,000 for every
-  file.  The ARD's numbers (`05_ard.csv`) go into it only with
-  `values = TRUE`.  Arguments added only: a call written before writes the
-  files it wrote, and `PASTE.md`.
-
-- **`plan_sort()` by a `plan_compare()` statistic** (#684): the rows by the
-  arms' difference.  A key that names a statistic of the comparison
-  records (`"-estimate"`, made at the ARD step with
-  `cards::diff_ard_hierarchical()`) reads its value on the row
-  `plan_compare()` places it on; `"-estimate[<comparison>]"` picks one of
-  `plan_compare(by = )`, and `"-estimate@SOC"` carries a SOC's own
-  difference to its PTs.  The order of the two calls does not matter, and
-  a statistic the body has is still the body's.
-
-- **`plan_sort()` by a row's largest or smallest value across the
-  columns** (#683): `"-max(n)"` puts first the rows most frequent in any
-  arm, `"min(n)"` the smallest; without the minus, ascending.  They go with
-  the other forms (`"-max(n)@SOC"`, `"-max(n)[Placebo]"`); `"sum(n)"` is
-  the plain `"n"`.  An addition: every sort written before orders as it did.
-- **A cheat sheet of row orders** (#682, docs).  `plan_sort()` writes most
-  clinical row orders -- one arm's count (`"-n[Drug X]"`), the most
-  frequent in any arm (`"-max(n)"`), a rate (`"-p[Total]"`), SOCs by count
-  with their PTs by name -- and a code list's order or visit order needs
-  nothing here (a factor made with the ARD).  The article "The plan verbs"
-  and the AI user manual list them by table, with the arms' difference
-  (#684).
-
-- **`plan_levels()` says a value the ARD does not have** (#680).  The
-  levels order what the ARD has and make no row or column; a value they
-  name that is not there (by its value or as `plan_labels()` prints it)
-  was ignored without a word.  `widen_ard()` now says which, in a message
-  that `notes = FALSE` does not silence: a level shown with no record has
-  to be in the ARD, a factor's level (the study's code list applied when
-  the ARD is made), which cards counts as 0.
-
-- **`plan_levels()` takes a value's text with it** (#678), as base R's
-  `factor(levels, labels)`: `plan_levels(SEX = c(F = "Female", M = "Male"))`
-  is the order F, M and their text, an element without a name the value as
-  it is (so an order without names is what it always was), and
-  `plan_levels(variable = c(AGE = "Age (years)", "SEX"))` the variables'
-  order and a heading.  `plan_labels()` names without ordering (a study's
-  dictionary of headings, one variable's heading changed), and its text
-  wins value by value over a name an order gives, whichever is called
-  first; it names a value by itself or by the text the order gives it
-  (`plan_labels(SEX = c(Female = "Women"))`), the value first when a text
-  is both (said).  (Instead of a new `plan_factor()`, the owner's choice.)
-
-- **The rounding's case is not significant** (#676): `"SAS"` is `"sas"`
-  and `"R"` is `"r"`, for `options(rtfreporter.rounding = )` and every
-  function's `rounding` (`round_num()`, the formatters, `plan_digits()`,
-  `widen_ard()`).  Lower case gives what it always did.
-
-- **The AI kit and its article checked against main** (#673).
-  `rtfreporter_ai_manual(dir, ard = )` writes its files as UTF-8 bytes in
-  any locale: in a non-UTF-8 one a Japanese label in `05_ard.csv` /
-  `06_ard_shape.md`, and the request's own dashes, used to be dropped.
-  `00_START_HERE.md` now says what to paste (the kit, `06_ard_shape.md` --
-  the ARD's summary --, `05_ard.csv` when allowed, the shell as text), what
-  never (subject-level data), the answer's form (one fenced R block, nothing
-  around it) and how to run it.  The manual's section 17 names every
-  argument of `table_plan()` (`show_keys`), `normalize_ard()` (`keys`,
-  `drop_contexts`, `drop_key_variables`, `stack_sep`), `plan_compare()`
-  (`position`), `plan_filter()` (`by`), `plan_paginate_group()` /
-  `plan_paginate_rows()` (`heading`, `heading_at`) and `plan_template()`
-  (`pipe`), and a test keeps it so; the kit's ORR example says
-  `heading_at = "section"`.  The article `ai-plan-code` (en/ja) runs end to
-  end on `cards::ADSL`; a test runs its blocks, and the kit's three examples.
-
-- **`plan_paginate_group(heading_at = )`: where the page name prints, said
-  in the plan** (#672).  `"section"` (the section header), `"title"` (the
-  last line of the titles) or `"none"`; `plan_paginate_rows()` takes it too,
-  for its `page_by` pages.  Each page carries it, as it carries its titles,
-  and it is the default of `rtf_tables(auto_section = , auto_title = )`,
-  which are now `NULL` by default: what the pages say, else `FALSE` as
-  before.  An argument given to `rtf_tables()` wins.  So a report's page
-  settings need not say `auto_section`; the plan that names the pages says
-  where the names go.  Nothing changes for a plan that does not say it.
-
-- **Docs: asking an AI chat for a table's plan code** (#670), a short
-  article in English and Japanese (a toggle between them): make the kit
-  with `rtfreporter_ai_manual(dir, ard = )`, what to give the AI (the kit and
-  this table's shell; never the ADaM; only `06_ard_shape.md` when the ARD may
-  not be sent; one text to paste when the chat takes no attachment), how to
-  ask, and how to try the code it returns.
-
-- **Docs: the navbar's AI manual links open** (#668).  The "AI user
-  manual" / "AI developer manual" links were relative `.md` paths, which
-  pkgdown rewrites to `.html` -- not published, so 404.  They are absolute
-  URLs to the published `.md` now, as the README's are, and a test keeps
-  them so.
-- Docs: the examples' running header starts `c(l = "Ichirio Pharma", r = "DRAFT")`
-  -- the study is the second line's `Protocol: {STUDY}` -- in the README,
-  Get started and the figures, gallery and tables-from-ARD articles; their
-  pictures made again (`data-raw/gen_gallery.R`, `gen_article_shots.R`, whose
-  list of pictures now reads `.shot()`, so a `.keep()` call over several
-  lines is no longer missed).
-
-- **A label sets only the text, never the order** (#666).
-  `plan_labels()` / `widen_ard(labels = )` used to put the labelled
-  variables first, in the order the labels were written, so labelling some
-  of a table's variables reordered its blocks with no message.  The order
-  of values, of variables and of columns is now always `plan_levels()`'s
-  (`plan_levels(variable = c("AGE", "SEX"))` for the variables) or the
-  ARD's.
-
-- **Docs: the plan verbs say what a new user looks for** (#664).
-  `table_plan()`: what the names in `rows` are and what `"variable"` and
-  `.label` hold, where the order of the columns' values comes from, where
-  subgroups are made.  `plan_verbs`: `plan_levels(variable = )` orders the
-  analysis variables, which verbs read the ARD's columns and which the
-  finished table's, the names after `...` are reserved, `rounding` is a
-  table's exception to the study's rule, when `plan_total()` is needed,
-  `column_widths_twips` wins over `widths`, hiding a variable with
-  `plan_filter()`; `value` is corrected: it matters only with `stats =
-  "rows"`.  `widen_ard()`, `normalize_ard()`, a custom `split` example in
-  `as_rtftables()`, the layer of `round_num()` / `fmt_round()` /
-  `fmt_signif()` / `fmt_numeric()`, and a "Looking inside a plan"
-  heading in the reference.
-
-- **The plan verbs take the plan as `.plan`** (#662).  A name such as `p`
-  in a verb's `...` -- `plan_digits(p = 1)` for `plan_compare()`'s column,
-  `plan_cells(p = )` -- was taken for the first argument `plan` (an
-  argument before `...` matches by its first letters) and stopped with
-  "Expected a table_plan".  Every `plan_*()` function's first argument is
-  now `.plan`, as `plan_compare()`'s already was: the pipe passes it by
-  position, so piped code does not change; a call that named it
-  `plan = ` writes `.plan = `.
-
-- **Docs: the plan verbs in one recommended order** (#660).  *Plan verbs*
-  has a section, *The order to write them in*: first the mapping
-  (`normalize_ard()`, `table_plan()`, `plan_cells()`, `plan_stat_groups()`,
-  `plan_total()`, `plan_compare()`, `plan_filter()`), then the finishing
-  (`plan_labels()`, `plan_levels()`, `plan_nest()`, `plan_digits()`,
-  `plan_sort()`, `plan_col_header()`, `plan_stub()`, `plan_blanks()`, the
-  pages, `plan_columns()`, `plan_style()`, `plan_cell_style()`).  The
-  examples of *Get started* and *Tables from an ARD* are written in that
-  order; their plans give the same tables as before.
-
-- **CRAN format** (#658).  The rtables and tern links of the *From rtables*
-  vignette are their CRAN pages (their pkgdown sites answer 404 now); the
-  WORDLIST has the nine words the spelling check found in the help and
-  the shipped vignettes; `?ard-tables` gives cards' rename of
-  `ard_continuous()` its version, 0.7.0.
-
-- **Docs: the examples write rtfreporter's own calls** (#656).  The
-  README, the Gallery, Figures and Tables from an ARD no longer use a
-  helper (`study_doc()`) for the study's running header and footer: each
-  example writes `rtf_document() |> rtf_section(header = rtf_header(),
-  footer = rtf_footer()) |> rtf_tables()` itself, as the flow figure shows.
-  The pages look the same (each document's RTF is byte for byte what it
-  was).
-
-- **A document can say its file: `rtf_document(file = )`** (#654).  The
-  RTF file's path (one string) is kept in the document, where the program
-  is said, and `generate_rtfreport(doc)` writes there; a `file_path` given
-  to `generate_rtfreport()` wins, and with neither it stops and says so.
-  `file_path` now defaults to `NULL`; a call that gives the file, by
-  position or by name, and the superseded `report =` work as before.
-
-- **A gt table's row groups are heading rows again** (#650).  A table built
-  with `gt(groupname_col = )` came through `as_rtftables()` with its group
-  as a column, `::group_id::`, repeated on every row (since 0.0.46, when the
-  body became `gt::extract_body()`'s).  Each group is now a heading row
-  above its rows, which are indented under it (two non-breaking spaces, as
-  gtsummary and tfrmt tables arrive), so `group_by = "auto"` finds the groups
-  for the page breaks and blank rows; a body cell's `tab_style()` moves with
-  its row.  gt is needed at 0.11.1 or later (was 0.9.0): before it,
-  `extract_body()` is missing or names its columns differently.
-
-- **The guide pages show their tables** (#651).  About fifty pictures, each
-  under the example it shows -- the feature tour, pagination, importing
-  tables, page setup, borders, headers and footers, adding content, figures,
-  listings, sections, the plan verbs, From gt and gtsummary, From rtables and
-  tern -- made from the examples' own RTF by `data-raw/gen_article_shots.R`.
-  The two *Same report, every framework* articles show each framework's
-  table as written, at the size of the other pictures, instead of "Waiting
-  for snapshot" (`data-raw/showcase_dm.R` / `showcase_ae.R` make the
-  pictures; the placeholder script is gone).  *Assembling reports into one
-  document* is an article of its own (cover, table of contents, page
-  numbers, a folder, PDF bookmarks, Word and LibreOffice); *Rendering and
-  post-processing* and the Pharmaverse catalog link to it.  *Figures* writes
-  its pages with the study's running header and footer.  The Articles menu
-  names the AI manuals without a version; the manuals list the released
-  versions.  The *External API specification* is gone: its table of the
-  public classes is in *Architecture & internals*, where the old address
-  leads.
-
-- **The plan verbs, by how often a table uses them** (#648).  *The plan
-  verbs*' At a glance is three groups: the verbs of every table, to learn
-  first (`table_plan()`, `plan_cells()`, `plan_digits()`, `plan_labels()` /
-  `plan_levels()`, `plan_col_header()`, and the study's house style written
-  once), what some tables add (`plan_total()`, `plan_compare()`,
-  `plan_sort()`, `plan_filter()` ...), and what is there when a table needs
-  it (`plan_hide()`, `plan_cell_style()`, `plan_paginate_cols()` ...).
-  Code of three lines or fewer is no longer folded under *Show code* on any
-  page.  *gt, gtsummary & rtables* is two articles, *From gt and gtsummary*
-  and *From rtables and tern*; the old address leads to the first.
-
-- **Get started and Tables from an ARD, two roles** (#646).  *Get started*
-  is the shortest way through the three steps (the code of each, one
-  finished table, then the other tables as pictures linking to their
-  sections); *Tables from an ARD* takes each step in detail.  Get started
-  leaves the Articles menu (the top bar links it).  The flow from an ARD to
-  an RTF file is a figure -- four boxes, side by side on a wide page and one
-  under another on a narrow one -- the same in the README and both articles
-  (a test keeps the three copies equal).
-
-- **Articles: the finished tables.** Eleven guide articles (headers and
-  footers, pagination, borders, figures, listings, importing tables, page
-  setup, the two on sections, adding content, the plan and `as_rtftables()`)
-  show a picture of the table after their key examples, made by
-  `data-raw/gen_article_shots.R` (#644).  *Adding tables and figures*: its
-  styling section now says what works -- a title row may be styled, a
-  footnote is styled as a block (`rtf_footnotes(border = , align = )`), and
-  a footnote row may be `c(l = , r = )`; the per-row footnote list it showed
-  was removed long ago and failed when written.
-
-- **The AI kit says what to give the AI.** `00_START_HERE.md` ends with a
-  section for the person attaching the folder: required (the ARD through
-  `rtfreporter_ai_manual(dir, ard = )`, the table's shell), nice to have
-  (the exact titles and footnotes, layout conventions, one house-style
-  program), one table a chat, never patient-level data (and an ARD is still
-  the study's results: the company's rules apply), and what the assistant
-  does when something is missing.  The user manual's §17a says the same to
-  the assistant.
-
-- **Home page**: the three examples (from an ARD, from tern, from gtsummary)
-  make the same table: age as Mean (SD), Median and Min, Max, sex as n (%),
-  the same digits, labels and footnotes, with N in the column header.
-
-- **Home page**: "From an ARD to an RTF table in 30 seconds", the page it
-  writes first and its code under it; the word *plan* is kept for the code
-  and the verbs (Get started's steps are the table, the report, the RTF
-  file).
-
-- **Docs for the new plan verbs.** *Get started* shows three more tables
-  from the same steps (a Total and a p-value, AEs in 5% or more with the
-  SOCs by frequency, ORR by subgroup with a section per arm); *Tables from
-  an ARD* has them in full, with `plan_total()`, `plan_compare()`,
-  `plan_filter()`, `-n@SOC`, `normalize_ard(stack = )`,
-  `plan_stat_groups()`, `heading =` and `rtfreporter_ai_manual()`; *The plan
-  verbs* lists them, and the reference index groups the verbs by job.  The
-  AI kit's ORR example drops a `plan_sort(FALSE)` that was the default.
-  The home page, *Get started* and *Tables from an ARD* present the same
-  three steps after the ARD (made with cards / cardx): the table plan, the
-  report, the RTF file.  The example outputs carry a study's running header
-  and footer (the study and the page, the output's number, title and
-  population; its footnotes, the program's path and the run).  The Gallery
-  shows each picture first, its code folded under it; the navbar is Get
-  started, Reference, Articles, Gallery, Changelog; *Rendering,
-  post-processing and assembly* says how the bookmarks reach a PDF.
-
-- **A plan's column positions count the PRINTED columns, all of them**
-  (#635).  Unnamed `plan_columns(widths = )`, the header's `col_cell()`s
-  and `plan_paginate_cols()` already counted the columns a page prints;
-  `plan_columns(row_title = )` and `plan_row_group(collapse = )` counted
-  the table's own, before a hidden key (`plan_hide()`, `page_by`) was
-  dropped, so with `arm` hidden `row_title = c(1, 2)` landed on the
-  hidden arm and the first printed column, and `collapse = c(1, 2)` never
-  reached the second.  They now count as `widths` does.  The basis
-  changes (no alias, before CRAN): a plan that counted the hidden column
-  in these two moves its positions down by one.  Both also take names,
-  which a reordered or hidden column cannot shift: a row key's name as
-  `table_plan(rows = )` gives it and `.values` --
-  `plan_columns(widths = c(grp1 = 42, grp2 = 28, .values = 15),
-  row_title = c("grp1", "grp2"))`, `plan_row_group(collapse = c("grp1",
-  "grp2"))`.  A hidden or unknown name, or a position past the printed
-  columns, is an error that lists them.
-
-- **A page key is never a row group** (#635).  The key the pages are cut
-  on -- `plan_paginate_rows(page_by = )`, `plan_paginate_group(col = )` --
-  is the same on every row of a page, yet the rows were grouped on it when
-  it was the outermost row key: `plan_blanks(where = "between_groups")`
-  then put no blank between the subgroups of an arm's section.  Row
-  grouping now starts at the first printed row key (`grp1`), for the blank
-  rows (with `first` / `last` on every page), `collapse`, `row_title`, the
-  stub and the column positions; `plan_paginate_group()` is handed to
-  `as_rtftables()` as `page_by` (still a page per value, named after it),
-  and keeps `split = "by_value"` only with a `plan_stub()` or a second
-  page key.
-
-- **An AI kit: `rtfreporter_ai_manual(dir, ard = )`** writes a folder to
-  attach to a chat, for an assistant to write one table's program from a
-  shell and an ARD: `00_START_HERE.md` (the request: the three-step layout
-  -- the plan over the ARD, the document, the file -- and the rules), the
-  user manual (its new §17a: from a shell and an ARD), three example
-  programs in that layout (an ORR by subgroup with a section per arm; AE by
-  SOC and PT; demographics with a Total and a p-value column), and with
-  `ard` the ARD as CSV and its shape (its keys, which come together, each
-  variable's statistics, a starting `table_plan()`).  Nothing is sent
-  anywhere.  `dir` replaces `file` (no alias, before CRAN):
-  `rtfreporter_ai_manual()` still returns the manual's path, and the
-  developer manual is `which = "dev"`.
-
-- With a `plan_compare()` column, a column header written with `{col}` /
-  `{n}` (or a short row repeated over the columns) sat one cell to the
-  right, and the comparison column got no cell (#631).  The cells now sit
-  over their columns, and a short row gives the comparison column its name
-  on the first row.
-
-- **`plan_filter()`: rows dropped by a condition over the record** (#620).
-  `plan_filter(p >= 0.05)` keeps the PTs with 5% or more in any arm
-  (`any = FALSE`: in every arm), in `plan_cells()`' guard language over the
-  record's statistics and keys.  A SOC stays exactly when one of its PTs
-  does (`parents = "keep"`; `"drop"` judges it on its own); the overall
-  row always stays; a row no statistic answers stays, noted.  It runs
-  before the cells and the sort, and the RTF is byte-identical to the same
-  plan on an ARD filtered by hand.  `widen_ard(filter = )` is the same
+- `normalize_ard()` reads a cards ARD into one tidy form.  It can stack
+  parallel subgroups (`stack`, `stack_nest`) and name the hierarchy.
+  `combine` reads variables the data keeps apart as one table dimension,
+  for example ADaM's grades toward low and toward high in a lab shift
+  table.
+  `widen_ard()`, `pull_ard()` and `list_ard_keys()` work on the same data
   without a plan.
 
-- **`table_plan(show_keys = )` and `plan_stat_groups(.variables, .others)`:
-  a subgroup's own n (%) beside its ORR** (#621).  Once SEX is a key
-  anywhere in the ARD (a subgroup layer), its own tabulation is a key's
-  count and was left out of the body; `show_keys = "SEX"` keeps it, as a
-  block of its own with `rows = c(block = "variable", ...)`.
-  `.variables = "RESP", .others = "n"` splits only the ORR into its groups
-  and puts the other variables' records whole in `n`, so SEX's `n` and `p`
-  stay together.  Defaults change nothing.
-
-- **The header's `{n}` for stacked keys on the columns** (#622).  With
-  `cols = c("subgroup", "subgroup_level")` (`normalize_ard(stack = )`), each
-  column's population is its layer's own tabulation: the `SEX____F` column's
-  is SEX's count at F.  A crossed layer's is not read (NA, with the usual
-  warning).
-
-- **`normalize_ard(stack_nest = TRUE)`: a crossed layer's outer level as a
-  heading row** (#623).  The outer levels go to a key of their own,
-  `<name>_outer`, the innermost to `<name>_level`, so with `plan_stub()` the
-  rows read `Age Group by Sex`, `65-80`, `F`; a single layer keeps its two
-  levels with no empty heading.  `FALSE` (default) is the joined form.
-
-- **`plan_compare()`: a test's p-value, a difference and its CI as columns on
-  the summary's row** (#625).  cardx's tests write the column key with no
-  value, so `table_plan(cols = )` dropped them.  `plan_compare(p =
-  c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}"))` and `plan_compare(diff =
-  "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})", p = "{p.value:.3f}")`
-  place those records -- an analysis the body does not have -- on their
-  variable's block: its level's row, else the block's first row.  `by =`
-  gives one column a comparison; `position =` puts them first or last.
-  Nothing is computed: the numbers are the ARD's.  A column keyed by
-  context (`p = c(stats_t_test = "{p.value:.3f}")`) picks one test of
-  several and leaves the others, noted; two tests one column reads are an
-  error, never one picked.  A column's lines are `cell_rows()`, each beside
-  the body's line of that label (an ORR difference on line 1, its CI on
-  line 2).  The names are the columns' own: `t = "{statistic:.2f}"`,
-  `df = "{parameter:.0f}"`, an odds ratio.  `widen_ard(compare = )` is the same without a
-  plan.
-- `plan_total()` reads only the body's analyses: with a test in the ARD it
-  took the test's record for an overall row and left an empty row.
-
-- **`plan_stat_groups()`: one record's statistics in two columns, without a
-  `mutate()` before the plan** (#619).  An ORR table with N in one column
-  and the rate and its CI in the next had to relabel `variable` by
-  `stat_name` first.  `plan_stat_groups(n = "N", orr_ci = c("n",
-  "estimate", "conf.low", "conf.high"))` puts each statistic in a named
-  group, the key `.stat_group`, which `table_plan(cols = c("ARM",
-  ".stat_group"))` names like any other; `plan_cells()` keys a template by
-  the group's name.  A statistic in no group is not read.
-  `widen_ard(stat_groups = )` is the same for a call without a plan.  The
-  RTF is byte-identical to the `mutate()` version (a test).  Overwriting
-  `variable` was a workaround: keep the ARD as it is and choose the layout
-  in the plan.  With `cell_rows()` inside each group, one analysis's
-  statistics lay out as n rows x m columns; the groups go across
-  (`cols =`) or down (`rows =`, in the order they are said), within one
-  record (the same analysis and keys).
-
-- **`plan_paginate_group(heading = )`: each page's name from a template**
-  (#619).  `heading = "Treatment: {value} (N={n})"` names each page --- the
-  heading `rtf_tables(auto_section = TRUE)` puts in the section header ---
-  with the page's value and its population as the ARD states it (the page
-  variable's own tabulation, `cards::ard_tabulate(adsl, variables =
-  TRT01A)`).  A section per arm says the arm and its N with neither
-  written by hand; what the ARD does not state is `NA`, with a warning.
-  `plan_paginate_rows(page_by = , heading = )` does the same for BY pages
-  with a row budget inside (a page per value refuses one).
-
-- **Sort keys `<stat>@<key>` and `<stat>[<col>]`** (#619, the tflplanner
-  builder's request).  `-n@soc` orders the SOCs by their own count and keeps
-  each SOC's PTs with it; `-n[Total]` / `-n[Placebo]` read one spread
-  column; `-n@soc[Total]` both.  A plain `-n` sums every spread column, as
-  before; ties go to the keys that follow.
-
-- **`normalize_ard(stack = )`: parallel subgroups as one pair of keys,
-  whatever group slot each came in** (#619).  `stack = list(subgroup =
-  c("ALL", "SEX", "AGEGR1"))` adds `subgroup` (the variable) and
-  `subgroup_level` (its level), so `rows = c(grp1 = "subgroup", grp2 =
-  "subgroup_level")` lays the subgroups one under another in the order
-  written.  Reading `group2` / `group2_level` directly worked only while
-  every subgroup came in that slot.  A layer may be crossed:
-  `list("ALL", "SEX", "AGEGR1", c("AGEGR1", "SEX"))` gives the row
-  `AGEGR1 / SEX` | `65-80 / F` (`stack_sep =`), three-way the same; a row
-  goes to the layer whose variables are exactly the ones it has, and a
-  combination no layer names is an error that says which to add.  Group
-  slots stand for what the ARD has there: `c("group2", "group3")` finds
-  the layers, single and crossed, in ARD order (refused where the slots
-  also hold the arm).  The variables' own columns stay.
-
-### Deprecated
-
-Removed in the next minor release, the first CRAN one.  The pre-CRAN API
-review, iteration 0 (#594; decided in the team's review):
-each warns once a session and still works; 0.9.0, the first CRAN release,
-removes it.  No old name is kept as an alias.
-
-- **The 26 table-format arguments of `rtf_tables()`, and `read_gt`** (#511
-  B-1).  A table's appearance is written in one place: `rtftable()`,
-  `as_rtftables()` or `plan_style()`.  `rtf_tables(doc, df, border = "tfl",
-  col_rel_width = c(2, 1))` is `rtf_tables(doc, rtftable(df, border = "tfl",
-  col_rel_width = c(2, 1)))`; a gt or gtsummary table goes through
-  `as_rtftables()` instead of `read_gt`.  Until 0.9.0 they behave as they
-  did, including overriding a pre-built `rtftable()` page when passed.
-- **`fmt_count_paren_bare(x)`** -- it is `fmt_count_paren(x, bare = TRUE)`
-  now, the same output byte for byte (`fmt_count_paren()` gains `bare =`;
-  `fmt_value_paren()` pads differently, so it is not the replacement);
-  **`realign_count_pct()`** -- `as_rtftables(align_count_pct = TRUE)`, the
-  built-in cell format `"count_pct"`; and **`format_count_pct()`, renamed
-  `fmt_count_pct()`** (the same arguments), named like the other cell
-  formatters.  The cell-format name `"realign_count_pct"` says so too
-  (`"count_pct"` is the same); `"count_paren_bare"` stays.
-
-### The rest of the review, iteration 0 (#594; nothing breaks)
-
-The names below that are *superseded* still work and do not warn
-(documented on their help pages); nothing is removed.
-
-- **`rtf_section(header = , footer = )`** (#594 1.5): the section is given as
-  two arguments, `rtf_section(doc, header = hdr, footer = ftr)`; `secinfo =
-  list(header = , footer = )` is superseded (it is still how several
-  sections are given at once).  A `secinfo` with another name
-  (`list(hdr = )`) is an error -- it was ignored, and the band it meant was
-  left out without a word (E3) -- and so is a header that is not a header,
-  its rows or its text (`list(header = 1)`).
-- **`paginate_cols()` takes `plan_paginate_cols()`'s names** (#594 1.4):
-  `cut_by` (a list of blocks or a separator), `every` (a block every so many
-  columns, which `paginate_cols()` did not have), `keep`, `fit`
-  (`TRUE`/`FALSE`) and `order`; `cols` / `by`, `carry`, `width` and
-  `page_order` are superseded.
-- **A character vector of titles or footnotes is one block for every page**
-  (#594 §3): `rtf_titles(doc, c("Table 14.1.1", "Demographics"))`, and
-  `titles =` / `footnotes =` of `rtf_tables()` / `rtf_figures()`, as
-  `list(c(...))` was.  It used to be an error.
-- **One name for a thing** (#594 1.4): `text_width_in()`,
-  `auto_col_widths()` and `fit_listing_widths()` take
-  `font_size_half_points` (was `size_half_points`) and default
-  `font = NULL`, the package's font (`getOption("rtfreporter.font")`, as
-  every other `font =`; it was always Courier New -- the same widths under
-  the default option); `auto_col_widths(data = )` (was `df`);
-  `generate_rtfreport(doc = )` (was `report`).  A call by position is
-  unchanged.
-
-### Changed
-
-- **`generate_rtfreport(overwrite = TRUE)` is the default.**  A report
-  program is run again and again, and every re-run stopped with "already
-  exists" unless the call said `overwrite = TRUE` -- as `write.csv()` and
-  `ggsave()` do, the file is written over now.  `overwrite = FALSE` keeps
-  the old guard.
-- `fmt_count_pct()` with `pct_unit = "fraction"` (the default) warns once a
-  session when a `pct` is above 1: a percentage written as a fraction prints
-  100 times too large (`5` as `500`).
-
-### New
-
-- **`plan_n_candidates()`: the populations a header's `{n}` can say**
-  (tflplanner #288).  Before `{n}` is chosen, a GUI can show each choice
-  with its values: one population (`scope = "all"`), or on pages split by
-  a group value two -- each page's own (`"page"`, the subjects with that
-  test) and the table's (`"table"`, the analysis set) -- per column and
-  over all the columns, as `plan_col_header(values = list(n = ))` prints
-  them; attribute `differ` when they disagree.  Nothing else changes: the
-  page split's column is now found by one helper that the header's pages
-  use too.
-
-### Continuous integration
-
-- R-CMD-check now also runs on R 4.2, the oldest R tested (`Depends: R (>= 4.1)` is kept; cardx, used in tests, needs R >= 4.2). That job leaves tern out (every tern now installable needs R >= 4.4) and lets a suggested package be missing; the tests skip what needs it.
-
-### Documentation
-
-- **The home page leads with the two ways in** (#613): a table from a cards
-  ARD with a plan first, then a gtsummary table brought in with
-  `as_rtftables()`, each with a picture of the RTF it writes; the typed-in
-  data frame follows, without one.  *Get started* adds an adverse-events
-  table, and the reference index puts *Bring your own table* right after
-  *Tables from an ARD*.  The pictures are rendered RTF -> PDF -> PNG by
-  `data-raw/gen_gallery.R`, from the code shown.  The articles use the
-  current names: `rtf_section(header = , footer = )`,
-  `paginate_cols(cut_by = , keep = , fit = , order = )` and
-  `fit_listing_widths(font_size_half_points = )`.
-- **`rtf_figures(width_twips = NULL)` is the image's native size** (#617), as
-  `?rtfplot` says: a file at its embedded DPI, a plot object at its
-  `render_width`, with no fit to the page.  Its help page said "the full
-  writable width"; the figure was never stretched to it.
-
-- **README first screen and a Gallery article.**  The README opens with one
-  sentence on what the package does and a 30-second example that needs only
-  rtfreporter, with a picture of the RTF it writes.  The new *Gallery*
-  article (in the navbar) shows a demographics table, an adverse-events table,
-  a vital-signs table, a listing and two figures made from the CDISC pilot
-  data, each with the code that wrote it.  `data-raw/gen_gallery.R` renders
-  the article and the README example and turns their RTF into the pictures.
-
-- **Examples on the ARD / plan path, and Get started without cards**
-  (#594 D1, D2).  `?plan_verbs` now runs every `plan_*` verb -- on a cards
-  ARD when cards is installed, and the display verbs and `plan_listing()`
-  on a plain data frame either way; `normalize_ard()`, `widen_ard()`,
-  `list_ard_keys()` and `plan_layers()` have examples of their own.  The
-  Get started vignette loads rtfreporter in a chunk that always runs, so
-  it builds (its last example included) on a machine without cards.
-
-- **The docs no longer contradict each other** (#594 D3-D6).
-  `?rtf_section` says what the renderer does and the headers article
-  already said: `header = NULL` *inherits* the previous section's header
-  (only the first section's `NULL` means none; `rtf_header("")` is a blank
-  one).  `?rtf_tables` describes `tables` by its usual forms -- a
-  `table_plan`, the pages of `as_rtftables()`, a bare `data.frame` -- and
-  sends a gt table through `as_rtftables()` rather than `read_gt`.
-  `?rtftable`'s `border =`, the public-API article and `?set_blank_rows`
-  no longer present `rtf_table_border()`, the old border constructors or
-  `paginate()` as current.  Every deprecation note now says the same
-  thing: removed in 0.9.0, the first CRAN release.
-
-- **No code copied from a discussion, and no links to discussions that are
-  moving** (#596).  The test that checks `build_listing()` against a listing
-  laid out by hand now lays it out with its own code, on made-up
-  adverse-event data, and checks the same things; the comments, docs and
-  NEWS describe their sources without the numbers.
-
-- **GROUPN, not BIGN** (#592).  The subjects per group -- what clinical
-  reporting calls big N -- are a GROUPN analysis in the comments and tests,
-  as in tflspec and tflplanner.  tfrmt's own names (`prep_big_n()`,
-  `big_n_structure()`, `bigN`) are tfrmt's and stay.
-
-### Bug fixes
-
-- **A gtsummary table's footnote is printed once** (#613), not once per
-  statistic column: gtsummary attaches it to every arm, and gt prints each
-  text once.
-- **`add_header_row()` keeps the column names** (#615) of a table that has no
-  column header yet: the new row goes above (or below) them, as documented,
-  instead of taking their place.  Tables of several data frames keep each
-  one's names.
-
-- **Mistakes that were accepted now stop with a message that says what to
-  write** (#594 E1-E11).  None of these changes the output of code that
-  worked.
-  * `rtf_document(page = "a4")` / `rtf_config(page = )`: `page` must be an
-    `rtf_page()` or a named list; a string used to fail later, in
-    `print()` or the renderer, with "$ operator is invalid for atomic
-    vectors".
-  * `rtf_header()` / `rtf_footer()`: a cell named other than `l` / `c` /
-    `r` (`c(left = "x")`) is an error.  Its text used to be left out of the
-    file without a word.
-  * A positional `col_header` row (`rtftable()`, `rtf_tables()` on a data
-    frame) must give one label per column; one too few left the last
-    header empty.  The labels rows of one `rtf_col_header()` must be the
-    same length.  A named row and a single label are still allowed, as
-    `set_col_header()` allows them.
-  * Clearer texts: `rtf_tables()` on an item it cannot place names its
-    class and where other tables go (`as_rtftables()`); `table_plan()` and
-    `normalize_ard()` name their argument `x`; an empty plan points to
-    `plan_paginate_rows()` (not the non-existent `plan_pages()`);
-    `titles` / `footnotes` of the wrong length say how many blocks and
-    pages there are; `rtf_titles()` / `rtf_footnotes()` before any content
-    say to call them after `rtf_tables()` / `rtf_figures()`.
-
-- **`{n:sum}` leaves the Total column out** (#604).  With `plan_total()`,
-  a header's `{n:sum}` (and `plan_header_tokens()`) added the Total
-  column to the arms -- 612 for 306 subjects.  The Total column is the
-  sum of the others, not a part of it.
-
-### New features
-
-- **`plan_total()`: a Total column from the ARD's overall rows** (#600,
-  tflspec #212).  cards states the overall itself -- the same analysis
-  without its `by`, bound under it, or `ard_stack(.overall = TRUE)` -- as
-  rows with no value of the column key.  `plan_total(label = "Total",
-  position = "last")` makes them one more column, and its header `{n}` is
-  the study total the ARD states (the column key tabulated on its own, or
-  `..ard_total_n..`), which is still never put in every column.  The ARD
-  keeps no `ARM = "Total"` the data does not have, so an ARS made from the
-  same analyses stays true.  A Total already in the data, or a table of
-  several column keys, stops with why.  Without `plan_total()`, nothing
-  changes.
-
-- **`plan_nest()`: a variable's rows under one level of another** (#598).
-  `plan_nest(RACESUB = c(RACE = "Asian"))` moves RACESUB's rows right after
-  RACE's "Asian" row, one stub indent step deeper, in RACE's group (its own
-  heading dropped): the sub-categories of a race under it, from two
-  analyses on the same data -- a hierarchical tabulation would drop every
-  level that has no sub-level.  The level is matched as the table shows it;
-  a variable or level not in the table stops with what there is.  Before,
-  only `plan_after()` could do it.
-
-- **`rtf_figures(doc, plot)`: one figure without `list()`** (#589).  An
-  `rtfplot`, one file path, a function that draws or a plot object (a
-  ggplot, a patchwork, a grob, a recorded plot) is taken as it is; a list
-  is still several figures.  A ggplot was a list of its own parts before,
-  so `rtf_figures(doc, plot)` failed on its first part.
-
-- **`plan_col_header(lines = )`: the column header a row at a time**
-  (#588).  A list, one element a header row, each a named character vector
-  -- a cell's name the columns it sits on (a name, `.values`, `3:5`,
-  `KEY = value`), its value the text:
-  `plan_col_header(lines = list(c(row_label = "", .values = "{col}"),
-  c(row_label = "Characteristic", .values = "(N={n})")))`.  `span` says how
-  a cell over several columns is made (`"each"`, `"one"` or a key's name).
-  It is the data frame of cells written another way, so it does all that
-  does; `header` (an `rtf_col_header()` or the data frame) stays.
-
-### Fixes
-
-- **`plan_labels()`: the variables in the order labelled** (#585).  A
-  variable whose own label is in its dictionary (`SEX = c(SEX = "Sex", F =
-  "Female")`, #514) moved to the end of the variable order, after the ones
-  labelled plainly; it now keeps its place.
-
-- **`normalize_ard()`: a text statistic no longer turns `stat` into text**
-  (#583).  An ARD with a test's `method` / `alternative` (cardx) or a flag
-  (`paired`) beside the numbers made the whole `stat` column character, so a
-  `cells` guard compared strings (`N < 9` was TRUE for 86) and a rework
-  written for numbers failed.  `stat` stays numeric, each number read as it
-  is (no digits lost); a text value is `NA` there and the row's `stat_fmt`
-  is the text, so `{method}` still prints it.
-
-### New
-
-- Added a root `CITATION.cff` so GitHub's "Cite this repository" button
-  works (#573).
-
-- **`rtf_header()` / `rtf_footer()`: `drop_empty_rows`** (#571).  With
-  `drop_empty_rows = TRUE`, a band row whose tokens of one's own
-  (`rtf_document(tokens = )`, `options(rtfreporter.tokens = )`) are all
-  empty when the file is written, and which says nothing else but blanks
-  and brackets (`"<{POPULATION}>"`), is left out: one header can serve
-  every report of a study, a report with no value for a line going without
-  it.  A row with no token, rtfreporter's own (`{PAGE}`) or an unknown one
-  is always written.  The default, `FALSE`, writes every row as before.
-
-- **`program_fallback`: the program when none is said or found** (#566).
-  `rtf_document(program_fallback = )` (and `generate_rtfreport(program_fallback
-  = )` for one call) names the program a `{PROGRAM...}` token uses when no
-  program is said (`program`, the option) and none is found -- last, after
-  the script `Rscript` runs, so a program's own file name always wins.  A
-  message says when it is used; the file name is completed as any
-  program's (`.R` added to a name with no extension).
-
-- **Tokens of one's own** (#564).  `rtf_document(tokens = list(STUDY =
-  "ABC-123"))` -- or `options(rtfreporter.tokens = )` for a session, the
-  document's value winning -- and a header, footer, title or footnote
-  says `{STUDY}`, filled when the file is written (RTF-escaped).  A name
-  is upper case, a letter then letters, digits or `_`, and not one of
-  rtfreporter's own (`{PAGE}`, `{PROGRAM}`, `{DATETIME}` ...: an error);
-  a value is one string or number.  `rtf_text_tokens(doc)` lists a
-  document's (and the session's) with `kind = "own"`.  A column header
-  still takes its values from `set_col_header(values = )`.
-
-- **The program is found when it is not said** (#562).  With no
-  `rtf_document(program = )`, `generate_rtfreport(program = )` or
-  `options(rtfreporter.program)`, a `{PROGRAM...}` token takes the file
-  `source()` is running (the innermost), the script `Rscript` runs, the
-  document knitr is knitting, or the file open in RStudio's editor
-  (interactive, with rstudioapi; not an Untitled one) -- and a message
-  says which.  A program said is used quietly, and a file with no
-  `{PROGRAM...}` token searches for nothing.  The file name is completed
-  to the one on disk: its real case (`t_dm.R` that is `T_DM.r` on
-  Windows); with no extension, the program of that name (`.R`, `.r`,
-  `.Rmd`, `.qmd`), else `.R`.  With no program at all, the error says
-  `rtf_document(program = )` first, or to run the program with
-  `source()` or `Rscript`.
-
-- **`{PROGRAM_FULL}`, the program's absolute path** (#560).  A run token
-  beside `{PROGRAM}`: the same path made absolute (`normalizePath()`,
-  from the working folder when the file is written), with the system's
-  separator -- `\` on Windows, `/` elsewhere.
-  `{PROGRAM}` is still the path as given, so existing files are unchanged.
-  `rtf_text_tokens()` lists it and `set_col_header()` leaves it for the
-  renderer; no program known is the same error as for `{PROGRAM}`.  The
-  documentation now names the program where a program says it once,
-  `rtf_document(program = )`; `generate_rtfreport(program = )` overrides it
-  for one call (the order the program is looked up in is unchanged).
-
-### Documentation
-
-- **The site leads with an ARD and a plan** (#581).  A new *Get started*
-  (`vignette("rtfreporter")`) builds a table from a cards ARD with
-  `table_plan()` and the `plan_*()` verbs, then points to the second path,
-  bringing a table from gt / gtsummary / rtables / tfrmt / flextable /
-  huxtable / a data frame through `as_rtftables()`.  The articles menu and
-  index, the reference index and the README follow that order (ARD + plan,
-  bring your own table, listings, figures, assembling a deliverable, AI
-  assistant); the headers article covers the run tokens, tokens of one's
-  own, `program_fallback` and `drop_empty_rows`.  The pipe-API vignette and
-  the two Quarto examples are gone (redirected), their ground covered by
-  Get started, the document articles and the Demographics showcase.
-
-- **AI developer manual: the repository rules** (#574).  A new §14
-  summarises, with a pointer to each source file, the Code of Conduct, the
-  issue -> PR workflow and the PR / issue templates, the four pre-push
-  checks (`R CMD check --as-cran`, the full suite with `NOT_CRAN=true`,
-  `pkgdown::check_pkgdown()`, `lintr::lint_package()`), versioning +
-  `NEWS.md`, and `cran-comments.md`.  `.github/copilot-instructions.md`
-  now points at `rtfreporter_ai_manual("dev")` and no longer contradicts
-  it on `Imports:` and optional-package guards.
-
-- **NEWS.md: no R comment reads as a version** (#558).  Two code blocks
-  (the R6 -> S3 migration of 0.8.0 and the gt `read_gt` example) began
-  their lines with R comments at column 0, which a markdown reader that
-  does not see the block open takes as level-1 headings -- versions --
-  so `R CMD check` noted "Cannot extract version info".  The comments are
-  in the text around the code now, and a test keeps every level-1 line a
-  version.
-
-- **README: no release/CRAN roadmap** (#579).  "Status & roadmap" is
-  "Status" now, and the planned-milestones table (first CRAN submission,
-  then v1.0.0) is gone, along with the other forward-looking CRAN mention --
-  packages do not announce release plans.  The section keeps the factual
-  status: pre-1.0, `lifecycle: experimental`, the latest release and how to
-  install it, the development-version scheme, and a pointer to `NEWS.md`.
-
-### Before CRAN
-
-- **cards' current verb names** (#556).  The examples, the quickstart
-  vignette, the articles, the AI manual and the tests build their ARDs with
-  `cards::ard_summary()` / `cards::ard_tabulate()` (cards 0.7.0 renamed
-  `ard_continuous()` / `ard_categorical()`), so they keep running when
-  cards drops the old names; `Suggests: cards (>= 0.7.0)`.  An ARD made
-  with the old verbs (its `context` is `"continuous"` / `"categorical"`)
-  still reads the same -- a test stamps the old context by hand.  The RTF
-  is unchanged.
-- `plan_header_tokens()`'s example runs only when cards is installed.
-- The Description says what the ARD layer (the plan) does.
-
-### Bug fixes
-
-- **A group count stated twice is one count** (#554).  A column
-  header's `{n}` read nothing (`(N=NA)`) when the ARD counted the groups
-  twice -- a BIGN row next to an `ard_stack(.by = )` that counts them too
-  (`.by_stats = TRUE`, cards' default) -- though both said the same: a
-  column's count was dropped as soon as it appeared twice.  The same count
-  twice is now one count; two different counts for one column are still
-  not a column's number, and `plan_header_tokens()` says why ("the ARD
-  states two different counts for this column").
-
-Found while raising the test coverage before CRAN (#552).
-
-- `print(rtf_watermark())` shows the watermark's summary: the method was
-  not registered in `NAMESPACE`, so the raw list was printed (#546).
-- `print(rtf_document())` names a preset page by its size and orientation
-  (`letter (landscape)`) instead of `x inches` (#547).
-- `rtf_tables(auto_section = TRUE)` with an explicit `rtf_section(page = n)`
-  on the page an auto section starts: the explicit section wins on that
-  page.  On page 1 this stopped with an internal error; on a later page the
-  pages were rendered twice, once in each section (#548).
-- `cell_rows()`: a row written as one bare guard (`"1" = n > 0 ~ "has"`, not
-  inside `c()`) is a chain of one guard, as inside `c()`; it printed `~` in
-  every cell and broke `print()` (#549).
-- The console preview of a table draws `dash` and `dot` rules with their own
-  glyphs; it looked for `dashed` / `dotted`, names no border has (#550).
-- `NEWS.md` parses again for `news()` and `R CMD check` (a heading with a
-  version number in it made the parser take every `###` heading for a
-  version).
-
-### Deprecated
-
-- The first argument of `set_blank_rows()` (was `df`) and `add_cont_label()`
-  (was `chunk`) is `data`, as in the other functions that take a table.
-  A call that gives it by position is unchanged; the old name still works
-  and warns once a session, and is removed in 0.9.0.
-
-### Finding what the next minor release removes
-
-0.9.0 removes everything deprecated in 0.8.x.  To find it in your code
-(R scripts, R Markdown / Quarto), search for this regular expression -- each
-hit warns today and stops working in 0.9.0:
-
-```
-\b(rtf_border_(none|top|bottom|box|with|tfl|side)|rtf_table_border|add_col_header_row|col_header_from_names|set_header_cell|update_(header|footer)_row|paginate|assemble_(files|spec|toc|from_spec)|toc_(heading|entry)|fmt_count_paren_bare|realign_count_pct|format_count_pct)\s*\(|\b(spanning_header|gt_obj|stub_vars|stub_label|stub_indent|stub_group_summary|read_gt)\s*=
-```
-
-For example `grep -rnE '<the expression>' R/ analysis/`, or RStudio's *Find
-in Files* with *Regular expression* ticked.  (`paginate_cols()` is not
-deprecated: the expression stops at `paginate(`.  The two first-argument
-names above are not in it -- they only matter when written as `df =` /
-`chunk =`.  Nor are the 26 table-format arguments of `rtf_tables()`
-deprecated in 0.8.2.9039: `rtftable()` keeps the same names, so look at each
-`rtf_tables(` call for `border =`, `col_rel_width =`, `font =` ...)
-
-### New
-
-- **`plan_levels(.drop_empty = )`**: the levels of these variables that no
-  record has -- `n` 0 (or missing) in every column -- are left out of the
-  table.  An ARD made after a code list's full set of levels was applied
-  (tflspec) counts a value no subject has as 0, which is what a table shows
-  by default; this is the switch to leave such rows out, one variable at a
-  time.  A level some column counts stays.  The default is unchanged.
-
-### Deprecated (the pre-CRAN API review, iteration 1)
-
-Each still works and warns once a session, naming what to write instead;
-all are removed in 0.9.0.  `?rtf_border` lists the older border ones.
-
-- `rtf_border_side()` is now **`rtf_border_line()`** (the same arguments):
-  it describes one line, used for any edge, not a side.  An object saved
-  with the old class still reads.
+Table plans
+
+- `table_plan()` maps an ARD to rows and columns.  The `plan_*()` verbs
+  refine it: `plan_cells()`, `plan_digits()`, `plan_labels()`,
+  `plan_levels()`, `plan_col_header()`, `plan_stub()`, `plan_style()`,
+  `plan_cell_style()`, `plan_columns()`.  `plan_template()` writes starting
+  code for an ARD.
+- More verbs: `plan_total()` (Total column or row), `plan_compare()`
+  (p-values and differences as columns), `plan_stat_groups()` (one record's
+  statistics in several columns), `plan_filter()`, `plan_nest()`,
+  `plan_sort()`, `plan_hide()`, `plan_empty()`, `plan_blanks()`.
+- Pages: `plan_paginate_rows()`, `plan_paginate_group()` and
+  `plan_paginate_cols()`.  `plan_header_tokens()` and `plan_n_candidates()`
+  list the values a header's `{n}` can take.
+- `as_rtftables()` brings a finished table from gt, gtsummary, rtables,
+  tfrmt, flextable, huxtable or a data frame into the same pipeline.
+
+Listings
+
+- `plan_listing()`, `listing_spec()` and `listing_col()` describe a listing.
+  `build_listing()` and `fit_listing_widths()` lay it out;
+  `collapse_repeats()` blanks repeated key values.
+
+Figures
+
+- `rtfplot()` and `rtf_figures()` place ggplot2 plots, files or drawing
+  functions.  `render_width`, `render_height`, `render_dpi` and `png_device`
+  set the drawing; `render_format = "emf"` draws a vector EMF picture (with
+  devEMF).  Plots are drawn with ragg when it is installed.
+
+RTF output and page layout
+
+- `rtf_document()` sets the page, fonts, tokens and the output `file`.
+  `rtf_section()` adds sections with `header` and `footer`;
+  `rtf_header()`, `rtf_footer()`, `rtf_titles()`, `rtf_footnotes()` and
+  `rtf_watermark()` fill the page.
+- `rtf_tables()` and `rtf_figures()` add content.  With `page_break = FALSE`
+  a table or figure goes under the content before it.
+- A font can be set per script (`latin`, `east_asian`, `complex`) and
+  `font_lang` sets the language, so East Asian text works in Word and
+  LibreOffice.
+- `generate_rtfreport()` writes the file.  `rtf_table_style()`,
+  `rtf_table_style_tfl()` and `set_col_header()` style tables and headers.
+
+Assembling
+
+- `assemble_rtf()` joins RTF files with a cover, table of contents and page
+  numbers.  `assemble_folder()` reads a folder into a table of contents and
+  can assemble it.
+
+Validation material
+
+- `rtfreporter_validation_kit()` copies templates for a company's own
+  validation.  The package ships its requirements, traceability matrix and
+  quality plan in `inst/validation`.
+- `rtfreporter_ai_manual()` writes the user and developer manuals, and a
+  folder to attach to an AI chat.
+
+## Changes for users of the pre-CRAN development versions
+
+Removed functions.  They warned in 0.8.x and are gone.
+
+- `paginate()` is `as_rtftables()`.
+- `rtf_border_none()`, `rtf_border_top()`, `rtf_border_bottom()`,
+  `rtf_border_box()`, `rtf_border_with()`, `rtf_border_tfl()` and
+  `rtf_table_border()` are `rtf_border()`, `rtf_table_style()` and the
+  `border` argument.
 - `add_col_header_row()`, `col_header_from_names()` and `set_header_cell()`:
-  write the rows (and spanning cells) in `rtf_col_header()` /
-  `set_col_header()`, add a row with `add_header_row()`, restyle cells with
-  `style_header()`; `as_rtftables()` already splits delimited names
-  (`header_sep =`).
-- `update_header_row()` / `update_footer_row()`: a header's rows are a
-  list -- make it again with `rtf_header(rows = )` / `rtf_footer(rows = )`.
-- `paginate()` (deprecated since 0.7.x, use `as_rtftables()`) is now on the
-  list removed in 0.9.0.
-- `rtftable(spanning_header = )` (and `rtf_tables(spanning_header = )`): put
-  the spanning row first in `col_header = list(<spanning row>, <label row>)`
-  -- the RTF is byte-identical.
-- `as_rtftable(gt_obj = )`: the argument is `x`, as in `as_rtftables()`.
+  write the rows in `rtf_col_header()` or `set_col_header()`, add a row with
+  `add_header_row()`, restyle cells with `style_header()`.
+- `update_header_row()` and `update_footer_row()`: build the band again with
+  `rtf_header(rows = )` or `rtf_footer(rows = )`.
+- `assemble_files()`, `assemble_spec()`, `assemble_toc()`,
+  `assemble_from_spec()`, `toc_heading()` and `toc_entry()`:
+  use `assemble_folder(dir)` (without `output_file` it returns the table of
+  contents) and `assemble_rtf(toc = )`.
+- `read_gt` is `as_rtftables()`.
 
+Renamed functions and arguments.  No old name is kept.
+
+- `format_count_pct()` is `fmt_count_pct()`.
+- `fmt_count_paren_bare(x)` is `fmt_count_paren(x, bare = TRUE)`.
+- `realign_count_pct()` is `as_rtftables(align_count_pct = TRUE)`; the cell
+  format `"realign_count_pct"` is `"count_pct"`.
+- `rtf_border_side()` is `rtf_border_line()`.
+- `rtfreporter_ai_manual(file = )` is `dir = `.
+- `set_blank_rows(df = )` and `add_cont_label(chunk = )` are `data = `.
+- `as_rtftable(gt_obj = )` is `x = `.
+- `size_half_points` is `font_size_half_points` in `text_width_in()`,
+  `auto_col_widths()` and `fit_listing_widths()`; `auto_col_widths(df = )`
+  is `data = `.
+- `generate_rtfreport(report = )` is `doc = `.  `report =` still works.
+- Every `plan_*()` function names its first argument `.plan`.  Piped code is
+  unchanged; write `.plan = `, not `plan = `.
+
+Removed arguments.
+
+- The 26 table-format arguments of `rtf_tables()` (`border`,
+  `col_rel_width`, `font` and the rest) are gone.  Give them to `rtftable()`,
+  `as_rtftables()` or `plan_style()`.
+- `rtftable(spanning_header = )`: put the spanning row first in
+  `col_header = list(<spanning row>, <label row>)`.
 - `as_rtftables(stub_vars = , stub_label = , stub_indent = ,
   stub_group_summary = )`: write `stub = stub_spec(vars, label = , indent = ,
-  group_summary = )` (or just `stub = vars`), which also reaches `layout`
-  and `label_span`.  (A plan's `plan_stub()` already goes through `stub =`.)
-- The assembly helpers `assemble_files()`, `assemble_spec()`,
-  `assemble_toc()`, `assemble_from_spec()`, `toc_heading()` and
-  `toc_entry()`: two functions are left.  `assemble_folder(dir)` without an
-  `output_file` returns the folder's table of contents (a data.frame: file,
-  label, heading, level, ...), and `assemble_rtf(toc = )` takes that table
-  -- or the path of its .xlsx / .csv -- with `input_files` then optional.
+  group_summary = )`.
+- `paginate_cols()` takes `cut_by`, `every`, `keep`, `fit` and `order`.  The
+  older `cols`, `by`, `carry`, `width` and `page_order` are superseded.
 
-The articles and the AI manual use the new spellings.  Exports: 125, of
-which 20 deprecated -- 105 to learn.  The SAMPLE-01 RTFs are byte-identical.
+Changed defaults and behaviour.
 
-### Documentation
-
-- **`citation("rtfreporter")` and credits** (#528).  A CITATION file, and
-  README sections that say how to cite rtfreporter (and cards / cardx, for
-  the statistics of a table made from their ARD) and acknowledge the
-  packages it builds on: cards / cardx, the table builders
-  `as_rtftables()` reads, pharmaverseadam and the pharmaverse examples.
-  The cards links now point to its home at pharmaverse.github.io/cards.
-
-### Behaviour changes
-
-- **A declared level order now orders a table with no row keys** (#534).
-  A table of one analysis variable without `rows` --
-  `table_plan(d, cols = "ARM") |> plan_levels(AGEGR1 = c("<65", "65-80",
-  ">80"))`, or `widen_ard(levels = )` -- kept the ARD's order: the sort that
-  applies the label column's order ran only when there were row keys.  Now
-  it runs there too.  What changes: tables of that shape with `levels` (or
-  factor data), whose rows now follow the declared order.
-
-- **`{DATE}` is not a token** (#532).  It was on the list of tokens
-  `set_col_header()` leaves for the renderer, and in its documentation, but
-  nothing ever replaced it: it printed as `{DATE}`.  It is gone from both; a
-  date is `{DATETIME:%Y-%m-%d}`.  A header that still writes `{DATE}` is now
-  an unfilled token, which `set_col_header()` reports instead of printing it.
-
-- **`rtf_table_style()` no longer left-aligns every column unless asked**
-  (#522).  Its `align` defaulted to `"left"`, so any style -- even one that
-  only draws rules (`border_*`, `rtf_table_style_tfl()`,
-  `plan_style(border_header = )`) -- moved the value columns to the left and
-  lost the per-column default (row-title columns left, the others centred).
-  `align` now defaults to `NULL`: unset, each column keeps its default; set,
-  it applies to every column as before.  What changes: a table given a
-  style that does not say `align`, whose non-row-title columns now centre.
-  Write `rtf_table_style(align = "left")` (or `plan_style(align = "left")`)
-  for the old look.
-
-### New features
-
-- **`plan_header_tokens()`** (#536): the tokens `print(plan)` lists under
-  "header tokens" -- `{col}`, `{col1}` ..., `{n}`, `{n:sum}`, `{n:<column>}` --
-  as a data frame, one row a token with its values (a list column), the
-  text print shows, and whether it resolved (and why not).  For a program
-  that offers the tokens with their values.  Added only.
-
-- **`rtf_text_tokens()`** (#529): the `{TOKEN}`s a header, footer, title or
-  footnote may carry, as a data frame -- the token, whether it is a page or
-  a run token, when it is filled (written into the file, computed by the word
-  processor, or left for `assemble_rtf()`), what it becomes, and an example
-  value for a preview.  A program offering them (an "insert" menu) reads this
-  list instead of keeping a copy.  Added only.
-
-- **Every `as_rtftables()` setting now has a plan verb** (#518).  A
-  plan could not say `cell_format`, `column_widths_twips`, `header_sep`,
-  `col_header_align`, the table width, the look fields of
-  `rtf_table_style()`, `col_spec`'s underline and indent, `na` on a
-  finished table, or a grouping column on a finished table without a page
-  per value.  Now: `plan_columns(cell_format =, column_widths_twips =)`,
-  `plan_col_header(header_sep =, col_header_align =)`,
-  `plan_style(table_width_twips =, table_width_pct =,
-  table_width_pct_of_writable =, header_align =, header_bold =,
-  header_italic =, align =, bold =, italic =, underline =)` (folded into
-  one `rtf_table_style()` with the `border_*` zones),
-  `plan_cell_style(underline =, indent_twips =)`, `plan_cells(na =)` on a
-  finished table, and `plan_row_group(group_col =)` on a finished table
-  (an ARD plan refuses it: its grouping column is the outermost row key).
-  Each gives the RTF of the direct call byte for byte.  Not carried over,
-  by design: `read_meta` / `read_attributes`, the superseded `stub_*`
-  arguments (`plan_stub()`), and `spanning_header` (`plan_col_header()`).
-  Added only: a plan without them gives what it gave.
-
-- **`plan_paginate_rows(page_by = )`** (#516): the BY pages of
-  `as_rtftables(page_by = )` in a plan -- the column(s) whose value
-  partitions the body first, each value a page named after it, the row
-  budget (`max_rows`, `split`, ...) then applying within one partition.
-  Before, a plan could page by a value only with `plan_paginate_group()`
-  (one page per value, no row budget), and a report needing both had to be
-  two plans with their pages interleaved by hand.  Added only: a plan
-  without `page_by` gives what it gave.
-
-- **An analysis variable's levels can be relabelled** (#514):
-  `plan_labels(SEX = c(F = "Female", M = "Male"))` -- and
-  `widen_ard(labels = list(SEX = c(F = "Female")))` -- now recode the
-  levels of the analysis variable `SEX` in the label column, the way
-  `plan_levels(SEX = c("M", "F"))` already ordered them (the order stays
-  written in the values).  A scope named an output column only before, so
-  no table that printed before prints differently.  The dictionary's entry
-  under the variable's own name labels the variable itself:
-  `SEX = c(SEX = "Sex", F = "Female", M = "Male")`.
-
-### CRAN preparation
-
-- **Every example runs** (#512).  The 23 `\dontrun{}` examples are
-  runnable now: they write to `tempdir()`, make the PNG they place, run a
-  plot preview only in an interactive session and gt / gtsummary only when
-  installed.  The help pages are ASCII but for what LaTeX sets (the PDF
-  manual could not have been made from a Japanese example and an approximately-equal sign).
-- The quickstart vignette uses the base pipe and runs its ggplot2 chunks
-  only when ggplot2 is installed; tests that call dplyr skip without it.
-- The example RTFs' PNG screenshots are left out of the package build
-  (5.3 MB installed to about 3.5 MB); they stay in the repository and on
-  the site.
-- `Language: en-GB` (the text is British) and `inst/WORDLIST`;
-  `cran-comments.md`; `lintr` and `covr` are no longer in Suggests (the CI
-  workflows install them); four URLs that answered 404 fixed.
-- **A first Linux `R CMD check --as-cran` with the PDF manual** (#524).
-  `paginate()`'s deprecation warning named the internal helper
-  (`'.warn_paginate_deprecated' is deprecated`) and, fired from the
-  example, was the one WARNING of that check: it names `paginate()` now and the
-  example does not trigger it.  Five wide tables in the help pages
-  (`plan_verbs`, `table_plan`, `paginate_cols`) ran off the page of the
-  PDF manual -- one of them by 15 cm -- because an Rd `\tabular` cell
-  cannot wrap; they are bullet lists now.  One `test-ard-tables.R` test
-  needed `broom` (through `cardx`), which the package does not declare:
-  it now skips without it, as `R CMD check --as-cran` (suggests-only
-  library) requires.
-- **Follow-up check on R 4.6.1 with every Suggests, `tern` included**
-  (#526).  The check is clean but for the CRAN-incoming NOTE.  Two
-  `test-num-format.R` tests set `options(scipen = -100)`, which R 4.6
-  clamps with a warning; they use `-9`.  The helper that makes a PNG for
-  `test-print-methods.R` failed with `figure margins too large` on its
-  120 x 80 px device, so its test was skipped everywhere; it passes now.
-- **Test coverage 90.0 % -> 95.3 %** (#551).  One new file,
-  `test-coverage-edges.R`, pins argument checks and their wording, print
-  methods, the console preview, hand-read image headers, header cell sheets
-  and `plan_layers()`, deprecated arguments warning once, and empty /
-  one-row / one-column data.  Tests only; the five defects it met are
-  #546 - #550.
-
-### Bug fixes
-
-- **An ARD plan's non-default `plan_columns(sep = )` built no spanning
-  column header** (#520).  The plan widens the ARD into column names with
-  its own separator ("Placebo--F" for `sep = "--"`), but
-  `as_rtftables()`'s `header_sep` -- what actually splits those names back
-  into header rows -- stayed at the default `"____"` unless
-  `plan_col_header(header_sep = )` was also set, contradicting
-  `plan_columns(sep = )`'s own documentation that the header is split on
-  it.  The plan's separator is now passed through as `header_sep`
-  whenever the user has not set one explicitly.  Table-input (`data.frame`)
-  plans, and ARD plans that keep the default separator, give the same RTF
-  as before.
-
-- **A row split by `set_decimal_split()` lost the table's font size and the
-  cell fill** (#509).  The split data rows were written without the table's
-  own font switch (`rtftable(font_size_half_points = , font = )`), so their
-  numbers fell back to the document's size and font, and without the
-  `background` of their column or of `cell_styles`, so a shaded column had
-  unshaded rows wherever a number was split.  Both now reach every cell of a
-  split row -- a pair merged back into one cell takes its original column's
-  fill.  Tables without `set_decimal_split()` are byte-identical.
-
-- **`plan_apply()` blamed a missing `cols` on unrelated verbs** (#507).  A
-  plan with no `cols` role stopped with "`cols` is required" followed by
-  "declared by:" and the widen-stage verbs, such as `plan_cells(notes =
-  FALSE)`, none of which had anything to do with it.  A missing declaration
-  has no layer to blame, so the error now says where to declare it
-  (`table_plan(cols = )`) and lists no verbs.
-
-- **A listing key column printed on every line of a record when a key
-  column to its left wrapped** (#505).  With `listing_col("TRT", width =
-  12, collapse_repeats = TRUE)` before `listing_col("USUBJID",
-  collapse_repeats = TRUE)`, a treatment that wrapped ("Xanomeline" / "High
-  Dose") made the subject print on both lines.  The repeats of a key are
-  blanked hierarchically, and the wrapped cell changed its text from line to
-  line.  The lines of one record now count as one value, so a key prints on
-  its record's first line (and again at the top of a continuation page)
-  whatever the other keys' wrapping.  Listings with no wrapping key are
-  byte-identical.
-
-### Documentation
-
-- **Development reopens at `0.8.2.9000`** (#500), after the 0.8.2 release.
-
-- **The plan and ARD route on the site** (#503).  Four new articles:
-  *Tables from an ARD*, *The plan verbs*, *Listings with a plan* and *From
-  as_rtftables() to a plan*, each run on pharmaverseadam with the RTF shown.
-  Get started ends with a short section on tables from an ARD, and the README
-  and the site menus point to the articles.
+- `generate_rtfreport(overwrite = TRUE)` is the default.  `file_path` is
+  `NULL` by default: name the file there or in `rtf_document(file = )`.
+- `rtf_table_style(align = NULL)`: a style that does not say `align` no
+  longer left-aligns the value columns.  Write `align = "left"` for the old
+  look.
+- `text_width_in()`, `auto_col_widths()` and `fit_listing_widths()` default
+  to `font = NULL`, the package font.
+- `rtf_tables(auto_section = , auto_title = )` default to `NULL`: they follow
+  `plan_paginate_group(heading_at = )`, else `FALSE`.
+- `plan_columns(row_title = )` and `plan_row_group(collapse = )` count the
+  printed columns, as `widths` does.  A hidden key no longer counts.
+- A page key (`plan_paginate_rows(page_by = )`, `plan_paginate_group(col = )`)
+  is never a row group for blank rows, `collapse`, `row_title` and the stub.
+- `plan_labels()` and `widen_ard(labels = )` set text only.  They no longer
+  put labelled variables first; the order is `plan_levels()` or the ARD's.
+- A declared level order now orders a table with no row keys.
+- A header's `{n:sum}` leaves the Total column out.
+- `{DATE}` is not a token.  Use `{DATETIME:%Y-%m-%d}`.
+- `plan_sort()` puts a group's own row before its members.
+- A gt table with `groupname_col` comes through `as_rtftables()` with the
+  groups as heading rows.  gt 0.11.1 or later is needed.
+- Plot objects are drawn with ragg when it is installed.  Set
+  `options(rtfreporter.png_device = "png")` for the earlier PNG bytes.
+- cards 0.7.0 or later is needed to run the examples (`ard_summary()`,
+  `ard_tabulate()`).
+- Mistakes that were ignored now stop with a message: a `secinfo` list with
+  another name, a header cell not named `l`, `c` or `r`, a positional
+  column-header row with too few labels, `rtf_document(page = "a4")`.
 
 # rtfreporter 0.8.2
 

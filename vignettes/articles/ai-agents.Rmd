@@ -356,6 +356,6 @@ tool's documentation when a step does not work as written.
 * [Set-up in the Claude desktop app](ai-agents-claude-app.html)
 * [Set-up in VS Code with GitHub Copilot](ai-agents-vscode-copilot.html)
 * `CONTRIBUTING.md` for the rules, and the
-  [AI developer manual](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-dev-manual-0.8.2.md)
+  [AI developer manual](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-dev-manual-0.9.0.md)
   for the briefing to attach to a chat.
 * [Developing with an AI assistant](ai-development.html) for a chat assistant.

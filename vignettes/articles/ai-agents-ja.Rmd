@@ -340,5 +340,5 @@ Claude のページに明記しています。ツールの変化は速いので�
 * [Claude デスクトップアプリのセットアップ](ai-agents-claude-app-ja.html)
 * [VS Code と GitHub Copilot のセットアップ](ai-agents-vscode-copilot-ja.html)
 * ルールは `CONTRIBUTING.md`、チャットに添付する資料は
-  [AI 開発者マニュアル](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-dev-manual-0.8.2.md)です。
+  [AI 開発者マニュアル](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-dev-manual-0.9.0.md)です。
 * チャットアシスタントについては、[AI アシスタントを使った開発](ai-development-ja.html)を参照してください。
