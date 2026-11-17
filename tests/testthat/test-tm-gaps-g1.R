@@ -374,6 +374,9 @@ test_that("FT-AR3016 [FR-AR130]: a plain data frame is read like the cards ARD, 
 
 test_that("FT-AR7001 [FR-AR130]: a plain data frame is read in an R where cards cannot be loaded", {
   skip_on_cran()
+  # Not under covr: its rtfreporter is instrumented and loads covr, which the
+  # child's library does not hold.  The test still runs in R CMD check.
+  skip_on_covr()
   rscript <- file.path(R.home("bin"),
                        if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
   if (!file.exists(rscript)) skip("no Rscript to start a child R")
