@@ -1,6 +1,6 @@
 # Header N when plan_labels relabels the column values
 
-test_that("plan_labels on the column variable: the header N is still each arm's count", {
+test_that("FT-IX6806 [FR-IX419]: plan_labels on the column variable: the header N is still each arm's count", {
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   ard <- cards::bind_ard(
