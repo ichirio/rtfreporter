@@ -274,10 +274,12 @@ skip_rows <- lapply(lst$get_results(), function(x) {
   if (!length(sk)) return(NULL)
   data.frame(file = x$file, test = x$test,
              reason = vapply(sk, function(e) trimws(sub("^Reason:\\s*", "", strsplit(conditionMessage(e), "\n")[[1L]][1L])), ""),
+             # the skip call's line, as a log names it ('file:line:col')
+             at = vapply(sk, function(e) if (inherits(e$srcref, "srcref")) as.integer(e$srcref[[1L]]) else NA_integer_, 0L),
              stringsAsFactors = FALSE)
 })
 skips <- do.call(rbind, skip_rows)
-if (is.null(skips)) skips <- data.frame(file = character(), test = character(), reason = character())
+if (is.null(skips)) skips <- data.frame(file = character(), test = character(), reason = character(), at = integer())
 skips$where <- tb$line[match(paste(skips$file, skips$test), paste(tb$file, tb$test))]
 skips$where <- sprintf("%s:%s", skips$file, skips$where)
 result <- res$result[match(paste(map$file, map$test), paste(res$file, res$test))]
@@ -504,15 +506,115 @@ area_lines <- c(
   gsub("^[|] (.*?) [|]", "| **\\1** |", area_row(tl, "Total"), perl = TRUE))
 
 # ---- the skips, with the reason (the mapped tests' run) ---------------------------------
-skip_lines <- if (!nrow(skips)) "No test of the mapped tests' run was skipped." else {
-  rs <- table(skips$reason)
-  rs <- names(rs)[order(-as.integer(rs), names(rs))]
-  c("| Reason | Skips | Where (test file:line) |", "|---|---|---|",
-    vapply(rs, function(r) {
-      w <- skips$where[skips$reason == r]
-      sprintf("| %s | %d | %s |", cell(r), length(w), cell(paste(unique(w), collapse = ", ")))
-    }, ""))
+# Each reason said for a reader: what the test checks, why it was skipped here
+# and where it runs (validation/skip-reasons.csv, validation/skip_reasons.R);
+# and why skipping it here hides no defect -- (a) the same tests ran and passed
+# on another required environment of this code (found here from the records:
+# a test a log does not list as skipped, in a run of FAIL 0, ran and passed),
+# else the table's (b) outside this environment, (c) checked by another test,
+# (d) run after the release tag.  A skip with none of them is an unverified
+# range, named before the conclusion.  The test's own message is beside it.
+source(file.path(root, "validation", "skip_reasons.R"), local = TRUE)
+skip_tab <- skip_table(root)
+skips$why <- skip_why(skips$reason, skips$file, skip_tab)
+skips$ok <- skip_why(skips$reason, skips$file, skip_tab, col = "ok")
+skip_env_dirs <- c(list.dirs(file.path(root, "validation", "env-out"), recursive = FALSE),
+                   list.dirs(file.path(root, "validation", "env-local"), recursive = FALSE))
+skip_env_dirs <- skip_env_dirs[file.exists(file.path(skip_env_dirs, "test-log.txt")) &
+                               file.exists(file.path(skip_env_dirs, "env.csv"))]
+skip_env_name <- vapply(skip_env_dirs, function(d)
+  utils::read.csv(file.path(d, "env.csv"), colClasses = "character")$environment[1L], "")
+skip_env_logs <- lapply(skip_env_dirs, function(d) skip_log(readLines(file.path(d, "test-log.txt"), warn = FALSE)))
+# the required environments of this code whose tests passed: where a skip here may have run
+skip_req <- if (is.null(envs)) character() else
+  envs$environment[is_req & env_tests_ok(envs) & env_code_ok]
+# Whether a required environment ran the skip at file:line: its log names the
+# skips' places (this code: the same lines), or -- a log that names none -- their reasons
+skip_ran_on <- function(file, at, reason) {
+  ran <- vapply(seq_along(skip_env_dirs), function(k) {
+    if (!skip_env_name[[k]] %in% skip_req) return(FALSE)
+    s <- skip_env_logs[[k]]
+    if (!nrow(s)) return(TRUE)
+    places <- unlist(strsplit(s$at[nzchar(s$at)], ", ", fixed = TRUE))
+    if (length(places)) return(!paste0(file, ":", at) %in% places)
+    !reason %in% s$reason
+  }, NA)
+  unique(skip_env_name[ran])
 }
+skips$ran_on <- vapply(seq_len(nrow(skips)), function(i)
+  paste(skip_ran_on(skips$file[i], skips$at[i], skips$reason[i]), collapse = "\r"), "")
+key <- paste(skips$reason, skips$why, skips$file, sep = "\r")
+skip_groups <- lapply(unique(key), function(k) which(key == k))
+skip_groups <- skip_groups[order(-lengths(skip_groups))]
+# a group's (a): each required environment and how many of the group's tests ran there
+skip_a <- vapply(skip_groups, function(i) {
+  on <- unlist(strsplit(skips$ran_on[i], "\r", fixed = TRUE))
+  if (!length(on)) return("")
+  n <- table(on)
+  paste0("a: ran and passed on ", paste(sprintf("%s (%d of %d)", names(n), as.integer(n), length(i)),
+                                        collapse = "; "))
+}, "")
+skip_ok_txt <- vapply(seq_along(skip_groups), function(g) {
+  own <- skips$ok[skip_groups[[g]][1L]]
+  own <- if (is.na(own)) "" else own
+  paste(c(skip_a[[g]], own)[nzchar(c(skip_a[[g]], own))], collapse = ". ")
+}, "")
+skip_kind <- vapply(seq_along(skip_groups), function(g) {
+  if (nzchar(skip_a[[g]])) "a" else if (nzchar(skip_ok_txt[[g]])) substr(skip_ok_txt[[g]], 1L, 1L) else "none"
+}, "")
+skip_n <- vapply(skip_groups, length, 0L)
+skip_unverified <- which(skip_kind == "none")
+skip_lines <- if (!nrow(skips)) "No test of the mapped tests' run was skipped." else {
+  by_kind <- function(k) sum(skip_n[skip_kind == k])
+  c(sprintf(paste0(
+    "%d tests were skipped in the mapped tests' run, for %d reasons.  None of them is a test that ",
+    "failed: each was not run here because of what this run's machine has or lacks.  %s"),
+    nrow(skips), length(unique(skips$reason)),
+    if (!length(skip_unverified)) paste0(
+      "None hides a defect of the package: ",
+      paste(c(if (by_kind("a")) sprintf("ran and passed on another required environment, %d", by_kind("a")),
+              if (by_kind("b")) sprintf("check behaviour this environment has not (Windows only), %d", by_kind("b")),
+              if (by_kind("c")) sprintf("covered by another test that ran here, %d", by_kind("c")),
+              if (by_kind("d")) sprintf("run after the release tag, in the release's own run, %d", by_kind("d"))),
+            collapse = "; "), ".  The column \"Why this hides no defect\" says how, for each.") else
+      sprintf("%d of them are verified nowhere: see \"Not verified\" below.", sum(skip_n[skip_unverified]))),
+    "",
+    "| Why it was skipped, and where it runs | Skips | Why this hides no defect | Where (test file:line) | The test's message |",
+    "|---|---|---|---|---|",
+    vapply(seq_along(skip_groups), function(g) {
+      i <- skip_groups[[g]]
+      why <- skips$why[i[1L]]
+      sprintf("| %s | %d | %s | %s | %s |", cell(if (is.na(why)) skips$reason[i[1L]] else why), length(i),
+              cell(if (nzchar(skip_ok_txt[[g]])) skip_ok_txt[[g]] else "**not verified**"),
+              cell(paste(unique(skips$where[i]), collapse = ", ")), cell(skips$reason[i[1L]]))
+    }, ""),
+    "",
+    "(a) is found from the records: a required environment of this code whose tests passed (FAIL 0) and whose log does not list the test as skipped ran it and it passed.  (b), (c) and (d) are validation/skip-reasons.csv's.")
+}
+# the reasons the table has not, in this run or in an environment's log: named in
+# the report, so the table is kept up to date
+skip_env_all <- do.call(rbind, c(list(data.frame(reason = character(), files = character())),
+                                 lapply(skip_env_logs, function(s) s[c("reason", "files")])))
+skip_unexplained <- sort(unique(c(
+  skips$reason[is.na(skips$why)],
+  skip_env_all$reason[is.na(skip_why(skip_env_all$reason, sub(",.*$", "", skip_env_all$files), skip_tab))])))
+if (length(skip_unexplained)) {
+  message("Skip reasons not in validation/skip-reasons.csv: ", paste(skip_unexplained, collapse = "; "))
+  skip_lines <- c(skip_lines, "", sprintf(
+    "Shown as the test's own message, not yet explained in validation/skip-reasons.csv: %s.",
+    paste(sprintf("\"%s\"", cell(skip_unexplained)), collapse = "; ")))
+}
+# the skips verified nowhere: the report says so before its conclusion
+skip_unverified_lines <- if (length(skip_unverified)) c(
+  "## Not verified",
+  "",
+  "These skipped tests ran on no required environment, and no other check stands for them: the range they test is not verified in this report.",
+  "",
+  vapply(skip_unverified, function(g) {
+    i <- skip_groups[[g]]
+    sprintf("- %s (%d: %s)", cell(skips$reason[i[1L]]), length(i), paste(unique(skips$where[i]), collapse = ", "))
+  }, ""),
+  "")
 
 # ---- the supported environments, and which tested one stands for each range ------------
 # The mapping (supported -> stands for it -> why) and the risks accepted are the
@@ -734,7 +836,7 @@ sm <- c(
   "",
   "## Skipped tests, with the reason",
   "",
-  sprintf("The mapped tests' run (test-log.txt): %d skipped, by the reason the test gives. The skip count of each other environment is in its table row; its reasons are in environments.txt.", nrow(skips)),
+  "The mapped tests' run (test-log.txt), by the reason: what the test checks, why it was skipped here and where it runs, and why skipping it hides no defect. The skip count of each other environment is in its table row; its skips, explained the same way, are in environments.txt.",
   "",
   skip_lines,
   "",
@@ -756,6 +858,7 @@ sm <- c(
   dev_lines,
   if (length(failing)) c("", sprintf("Failing: %s.", paste(failing, collapse = ", "))),
   "",
+  skip_unverified_lines,
   "## Conclusion",
   "",
   "What assures the quality, in order, against the acceptance criteria of the Quality Plan (section 4):",
