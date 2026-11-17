@@ -86,10 +86,10 @@ RTF document -- not be re-stated in a different vocabulary.
 
 ## The recommended workflow: `as_rtftables()`
 
-[as_rtftables()] is the single entry point.  It takes a table object
+`as_rtftables()` is the single entry point.  It takes a table object
 (`gt_tbl`, a **gtsummary** table, a `data.frame`/tibble, or a list of
 these), reads all of the table's metadata, paginates the body, and
-returns a list of ready-to-render [rtftable()] objects -- one per page:
+returns a list of ready-to-render `rtftable()` objects -- one per page:
 
 ```
   gt / gtsummary / tfrmt          as_rtftables()             rtf_tables()
@@ -112,7 +112,7 @@ g <- gt(head(mtcars, 3)) |>
   ) |>
   tab_source_note("Source: built-in mtcars dataset.")
 
-pages <- as_rtftables(g)          # read = TRUE by default
+pages <- as_rtftables(g)          # read_meta = TRUE by default
 length(pages)                      # one page here
 class(pages[[1]])
 ```
@@ -122,7 +122,7 @@ class(pages[[1]])
 .shot("gt_basic.png")
 ```
 
-Hand the pages straight to [rtf_tables()].  The page-level title and
+Hand the pages straight to `rtf_tables()`.  The page-level title and
 source notes travel with each page (as `rtf_titles` / `rtf_footnotes`
 attributes) and are picked up automatically -- no `read_gt` flag
 needed:
@@ -136,7 +136,7 @@ doc$contents[[1]]$title       # title + subtitle, read from the gt object
 doc$contents[[1]]$footnote    # source note
 ```
 
-For a single page you can use the convenience wrapper [as_rtftable()],
+For a single page you can use the convenience wrapper `as_rtftable()`,
 which returns one `rtftable` instead of a list:
 
 ```{r}
@@ -201,8 +201,8 @@ automatically.
 
 ## What gets read
 
-`read = TRUE` (the default) is shorthand for a set of independent
-tokens, grouped into phases.  Pass `read = c("col_header", "titles")`
+`read_meta = TRUE` (the default) is shorthand for a set of independent
+tokens, grouped into phases.  Pass `read_meta = c("col_header", "titles")`
 to opt in selectively.
 
 * **Phase A (shape-preserving, "safe")**
@@ -245,7 +245,7 @@ to opt in selectively.
     * `"strip_html"`     -- remove stray HTML left in cell values
                             (`<br>` -> line break; other tags dropped)
 
-Anything listed in `read = c(...)` is read; anything left out falls
+Anything listed in `read_meta = c(...)` is read; anything left out falls
 back to the rtfreporter default (e.g. column names from `names(data)`).
 
 ## End-to-end example: a TFL-style adverse-events table
@@ -338,7 +338,7 @@ specify `col_header = c("A", "B", ...)` explicitly, gt's
 ```{r}
 g <- gt(head(mtcars, 1)[, "mpg", drop = FALSE]) |>
   cols_label(mpg = "MPG")
-tbl <- as_rtftable(g, read = TRUE, col_header = "Override")
+tbl <- as_rtftable(g, read_meta = TRUE, col_header = "Override")
 tbl$col_header[[1L]]
 ```
 

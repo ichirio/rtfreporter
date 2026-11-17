@@ -217,7 +217,7 @@ list of rows, where each row is a string or a styled list with any of `align`,
 `bold`, `italic`, `underline` and `color` (a `"#RRGGBB"` hex).
 
 A **footnote** is styled as a block, with [rtf_footnotes()]: `align`,
-`font_size_half_points`, `markup`, and `border` (an [rtf_border()], e.g. the
+`font_size_half_points`, `markup`, and `border` (an `rtf_border()`, e.g. the
 rule above it). A footnote row may be `c(l = , c = , r = )`, up to three cells
 on one line -- the source on the left and the run date on the right:
 

@@ -681,8 +681,8 @@ tbl <- rtftable(page)          # read_attributes = TRUE consumes the attribute
 
 You do not need pagination to use them: `rtftable(blank_rows = )` accepts integer
 positions (here `-1` also means "after the last row"), or the spec constructors
-[blank_rows_by_change()] (blank when a column value changes) and
-[blank_rows_by_rule()] (blank before/after rows matching a regex), or a `list`
+`blank_rows_by_change()` (blank when a column value changes) and
+`blank_rows_by_rule()` (blank before/after rows matching a regex), or a `list`
 combining them:
 
 ```{r blank-single}

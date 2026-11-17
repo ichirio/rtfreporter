@@ -116,8 +116,8 @@ file.exists(out)
 .shot("rt_basic.png")
 ```
 
-The rtables `read` tokens are `"col_header"`, `"alignment"`, `"spanning"`,
-`"titles"`, `"footnotes"`, `"indent"`, `"footnote_marks"`; `read = TRUE`
+The rtables `read_meta` tokens are `"col_header"`, `"alignment"`, `"spanning"`,
+`"titles"`, `"footnotes"`, `"indent"`, `"footnote_marks"`; `read_meta = TRUE`
 (default) reads them all.
 
 ## Splitting a long table across pages
