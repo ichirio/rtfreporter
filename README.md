@@ -32,6 +32,7 @@ included.**
 Install the released version from GitHub, or the development version:
 
 ``` r
+# install.packages("rtfreporter")   # from CRAN, once it is accepted
 remotes::install_github("ichirio/rtfreporter@v0.9.0")   # the latest release, 0.9.0
 remotes::install_github("ichirio/rtfreporter")          # the development version
 ```
@@ -304,11 +305,6 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
   [borders and rules](https://ichirio.github.io/rtfreporter/articles/borders.html), and
   [joining files with a table of contents](https://ichirio.github.io/rtfreporter/articles/output.html)
 - **Architecture & internals** — [the object model, the public classes and the rendering pipeline](https://ichirio.github.io/rtfreporter/articles/architecture.html)
-
-## Status
-
-The latest release is `v0.9.0`; what changed is in [`NEWS.md`](NEWS.md),
-and the roadmap is in the site's sidebar.
 
 ## Citation
 
