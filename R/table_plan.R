@@ -5463,6 +5463,17 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
   unique(c(keys[!hit], unname(of[keys[hit]])))
 }
 
+# A column key's values relabelled as widen_ard() relabels them (its
+# `labels`, the entries for that key or the flat ones)
+.plan_n_relabel <- function(v, labels, ref) {
+  v <- as.character(v)
+  lab <- if (length(labels)) .ard_labels_for(labels, ref)
+  if (is.null(lab)) return(v)
+  hit <- !is.na(v) & v %in% names(lab)
+  v[hit] <- unname(lab[v[hit]])
+  v
+}
+
 .plan_n_read <- function(plan, sp, d = plan$data) {
   cols <- as.character(unlist(sp$cols, use.names = FALSE))
   sep <- sp$sep %||% "____"
@@ -5556,8 +5567,11 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
       at <- at & Reduce(`&`, lapply(has[-seq_len(k)], `!`))
     }
     if (!any(at)) next
+    # (a column key's values as the columns show them: relabelled by
+    # plan_labels() / plan_levels() as widen_ard() does, so the N found is
+    # named as the column it belongs to)
     key <- do.call(paste, c(lapply(cols[seq_len(k)], function(cc)
-      as.character(d[[cc]])), list(sep = sep)))
+      .plan_n_relabel(d[[cc]], sp$labels, cc)), list(sep = sep)))
     got <- numeric(0)
     add <- function(x) {
       x <- x[!names(x) %in% names(got)]
