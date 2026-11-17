@@ -110,12 +110,14 @@ p <- p_body |>
   plan_footnotes("Age in years at baseline. Ongoing = no end date recorded.")
 ```
 
-* `collapse_repeats = TRUE` marks a **key** column. Its value prints on the
-  first line of a record and not on the lines a wrapped cell adds below it.
+* `collapse_repeats = TRUE` marks a **key** column. Its value prints once for
+  each run of records that share it: not on the lines a wrapped cell adds,
+  and not on the next records with the same value.
   If a record continues onto the next page, the value prints again at the
   top of that page.
-* `plan_blanks(where = "records")` puts a blank row between records.
-  `first = TRUE` would add one at the top of every page too.
+* `plan_blanks(where = "records")` puts a blank row after each record. That is
+  the `"multiline"` type's default, written out here. The type also puts one
+  at the top of every page; `first = FALSE` takes it away.
 * `plan_paginate_rows(max_rows = )` counts **physical** rows, including the
   extra lines of wrapped cells, and never splits a record across pages.
 * `plan_titles()` and `plan_footnotes()` put the same block on every page.

@@ -140,7 +140,7 @@ setting. Every layer has been merged, so what you see is what runs.
 |---|---|
 | `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label` | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label)` (`split_rows` is `break_before`) |
 | `split = "by_value"`, `group_col` | `plan_paginate_group(col)`: a page per value |
-| `page_by` | no verb; use `plan_paginate_group()` for a page per value |
+| `page_by` | `plan_paginate_rows(page_by = , heading = )`: a page per value, with a row budget inside |
 | then `paginate_cols(pages, ...)` | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
 
 **Rows**
@@ -163,7 +163,7 @@ setting. Every layer has been merged, so what you see is what runs.
 | `rtftable(col_rel_width = )`, `row_title` | `plan_columns(widths = , row_title = )`; named widths follow the columns |
 | `set_decimal_split(pages, cols = )` | `plan_columns(decimal = )` |
 | `set_col_header(pages, header, values = )` | `plan_col_header(header, values)` |
-| `header_sep` | the separator of several `cols` keys: `plan_columns(sep = )` |
+| `header_sep` | `plan_col_header(header_sep = )`; when it is not given, a plan from an ARD splits on `plan_columns(sep = )` |
 
 **Look**
 
@@ -181,14 +181,15 @@ setting. Every layer has been merged, so what you see is what runs.
 
 | `as_rtftables()` | In a plan |
 |---|---|
-| `read_meta` | `FALSE`: a table from an ARD is a plain data frame with no adapter metadata |
-| `na`, `cell_format` | the cells are text already: `plan_cells(na = )` for an empty cell |
+| `read_meta` | `FALSE`: a plan's table is a plain data frame with no adapter metadata |
+| `na` | `plan_cells(na = )` |
+| `cell_format` | `plan_columns(cell_format = )` |
 
 ## Rules that differ from a single call
 
 A few things behave differently because a plan is built from layers:
 
-* **A later layer wins** for every setting except one. `plan_hide()` **adds**:
+* **A later layer wins**, with a few exceptions. `plan_hide()` **adds**:
   two `plan_hide()` calls hide both columns, because a later one un-hiding the
   first would be a surprise. A named list or vector argument is replaced as a
   whole: `plan_columns(widths = c(AGE = 1200, SEX = 900))` followed by
@@ -196,8 +197,8 @@ A few things behave differently because a plan is built from layers:
   `plan_levels()`, `plan_labels()` and `plan_nest()` merge one key at a time.
 * **Contradictions are errors.** `plan_paginate_group()` with
   `plan_paginate_rows(max_rows = )` says both "a page per value" and "this
-  many rows a page". A single call would quietly ignore `max_rows`. A plan
-  stops and says which to drop.
+  many rows a page". A plan stops and points to
+  `plan_paginate_rows(page_by = , max_rows = )`, which does both.
 * **Declarations name columns, not positions.** `plan_columns(widths =
   c(row_label = 4, .values = 2))` and `plan_cell_style(cols = "Placebo")`
   still apply after a column is added or reordered. `.values` stands for every
