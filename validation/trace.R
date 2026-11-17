@@ -354,11 +354,25 @@ env_stale <- if (is.null(envs)) character() else envs$environment[is_req & !envs
 this_commit <- tryCatch(system2("git", c("rev-parse", "--short", "HEAD"), stdout = TRUE),
                         error = function(e) "unknown")
 short_sha <- function(x) ifelse(is.na(x) | !nzchar(x), "--", substr(x, 1L, 7L))
+# Whether each path is left out of the package by .Rbuildignore, as R CMD
+# build reads it: a pattern (Perl, case ignored) that matches the path or
+# one of its folders
+build_ignored <- function(paths) {
+  f <- file.path(root, ".Rbuildignore")
+  pats <- if (file.exists(f)) trimws(readLines(f, warn = FALSE)) else character()
+  pats <- pats[nzchar(pats) & !startsWith(pats, "#")]
+  vapply(paths, function(p) {
+    parts <- strsplit(p, "/", fixed = TRUE)[[1L]]
+    sub_paths <- vapply(seq_along(parts), function(i) paste(parts[seq_len(i)], collapse = "/"), "")
+    any(vapply(pats, function(x) any(grepl(x, sub_paths, perl = TRUE, ignore.case = TRUE)), NA))
+  }, NA, USE.NAMES = FALSE)
+}
 # A record is of this code when it was made at this commit, or when nothing
 # the tests run changed between its commit and this one: only validation/
 # (the records themselves, committed by their own PR, and the report's
-# scripts) or .github/ (CI).  Unknown when git cannot tell (no history): then
-# it counts as another commit.
+# scripts), .github/ (CI), or a file .Rbuildignore leaves out of the package
+# (cran-comments.md, README.Rmd, data-raw/: the tests never see it).
+# Unknown when git cannot tell (no history): then it counts as another commit.
 same_code <- function(sha) {
   if (is.na(sha) || !nzchar(sha)) return(FALSE)
   if (identical(substr(sha, 1L, 7L), substr(this_commit, 1L, 7L))) return(TRUE)
@@ -366,7 +380,7 @@ same_code <- function(sha) {
     system2("git", c("diff", "--name-only", sha, "HEAD"), stdout = TRUE, stderr = FALSE),
     error = function(e) NULL))
   if (is.null(changed) || !is.null(attr(changed, "status"))) return(FALSE)
-  all(startsWith(changed, "validation/") | startsWith(changed, ".github/"))
+  all(startsWith(changed, "validation/") | startsWith(changed, ".github/") | build_ignored(changed))
 }
 env_code_ok <- if (is.null(envs)) logical() else if (is.null(envs$commit)) rep(FALSE, nrow(envs)) else
   vapply(envs$commit, same_code, logical(1L), USE.NAMES = FALSE)
@@ -419,7 +433,7 @@ env_lines <- if (is.null(envs)) {
   if (length(env_add_failing)) c("", sprintf("Failing here (reported, not judged): %s.",
                                              paste(env_add_failing, collapse = "; "))),
   if (length(env_other_commit)) c("", sprintf(
-    "Recorded at another commit than this report's (%s): %s. Such a record is of this version but not of this code; its test count can differ from this commit's.%s",
+    "Recorded at another commit than this report's (%s): %s. Such a record is of this version but not of this code; its test count can differ from this commit's. (A change only to validation/, .github/ or a file .Rbuildignore leaves out of the package keeps a record of this code.)%s",
     substr(this_commit, 1L, 7L), paste(env_other_commit, collapse = "; "),
     if (length(env_other_req)) " A required one does not count for criterion 3 until it is made again." else "")))
 

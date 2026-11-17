@@ -324,7 +324,10 @@ when all of these hold:
    without a reason, and none not yet assessed;
 3. the tests pass on every **required** environment of section 5 (each
    one's record complete, of this version and of this code, and no
-   dependency there older than the minimum DESCRIPTION names);
+   dependency there older than the minimum DESCRIPTION names; a record
+   stays of this code when the changes since it touch only `validation/`,
+   `.github/` or files `.Rbuildignore` leaves out of the package, such as
+   `cran-comments.md`);
 4. the changes were made under the responsibilities of section 7.
 
 Line coverage and the arguments the tests give are aids, not criteria.
