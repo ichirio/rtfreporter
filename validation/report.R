@@ -32,12 +32,16 @@ envs <- if (length(dirs)) do.call(rbind, lapply(dirs, function(d) {
   utils::read.csv(file.path(d, "env.csv"), colClasses = "character", stringsAsFactors = FALSE)
 })) else NULL
 saveRDS(envs, file.path(out, "environments.rds"))
+# the skips said for a reader (validation/skip-reasons.csv)
+source(file.path(root, "validation", "skip_reasons.R"), local = TRUE)
+skip_tab <- skip_table(root)
 bundle <- unlist(lapply(dirs, function(d) {
   e <- utils::read.csv(file.path(d, "env.csv"), colClasses = "character")
   # sessionInfo() is taken before any package is loaded: the versions of the
   # packages DESCRIPTION names are packages.csv
   p <- file.path(d, "packages.csv")
   pk <- if (file.exists(p)) utils::read.csv(p, colClasses = "character", na.strings = "NA") else NULL
+  log <- readLines(file.path(d, "test-log.txt"), warn = FALSE)
   c(strrep("=", 78), sprintf("%s (%s)", e$environment, e$source),
     sprintf("commit %s, recorded %s", if (is.null(e$commit)) "--" else e$commit,
             if (is.null(e$date)) "--" else e$date),
@@ -46,7 +50,8 @@ bundle <- unlist(lapply(dirs, function(d) {
     "-- the packages DESCRIPTION names (Imports and Suggests), as installed --",
     if (is.null(pk)) "(no packages.csv in this record)" else
       sprintf("%-14s %s", pk$package, ifelse(is.na(pk$version), "not installed", pk$version)), "",
-    "-- the tests' log --", readLines(file.path(d, "test-log.txt"), warn = FALSE), "")
+    "-- the tests' log --", log, "",
+    "-- the skipped tests: why, and where they run --", skip_log_lines(log, skip_tab), "")
 }))
 writeLines(bundle, file.path(out, "environments.txt"), useBytes = TRUE)
 
