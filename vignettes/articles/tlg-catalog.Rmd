@@ -65,11 +65,9 @@ tables -- [tern](https://insightsengineering.github.io/tern/) /
 [tfrmt](https://gsk-biostatistics.github.io/tfrmt/) compute the statistics and
 format the numbers, and the official
 [**Pharmaverse Examples**](https://pharmaverse.github.io/examples/) show
-exactly how.  Where they stop is the **last mile**: turning that finished
-table *object* into the paginated, header-bearing **RTF** page a regulatory
-deliverable actually ships.  That last little step is the gap rtfreporter
-fills -- with full respect for everything the pharmaverse already does, and
-without reinventing any of it.
+exactly how.  This article takes the finished table *object* and writes it as
+a paginated **RTF** page with running headers, the form a regulatory
+deliverable ships in.
 
 So this article picks up right where a **Pharmaverse Example** leaves off.  It
 takes the table objects built -- *verbatim* -- by the
@@ -104,7 +102,7 @@ library(rtfreporter)
 
 Two small helpers build the clinical running header and footer used by every
 table below (the defaults -- landscape Letter, one blank line under the header
--- need no setup; see *Using rtfreporter* for the details):
+-- need no setup; see *Using rtfreporter* below):
 
 ```{r helpers}
 make_header <- function(table_no, title, subtitle = "Safety Analysis Set") {
@@ -209,8 +207,8 @@ dm_gts <- tbl_ard_summary(
 dm_gts
 ```
 
-The gtsummary object is a `gt_tbl`; rtfreporter reads it exactly the same way
--- nothing about the call changes:
+The gtsummary table is converted to a `gt_tbl` (`gtsummary::as_gt()`) and read
+the same way -- nothing about the call changes:
 
 ```{r dm-gts-rtf}
 out_dm_gts <- tempfile(fileext = ".rtf")
@@ -472,8 +470,8 @@ section collects the pieces you can tune.
   numbers.
 * `{PAGE}` / `{TOTAL_PAGES}` -- *static* numbers baked in at render time, so
   each table carries its own real `Page X of Y` text that every viewer shows
-  identically and `assemble_rtf()` leaves untouched.  The recipes above use
-  these.
+  identically and `assemble_rtf()` leaves untouched.  The examples above use
+  these (`make_header()`).
 
 ## Pagination
 
@@ -506,8 +504,8 @@ just before pagination.  rtfreporter ships a few:
   all share one width and line up on both the count digit and the percentage.
   (It also copes with the 4-digit event totals in the tern table, which the
   fixed-width helper below cannot.)
-* `align_count_pct = TRUE` (the cell format `"count_pct"`) -- the older fixed-width
-  helper for plain `"n (xx.x%)"` cells; kept for back-compatibility.
+* `align_count_pct = TRUE` (the cell format `"count_pct"`) -- a fixed-width
+  helper for plain `"n (xx.x%)"` cells.
 * `fmt_right_align()` -- the simplest one: right-justify a column to a common
   width.
 

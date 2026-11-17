@@ -77,9 +77,7 @@ analysis functions build, which are rtables objects -- goes to RTF through
 
 ## From an rtables table to RTF
 
-`as_rtftables()` also accepts any **rtables** `VTableTree` -- including the
-tables produced by **tern** analysis functions, which are rtables objects.
-They are read through `formatters::matrix_form()`, so nested column splits
+`as_rtftables()` accepts any **rtables** `VTableTree`.  It is read through `formatters::matrix_form()`, so nested column splits
 become spanning headers, the row-label stub keeps its indentation, and the
 titles / footers / referential footnotes flow through.  In-cell footnote
 marks `{N}` are rewritten to `^{N}`.
@@ -117,8 +115,9 @@ file.exists(out)
 ```
 
 The rtables `read_meta` tokens are `"col_header"`, `"alignment"`, `"spanning"`,
-`"titles"`, `"footnotes"`, `"indent"`, `"footnote_marks"`; `read_meta = TRUE`
-(default) reads them all.
+`"titles"`, `"footnotes"`, `"footnote_marks"`; `read_meta = TRUE`
+(default) reads them all.  The row-label indentation is always written into the
+labels.
 
 ## Splitting a long table across pages
 
