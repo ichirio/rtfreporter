@@ -255,7 +255,7 @@ Some rules are better enforced at each edit than at the end: lint a changed R
 file, or refuse an edit to `Version:` in `DESCRIPTION`, to `NEWS.md` or to
 `CHANGELOG.md`. Claude Code does this with **hooks**. VS Code has hooks too, in
 Preview. The Claude page shows an example set, which is in `.claude/` in the
-repository (in `next` now, and in `main` with the next merge). The VS Code page shows the format of a hook. Where a tool cannot do it, the
+repository. The VS Code page shows the format of a hook. Where a tool cannot do it, the
 pre-PR check and CI cover the same ground.
 
 ## 4. The workflow

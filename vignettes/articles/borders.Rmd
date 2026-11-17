@@ -57,25 +57,26 @@ library(rtfreporter)
 
 Clinical tables live and die by their rules: a top and bottom line around the
 column header, a group underline beneath a spanning label, an occasional rule
-under the last data row. rtfreporter gives you three levels of control, from a
-one-word preset down to a single cell. This article walks through all three,
+under the last data row. rtfreporter gives you five levels of control, from a
+one-word preset down to a single cell and the restyling of a finished table.
+This article walks through all five,
 with runnable code.
 
 The border objects are plain S3 records (no reference semantics), so a border
 you build can be reused across tables safely. The vocabulary is small:
 
 ```r
-rtf_border(all, top, bottom, left, right, inside_h, inside_v,
-           style, width, color, from)
+rtf_border(all, top, bottom, left, right, inside_h, inside_v)
 ```
 
 `top`/`bottom`/`left`/`right` are the selection's outer edges and `all` is the
 four of them at once; `inside_h` and `inside_v` are the rules *between* its rows
 and *between* its cells. Each takes `TRUE` for a rule, `FALSE` or `"none"` for
-none, or a style name such as `"double"`. `style`/`width`/`colour` describe the
-line those sides draw, and `from` layers a border onto an existing one.
+none, a style name such as `"double"`, or an `rtf_border_line(style, width,
+color)` for a line of its own weight or colour. The `style_*()` verbs layer a
+border onto an existing one, side by side.
 
-That is the whole vocabulary -- **one function**. There is no separate
+That is the whole vocabulary -- **one function** (and `rtf_border_line()` for a line's look). There is no separate
 table-border type and no per-edge constructor: what a border applies to is
 decided by where you attach it, the same way Word's border dialog acts on
 whatever is selected.
@@ -97,7 +98,7 @@ other arguments are present.
 
 ## Level 1 -- a preset
 
-The `border` argument of `rtftable()` (and `rtf_tables()`, `as_rtftables()`)
+The `border` argument of `rtftable()` (and `as_rtftables()`)
 accepts a shorthand string:
 
 ```{r preset}
@@ -176,8 +177,7 @@ tbl <- rtftable(df, border = "none") |>
 .shot("bd_zones.png")
 ```
 
-`style`, `width` and `color` describe the line that the sides named in the same
-call draw:
+`rtf_border_line(style, width, color)` gives a side its own line:
 
 ```{r side}
 rtf_border(top = rtf_border_line("double", 30L, "#003366"))
@@ -221,7 +221,7 @@ does not draw this grid; the rules inside are named with `inside_h` /
 `inside_v`. See *Common cases* at the end of this article.
 
 
-## Level 3 -- single columns and single cells
+## Level 4 -- single columns and single cells
 
 The header is where fine control matters most. Two mechanisms reach inside it.
 
@@ -316,7 +316,7 @@ from step 3. That single rule -- *last writer wins, per side* -- is all you need
 to reason about any combination.
 
 
-## Level 4 -- restyling an existing table: the styling verbs
+## Level 5 -- restyling an existing table: the styling verbs
 
 Everything above configures a table you are *building*. When the table already
 exists -- typically because `as_rtftables(x, read_meta = TRUE)` extracted the
@@ -375,15 +375,6 @@ The merge semantics are the ones this article already taught: last writer
 wins, per side. See `?style_header` for the full family, including how a
 character label row is promoted to cells when it needs a per-cell border.
 
-<!-- where-next -->
-
-## Where next
-
-- [Output options](output.html) --- what the rendered file contains
-
-The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.
-
-
 ## Common cases
 
 `s` is `TRUE` throughout. An edge always means the **outer** edge of the
@@ -419,3 +410,11 @@ rtfreporter warns **once per session** when it meets a border whose edges
 could be read as either the outer edge or every rule. Naming `inside_h` /
 `inside_v` says which you mean and silences it. Use `"none"` when the answer is
 "no rule there".
+
+<!-- where-next -->
+
+## Where next
+
+- [Output options](output.html) --- what the rendered file contains
+
+The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.

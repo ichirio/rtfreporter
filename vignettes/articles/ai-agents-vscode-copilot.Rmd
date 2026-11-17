@@ -207,8 +207,7 @@ Preview, rely on the pre-PR check and on CI for these rules until you have
 tested a hook yourself.
 
 The example hooks in `.claude/` in the repository are written for Claude Code
-and tested only with it. They are in `next` now, and they reach `main` with the
-next merge. See
+and tested only with it. See
 [the Claude app page](ai-agents-claude-app.html#checks-on-each-edit).
 
 Source: <https://code.visualstudio.com/docs/copilot/customization/hooks>

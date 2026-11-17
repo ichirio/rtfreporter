@@ -159,7 +159,7 @@ Claude が止まって、あなたに聞きます（`deny` にするとコマン
 アプリのローカルセッションは、個人のスキルを `~/.claude/skills/` から、プロジェクトの
 スキルをリポジトリから読み込みます。起動は `/<name>` です。リポジトリには、次のスキルが
 [`.claude/skills/pre-pr/SKILL.md`](https://github.com/ichirio/rtfreporter/blob/main/.claude/skills/pre-pr/SKILL.md) としてあります。
-今は `next` にあり、次に `next` を `main` にマージしたときに `main` に入ります。中身は次のとおりです。
+中身は次のとおりです。
 
 ```markdown
 ---
@@ -200,8 +200,8 @@ Claude Code では実行していません。`disable-model-invocation: true` �
 結果を返すだけです。マッチャー `Edit|Write` はファイルの編集を選び、ファイルのパスは
 `tool_input.file_path` に入っています。
 
-2 つのフックの例が、リポジトリの `.claude/` にあります。今は `next` にあり、次に `next` を
-`main` にマージしたときに `main` に入ります。下の設定は `.claude/settings.json` に入っています
+2 つのフックの例が、リポジトリの `.claude/` にあります。
+下の設定は `.claude/settings.json` に入っています
 （`.claude` はパッケージの
 ビルドから除外されているので、あるのはリポジトリであって、インストールされるパッケージでは
 ありません）。フックのコマンドは `bash` を呼びます。Windows では Git Bash のことで、

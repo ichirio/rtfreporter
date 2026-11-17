@@ -157,8 +157,8 @@ A **skill** is a folder with a `SKILL.md` file. A project skill lives in
 `.claude/skills/<name>/SKILL.md`; commit it to share it. Local sessions in the
 desktop app load personal skills from `~/.claude/skills/` and project skills
 from the repository. You start it with `/<name>`. The repository has this one
-as [`.claude/skills/pre-pr/SKILL.md`](https://github.com/ichirio/rtfreporter/blob/main/.claude/skills/pre-pr/SKILL.md),
-in `next` now and in `main` with the next merge of `next` into `main`. Its text is:
+as [`.claude/skills/pre-pr/SKILL.md`](https://github.com/ichirio/rtfreporter/blob/main/.claude/skills/pre-pr/SKILL.md).
+Its text is:
 
 ```markdown
 ---
@@ -200,8 +200,7 @@ can block it with exit code 2; the message on stderr is what Claude sees. A
 The matcher `Edit|Write` selects file edits, and the file's path is in
 `tool_input.file_path`.
 
-An example set of two hooks is in `.claude/` in the repository. It is in
-`next` now, and it reaches `main` with the next merge of `next` into `main`.
+An example set of two hooks is in `.claude/` in the repository.
 `.claude/settings.json` holds the settings shown below. (`.claude` is left out
 of the package build, so it is in the repository, not in the installed
 package.) The hook commands call `bash`; on

@@ -338,7 +338,7 @@ rtfreporter の token（`{PAGE}`、`{PROGRAM}` など）と `rtf_document(tokens
 
 ## 次に読む
 
-- [Titles, footnotes and several tables](adding-content.html) --- タイトルと脚注の書き方と体裁
+- [Adding tables and figures](adding-content.html) --- タイトルと脚注の書き方と体裁
 - [Headers, footers and tokens](headers-footers.html) --- ページのヘッダー・フッターと token
 - [Splitting a report into sections](section-splitting.html) --- セクションと `auto_section`
 - [Listings with a plan](plan-listings.html) --- 折り返すリスティング

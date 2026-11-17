@@ -553,7 +553,7 @@ within, the writable page width). An explicit `column_widths_twips` /
 ## Pass-through to `rtftable()`
 
 Any further argument is forwarded to `rtftable()` for **every** page, so you can
-set the table''s appearance in the same call -- and your explicit values always
+set the table's appearance in the same call -- and your explicit values always
 win over the metadata extracted from the source:
 
 ```{r passthrough}
