@@ -1032,6 +1032,54 @@ test_that("FT-PL172 [FR-PL333 FR-PL334]: plan_empty() says what is wrong", {
   expect_error(plan_empty(vc_empty()), "Expected a table_plan; pipe from table_plan(ard).", fixed = TRUE)
 })
 
+# a listing's RTF text, written to a temporary file
+vc_listing_rtf <- function(d, ...) {
+  p <- table_plan(d) |> plan_listing(listing_col("USUBJID"), listing_col("AETERM"))
+  p <- Reduce(function(a, f) f(a), list(...), p)
+  dir <- tempfile("lst-")
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+  f <- file.path(dir, "l.rtf")
+  generate_rtfreport(rtf_document(file = f) |> rtf_tables(as_rtftables(p)), f, overwrite = TRUE)
+  paste(readLines(f, warn = FALSE), collapse = "\n")
+}
+
+test_that("FT-PL6802 [FR-PL991 FR-PL992]: plan_empty() on a listing of no records prints its sentence and footnote", {
+  none <- data.frame(USUBJID = character(), AETERM = character())
+  txt <- vc_listing_rtf(none, function(p) plan_empty(p, "No records were reported."))
+  expect_true(grepl("No records were reported.", txt, fixed = TRUE))
+  expect_true(grepl("AETERM", txt, fixed = TRUE))
+  # the default sentence, as on a table
+  expect_true(grepl("No subjects met the criteria.", vc_listing_rtf(none, plan_empty), fixed = TRUE))
+  # the sentence is one row, in the first listing column
+  pg <- plan_apply(table_plan(none) |> plan_listing(listing_col("USUBJID"), listing_col("AETERM")) |>
+                     plan_empty("None."))
+  d <- if (inherits(pg, "rtftable")) pg$data else pg[[1L]]$data
+  expect_identical(d$USUBJID[1L], "None.")
+  expect_identical(d$AETERM[1L], "")
+  # the footnote, only when the listing is empty; text = NULL leaves the row out
+  fn <- function(p) plan_empty(p, "None.", footnote = "No records.")
+  expect_true(grepl("No records.", vc_listing_rtf(none, fn), fixed = TRUE))
+  some <- data.frame(USUBJID = c("S1", "S2"), AETERM = c("A", "B"))
+  expect_false(grepl("No records.", vc_listing_rtf(some, fn), fixed = TRUE))
+  p0 <- table_plan(none) |> plan_listing(listing_col("USUBJID"), listing_col("AETERM")) |>
+    plan_empty(text = NULL, footnote = "Nothing.")
+  pg0 <- plan_apply(p0)
+  expect_identical(unlist(attr(if (inherits(pg0, "rtftable")) pg0 else pg0[[1L]], "rtf_footnotes")), "Nothing.")
+})
+
+test_that("FT-PL6803 [FR-PL993]: a listing with records, or with no plan_empty(), is as it was", {
+  some <- data.frame(USUBJID = c("S1", "S2"), AETERM = c("A", "B"))
+  none <- data.frame(USUBJID = character(), AETERM = character())
+  with <- vc_listing_rtf(some, function(p) plan_empty(p, "No records were reported."))
+  expect_false(grepl("No records were reported.", with, fixed = TRUE))
+  expect_identical(with, vc_listing_rtf(some))
+  # no plan_empty(): a listing of no records is its headings only
+  bare <- vc_listing_rtf(none)
+  expect_false(grepl("No subjects met the criteria.", bare, fixed = TRUE))
+  expect_true(grepl("AETERM", bare, fixed = TRUE))
+})
+
 test_that("plan_empty() says a table its filter emptied, with no overall row in the ARD (#750)", {
   ae <- data.frame(ARM = c("Placebo", "Active"), .label = "Headache",
                    .kind = "categorical", stat_name = "n", stat = c(1, 2))
