@@ -4270,6 +4270,10 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     d <- .plan$data
     .plan_remember(.plan, "table", d)
     if (stage %in% c("table", "input")) return(d)
+    # a listing of no records: plan_empty()'s sentence as one row, as on a
+    # table (#1100)
+    emp <- .plan_resolve(.plan, "empty")
+    if (length(emp)) d <- .plan_empty_listing(.plan, d, emp)
     return(.plan_to_pages(.plan, d))
   }
   # A table somebody already built -- with widen_ard(), with dplyr, with
@@ -4529,6 +4533,23 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
          first = rbind(row, tbl),
          replace = row,
          rbind(tbl, row))
+}
+
+# plan_empty() on a listing: a listing with no record (and `when` not
+# "overall_zero", which is an ARD's) gets its sentence as one row, in its
+# first column; the other cells blank.  Remembered for the footnote.
+.plan_empty_listing <- function(plan, d, e) {
+  empty <- nrow(d) == 0L && !identical(e$when, "overall_zero")
+  plan$cache$empty <- isTRUE(empty)
+  if (!empty || isTRUE(e$.no_text) || is.null(e$text)) return(d)
+  row <- as.data.frame(lapply(d, function(v) {
+    if (is.character(v)) "" else v[NA_integer_]
+  }), stringsAsFactors = FALSE, check.names = FALSE)
+  cols <- .plan_merge(.plan_of(plan, "listing"))$cols
+  first <- vapply(cols, function(cl) as.character(cl$name)[1L], "")
+  first <- c(first[first %in% names(d)], names(d))[1L]
+  row[[first]] <- e$text
+  row
 }
 
 # The rows of each nested variable moved under their level: found by the
