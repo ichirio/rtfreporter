@@ -15,7 +15,14 @@
 * win-builder: R-devel, R-release, R-oldrelease
 * R-hub: linux, macos-arm64, windows, and one sanitizer run
 
-(Results: to be filled from the release test run before submission.)
+Results of the release test run (frozen next, 1b316c4, 2026-11-17):
+
+* local Windows 11, R 4.6.1, every suggested package installed:
+  tests FAIL 0 | WARN 0 | SKIP 6 | PASS 26365
+* local Windows 11, R 4.4.2: tests FAIL 0 | WARN 2 | SKIP 12 | PASS 26269
+  (the warnings: testthat built under R 4.4.3; the extra skips: broom.helpers
+  not installed there)
+* GitHub Actions, win-builder, R-hub: (to be filled before submission)
 
 ## Notes for the reviewers
 
