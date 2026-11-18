@@ -201,7 +201,7 @@ VS Code のフックのページには、Local ハーネスはマッチャーの
 と CI に任せてください。
 
 リポジトリの `.claude/` にあるフックの例は、Claude Code 向けに書かれ、Claude でのみ
-確認しています。今は `next` にあり、次のマージで `main` に入ります。
+確認しています。
 [Claude アプリのページ](ai-agents-claude-app-ja.html#checks-on-each-edit) を参照して
 ください。
 

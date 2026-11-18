@@ -57,14 +57,6 @@ set.seed(20260909)
 library(rtfreporter)
 ```
 
-The figures below are written with the study's running header and footer,
-the same as the tables' in the [Gallery](gallery.html): the study and the
-page number, then the output's number, title and population at the top; its
-footnotes, then the program's full path and the run date and time at the
-bottom.  They are written with rtfreporter's own functions,
-`rtf_document() |> rtf_section(header = rtf_header(), footer = rtf_footer())`,
-then `rtf_figures()`.
-
 A figure is a content page like any other: one figure per page, its own titles
 and footnotes, the section's running header and footer around it. What is
 particular to a figure is **size** -- a table fills the width it is given,
@@ -72,6 +64,14 @@ while a figure has a size of its own and has to be told what to do about it.
 
 This article is about that: getting a plot into the document, deciding how big
 it is on the page, and knowing what the file underneath is.
+
+The figures below are written with the study's running header and footer,
+the same as the tables' in the [Gallery](gallery.html): the study and the
+page number, then the output's number, title and population at the top; its
+footnotes, then the program's full path and the run date and time at the
+bottom.  They are written with rtfreporter's own functions,
+`rtf_document() |> rtf_section(header = rtf_header(), footer = rtf_footer())`,
+then `rtf_figures()`.
 
 ## A plot object goes straight in
 
@@ -230,7 +230,7 @@ unit the rest of the package uses. `align` puts the figure `"center"`
 
 ## From a file
 
-The path form is unchanged, and it is what you want when the graphic comes
+A path to an image file is what you want when the graphic comes
 from somewhere else -- a validated output from another system, a diagram
 someone drew:
 
@@ -270,7 +270,7 @@ file.create(svg)
 rtfplot(svg)
 ```
 
-For a clinical deliverable that is the right pair: PNG for anything with text
+For a clinical deliverable: PNG for anything with text
 or lines (lossless, and the usual choice for a plot), JPEG for a photograph.
 An EMF file -- a vector picture, from a program that writes one -- is embedded
 as it is, at the size its header gives (the frame, in 0.01 mm). It prints more
@@ -337,8 +337,8 @@ rtf_layout(doc)
 
 ## Where next
 
-- [Adding content](adding-content.html) --- titles, footnotes and the page model
+- [Adding tables and figures](adding-content.html) --- titles, footnotes and the page model
 - [Headers and footers](headers-footers.html) --- the running header around a figure
-- [Rendering & assembly](output.html) --- combining figure and table documents into one file
+- [Assembling reports into one document](assembling.html) --- combining figure and table documents into one file
 
 See `?rtfplot` and `?rtf_figures` for the full argument reference.

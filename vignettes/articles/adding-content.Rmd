@@ -172,7 +172,7 @@ rule). You can switch either form with the document defaults
 `title_format` / `footnote_format` (`"text"` or `"table"`):
 
 ```{r title-format}
-doc <- rtf_document(style = rtf_style(title_format = "table")) |>  # legacy
+doc <- rtf_document(style = rtf_style(title_format = "table")) |>  # titles as a table
   rtf_tables(list(df1), titles = list("Table 14.1.1"))
 ```
 
@@ -216,8 +216,8 @@ A **title** block can be a plain character vector (default styling) **or** a
 list of rows, where each row is a string or a styled list with any of `align`,
 `bold`, `italic`, `underline` and `color` (a `"#RRGGBB"` hex).
 
-A **footnote** is styled as a block, with [rtf_footnotes()]: `align`,
-`font_size_half_points`, `markup`, and `border` (an [rtf_border()], e.g. the
+A **footnote** is styled as a block, with `rtf_footnotes()`: `align`,
+`font_size_half_points`, `markup`, and `border` (an `rtf_border()`, e.g. the
 rule above it). A footnote row may be `c(l = , c = , r = )`, up to three cells
 on one line -- the source on the left and the run date on the right:
 
@@ -250,8 +250,7 @@ notes flow through automatically -- see
 
 Cell text (data cells, column / spanning headers, titles and footnotes) is run
 through a small markup step controlled by the `markup` argument of `rtftable()`
-(and `rtf_tables()` for bare data.frames; the document-wide default is
-`rtf_document(style = rtf_style(markup = ))`). It takes a character vector of:
+(the document-wide default is `rtf_document(style = rtf_style(markup = ))`). It takes a character vector of:
 
 - `"script"` -- `^{...}` renders as superscript, `_{...}` as subscript (this is
   how adapter-generated footnote reference marks such as `^{1}` become real
@@ -282,7 +281,7 @@ see the [figures article](figures.html)), image paths (PNG/JPEG), or
 display, and `titles` / `footnotes` work exactly as for tables.
 
 ```{r figure-object, eval = FALSE}
-rtf_figures(list(ggplot(dat, aes(week, mean)) + geom_line()))  # no file needed
+rtf_document() |> rtf_figures(list(ggplot(dat, aes(week, mean)) + geom_line()))  # no file needed
 ```
 
 **By default a figure embeds at its native size (100%)** -- the pixel dimensions
@@ -314,7 +313,7 @@ scale a figure -- for example to shrink one that is wider than the page, since
 the native size is **not** auto-capped to the writable width:
 
 ```{r figure-scale, eval = FALSE}
-rtf_figures(list(img), width_twips = 9000L)          # force 6.25 in wide
+rtf_document() |> rtf_figures(list(img), width_twips = 9000L)        # force 6.25 in wide
 ```
 
 Tables and figures share the same page model, so a report is just a sequence of

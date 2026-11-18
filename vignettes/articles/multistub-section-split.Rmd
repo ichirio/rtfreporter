@@ -194,9 +194,8 @@ outer level splits, the inner levels merge.
   `auto_section` can see them, for every table object.
 - [Importing tables](importing-tables.html) -- what `as_rtftables()` reads from a `gt`
   (and why a multi-stub table is read from slots).
-- [`stub_cols()`] -- the same stub merge on a plain `data.frame`, and the
-  `stub` argument of [`as_rtftables()`] that folds it into the pipeline.
-```
+- `stub_cols()` -- the same stub merge on a plain `data.frame`, and the
+  `stub` argument of `as_rtftables()` that folds it into the pipeline.
 
 <!-- where-next -->
 

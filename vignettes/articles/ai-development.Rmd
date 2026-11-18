@@ -55,7 +55,7 @@ Then say, in as many words:
 
 > Use this manual when working on the rtfreporter codebase.
 
-It is one self-contained file of about 18 KB — roughly 5,000 tokens, so it
+It is one self-contained file of about 35 KB — roughly 9,000 tokens, so it
 sits comfortably in a session alongside a long conversation. It carries the
 invariants, the S3 object model, the rendering pipeline, the `as_rtftables()`
 kwargs contract, how to add a table-object adapter, the code / test / docs
@@ -96,16 +96,15 @@ Then, once you agree on the approach:
 
 > Implement it. Branch `feat/123-slug`, update `R/`, the tests and the
 > roxygen together, run `devtools::document()`, `devtools::test()` and
-> `lintr::lint_package()`, add a `NEWS.md` entry, and open the PR with
-> `Closes #123`.
+> `lintr::lint_package()`, fill the PR template's *User-visible change (for
+> NEWS)* field, and open the PR with `Closes #123`.
 
 Every item in that list is in the manual; naming them anyway is cheap and
 makes the omissions obvious when you review.
 
 Note what is *not* in it: a version bump.  Under the standard R scheme
 (`X.Y.Z` released, `X.Y.Z.9000` in development) an ordinary PR leaves
-`DESCRIPTION` alone unless the change is one somebody needs to name, and
-`version-guard` rejects a PR that touches `X.Y.Z` without the `release` label.
+`Version:` alone, and `version-guard` rejects a PR that touches `X.Y.Z` without the `release` label.
 An assistant that "helpfully" bumps the version is making a release, and will
 be told so by CI.
 
@@ -155,8 +154,8 @@ fails CI:
 
 * the user manual's function list must equal `getNamespaceExports()`
   **exactly** — no omission, no invented name;
-* no deprecated export may appear in any code block, and every deprecated
-  export must be documented as deprecated;
+* no function removed in 0.9.0 may appear in a code block, and the manual has
+  no table of deprecated functions;
 * every idiom the user manual teaches is executed against the package,
   including the ones it documents as *errors*;
 * the developer manual's source-file map, `Imports:` list and S3-only claim

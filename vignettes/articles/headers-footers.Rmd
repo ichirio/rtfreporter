@@ -64,14 +64,14 @@ attached to individual pages. Instead they are defined by **sections**.
 
 A **section** assigns a header and footer starting at a given page; that
 header/footer applies to every page **from there until the next section**. There
-is no separate "per-page header" mechanism -- a single page''s header is simply
+is no separate "per-page header" mechanism -- a single page's header is simply
 whatever the section covering that page defines. You create sections with
 `rtf_section(doc, page = , header = , footer = )`.
 
 Two consequences worth remembering:
 
 - Passing `header = NULL` (or `footer = NULL`) for a section means **inherit**
-  the previous section''s header (footer) -- not "blank".
+  the previous section's header (footer) -- not "blank".
 - Sections are an overlay on the flat page list; they do **not** contain or
   group the content. Content order alone determines page numbers.
 
@@ -169,7 +169,7 @@ doc <- rtf_document() |>
 .shot("hf_ranges.png")
 ```
 
-`footer = NULL` on the second section inherits the first section''s footer, so
+`footer = NULL` on the second section inherits the first section's footer, so
 only the header changes at page 3. You can also assign several sections in one
 call by passing a vector of `page`s and a list of `secinfo` objects -- see
 `?rtf_section`.
@@ -208,8 +208,9 @@ the same section mechanism described above.
 (its text goes in the header), and an empty / unnamed element falls through into
 the current section. The example above works because each item is a single
 table. But `as_rtftables()` returns **one element per page**, so a paginated
-table is already a list -- naming the whole list once is not enough, and naming
-*every* page would start a fresh section on each page.
+table is already a list. A section opens where the name **changes**, so pages
+that share a name (the pages of one split table) form one section, and a page
+with an empty name falls through into the open section.
 
 Two ways to get clean sections from converted tables:
 
@@ -228,7 +229,7 @@ Two ways to get clean sections from converted tables:
 
 - **Group is row-grouped** (gt, gtsummary, rtables/tern, or `tfrmt` indented --
   the group is rendered as label rows, not a column), **or you are combining
-  several distinct tables**: use [`combine_sections()`]. Each argument's name
+  several distinct tables**: use `combine_sections()`. Each argument's name
   becomes one section, applied to that argument's first page with the remaining
   pages falling through:
 
@@ -243,15 +244,13 @@ Two ways to get clean sections from converted tables:
       auto_section = TRUE)                          # one clean section per table
   ```
 
-Leaving the pages named one-per-page is also fine -- it simply yields one RTF
-section per page, which is harmless (it matches the common one-page-one-section
-convention). `combine_sections()` is just for the tidier one-section-per-table
-layout.
+`combine_sections()` is for tables whose pages carry different names (one per
+row group, say): it gives each table one section.
 
 
 ## Page numbering
 
-The tokens render to dynamic RTF fields, so the page numbers are correct in the
+`{AUTO_PAGE}` and `{AUTO_TOTAL_PAGES}` render to RTF fields, so the page numbers are correct in the
 word processor even after the document is re-paginated:
 
 ```{r numbering}

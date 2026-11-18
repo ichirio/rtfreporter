@@ -248,10 +248,8 @@ general-purpose RTF library.  What that buys you:
   rtf_tables() |> generate_rtfreport()` — the same vocabulary every
   time, so building a 50-TFL deliverable is a loop.
 
-If your deliverables need a substantially different layout, another tool
-may serve you better — and that trade-off is intentional.  We would
-rather do one well-defined style really well than do everything passably.
-You are warmly welcome to use rtfreporter for the styles it supports.
+rtfreporter does one well-defined style, and does it well.  If that style
+is what your deliverables need, you are warmly welcome to use it.
 
 ## Why RTF?
 
@@ -275,10 +273,8 @@ genuinely useful today:
   it to PDF, so the final step fits whatever your organisation already
   uses.
 
-A PDF-first or DOCX-first toolkit could do the same job, perhaps more
-elegantly or with more features.  But for *our* needs — which are modest,
-specific, and well-defined — RTF remains the easiest path that is
-**necessary and sufficient**.  Simplicity, here, is the feature.
+For needs that are modest, specific and well-defined, RTF is the easiest
+path that is **necessary and sufficient**.  Simplicity, here, is the feature.
 
 ## Documentation
 
@@ -303,7 +299,7 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
 - **Figures** — [a plot object to a page](https://ichirio.github.io/rtfreporter/articles/figures.html)
 - **Assembling a deliverable** — [headers, footers and tokens](https://ichirio.github.io/rtfreporter/articles/headers-footers.html),
   [borders and rules](https://ichirio.github.io/rtfreporter/articles/borders.html), and
-  [joining files with a table of contents](https://ichirio.github.io/rtfreporter/articles/output.html)
+  [joining files with a table of contents](https://ichirio.github.io/rtfreporter/articles/assembling.html)
 - **Architecture & internals** — [the object model, the public classes and the rendering pipeline](https://ichirio.github.io/rtfreporter/articles/architecture.html)
 
 ## Citation

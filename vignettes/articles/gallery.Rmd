@@ -387,5 +387,5 @@ generate_rtfreport(doc, "f_vs.rtf", overwrite = TRUE)
   step, and [Tables from an ARD](tables-from-ard.html) the others from an ARD.
 * [The plan verbs](plan-verbs.html), [Listings with a plan](plan-listings.html)
   and [Figures](figures.html) explain the pieces used here.
-* [Rendering, post-processing and assembly](output.html) joins finished files
+* [Assembling reports into one document](assembling.html) joins finished files
   like these into one deliverable with a table of contents.
