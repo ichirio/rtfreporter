@@ -9,7 +9,7 @@ Authors@R: c(
            role   = c("aut", "cph")),
     person("Shoichi", "Fujita", email = "shoichi.fujita@takeda.com", role = "cre"))
 Description: A standalone toolkit for generating Rich Text Format (RTF)
-    reports used in clinical trial deliverables -- Tables, Listings and
+    reports used in clinical trial deliverables: Tables, Listings and
     Figures (TFLs). Provides a functional, pipe-friendly API to compose
     documents with multi-section headers and footers, multi-row column
     headers including spanning groups, per-column formatting, automatic
@@ -17,7 +17,10 @@ Description: A standalone toolkit for generating Rich Text Format (RTF)
     borders. Tables can also be made from an analysis results dataset
     (ARD, as built by 'cards' and 'cardx') with a plan of small verbs:
     which keys are columns and rows, how the statistics are formatted, and
-    how the table is paged. Requires only packages that ship with R.
+    how the table is paged. Listings are laid out and paged by subject,
+    and finished RTF files can be assembled into one document with a
+    table of contents. The required dependencies all ship with R; the
+    packages that read other table formats are optional.
 License: Apache License (>= 2)
 URL: https://github.com/ichirio/rtfreporter,
     https://ichirio.github.io/rtfreporter/

@@ -2,12 +2,13 @@
 
 0 errors | 0 warnings | 1 note
 
-* This is a new submission.
-* The maintainer is the person named as `cre` in DESCRIPTION.
+* This is a new submission.  The one NOTE is the "New submission" note.
+
+There are no reverse dependencies (this is the package's first release).
 
 ## Test environments
 
-* local: Windows 11, R 4.6.1 (and R 4.4.2)
+* local: Windows 11, R 4.6.1
 * GitHub Actions: ubuntu-latest (devel, release, oldrel-1),
   macos-latest (release), windows-latest (release), and ubuntu-24.04
   with R 4.3 and every dependency at the minimum version DESCRIPTION
@@ -15,13 +16,10 @@
 * win-builder: R-devel, R-release, R-oldrelease
 * R-hub: linux, macos-arm64, windows, and one sanitizer run
 
-Results of the release test run (2026-11-17):
+Results of the release test run:
 
-* local Windows 11, R 4.6.1, every suggested package installed, on the tag
+* local Windows 11, R 4.6.1, every suggested package installed, on the release
   candidate (f7015fc): tests FAIL 0 | WARN 0 | SKIP 6 | PASS 26383
-* local Windows 11, R 4.4.2, on the frozen next (1b316c4): tests FAIL 0 | WARN 2 | SKIP 12 | PASS 26269
-  (the warnings: testthat built under R 4.4.3; the extra skips: broom.helpers
-  not installed there)
 * GitHub Actions, win-builder, R-hub: (to be filled before submission)
 
 ## Notes for the reviewers
