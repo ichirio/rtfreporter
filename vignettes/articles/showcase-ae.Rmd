@@ -52,9 +52,7 @@ and validation story. What they all have in common is the *last* step: a
 
 That last step is exactly what `rtfreporter` does, for **all of them**. This
 article builds the **same adverse-events report from the same data** with several
-frameworks and renders each to RTF through `rtfreporter`. The point is not that
-one framework is best -- it is that **whatever you already use, rtfreporter is
-the RTF back end**. Its companion,
+frameworks and renders each to RTF through `rtfreporter`. **Whatever you already use, rtfreporter is the RTF back end**. Its companion,
 [Demographics](showcase-dm.html), does the same for a single-page demographics
 table; this article tackles a longer table that `rtfreporter` must **paginate**.
 
@@ -201,7 +199,7 @@ carries no metadata to begin with.)
 
 ## rtables / tern
 
-`tern` is the pharmaverse standard for this table. `analyze_num_patients()`
+`tern` builds this table with `analyze_num_patients()`, which
 gives the overall "any AE" row; a SOC-level content summary
 (`summarize_row_groups()` with `child_labels = "hidden"`) puts each SOC's
 distinct-subject count **on the SOC name row**; `count_occurrences()` gives the
@@ -610,11 +608,6 @@ generate_rtfreport(doc, "ae_huxtable.rtf", overwrite = TRUE)
 > **Seven ways, one report.** rtables/tern, gtsummary, cards + gtsummary, Tplyr,
 > cards + tfrmt, and gtsummary converted to flextable / huxtable -- all the same
 > AE table, all rendered to the same paginated RTF by `rtfreporter`.
-
----
-
-*Coming next, under the same showcase: real Word snapshots in place of the
-current placeholders.*
 
 <!-- where-next -->
 

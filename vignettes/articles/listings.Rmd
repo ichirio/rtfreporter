@@ -56,9 +56,9 @@ options(width = 100)
 library(rtfreporter)
 ```
 
-A table and a listing want different things from the same package. A table is
-already a table by the time it reaches `rtfreporter`: some framework counted,
-summarised and labelled it, and what is left is rendering. A listing is
+A table and a listing want different things from the same package. A table reaches
+rtfreporter with its numbers already computed, as a table object or an ARD, and
+what is left is layout. A listing is
 different -- it is one row of source data per subject, and the work is
 **shape**:
 
@@ -70,7 +70,7 @@ different -- it is one row of source data per subject, and the work is
 * **a page break must never land inside a subject's block.**
 
 `listing_col()`, `listing_spec()` and `build_listing()` do the first four.
-The fifth is `as_rtftables()`, which could already do it. This article runs the
+The fifth is `as_rtftables()`'s job. This article runs the
 whole thing, source data to `.rtf`.
 
 ## The source data
@@ -147,7 +147,8 @@ Two more per-column settings matter before the widths: `layout = "flow"`
 fills each line as far as `width` allows instead of starting every variable on
 its own line -- for a column of `c("AGE", "SEX")`, which would otherwise spend
 two rows on four characters -- and `collapse_repeats = TRUE` marks a **key**
-column, printed once per record and again at the top of the next page. (The
+column, printed once for each run of records that share it, and again at the
+top of the next page. (The
 separator breaks *between* the variables of a column, not inside a value: a
 single variable `AGESEX` holding `64/M` stays on one line when it fits.)
 
@@ -324,8 +325,8 @@ pages[[2]]
 .shot("ls_paginate.png")
 ```
 
-Nothing new implements that. `build_listing()` emitted the `.rtf_record`
-column, and the hook pointed the machinery that was already there at it:
+`build_listing()` writes the `.rtf_record` column, and `listing =` points the
+usual pagination settings at it:
 
 ```{r equivalent, eval = FALSE}
 # what as_rtftables(listing = spec, max_rows = 8) sets for you
@@ -338,7 +339,7 @@ as_rtftables(body, max_rows = 8,
 
 `drop_cols` columns are hidden **after** pagination, which is why a column can
 decide the page breaks and still never appear. Every one of those is a
-*default*: pass `split`, `group_col` or `drop_cols` yourself and the hook
+*default*: pass `split`, `group_col` or `drop_cols` yourself and `listing =`
 leaves your choice alone.
 
 ## The whole report
@@ -445,9 +446,9 @@ Paste it, change what you need, and hand the entry function to
 `listing_spec(wrap = my_wrap)`.
 
 
-## The hand-written version this replaces
+## Compared with a hand-written pipeline
 
-Before this existed, the same listing was a page of pipeline: `catx()` calls to
+Without `build_listing()`, the same listing takes a page of code: `catx()` calls to
 join the columns, a `split_string()` that broke a cell at `/` and then at word
 boundaries, a `get_max_element_counts()` to find each record's height, a
 `pad_list_elements()` to pad every column to it, `unnest_longer()`, a manually
@@ -474,9 +475,9 @@ differences are deliberate:
   lost its blank row -- and with it the boundary a page split needs.
 
 One more difference is a matter of placement rather than behaviour: the blank
-row that used to be bound on top of the body is now
-`as_rtftables(blank_row_first = )`, which the `"multiline"` template turns on,
-so it appears at the top of **every** page rather than only the first.
+row at the top is `as_rtftables(blank_row_first = )`, which the `"multiline"`
+template turns on, so it appears at the top of **every** page rather than only
+the first.
 
 ## When not to use this
 

@@ -120,7 +120,8 @@ client-specific font (`rtf_config(font_table = list(list(name = "Arial")))`)
 from one composed report.
 
 Both functions take the same parameters: `page`, `font_table`,
-`color_table`, and `style`, covered below.
+`color_table`, `watermark`, `font_lang` and `style`. This page covers `page`,
+`font_table`, `color_table` and `style`.
 
 
 ## Page geometry -- `page`
@@ -174,9 +175,10 @@ options(rtfreporter.page.margin_left_in  = 0.5,
         rtfreporter.page.margin_right_in = 0.5)
 ```
 
-`auto_width` (and `as_rtftables()`) size columns to the *default* writable width,
-so they follow the current margins automatically; only **absolute**
-`column_widths_twips` need to be recomputed when you change the margins.
+With `auto_width = TRUE`, an over-wide table is capped at the writable width of
+the default page (landscape Letter with 0.75 in margins: 9.5 in). On a narrower
+page, give `table_width_twips` as well. Absolute `column_widths_twips` must be
+recomputed when you change the margins.
 
 **Pick a paper size by name.** For the common case, `paper_size` + `orientation`
 is easier than remembering inch dimensions. One line gives **A4 landscape**:
@@ -228,8 +230,8 @@ sized against, so changing the margins automatically reflows full-width tables.
 
 The report uses a **single** font, given by `font_table`. The default is
 **Courier New**, a monospaced font: in clinical listings, monospacing is what lets
-count/percent columns line up by character (see the count/percent formatters in
-the pagination article). Switch to a proportional font only if you do not rely
+count/percent columns line up by character (see *Monospaced alignment* in
+[Importing tables](importing-tables.html)). Switch to a proportional font only if you do not rely
 on character alignment:
 
 ```{r font}
@@ -242,11 +244,11 @@ doc <- rtf_document(font_table = list(list(name = "Arial"))) |>
 .shot("ps_font.png")
 ```
 
-`font_table` is written as a list for forward compatibility, but **only the
-first entry is currently used** -- any further entries are ignored, and there is
-no way to select a different font for specific cells or text. (Multiple fonts
-and per-text font selection are a planned enhancement.) To use one font
-throughout, set that first entry as above.
+The first entry of `font_table` is the document's font. A table, a title or
+footnote block, or the page header and footer can use another font: give
+`font =` to `rtftable()`, `rtf_titles()`, `rtf_footnotes()`, `rtf_header()` or
+`rtf_footer()`, or set `rtf_style(font = )`. A font family that is not in
+`font_table` is added to it.
 
 
 ## Document font size -- `rtf_style()`
@@ -441,9 +443,10 @@ doc <- rtf_document() |>
 .shot("ps_colors.png")
 ```
 
-**What is not coloured (by design, for now):** cell background / fill, and the
-text of column headers, the page header/footer, titles, and footnotes -- these
-render in the default black. The `color_table` argument on `rtf_document()` only
+**Other colours:** cell backgrounds and column-header text are coloured with
+`style_cols(background = , header_color = )` and `style_body(background = )`;
+page header and footer text with `rtf_header(color = )` / `rtf_footer(color = )`.
+Titles and footnotes have no colour argument and render in black. The `color_table` argument on `rtf_document()` only
 pre-declares colours in the table; it does not style anything by itself.
 
 

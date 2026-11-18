@@ -77,7 +77,7 @@ natural answers depending on where the grouping variable lives.
 | Where the group lives | Object types | How to name the sections |
 |---|---|---|
 | A **column** of the rendered body | a `data.frame` / `Tplyr` body you assemble; `cards` + `tfrmt` with `label_loc = "column"` | `as_rtftables(split = "by_value", group_col = ...)` -- names each page by the group value |
-| **Row groups** (label rows in the stub) | `gt`, `gtsummary`, `rtables` / `tern`, `tfrmt` (indented) | build one table per group, then [`combine_sections()`] |
+| **Row groups** (label rows in the stub) | `gt`, `gtsummary`, `rtables` / `tern`, `tfrmt` (indented) | build one table per group, then `combine_sections()` |
 
 Both routes end the same way -- a flat, named list handed to
 `rtf_tables(..., auto_section = TRUE)`.
@@ -176,7 +176,7 @@ exactly as above.
 **indented label rows in the stub**, not as a column. After rendering there is
 no column for `split = "by_value"` to key on. The natural unit there is **one
 table per section**: build a small table for each lab test, then stitch them
-together with [`combine_sections()`], which names each table's first page and
+together with `combine_sections()`, which names each table's first page and
 lets the rest fall through.
 
 `combine_sections()` is format-agnostic -- it only arranges the names of a list
@@ -261,10 +261,9 @@ knitr::kable(data.frame(
 ## A note on the "one section per page" default
 
 You do **not** have to use either route. If you hand `auto_section = TRUE` a
-list whose pages are each named (or each unnamed), you simply get **one RTF
-section per page**. That is harmless -- it matches the one-page-one-section
-convention many SAS-based pipelines use -- and the page numbering and headers
-still come out correct. `split = "by_value"` and `combine_sections()` are for
+list whose pages each carry a different name, you get **one RTF section per
+page**; pages with no names open no section. Either way the page numbering and
+headers still come out correct. `split = "by_value"` and `combine_sections()` are for
 the tidier **one-section-per-group** layout, not a correctness fix.
 
 See also [Headers and footers](headers-footers.html) for the section /

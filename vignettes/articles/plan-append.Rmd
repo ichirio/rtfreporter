@@ -44,7 +44,7 @@ parts come from two sources -- the records and an ARD of their statistics --
 but they are **one table**: one column header, one set of column widths, and
 a page for each analyte and treatment that holds both parts of that group.
 
-In rtfreporter each part is an ordinary [plan](plan-and-as-rtftables.html),
+In rtfreporter each part is an ordinary [plan](tables-from-ard.html),
 and `plan_append()` lays the rows of the second under the rows of the first.
 This page builds such a table for a fictional study.
 
@@ -100,7 +100,7 @@ analyte, treatment and time point. Its constant row key (`block = ~ "Summary
 Statistics"`) makes the heading row above its statistics. Mean, SD,
 geometric mean and median take one significant digit more than the data,
 minimum and maximum the data's, CV% one decimal. A statistic that cannot be
-computed (an SD of one value) prints `na`, NC; the heading row stays empty:
+computed (an SD of one value) prints the `na` text, NC; the heading row stays empty:
 
 ```{r summary}
 pk_stats <- ~ list(N = length, mean = mean, sd = stats::sd,
@@ -138,8 +138,7 @@ pk <- listing |>
     c("Subject ID/Age (years)/Gender", "{col}"))) |>
   plan_columns(widths = c(label = 2.6, .values = 1), decimal = ".values") |>
   plan_paginate_rows(page_by = c("ANALYTE", "ARM")) |>
-  plan_style(border = "tfl") |>
-  plan_after(function(x) lapply(x, style_zone, last_row = rtf_border(bottom = TRUE)))
+  plan_style(border = "tfl", border_last_row = rtf_border(bottom = TRUE))
 ```
 
 The parts are stacked **before** the pages are cut, so the page of
@@ -231,7 +230,7 @@ length(plan_apply(pk_skip))       # four pages; the last has the listing only
 
 - [`plan_append()`](../reference/plan_append.html) --- the reference, with
   every verb a part may carry
-- [Plans and as_rtftables()](plan-and-as-rtftables.html) --- what a plan is
+- [From as_rtftables() to a plan](plan-and-as-rtftables.html) --- which verb takes over each argument
 - [Pagination](pagination.html) --- `page_by`, and cutting the columns
 - [Several contents on one page](several-contents.html) --- two separate
   tables, or a table and a figure, on one page

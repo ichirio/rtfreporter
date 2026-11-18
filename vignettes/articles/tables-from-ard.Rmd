@@ -267,8 +267,9 @@ path and the run date and time. `{PAGE}`, `{TOTAL_PAGES}`, `{PROGRAM_FULL}` and
 generate_rtfreport(doc, "t_dm.rtf", overwrite = TRUE)
 ```
 
-To see a stage without writing RTF, use `plan_apply()`. It gives the pages
-by default. `stage = "table"` gives the table data frame before it is split
+To see a stage without writing RTF, use `plan_apply()`. By default it goes as
+far as the plan declares: the pages for a plan with display verbs, the table
+for one without. `stage = "table"` gives the table data frame before it is split
 into pages, which is often the quickest way to check a cell:
 
 ```{r apply-table}

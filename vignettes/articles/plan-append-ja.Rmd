@@ -41,7 +41,7 @@ PK 濃度の表では、被験者ごとの濃度を時点ごとに並べ、そ�
 よくあります。2 つの部分の元は別々（レコードと、その統計量の ARD）ですが、**1 つの表**です。
 列見出しも列幅も 1 つで、分析対象と投与群ごとのページに、そのグループの両方の部分が載ります。
 
-rtfreporter では、それぞれの部分が普通の [plan](plan-and-as-rtftables.html) で、
+rtfreporter では、それぞれの部分が普通の [plan](tables-from-ard.html) で、
 `plan_append()` が 2 つ目の行を 1 つ目の行の下に並べます。この記事では、架空の試験でその表を作ります。
 
 ```{r setup, fold = FALSE}
@@ -127,8 +127,7 @@ pk <- listing |>
     c("Subject ID/Age (years)/Gender", "{col}"))) |>
   plan_columns(widths = c(label = 2.6, .values = 1), decimal = ".values") |>
   plan_paginate_rows(page_by = c("ANALYTE", "ARM")) |>
-  plan_style(border = "tfl") |>
-  plan_after(function(x) lapply(x, style_zone, last_row = rtf_border(bottom = TRUE)))
+  plan_style(border = "tfl", border_last_row = rtf_border(bottom = TRUE))
 ```
 
 部分はページに分ける**前に**積み重なるので、`Drug A` / `Drug A 100 mg` のページには、
@@ -214,6 +213,6 @@ length(plan_apply(pk_skip))       # 4 ページ。最後のページはリステ
 ## 次に読む
 
 - [`plan_append()`](../reference/plan_append.html) --- リファレンス（部分に書ける動詞の一覧）
-- [Plans and as_rtftables()](plan-and-as-rtftables.html) --- plan とは
+- [From as_rtftables() to a plan](plan-and-as-rtftables.html) --- どの引数をどの verb が引き継ぐか
 - [Pagination](pagination.html) --- `page_by` と、列の分け方
 - [1 ページに複数のコンテンツを置く](several-contents-ja.html) --- 別々の表 2 つや、表と図を 1 ページに

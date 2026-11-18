@@ -145,8 +145,8 @@ segments. The content itself is the internal generic `.render_content()` --
 tables via the row renderers, figures via the picture renderer -- so a new kind
 of content adds one method. Page-number tokens
 (`{AUTO_PAGE}` / `{AUTO_TOTAL_PAGES}` / `{PAGE}`) are substituted here. Helper
-functions (`.resolve_sections()`, `.render_footnote_table()`,
-`.compute_content_width()`, …) live in `R/generate_rtfreport.R`.
+functions (`.resolve_sections()`, `.compute_cellx()`,
+`.content_width_twips()`, …) live in `R/generate_rtfreport.R`.
 
 One rendering step deliberately works on a *derived* geometry rather than the
 table's own: `set_decimal_split()` (`R/decimal_split.R`). Because RTF lets each
