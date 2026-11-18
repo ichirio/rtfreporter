@@ -18,7 +18,7 @@
 Results of the release test run (2026-11-17):
 
 * local Windows 11, R 4.6.1, every suggested package installed, on the tag
-  candidate (1709983): tests FAIL 0 | WARN 0 | SKIP 6 | PASS 26382
+  candidate (f7015fc): tests FAIL 0 | WARN 0 | SKIP 6 | PASS 26383
 * local Windows 11, R 4.4.2, on the frozen next (1b316c4): tests FAIL 0 | WARN 2 | SKIP 12 | PASS 26269
   (the warnings: testthat built under R 4.4.3; the extra skips: broom.helpers
   not installed there)
