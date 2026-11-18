@@ -54,10 +54,17 @@ make_header <- function(table_no, title, subtitle = "Safety Analysis Set") {
     c(c = paste0("<", subtitle, ">"))
   ))
 }
+# Two page numbers.  Top right (make_header): the report's own page,
+# {PAGE} / {TOTAL_PAGES}, written in as text, so they count this report's
+# pages also after assemble_rtf() joins it with others.  Bottom centre: the
+# document's page, {AUTO_PAGE} / {AUTO_TOTAL_PAGES}, page-number fields the
+# reader fills, which count the whole joined document.  On its own a report
+# shows the same numbers in both.
 make_footer <- function(built_with) {
-  rtf_footer(c(l = paste0(
-    "Table object built with ", built_with,
-    " (Pharmaverse Example); rendered to RTF by rtfreporter.")))
+  rtf_footer(rows = list(
+    c(l = paste0("Table object built with ", built_with,
+                 " (Pharmaverse Example); rendered to RTF by rtfreporter.")),
+    c(c = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")))
 }
 # AE tables (5 columns): row-label column left, data columns centred.
 ae_col_spec <- c(
@@ -187,8 +194,11 @@ ae_tern <- build_table(
     count_occurrences(vars = "AEDECOD", .indent_mods = -1L) |>
     append_varlabels(adae_ae, "AEDECOD", indent = 1L),
   df = adae_ae, alt_counts_df = adsl_ae)
-ae_tern_pages <- as_rtftables(ae_tern, split = "group_safe", max_rows = 36,
+# max_rows counts the rows the page prints, the blank rows between groups
+# included (count_blank_rows = TRUE); 30 leaves room for long terms that wrap.
+ae_tern_pages <- as_rtftables(ae_tern, split = "group_safe", max_rows = 30,
                               blank_rows = "between_groups",
+                              count_blank_rows = TRUE,
                               cell_format = "count_paren_bare",
                               col_rel_width = c(0.50, 0.125, 0.125, 0.125, 0.125),
                               col_spec = ae_col_spec,
@@ -250,7 +260,9 @@ ae_hdr <- c("System Organ Class /\nPreferred Term",
             "Xanomeline\nHigh Dose\n(N=72)",
             "Xanomeline\nLow Dose\n(N=96)",
             "All Patients\n(N=254)")
-ae_tfrmt_pages <- as_rtftables(ae_tfrmt, split = "group_force", max_rows = 36,
+# The header here takes four lines, so a page holds two rows fewer than tern's.
+ae_tfrmt_pages <- as_rtftables(ae_tfrmt, split = "group_force", max_rows = 28,
+                               count_blank_rows = TRUE,
                                col_header = ae_hdr,
                                col_rel_width = c(0.50, 0.125, 0.125, 0.125, 0.125),
                                col_spec = ae_col_spec,
