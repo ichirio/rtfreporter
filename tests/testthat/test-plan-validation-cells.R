@@ -1066,6 +1066,8 @@ test_that("FT-PL6802 [FR-PL991 FR-PL992]: plan_empty() on a listing of no record
     plan_empty(text = NULL, footnote = "Nothing.")
   pg0 <- plan_apply(p0)
   expect_identical(unlist(attr(if (inherits(pg0, "rtftable")) pg0 else pg0[[1L]], "rtf_footnotes")), "Nothing.")
+  d0 <- if (inherits(pg0, "rtftable")) pg0$data else pg0[[1L]]$data
+  expect_identical(nrow(d0), 0L)
 })
 
 test_that("FT-PL6803 [FR-PL993]: a listing with records, or with no plan_empty(), is as it was", {
