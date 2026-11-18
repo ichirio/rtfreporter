@@ -19,7 +19,7 @@ There are no reverse dependencies (this is the package's first release).
 Results of the release test run:
 
 * local Windows 11, R 4.6.1, every suggested package installed, on the release
-  candidate (b782f92): tests FAIL 0 | WARN 0 | SKIP 6 | PASS 26383
+  candidate (fd1a4af): tests FAIL 0 | WARN 0 | SKIP 6 | PASS 26383
 * GitHub Actions, win-builder, R-hub: (to be filled before submission)
 
 ## Notes for the reviewers
