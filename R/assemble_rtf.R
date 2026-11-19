@@ -396,12 +396,13 @@
 
 # ── Cover-page rendering ───────────────────────────────────────────────────
 
-# The cover and TOC sections' page: landscape letter with 0.6 in left and
-# right margins.  Its text width, 14112 twips, is where the TOC's page numbers
+# The cover and TOC sections' page: landscape letter with 0.75 in left and
+# right margins (the FDA PDF specification asks for at least 3/4 in on the
+# left, #1112).  Its text width, 13680 twips, is where the TOC's page numbers
 # end and where its labels wrap (#967).
 .TOC_PAGE_W    <- 15840L
 .TOC_PAGE_H    <- 12240L
-.TOC_MARGIN_LR <- 864L
+.TOC_MARGIN_LR <- 1080L
 .TOC_TEXT_W    <- .TOC_PAGE_W - 2L * .TOC_MARGIN_LR
 
 .build_cover_section <- function(cover) {

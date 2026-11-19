@@ -249,14 +249,10 @@ version 4.1, with qpdf, pypdf and PyMuPDF:
 | Initial view | Bookmarks Panel and Page; layout and magnification default | `/UseOutlines`, no layout or zoom set | Pass |
 | Fast Web View | optimized for fast web view | linearized (qpdf) | Pass |
 | Page size | 8.5 x 11 in, orientation kept | letter; landscape tables, one portrait | Pass |
-| Margins | left 3/4 in; 3/8 in elsewhere; landscape top 3/4 in | table pages pass; cover and TOC pages 0.6 in on the left | **Fail** (rtfreporter#1112) |
+| Margins | left 3/4 in; 3/8 in elsewhere; landscape top 3/4 in | every page 0.75 in left and right; top 0.75 in on the table pages, 0.9 in on the cover and TOC | Pass |
 | Images | resolution, lossless compression | no images: text only, searchable | Pass |
 | JavaScript, external links, attachments | none | none | Pass |
 | Metadata | -- | title set, neutral author | Pass |
-
-The cover and table of contents pages have 0.6 in left margins, written by
-`assemble_rtf()` itself; the converter cannot change them. This is tracked
-as rtfreporter#1112.
 
 See `?assemble_rtf` and `?assemble_folder` for every argument.
 

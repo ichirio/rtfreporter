@@ -834,7 +834,7 @@ test_that("FT-AS6203 [FR-AS260]: toc_style sets size and boldness of the title, 
   expect_identical(p[1L], "{\\pard\\qc\\b\\fs28 Table of Contents\\par}")
   expect_identical(p[2L], "{\\pard\\fs18\\par}")
   expect_identical(p[3L], "{\\pard\\b\\fs22 H\\par}")
-  expect_match(p[4L], "^\\{\\\\pard\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(p[4L], "^\\{\\\\pard\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx13680 ")
   # every item given: points are doubled to half points, bold FALSE drops \b
   st <- list(title = list(size = 16, bold = FALSE), heading = list(size = 12, bold = FALSE),
              entry = list(size = 9, bold = TRUE), gap = list(size = 6))
@@ -842,7 +842,7 @@ test_that("FT-AS6203 [FR-AS260]: toc_style sets size and boldness of the title, 
   expect_identical(q[1L], "{\\pard\\qc\\fs32 Table of Contents\\par}")
   expect_identical(q[2L], "{\\pard\\fs12\\par}")
   expect_identical(q[3L], "{\\pard\\fs24 H\\par}")
-  expect_match(q[4L], "^\\{\\\\pard\\\\ri648\\\\keep\\\\b\\\\fs18\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(q[4L], "^\\{\\\\pard\\\\ri648\\\\keep\\\\b\\\\fs18\\\\tqr\\\\tldot\\\\tx13680 ")
   # a half point: 10.5 pt is \fs21
   expect_match(.tt_entries(.tt_asm(f, toc = "auto", toc_style = list(entry = list(size = 10.5))))[1L],
                "^\\{\\\\pard\\\\ri756\\\\keep\\\\fs21\\\\tqr")
@@ -908,14 +908,15 @@ test_that("FT-AS6205 [FR-AS265]: a label too long for a line stays in its one pa
   lab <- .tt_long_label()
   expect_length(e, 3L)
   expect_true(grepl(lab, e[2L], fixed = TRUE))                    # the whole label in the one paragraph
-  expect_match(e[2L], "^\\{\\\\pard\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
-  expect_match(e[3L], "^\\{\\\\pard\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(e[2L], "^\\{\\\\pard\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx13680 ")
+  expect_match(e[3L], "^\\{\\\\pard\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx13680 ")
   expect_false(any(grepl("\\\\fi[0-9-]", e)))
   expect_identical(sum(grepl("\\\\par\\}$", e)), 3L)              # three entries, three paragraphs
   # The estimate: a Courier New 10 pt character is 120 twips.  Level 2 has the width
-  # 14112 - 0 (no level indent by default) - 720 (page number) = 13392 = 111.6 characters:
-  # 111 fit a line, 112 wrap.  A page holds 35 lines, so 34 one-line entries and one label of
-  # 111 characters fit one page, and the same with a label of 112 characters (two lines, 36
+  # 13680 - 0 (no level indent by default) - 720 (page number) = 12960 = 108 characters:
+  # 107 fit a line, 108 wrap (the estimate wraps at the edge).  A page holds 35 lines, so 34
+  # one-line entries and one label of 107 characters fit one page, and the same with a label
+  # of 108 characters (two lines, 36
   # lines) take two.
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B"))
   pages_of <- function(len, level) {
@@ -923,11 +924,11 @@ test_that("FT-AS6205 [FR-AS265]: a label too long for a line stays in its one pa
                       level = c(rep(2L, 34L), level))
     sum(grepl("\\\\pagebb", .tt_paras(.tt_asm(f, toc = toc)))) + 1L
   }
-  expect_identical(pages_of(111L, 2L), 1L)
-  expect_identical(pages_of(112L, 2L), 2L)
-  # Level 3: the same width (no level indent): 111 fit, 112 wrap
-  expect_identical(pages_of(111L, 3L), 1L)
-  expect_identical(pages_of(112L, 3L), 2L)
+  expect_identical(pages_of(107L, 2L), 1L)
+  expect_identical(pages_of(108L, 2L), 2L)
+  # Level 3: the same width (no level indent): 107 fit, 108 wrap
+  expect_identical(pages_of(107L, 3L), 1L)
+  expect_identical(pages_of(108L, 3L), 2L)
 })
 
 test_that("FT-AS6206 [FR-AS269]: toc_style entry hanging is FALSE by default (no \\fi, as before), TRUE writes \\li<indent + 720>\\fi-720, a whole number h writes \\li<indent + h>\\fi-h, headings are not affected, the estimate counts the wrapped lines with h less width, anything else or another key stops naming it; the option works and the argument wins", {
@@ -944,9 +945,9 @@ test_that("FT-AS6206 [FR-AS269]: toc_style entry hanging is FALSE by default (no
   # TRUE: 720 on every level (no level indent by default: 720 at levels 1, 2 and 3), first line where it was
   x1 <- .tt_asm(f, toc = toc, toc_style = list(entry = list(hanging = TRUE)))
   e1 <- .tt_entries(x1)
-  expect_match(e1[1L], "^\\{\\\\pard\\\\li720\\\\fi-720\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
-  expect_match(e1[2L], "^\\{\\\\pard\\\\li720\\\\fi-720\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
-  expect_match(e1[3L], "^\\{\\\\pard\\\\li720\\\\fi-720\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ")
+  expect_match(e1[1L], "^\\{\\\\pard\\\\li720\\\\fi-720\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx13680 ")
+  expect_match(e1[2L], "^\\{\\\\pard\\\\li720\\\\fi-720\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx13680 ")
+  expect_match(e1[3L], "^\\{\\\\pard\\\\li720\\\\fi-720\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx13680 ")
   # a whole number of twips: 360 at every level
   e2 <- .tt_entries(.tt_asm(f, toc = toc, toc_style = list(entry = list(hanging = 360))))
   expect_match(e2[1L], "^\\{\\\\pard\\\\li360\\\\fi-360\\\\ri720\\\\keep\\\\fs20\\\\tqr")
@@ -956,11 +957,11 @@ test_that("FT-AS6206 [FR-AS269]: toc_style entry hanging is FALSE by default (no
   noent <- function(l) .tt_paras(l)[!grepl("PAGEREF", .tt_paras(l))]
   expect_identical(noent(x1), noent(x0))
   expect_false(any(grepl("\\\\fi[0-9-]", noent(x1))))
-  # the estimate: 33 one-line entries and one of 220 characters at level 2 (111 on the first line)
+  # the estimate: 33 one-line entries and one of 214 characters at level 2 (107 on the first line)
   # are 33 + 2 = 35 lines without a hanging indent; with 720 the wrapped line holds
-  # floor((13392 - 720) / 120) = 105, so 220 - 111 = 109 characters need two: 33 + 3 = 36 lines
+  # floor((12960 - 720) / 120) = 101 (the edge), so 214 - 107 = 107 characters need two: 33 + 3 = 36 lines
   g <- .tt_inputs(d, c(t_14_4_1 = "D", t_14_5_1 = "E"))
-  big <- data.frame(file = g[rep_len(1:2, 34L)], label = c(rep("x", 33L), strrep("y", 220L)), level = 2L)
+  big <- data.frame(file = g[rep_len(1:2, 34L)], label = c(rep("x", 33L), strrep("y", 214L)), level = 2L)
   npb <- function(style) {
     sum(grepl("\\\\pagebb", .tt_paras(.tt_asm(g, toc = big, toc_style = style))))
   }
