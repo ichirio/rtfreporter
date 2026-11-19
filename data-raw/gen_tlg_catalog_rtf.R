@@ -6,7 +6,8 @@
 # in Word / LibreOffice and take screenshots for the article.
 #
 # The table objects are the pharmaverse example objects (demographic + adverse
-# events), built verbatim; rtfreporter only adds the RTF-rendering step.
+# events), built verbatim (but for the tfrmt AE table's cell format, see
+# 2b); rtfreporter only adds the RTF-rendering step.
 #
 # Run from the repo root (with the dev package installed):
 #     Rscript data-raw/gen_tlg_catalog_rtf.R
@@ -243,11 +244,19 @@ ae_card <- ae_card |>
   full_join(ord_soc, by = "AEBODSYS") |>
   full_join(ord_pt, by = c("AEBODSYS", "AEDECOD")) |>
   select(AEBODSYS, AEDECOD, ord1, ord2, stat, stat_name, ACTARM)
-ae_tfrmt <- tfrmt_n_pct(n = "n", pct = "p",
-  pct_frmt_when = frmt_when(
-    "==1" ~ frmt("(100%)"), ">=0.995" ~ frmt("(>99%)"), "==0" ~ frmt(""),
-    "<=0.01" ~ frmt("(<1%)"), "TRUE" ~ frmt("(xx.x%)", transform = ~ . * 100))) |>
-  tfrmt(group = AEBODSYS, label = AEDECOD, param = stat_name, value = stat,
+# The only change from the pharmaverse example is the cell format, so that the
+# digits line up down each column, as in the tern table: every percent prints
+# "(xx.x%)" (its "(>99%)" and "(<1%)" rows are dropped), and the n / percent
+# combine is written out instead of tfrmt_n_pct()'s "{n} {p}", with the space
+# inside the percent's format, so a zero cell is just "0" (tfrmt_n_pct()
+# leaves "0 ", whose trailing space print_to_gt() turns into a no-break
+# space).  The column alignment is left to cell_format = "count_paren_bare".
+ae_n_pct <- frmt_combine("{n}{p}", n = frmt("x"),
+  p = frmt_when(
+    "==1" ~ frmt(" (100%)"), "==0" ~ frmt(""),
+    "TRUE" ~ frmt(" (xx.x%)", transform = ~ . * 100)))
+ae_tfrmt <- tfrmt(body_plan = body_plan(frmt_structure(ae_n_pct)),
+    group = AEBODSYS, label = AEDECOD, param = stat_name, value = stat,
     column = ACTARM, sorting_cols = c(ord1, ord2),
     col_plan = col_plan("System Organ Class / Preferred Term" = AEBODSYS,
       Placebo, `Xanomeline High Dose`, `Xanomeline Low Dose`, -ord1, -ord2),

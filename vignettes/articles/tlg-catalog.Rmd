@@ -73,7 +73,10 @@ So this article picks up right where a **Pharmaverse Example** leaves off.  It
 takes the table objects built -- *verbatim* -- by the
 [demographic](https://pharmaverse.github.io/examples/tlg/demographic.html) and
 [adverse events](https://pharmaverse.github.io/examples/tlg/adverse_events.html)
-examples and adds only the final RTF step, with
+examples (one change: the tfrmt adverse-events table's cell format prints
+every percent as `(xx.x%)`, without `(<1%)` / `(>99%)`, and a zero count as a
+plain `0`, so its digits line up) and
+adds only the final RTF step, with
 [`as_rtftables()`](../reference/as_rtftables.html) +
 [`rtf_tables()`](../reference/rtf_tables.html) +
 [`generate_rtfreport()`](../reference/generate_rtfreport.html).  The point is
@@ -404,12 +407,17 @@ ae_card <- ae_card |>
   full_join(ord_soc, by = "AEBODSYS") |>
   full_join(ord_pt, by = c("AEBODSYS", "AEDECOD")) |>
   select(AEBODSYS, AEDECOD, ord1, ord2, stat, stat_name, ACTARM)
-ae_tfrmt <- tfrmt_n_pct(
-  n = "n", pct = "p",
-  pct_frmt_when = frmt_when(
-    "==1" ~ frmt("(100%)"), ">=0.995" ~ frmt("(>99%)"), "==0" ~ frmt(""),
-    "<=0.01" ~ frmt("(<1%)"), "TRUE" ~ frmt("(xx.x%)", transform = ~ . * 100))) |>
-  tfrmt(
+# The only change from the pharmaverse example is the cell format, so that the
+# digits line up down each column, as in the tern table: every percent prints
+# "(xx.x%)" (no "(>99%)" / "(<1%)"), and a zero cell is just "0" (the space
+# sits inside the percent's format); cell_format = "count_paren_bare" then
+# lines the column up.
+ae_n_pct <- frmt_combine("{n}{p}", n = frmt("x"),
+  p = frmt_when(
+    "==1" ~ frmt(" (100%)"), "==0" ~ frmt(""),
+    "TRUE" ~ frmt(" (xx.x%)", transform = ~ . * 100)))
+ae_tfrmt <- tfrmt(
+    body_plan = body_plan(frmt_structure(ae_n_pct)),
     group = AEBODSYS, label = AEDECOD, param = stat_name, value = stat,
     column = ACTARM, sorting_cols = c(ord1, ord2),
     col_plan = col_plan("System Organ Class / Preferred Term" = AEBODSYS,
