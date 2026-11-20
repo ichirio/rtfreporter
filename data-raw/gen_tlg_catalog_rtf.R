@@ -164,8 +164,9 @@ dm_tfrmt <- tfrmt(group = stat_variable, label = label, param = stat_name,
     rtf_section(page = 1, secinfo = list(
       header = make_header("14.1.1c", paste(demog_title, "(tfrmt)")),
       footer = make_footer("tfrmt + cards"))) |>
-    rtf_tables(as_rtftables(dm_tfrmt, auto_width = TRUE,
-                          cell_format = fmt_count_paren)),
+    # No cell format: tfrmt pads every cell itself (with no-break spaces), so
+    # the columns already line up as in the pharmaverse example.
+    rtf_tables(as_rtftables(dm_tfrmt, auto_width = TRUE)),
   "pharmaverse-demographic-tfrmt.rtf")
 
 # ---- AE data prep ----------------------------------------------------------

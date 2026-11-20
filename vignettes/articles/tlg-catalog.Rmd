@@ -81,7 +81,9 @@ adds only the final RTF step, with
 [`rtf_tables()`](../reference/rtf_tables.html) +
 [`generate_rtfreport()`](../reference/generate_rtfreport.html).  The point is
 that **whichever pharmaverse package built your table, rtfreporter can read its
-object** and carry it that last mile.
+object** and carry it that last mile.  The tables keep the examples' own
+number formats (integer statistics in the tfrmt demographics, tern's `0` and
+rounded percents), so each page shows what its example shows.
 
 > All credit for the tables below belongs to the Pharmaverse Examples and
 > their authors; rtfreporter only adds the last-mile RTF rendering.
@@ -281,8 +283,9 @@ dm_tfrmt
 ```
 
 tfrmt also renders to a `gt_tbl`, so once more the rtfreporter call is the
-same (this example formats its statistics as integers; rtfreporter reproduces
-whatever the object contains):
+same, without a cell format: tfrmt pads every cell itself, so the columns
+already line up (this example formats its statistics as integers; rtfreporter
+reproduces whatever the object contains):
 
 ```{r dm-tfrmt-rtf}
 out_dm_tfrmt <- tempfile(fileext = ".rtf")
@@ -290,8 +293,7 @@ rtf_document() |>
   rtf_section(page = 1,
     header = make_header("14.1.1c", "Demographic and Baseline Characteristics (tfrmt)"),
     footer = make_footer("tfrmt + cards")) |>
-  rtf_tables(as_rtftables(dm_tfrmt, auto_width = TRUE,
-                          cell_format = fmt_count_paren)) |>
+  rtf_tables(as_rtftables(dm_tfrmt, auto_width = TRUE)) |>
   generate_rtfreport(out_dm_tfrmt, overwrite = TRUE)
 ```
 
