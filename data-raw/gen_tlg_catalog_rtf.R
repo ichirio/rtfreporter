@@ -55,17 +55,17 @@ make_header <- function(table_no, title, subtitle = "Safety Analysis Set") {
     c(c = paste0("<", subtitle, ">"))
   ))
 }
-# Two page numbers.  Top right (make_header): the report's own page,
-# {PAGE} / {TOTAL_PAGES}, written in as text, so they count this report's
-# pages also after assemble_rtf() joins it with others.  Bottom centre: the
-# document's page, {AUTO_PAGE} / {AUTO_TOTAL_PAGES}, page-number fields the
-# reader fills, which count the whole joined document.  On its own a report
-# shows the same numbers in both.
+# Page numbers, the usual practice.  Top right (make_header): the report's
+# own page, {PAGE} / {TOTAL_PAGES}, written in as text, so it counts this
+# report's pages also after assemble_rtf() joins it with others.  Bottom
+# centre: a {BOOK_PAGE} slot, empty in a report on its own (one page number
+# on the page), which assemble_rtf(book_page = ) fills with the joined
+# book's page (see ?assemble_rtf, book_page).
 make_footer <- function(built_with) {
   rtf_footer(rows = list(
     c(l = paste0("Table object built with ", built_with,
                  " (Pharmaverse Example); rendered to RTF by rtfreporter.")),
-    c(c = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")))
+    c(c = "{BOOK_PAGE}")))
 }
 # AE tables (5 columns): row-label column left, data columns centred.
 ae_col_spec <- c(
@@ -292,6 +292,7 @@ assemble_rtf(
   c(out_dm_gts, out_ae_tern),
   file.path(out_dir, "pharmaverse-assembled.rtf"),
   overwrite = TRUE,
+  book_page = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}",
   toc = data.frame(
     file    = c(out_dm_gts, out_ae_tern),
     label   = c("Table 14.1.1b  Demographic and Baseline Characteristics (gtsummary)",
