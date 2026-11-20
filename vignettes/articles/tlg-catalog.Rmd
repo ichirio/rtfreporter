@@ -73,12 +73,17 @@ So this article picks up right where a **Pharmaverse Example** leaves off.  It
 takes the table objects built -- *verbatim* -- by the
 [demographic](https://pharmaverse.github.io/examples/tlg/demographic.html) and
 [adverse events](https://pharmaverse.github.io/examples/tlg/adverse_events.html)
-examples and adds only the final RTF step, with
+examples (one change: the tfrmt adverse-events table's cell format prints
+every percent as `(xx.x%)`, without `(<1%)` / `(>99%)`, and a zero count as a
+plain `0`, so its digits line up) and
+adds only the final RTF step, with
 [`as_rtftables()`](../reference/as_rtftables.html) +
 [`rtf_tables()`](../reference/rtf_tables.html) +
 [`generate_rtfreport()`](../reference/generate_rtfreport.html).  The point is
 that **whichever pharmaverse package built your table, rtfreporter can read its
-object** and carry it that last mile.
+object** and carry it that last mile.  The tables keep the examples' own
+number formats (integer statistics in the tfrmt demographics, tern's `0` and
+rounded percents), so each page shows what its example shows.
 
 > All credit for the tables below belongs to the Pharmaverse Examples and
 > their authors; rtfreporter only adds the last-mile RTF rendering.
@@ -278,8 +283,9 @@ dm_tfrmt
 ```
 
 tfrmt also renders to a `gt_tbl`, so once more the rtfreporter call is the
-same (this example formats its statistics as integers; rtfreporter reproduces
-whatever the object contains):
+same, without a cell format: tfrmt pads every cell itself, so the columns
+already line up (this example formats its statistics as integers; rtfreporter
+reproduces whatever the object contains):
 
 ```{r dm-tfrmt-rtf}
 out_dm_tfrmt <- tempfile(fileext = ".rtf")
@@ -287,8 +293,7 @@ rtf_document() |>
   rtf_section(page = 1,
     header = make_header("14.1.1c", "Demographic and Baseline Characteristics (tfrmt)"),
     footer = make_footer("tfrmt + cards")) |>
-  rtf_tables(as_rtftables(dm_tfrmt, auto_width = TRUE,
-                          cell_format = fmt_count_paren)) |>
+  rtf_tables(as_rtftables(dm_tfrmt, auto_width = TRUE)) |>
   generate_rtfreport(out_dm_tfrmt, overwrite = TRUE)
 ```
 
@@ -404,12 +409,18 @@ ae_card <- ae_card |>
   full_join(ord_soc, by = "AEBODSYS") |>
   full_join(ord_pt, by = c("AEBODSYS", "AEDECOD")) |>
   select(AEBODSYS, AEDECOD, ord1, ord2, stat, stat_name, ACTARM)
-ae_tfrmt <- tfrmt_n_pct(
-  n = "n", pct = "p",
-  pct_frmt_when = frmt_when(
-    "==1" ~ frmt("(100%)"), ">=0.995" ~ frmt("(>99%)"), "==0" ~ frmt(""),
-    "<=0.01" ~ frmt("(<1%)"), "TRUE" ~ frmt("(xx.x%)", transform = ~ . * 100))) |>
-  tfrmt(
+# The only change from the pharmaverse example is the cell format, so that the
+# digits line up down each column, as in the tern table: every percent prints
+# "(xx.x%)" (no "(>99%)" / "(<1%)"), and a zero cell is just "0" (the space
+# sits inside the percent's format); cell_format = "count_paren_bare" then
+# lines the column up.
+ae_n_pct <- frmt_combine("{n}{p}", n = frmt("x"),
+  p = frmt_when(
+    "==1" ~ frmt(" (100%)"), "==0" ~ frmt(""),
+    "TRUE" ~ frmt(" (xx.x%)", transform = ~ . * 100)))
+ae_tfrmt <- tfrmt(
+    body_plan = body_plan(frmt_structure(
+      group_val = ".default", label_val = ".default", ae_n_pct)),
     group = AEBODSYS, label = AEDECOD, param = stat_name, value = stat,
     column = ACTARM, sorting_cols = c(ord1, ord2),
     col_plan = col_plan("System Organ Class / Preferred Term" = AEBODSYS,

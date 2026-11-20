@@ -6,7 +6,8 @@
 # in Word / LibreOffice and take screenshots for the article.
 #
 # The table objects are the pharmaverse example objects (demographic + adverse
-# events), built verbatim; rtfreporter only adds the RTF-rendering step.
+# events), built verbatim (but for the tfrmt AE table's cell format, see
+# 2b); rtfreporter only adds the RTF-rendering step.
 #
 # Run from the repo root (with the dev package installed):
 #     Rscript data-raw/gen_tlg_catalog_rtf.R
@@ -54,17 +55,17 @@ make_header <- function(table_no, title, subtitle = "Safety Analysis Set") {
     c(c = paste0("<", subtitle, ">"))
   ))
 }
-# Two page numbers.  Top right (make_header): the report's own page,
-# {PAGE} / {TOTAL_PAGES}, written in as text, so they count this report's
-# pages also after assemble_rtf() joins it with others.  Bottom centre: the
-# document's page, {AUTO_PAGE} / {AUTO_TOTAL_PAGES}, page-number fields the
-# reader fills, which count the whole joined document.  On its own a report
-# shows the same numbers in both.
+# Page numbers, the usual practice.  Top right (make_header): the report's
+# own page, {PAGE} / {TOTAL_PAGES}, written in as text, so it counts this
+# report's pages also after assemble_rtf() joins it with others.  Bottom
+# centre: a {BOOK_PAGE} slot, empty in a report on its own (one page number
+# on the page), which assemble_rtf(book_page = ) fills with the joined
+# book's page (see ?assemble_rtf, book_page).
 make_footer <- function(built_with) {
   rtf_footer(rows = list(
     c(l = paste0("Table object built with ", built_with,
                  " (Pharmaverse Example); rendered to RTF by rtfreporter.")),
-    c(c = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")))
+    c(c = "{BOOK_PAGE}")))
 }
 # AE tables (5 columns): row-label column left, data columns centred.
 ae_col_spec <- c(
@@ -163,8 +164,9 @@ dm_tfrmt <- tfrmt(group = stat_variable, label = label, param = stat_name,
     rtf_section(page = 1, secinfo = list(
       header = make_header("14.1.1c", paste(demog_title, "(tfrmt)")),
       footer = make_footer("tfrmt + cards"))) |>
-    rtf_tables(as_rtftables(dm_tfrmt, auto_width = TRUE,
-                          cell_format = fmt_count_paren)),
+    # No cell format: tfrmt pads every cell itself (with no-break spaces), so
+    # the columns already line up as in the pharmaverse example.
+    rtf_tables(as_rtftables(dm_tfrmt, auto_width = TRUE)),
   "pharmaverse-demographic-tfrmt.rtf")
 
 # ---- AE data prep ----------------------------------------------------------
@@ -243,11 +245,20 @@ ae_card <- ae_card |>
   full_join(ord_soc, by = "AEBODSYS") |>
   full_join(ord_pt, by = c("AEBODSYS", "AEDECOD")) |>
   select(AEBODSYS, AEDECOD, ord1, ord2, stat, stat_name, ACTARM)
-ae_tfrmt <- tfrmt_n_pct(n = "n", pct = "p",
-  pct_frmt_when = frmt_when(
-    "==1" ~ frmt("(100%)"), ">=0.995" ~ frmt("(>99%)"), "==0" ~ frmt(""),
-    "<=0.01" ~ frmt("(<1%)"), "TRUE" ~ frmt("(xx.x%)", transform = ~ . * 100))) |>
-  tfrmt(group = AEBODSYS, label = AEDECOD, param = stat_name, value = stat,
+# The only change from the pharmaverse example is the cell format, so that the
+# digits line up down each column, as in the tern table: every percent prints
+# "(xx.x%)" (its "(>99%)" and "(<1%)" rows are dropped), and the n / percent
+# combine is written out instead of tfrmt_n_pct()'s "{n} {p}", with the space
+# inside the percent's format, so a zero cell is just "0" (tfrmt_n_pct()
+# leaves "0 ", whose trailing space print_to_gt() turns into a no-break
+# space).  The column alignment is left to cell_format = "count_paren_bare".
+ae_n_pct <- frmt_combine("{n}{p}", n = frmt("x"),
+  p = frmt_when(
+    "==1" ~ frmt(" (100%)"), "==0" ~ frmt(""),
+    "TRUE" ~ frmt(" (xx.x%)", transform = ~ . * 100)))
+ae_tfrmt <- tfrmt(body_plan = body_plan(frmt_structure(
+      group_val = ".default", label_val = ".default", ae_n_pct)),
+    group = AEBODSYS, label = AEDECOD, param = stat_name, value = stat,
     column = ACTARM, sorting_cols = c(ord1, ord2),
     col_plan = col_plan("System Organ Class / Preferred Term" = AEBODSYS,
       Placebo, `Xanomeline High Dose`, `Xanomeline Low Dose`, -ord1, -ord2),
@@ -281,6 +292,7 @@ assemble_rtf(
   c(out_dm_gts, out_ae_tern),
   file.path(out_dir, "pharmaverse-assembled.rtf"),
   overwrite = TRUE,
+  book_page = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}",
   toc = data.frame(
     file    = c(out_dm_gts, out_ae_tern),
     label   = c("Table 14.1.1b  Demographic and Baseline Characteristics (gtsummary)",

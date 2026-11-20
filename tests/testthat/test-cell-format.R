@@ -33,6 +33,27 @@ test_that("fmt_count_paren copes with mixed tfrmt notations", {
   expect_true(all(nchar(out) == nchar(out[1L])))   # equal width -> aligned
 })
 
+test_that("fmt_count_paren reads a non-breaking space as a space (tfrmt zero cells)", {
+  # tfrmt + gt print a zero cell as "0" followed by a non-breaking space.
+  x <- c("1 (1.2%)", paste0("0", NBSP), paste0("11", NBSP, "(3.6%)"), "108 (35.3%)")
+  out <- unbsp(fmt_count_paren(x, bare = TRUE))
+  expect_identical(out, c("  1 ( 1.2%)", "  0        ",
+                          " 11 ( 3.6%)", "108 (35.3%)"))
+  expect_true(all(nchar(out) == nchar(out[1L])))
+  # Without bare the zero cell is still returned byte for byte.
+  expect_identical(fmt_count_paren(x)[2L], paste0("0", NBSP))
+})
+
+test_that("fmt_count_paren reads padding of non-breaking and zero-width spaces", {
+  zw <- intToUtf8(0x200BL)
+  x <- c(paste0(NBSP, NBSP, "5", NBSP, "(", NBSP, "2.0%)"),
+         paste0(NBSP, "0", zw), "12 (10.0%)")
+  out <- unbsp(fmt_count_paren(x, bare = TRUE))
+  expect_identical(out, c(" 5 ( 2.0%)", " 0        ", "12 (10.0%)"))
+  # A cell of padding only is not a count and stays as it is.
+  expect_identical(fmt_count_paren(c(NBSP, "1 (1.0%)"), bare = TRUE)[1L], NBSP)
+})
+
 test_that("fmt_count_paren leaves non-count and bare-count cells unchanged", {
   expect_identical(fmt_count_paren(c("Mean (SD)", "n/a", "", "0", "75.2 (8.6)")),
                    c("Mean (SD)", "n/a", "", "0", "75.2 (8.6)"))
