@@ -185,7 +185,7 @@ test_that("FT-AS3006 [FR-AS112]: toc = \"auto\" makes one level-1 entry per file
   ent <- l[grepl("HYPERLINK", l, fixed = TRUE)]
   expect_length(ent, 2L)
   # level 1: no indent
-  expect_true(all(startsWith(ent, "{\\pard\\ri720\\keep\\fs20\\tqr\\tldot\\tx14112 {\\field")))
+  expect_true(all(startsWith(ent, "{\\pard\\ri720\\keep\\fs20\\tqr\\tldot\\tx13680 {\\field")))
   expect_true(grepl("{\\fldrslt Lab \\u181?g/mL summary}}", ent[1], fixed = TRUE))
   expect_true(grepl("{\\fldrslt plain_two}}", ent[2], fixed = TRUE))
 })
@@ -204,7 +204,7 @@ test_that("FT-AS3007 [FR-AS115]: a toc table prints a heading above an entry whe
   expect_identical(l[h], c("{\\pard\\b\\fs22 HA\\par}", "{\\pard\\b\\fs22 HB\\par}"))
   e <- grep("HYPERLINK", l, fixed = TRUE)
   expect_length(e, 4L)
-  expect_true(all(startsWith(l[e], "{\\pard\\ri720\\keep\\fs20\\tqr\\tldot\\tx14112 ")))
+  expect_true(all(startsWith(l[e], "{\\pard\\ri720\\keep\\fs20\\tqr\\tldot\\tx13680 ")))
   for (k in 1:4) {
     expect_true(grepl(sprintf("{\\fldrslt Label %d}}", k), l[e[k]], fixed = TRUE))
   }
@@ -225,9 +225,9 @@ test_that("FT-AS3007 [FR-AS115]: a toc table prints a heading above an entry whe
   l2 <- .g2_lines(out2)
   e2 <- grep("HYPERLINK", l2, fixed = TRUE)
   expect_length(e2, 3L)
-  expect_true(startsWith(l2[e2[1]], "{\\pard\\li1200\\ri720\\keep\\fs20\\tqr\\tldot\\tx14112 "))
-  expect_true(startsWith(l2[e2[2]], "{\\pard\\li600\\ri720\\keep\\fs20\\tqr\\tldot\\tx14112 "))
-  expect_true(startsWith(l2[e2[3]], "{\\pard\\ri720\\keep\\fs20\\tqr\\tldot\\tx14112 "))
+  expect_true(startsWith(l2[e2[1]], "{\\pard\\li1200\\ri720\\keep\\fs20\\tqr\\tldot\\tx13680 "))
+  expect_true(startsWith(l2[e2[2]], "{\\pard\\li600\\ri720\\keep\\fs20\\tqr\\tldot\\tx13680 "))
+  expect_true(startsWith(l2[e2[3]], "{\\pard\\ri720\\keep\\fs20\\tqr\\tldot\\tx13680 "))
   expect_true(grepl("{\\fldrslt Own two}}", l2[e2[1]], fixed = TRUE))
   expect_true(grepl("{\\fldrslt Table 3 T3}}", l2[e2[2]], fixed = TRUE))
   expect_true(grepl("{\\fldrslt Table 1 T1}}", l2[e2[3]], fixed = TRUE))
@@ -526,7 +526,7 @@ test_that("FT-AS3018 [FR-AS157]: assemble_folder() defaults to the title Table o
   assemble_folder(d, out)
   l <- .g2_lines(out)
   expect_true("{\\pard\\qc\\b\\fs28 Table of Contents\\par}" %in% l)
-  expect_true(any(grepl("\\tqr\\tldot\\tx14112", l, fixed = TRUE)))
+  expect_true(any(grepl("\\tqr\\tldot\\tx13680", l, fixed = TRUE)))
   expect_true("\\sectd\\sbkpage\\lndscpsxn" %in% l)
   expect_false(any(grepl("\\pgn", l, fixed = TRUE)))
   expect_error(assemble_folder(d, out), "already exists")
