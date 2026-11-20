@@ -165,7 +165,7 @@ fmt_right_align <- function(x, nbsp = "\u00a0", na = "") {
   # space (U+200B) count as spaces: gt / tfrmt output can carry them around a
   # count ("0 " for a zero cell), and a cell left unparsed would fall out
   # of the column.  Cells not reformatted are still returned from `x`.
-  xp <- gsub("[ ​]", " ", x)
+  xp <- gsub("[\u00a0\u200b]", " ", x)
   rx <- "^[[:space:]]*([0-9]+)[[:space:]]*(\\((.*)\\))?[[:space:]]*$"
   m  <- regmatches(xp, regexec(rx, xp))
   count  <- rep(NA_character_, length(x))
