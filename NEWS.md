@@ -23,10 +23,3 @@ report as RTF files.  It needs R 4.3 or later.
 - Validation material: `rtfreporter_validation_kit()` copies templates for
   a company's own validation, and the package ships its requirements,
   traceability matrix and quality plan in `inst/validation`.
-
-## Known issues
-
-- `plan_total(direction = "cols")` or `"both"` in a shift table (the arm
-  and the post-baseline category as two column levels) reads the BIGN rows
-  as rows of the Total column and ignores `position = "last"` (#1103).
-  The default Total row (`direction = "rows"`) is correct.
