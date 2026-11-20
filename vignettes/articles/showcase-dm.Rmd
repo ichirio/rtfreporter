@@ -168,8 +168,7 @@ tbl <- adsl |>
       AGE ~ c("{N_nonmiss}", "{mean} ({sd})", "{median}", "{min}, {max}"),
       all_categorical() ~ "{n} ({p}%)"),
     digits = list(AGE ~ list(N_nonmiss = 0, mean = 1, sd = 2,
-                             median = 1, min = 0, max = 0),
-                  all_categorical() ~ c(0, 1)))             # percent: one decimal
+                             median = 1, min = 0, max = 0)))
 # (No modify_header: rtfreporter supplies the shared column header below.)
 
 # align_count_pct lines up the "n (xx.x%)" cells; the shared furniture supplies
