@@ -144,9 +144,6 @@ ard_tbl <- ard |>
     stat_variable == "SEX"    ~ "Sex",
     stat_variable == "RACE"   ~ "High Level Race", .default = stat_variable)) |>
   select(ACTARM, stat_variable, label, stat_name, stat, ord1, ord2) |> unique()
-# tfrmt pads its cells with no-break spaces; "count_paren_bare" re-pads the
-# lone counts (n, mean, SD, ...) as well as the "n (xx%)" cells, so the whole
-# column lines up on the ones digit.
 dm_tfrmt <- tfrmt(group = stat_variable, label = label, param = stat_name,
   value = stat, column = ACTARM, sorting_cols = c(ord1, ord2),
   body_plan = body_plan(
@@ -168,7 +165,7 @@ dm_tfrmt <- tfrmt(group = stat_variable, label = label, param = stat_name,
       header = make_header("14.1.1c", paste(demog_title, "(tfrmt)")),
       footer = make_footer("tfrmt + cards"))) |>
     rtf_tables(as_rtftables(dm_tfrmt, auto_width = TRUE,
-                          cell_format = "count_paren_bare")),
+                          cell_format = fmt_count_paren)),
   "pharmaverse-demographic-tfrmt.rtf")
 
 # ---- AE data prep ----------------------------------------------------------

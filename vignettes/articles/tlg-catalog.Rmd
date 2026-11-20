@@ -282,9 +282,7 @@ dm_tfrmt
 
 tfrmt also renders to a `gt_tbl`, so once more the rtfreporter call is the
 same (this example formats its statistics as integers; rtfreporter reproduces
-whatever the object contains).  The cell format is `"count_paren_bare"`: tfrmt
-pads its cells itself, and the bare variant re-pads the lone counts (n, mean,
-SD, ...) along with the `n (xx%)` cells, so the whole column lines up:
+whatever the object contains):
 
 ```{r dm-tfrmt-rtf}
 out_dm_tfrmt <- tempfile(fileext = ".rtf")
@@ -293,7 +291,7 @@ rtf_document() |>
     header = make_header("14.1.1c", "Demographic and Baseline Characteristics (tfrmt)"),
     footer = make_footer("tfrmt + cards")) |>
   rtf_tables(as_rtftables(dm_tfrmt, auto_width = TRUE,
-                          cell_format = "count_paren_bare")) |>
+                          cell_format = fmt_count_paren)) |>
   generate_rtfreport(out_dm_tfrmt, overwrite = TRUE)
 ```
 
