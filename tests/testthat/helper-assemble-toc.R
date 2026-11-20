@@ -206,14 +206,15 @@
 
 # the borderline TOC: at levels 2 and 3, labels whose last (only) line ends
 # from 3 characters before to 3 after the width an entry wraps at, by the
-# estimate (Courier New 10 pt, 120 twips a character): 111 characters of a
-# whole label (14112 - 720 = 13392 twips, no level indent) in the default
-# style; with `hanging = TRUE`, 95 characters of a title beside the hang of
-# "Table 14.2.1.1" (14 x 120 + 200 = 1880; 13392 - 1880 = 11512 twips)
+# estimate (Courier New 10 pt, 120 twips a character): 107 characters of a
+# whole label (13680 - 720 = 12960 twips, no level indent; the estimate wraps
+# the 108th, which ends exactly at the right indent) in the default
+# style; with `hanging = TRUE`, 92 characters of a title beside the hang of
+# "Table 14.2.1.1" (14 x 120 + 200 = 1880; 12960 - 1880 = 11080 twips)
 .tt_case_borderline <- function(dir, hanging = FALSE) {
   f <- .tt_inputs(dir, c(t_14_2_1 = "Table 14.2.1 A", t_14_2_2 = "Table 14.2.2 B",
                          t_14_2_3 = "Table 14.2.3 C"))
-  lens <- (if (hanging) 95L else 111L) + (-3:3)
+  lens <- (if (hanging) 92L else 107L) + (-3:3)
   lab2 <- vapply(seq_along(lens), function(i)
     .tt_border_label(paste0("Table 14.2.", i), lens[i], hanging), character(1L))
   lab3 <- vapply(seq_along(lens), function(i)
