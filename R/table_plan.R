@@ -6360,14 +6360,33 @@ plan_n_candidates <- function(.plan) {
     a <- list(vars = stub$vars, label = stub$name, indent = stub$indent,
               group_summary = stub$group_summary)
     a <- a[!vapply(a, is.null, logical(1L))]
-    # a change of the page_by key writes the heading rows again (stub_cols())
-    pb <- intersect(.plan_merge(.plan_of(plan, "pages"))$page_by, names(tbl))
+    # a change of a page key -- page_by or plan_paginate_group()'s --
+    # writes the heading rows again (stub_cols()), so a page opens with its
+    # own headings
+    pb <- intersect(.plan_page_keys(plan), names(tbl))
     if (length(pb) && nrow(tbl)) {
       attr(tbl, "rtf_stub_break") <- do.call(paste, c(lapply(pb, function(k) {
         .fill_page_by_gaps(as.character(tbl[[k]]))
       }), list(sep = "\r")))
     }
     tbl <- do.call(stub_cols, c(list(data = tbl), a))
+    # The page keys, carried on every row: a heading row the fold added has
+    # none, and a page key with gaps reads as a group value only on its
+    # first row -- a page per data row (#1108).  A heading row takes the
+    # keys of the row it introduces (at the foot, of the row it follows),
+    # as plan_append()'s fold and the page_by split do.
+    pk <- intersect(pb, names(tbl))
+    src <- attr(tbl, "rtf_stub_src", exact = TRUE)
+    if (length(pk) && length(src) == nrow(tbl) && anyNA(src) &&
+        !all(is.na(src))) {
+      s <- .carry_back(src)
+      s[is.na(s)] <- .carry_forward(src)[is.na(s)]
+      for (k in pk) {
+        lb <- attr(pre[[k]], "label", exact = TRUE)
+        tbl[[k]] <- pre[[k]][s]
+        if (!is.null(lb)) attr(tbl[[k]], "label") <- lb
+      }
+    }
     # (stub_cols() puts the folded column first)
     if (!is.null(stub$heading)) attr(tbl[[1L]], "rtf_heading") <- stub$heading
   }
