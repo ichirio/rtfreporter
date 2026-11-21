@@ -1,8 +1,10 @@
 # Run covr to compute test coverage and upload to Codecov.
 # Derived from r-lib/actions examples.
 on:
+  # (not next: the user, 2026-11-22 -- the full check runs once, when next
+  # goes into main; a release from a frozen next is run by hand first)
   push:
-    branches: [main, master, next]
+    branches: [main, master]
   # (a pull request into next runs quick-check.yaml instead)
   pull_request:
     branches-ignore: [next]
