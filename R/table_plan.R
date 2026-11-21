@@ -890,17 +890,18 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
 }
 
 .plan_col_widths <- function(pages, widths, spread, hidden = character()) {
+  skipped <- character()
+  shown <- character()
   one <- function(tb) {
     nm <- names(tb$data)
-    # a name that is no column of the table: a typo, or a column renamed
-    # (a hidden column's width is harmless: it is not printed)
+    # a name that is no column of the table is skipped with a warning: one
+    # set of widths serves tables whose columns differ (a one-arm and a
+    # two-arm study), and a typo is still named.  A hidden column's width
+    # is harmless: it is not printed.
     bad <- setdiff(names(widths), c(nm, ".values", hidden))
     if (length(bad)) {
-      .ard_stop(paste0(
-        "plan_columns(widths = ) names ", paste(sQuote(bad, FALSE), collapse = ", "),
-        ", not a column of the table.\n",
-        "  Its printed columns: ", paste(sQuote(nm, FALSE), collapse = ", "),
-        " (`.values` covers the value columns)."))
+      skipped <<- union(skipped, bad)
+      shown <<- union(shown, nm)
     }
     w <- rep(NA_real_, length(nm))
     if (".values" %in% names(widths)) w[nm %in% spread] <- widths[[".values"]]
@@ -917,8 +918,17 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
     tb$col_rel_width <- w
     tb
   }
-  if (inherits(pages, "rtftable")) return(one(pages))
-  pages[] <- lapply(pages, one)
+  pages <- if (inherits(pages, "rtftable")) one(pages) else {
+    pages[] <- lapply(pages, one)
+    pages
+  }
+  if (length(skipped)) {
+    warning(paste0(
+      "plan_columns(widths = ) names ", paste(sQuote(skipped, FALSE), collapse = ", "),
+      ", not a column of the table: skipped.\n",
+      "  Its printed columns: ", paste(sQuote(shown, FALSE), collapse = ", "),
+      " (`.values` covers the value columns)."), call. = FALSE)
+  }
   pages
 }
 
@@ -3764,7 +3774,9 @@ plan_col_header <- function(.plan, header = NULL, values = NULL,
 #'   **Named by column** (`c(row_label = 5, .values = 2)`, `.values` for
 #'   every value column) a reordered table keeps them; unnamed, they are one
 #'   a column in order, as `col_rel_width` itself.  A name that is not a
-#'   column of the table stops with the names the table has.  Each width is
+#'   column of the table is skipped, with a warning that names it and the
+#'   columns the table has (one set of widths can serve a one-arm and a
+#'   two-arm table).  Each width is
 #'   a positive finite number: `0`, a negative, `NA`, `Inf` or a string
 #'   stops at `plan_columns()`.  A later `plan_columns(widths = )` replaces
 #'   the earlier one as a whole: `c(AGE = 1200, SEX = 900)` followed by
@@ -3774,7 +3786,7 @@ plan_col_header <- function(.plan, header = NULL, values = NULL,
 #'   (`.values` for every value column), [set_decimal_split()]'s `cols`, by
 #'   name.  A value that is not column names (`NA`, `""`, a number) stops at
 #'   `plan_columns()`; a name that is not a column of the table stops when
-#'   the plan is applied, as a `widths` name does (a hidden column's name is
+#'   the plan is applied (a hidden column's name is
 #'   allowed and changes nothing).
 #' @param row_title The row-heading columns, `rtftable(row_title = )`, by
 #'   name as `widths` are: a row key's name as `table_plan(rows = )` gives
@@ -6549,7 +6561,7 @@ plan_n_candidates <- function(.plan) {
 
   if (length(colset$decimal)) {
     first_d <- if (inherits(out, "rtftable")) out$data else out[[1L]]$data
-    # a name that is no column of the table stops, as a `widths` name does
+    # a name that is no column of the table stops
     # (#864); a hidden column is not printed, so it is left alone
     bad <- setdiff(colset$decimal,
                    c(names(first_d), ".values", rtf$drop_cols %||% character()))

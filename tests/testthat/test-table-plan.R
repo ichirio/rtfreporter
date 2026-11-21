@@ -4012,7 +4012,7 @@ test_that("plan_n_candidates(): nothing to read is no row, not an error", {
   expect_identical(names(nc), c("scope", "page", "column", "value"))
 })
 
-test_that("FT-PL046 [FR-PL160]: plan_columns(widths =) naming no column of the table stops, naming it", {
+test_that("FT-PL046 [FR-PL160]: plan_columns(widths =) naming no column of the table warns, naming it, and skips it", {
   d <- data.frame(Item = c("a", "b"), A = c("1", "2"), B = c("3", "4"), Hid = c("x", "y"),
                   stringsAsFactors = FALSE)
   pages <- function(p) suppressMessages(plan_apply(p, "pages"))
@@ -4021,10 +4021,20 @@ test_that("FT-PL046 [FR-PL160]: plan_columns(widths =) naming no column of the t
                 plan_columns(widths = c(Item = 3, A = 1, B = 1, Hid = 9)))
   ok <- if (inherits(ok, "rtftable")) ok else ok[[1L]]
   expect_equal(as.numeric(ok$col_rel_width), c(3, 1, 1))
-  # a name that is no column: stops, with the name and the printed columns
-  err <- expect_error(pages(table_plan(d) |> plan_columns(widths = c(Item = 3, nope = 1, .values = 1))),
-                      "plan_columns(widths = ) names 'nope', not a column of the table", fixed = TRUE)
-  expect_match(conditionMessage(err), "Its printed columns: 'Item', 'A', 'B', 'Hid'", fixed = TRUE)
+  # a name that is no column: one warning, with the name and the printed
+  # columns; the other widths are used
+  w <- expect_warning(sk <- pages(table_plan(d) |>
+                        plan_columns(widths = c(Item = 3, nope = 1, A = 1, B = 1, Hid = 2))),
+                      "plan_columns(widths = ) names 'nope', not a column of the table: skipped", fixed = TRUE)
+  expect_match(conditionMessage(w), "Its printed columns: 'Item', 'A', 'B', 'Hid'", fixed = TRUE)
+  sk <- if (inherits(sk, "rtftable")) sk else sk[[1L]]
+  expect_equal(as.numeric(sk$col_rel_width), c(3, 1, 1, 2))
+  # one set of widths for a one-arm and a two-arm table: B is absent here
+  d1 <- d[c("Item", "A")]
+  expect_warning(one <- pages(table_plan(d1) |> plan_columns(widths = c(Item = 3, A = 1, B = 1))),
+                 "names 'B', not a column of the table: skipped", fixed = TRUE)
+  one <- if (inherits(one, "rtftable")) one else one[[1L]]
+  expect_equal(as.numeric(one$col_rel_width), c(3, 1))
 })
 
 test_that("FT-PL047 [FR-PL172 FR-IX102]: plan_columns(widths =) with column_widths_twips stops: one of them", {
