@@ -75,38 +75,16 @@ home:
       devnotes:
         title: Dev stage
         text: |
-          v0.8.2 released (current stable); pre-1.0, the API may still change
-          before v1.0.0.  Development continues at `0.8.2.9000` — the standard
-          R scheme, where the three-component part names the last release.
+          v0.9.0 released (current stable).  Development continues at
+          `0.9.0.9000` — the standard R scheme, where the three-component
+          part names the last release.
 
           Roadmap:
 
-          **Next release** (in development on `main`):
+          **0.9.0**: Initial release
+          ([release notes](https://github.com/ichirio/rtfreporter/releases/tag/v0.9.0)).
 
-          - Tables from an ARD, end to end: every `as_rtftables()` setting
-            has a plan verb, plus a Total column (also a Total row for a
-            shift table), nested rows, BY pages and a column header written
-            row by row, with `(N=xx)` read from the same ARD.
-          - The tables a study report has: a test or a difference as a
-            column (`plan_compare()`), several statistics in one column
-            (`plan_stat_groups()`), subgroups one under another
-            (`normalize_ard(stack = )`), rows kept by a rule
-            (`plan_filter()`), sorting by a parent's count (`-n@SOC`), a
-            section per arm with its N (`heading =`) and a line for a table
-            with no events (`plan_empty()`).
-          - Flow placement: with `page_break = FALSE`, a table or a figure
-            goes on the page under the content before it, and a listing
-            under its summary table.
-          - Japanese and other East Asian text: a font per script
-            (`latin` / `east_asian` / `complex`) and `font_lang`.
-          - Figures: the drawing settings in `rtf_figures()`, and a better PNG
-            device when one is installed.
-          - A folder for an AI assistant (`rtfreporter_ai_manual()`): the
-            manual, example programs, your ARD's shape and one file to paste.
-          - A cleaner API: one name per thing,
-            `rtf_section(header = , footer = )`, table formats in the plan
-            or the style rather than in `rtf_tables()`, and the old border
-            functions on their way out.
+          **Next release**:
 
           **Later**:
 
@@ -244,9 +222,9 @@ navbar:
         - text: "AI agents: VS Code with Copilot"
           href: articles/ai-agents-vscode-copilot.html
         - text: "AI user manual"
-          href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.8.2.md
+          href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.9.0.md
         - text: "AI developer manual"
-          href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-dev-manual-0.8.2.md
+          href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-dev-manual-0.9.0.md
         # ── Validation ──────────────────────────────────────────────────
         - text: -------
         - text: "Validation"
@@ -259,9 +237,6 @@ navbar:
         - text: "Specification & internals"
         - text: "Architecture & internals"
           href: articles/architecture.html
-    news:
-      text: Changelog
-      href: news/index.html
     github:
       icon: fab fa-github
       href: https://github.com/ichirio/rtfreporter
@@ -817,11 +792,10 @@ articles:
       - articles/internal-design
       - articles/internal-design-ja
 
-# News configuration:
-# Until v0.1.0 we are publishing every dev release as one rolling section
-# ("Development version").  Once v0.1.0 ships the section breakdown
-# below will be updated to show per-version history.
+# News: pkgdown's News menu -- each release's page on GitHub, then the
+# Changelog (NEWS.md).  A new release adds its line at the top.
 news:
   one_page: true
   releases:
-    - text: "Development version (pre-v0.1.0)"
+    - text: "Version 0.9.0"
+      href: https://github.com/ichirio/rtfreporter/releases/tag/v0.9.0
