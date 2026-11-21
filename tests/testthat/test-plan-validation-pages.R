@@ -680,7 +680,7 @@ test_that("FT-PL1001 [FR-PL977]: a two-level stub (visit, variable) under a hidd
   for (x in pg) expect_identical(x[1:2], c("WEEK 12", paste0(strrep(" ", 4L), "AVAL")))
 })
 
-test_that("FT-PL6804 [FR-PL994]: plan_stub(before = TRUE) with plan_paginate_group(): a page per value, each opening with its heading rows (#1108)", {
+test_that("FT-PL6807 [FR-PL996]: plan_stub(before = TRUE) with plan_paginate_group(): a page per value, each opening with its heading rows (#1108)", {
   mk <- function(visits) {
     st <- expand.grid(AVISIT = visits, PARAM = c("ALT", "HGB"), ARM = c("Placebo", "Active"),
                       variable = c("AVAL", "CHG"), stringsAsFactors = FALSE)
