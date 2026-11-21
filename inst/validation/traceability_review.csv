@@ -116,7 +116,7 @@
 "FT-PL043","FR-PL159","asserts","expect_identical(first_page(ok)$col_rel_width, c(1, 2, 3, 3, 3))","yes"
 "FT-PL976","FR-PL159","asserts","O(""widths"", ""by name"", c(group = 2, label = 3, .values = 1), rw(c(2, 3, 1, 1))),","yes"
 "FT-PL046","FR-PL160","asserts","expect_equal(as.numeric(ok$col_rel_width), c(3, 1, 1)) | w <- expect_warning(sk <- pages(...nope...), ""plan_columns(widths = ) names 'nope', not a column of the table: skipped"", fixed = TRUE) | expect_equal(as.numeric(sk$col_rel_width), c(3, 1, 1, 2)) | expect_warning(one <- pages(...B absent...)) | expect_equal(as.numeric(one$col_rel_width), c(3, 1))","yes"
-"FT-PL976","FR-PL160","part","E(""widths"", ""a name not there"", c(nope = 1), ""^plan_columns\\(widths = \\) names 'nope'""),","yes"
+"FT-PL976","FR-PL160","part",".eb3_case(""widths"", ""a name not there (skipped)"", c(group = 2, label = 3, nope = 1, .values = 1), ""warning:^plan_columns\\(widths = \\) names 'nope', not a column of the table: skipped""),","yes"
 "FT-PL980","FR-PL160","part","expect_identical(p[[1L]]$col_rel_width, c(3, 1, 1))","yes"
 "FT-PL013","FR-PL161","asserts","plan_after(p, function(x) set_decimal_split(x, cols = 3:5))) | by_decl <- as_rtftables(plan_columns(p, decimal = "".values"")) | expect_identical(by_decl, by_step)","yes"
 "FT-PL980","FR-PL161","asserts","ds <- function(v) function(p) identical(p[[1L]]$decimal_split$cols, v) | O(""decimal"", "".values"", "".values"", ds(3:4)),","yes"
