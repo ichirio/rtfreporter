@@ -679,3 +679,34 @@ test_that("FT-PL1001 [FR-PL977]: a two-level stub (visit, variable) under a hidd
   expect_length(pg, 2L)
   for (x in pg) expect_identical(x[1:2], c("WEEK 12", paste0(strrep(" ", 4L), "AVAL")))
 })
+
+test_that("FT-PL6807 [FR-PL996]: plan_stub(before = TRUE) with plan_paginate_group(): a page per value, each opening with its heading rows (#1108)", {
+  mk <- function(visits) {
+    st <- expand.grid(AVISIT = visits, PARAM = c("ALT", "HGB"), ARM = c("Placebo", "Active"),
+                      variable = c("AVAL", "CHG"), stringsAsFactors = FALSE)
+    st$stat_name <- "mean"; st$stat <- seq_len(nrow(st)) * 1.5
+    st$.label <- NA_character_; st$.kind <- "continuous"
+    p <- table_plan(st, cols = "ARM", rows = list(param = "PARAM", group2 = "AVISIT", group3 = "variable")) |>
+      plan_cells(continuous = c(Mean = "{mean:.1f}")) |>
+      plan_stub(name = "row_label", before = TRUE) |>
+      plan_sort(keys = c("param", "group2", "group3")) |>
+      plan_paginate_group(col = "param", keep = FALSE, heading = "Parameter: {value}",
+                          heading_at = "title")
+    vp_pages(p)
+  }
+  # the stub indents with no-break spaces
+  lbl <- function(pg) gsub("\u00a0", " ", pg$data$row_label)
+  ind <- paste0(strrep(" ", 4L), c("AVAL", "", "CHG", ""), c("", "    Mean"))
+  # one visit: the visit heading is one value over the table, and still
+  # opens the second page; before #1108 a page per data row and a "group_0"
+  one <- mk("WEEK 12")
+  expect_identical(names(one), c("Parameter: ALT", "Parameter: HGB"))
+  for (pg in one) {
+    expect_identical(lbl(pg), c("WEEK 12", ind))
+    expect_false("param" %in% names(pg$data))
+  }
+  two <- mk(c("WEEK 4", "WEEK 12"))
+  expect_identical(names(two), c("Parameter: ALT", "Parameter: HGB"))
+  # (the visits sort as text: "WEEK 12" before "WEEK 4")
+  for (pg in two) expect_identical(lbl(pg), c("WEEK 12", ind, "WEEK 4", ind))
+})
