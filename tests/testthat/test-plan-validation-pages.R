@@ -694,17 +694,19 @@ test_that("FT-PL6804 [FR-PL994]: plan_stub(before = TRUE) with plan_paginate_gro
                           heading_at = "title")
     vp_pages(p)
   }
+  # the stub indents with no-break spaces
+  lbl <- function(pg) gsub("\u00a0", " ", pg$data$row_label)
   ind <- paste0(strrep(" ", 4L), c("AVAL", "", "CHG", ""), c("", "    Mean"))
   # one visit: the visit heading is one value over the table, and still
   # opens the second page; before #1108 a page per data row and a "group_0"
   one <- mk("WEEK 12")
   expect_identical(names(one), c("Parameter: ALT", "Parameter: HGB"))
   for (pg in one) {
-    expect_identical(pg$data$row_label, c("WEEK 12", ind))
+    expect_identical(lbl(pg), c("WEEK 12", ind))
     expect_false("param" %in% names(pg$data))
   }
   two <- mk(c("WEEK 4", "WEEK 12"))
   expect_identical(names(two), c("Parameter: ALT", "Parameter: HGB"))
   # (the visits sort as text: "WEEK 12" before "WEEK 4")
-  for (pg in two) expect_identical(pg$data$row_label, c("WEEK 12", ind, "WEEK 4", ind))
+  for (pg in two) expect_identical(lbl(pg), c("WEEK 12", ind, "WEEK 4", ind))
 })
