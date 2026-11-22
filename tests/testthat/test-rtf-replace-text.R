@@ -83,7 +83,7 @@ test_that("case_insensitive matches regardless of case, escaping metachars", {
   expect_identical(.read_txt(p2), "Z axb")
 })
 
-test_that("FT-DC6803 [FR-DC387]: rtf_replace_text(case_insensitive = TRUE) keeps a fixed replacement's backslashes; a regex replacement keeps its back-references", {
+test_that("FT-DC6805 [FR-DC389]: rtf_replace_text(case_insensitive = TRUE) keeps a fixed replacement's backslashes; a regex replacement keeps its back-references", {
   p <- .tmp_rtf("DRAFT here")
   on.exit(unlink(c(p, paste0(p, ".bak"))), add = TRUE)
   rtf_replace_text(p, "draft", "FINAL\\line \\1 $1", case_insensitive = TRUE)
