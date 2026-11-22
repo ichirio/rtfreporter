@@ -26,10 +26,16 @@ Results of the release test run:
 
 * The examples write only to `tempdir()`; the two that open a plot window
   run only in an interactive session.  Examples that use a suggested
-  package (gt, gtsummary) run only when it is installed.
-* Tests and vignettes that use a suggested package skip without it.  No
-  test reaches the network.  The few tests that call an external program
-  (LibreOffice to render an RTF, git in a source checkout) skip on CRAN
-  and wherever the program is absent.
-* The screenshots of the example RTF output are not part of the package
-  (they are on the package's website); the example `.rtf` files are.
+  package (cards, gt, gtsummary) run only when it is installed.
+* Tests and vignettes that use a suggested package skip without it:
+  suggested packages are used only behind `requireNamespace()` or
+  `skip_if_not_installed()`.  That includes ragg (a plot is drawn with it
+  when installed, else with `grDevices::png()`) and devEMF (used only when
+  a plot is asked to be drawn as EMF, `render_format = "emf"`, which
+  without it stops with a message saying how to install it; its tests are
+  skipped without it).  No test reaches the network.  The few tests that
+  call an external program (LibreOffice to render an RTF, git in a source
+  checkout) skip on CRAN and wherever the program is absent.
+* The screenshots of example output are the PNG files in `man/figures`,
+  for the README and the package's website; the example `.rtf` files
+  are in the package too.
