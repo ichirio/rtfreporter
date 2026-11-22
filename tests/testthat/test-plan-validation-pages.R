@@ -710,3 +710,31 @@ test_that("FT-PL6807 [FR-PL996]: plan_stub(before = TRUE) with plan_paginate_gro
   # (the visits sort as text: "WEEK 12" before "WEEK 4")
   for (pg in two) expect_identical(lbl(pg), c("WEEK 12", ind, "WEEK 4", ind))
 })
+
+test_that("FT-PL6808 [FR-PL997]: as_rtftables(<a table_plan>) runs the plan and stops on any other argument, naming it", {
+  p <- table_plan(vp_wide())
+  # the plan alone: its pages, as plan_apply(plan, "pages") gives them
+  expect_equal(suppressMessages(as_rtftables(p)), vp_pages(p))
+  hint <- paste0("\n  A plan's table settings go in plan_style() and the other plan_*() ",
+                 "verbs (plan_paginate_rows() for max_rows and split).")
+  expect_error(as_rtftables(p, max_rows = 2),
+               paste0("as_rtftables(): a table_plan takes no other argument; got `max_rows`.",
+                      hint), fixed = TRUE)
+  expect_error(as_rtftables(p, max_rows = 2, border = "none"),
+               "got `max_rows`, `border`.", fixed = TRUE)
+  expect_error(as_rtftables(p, "group_safe"), "got an unnamed argument.", fixed = TRUE)
+  # an argument is named, not evaluated
+  expect_error(as_rtftables(p, split = stop("not reached")), "got `split`.", fixed = TRUE)
+})
+
+test_that("FT-PL6809 [FR-PL998]: plan_paginate_rows(max_rows = , split = <a function>) gives the function the budget, as as_rtftables() does", {
+  got <- integer()
+  two <- function(df, max_rows, ...) {
+    got <<- c(got, max_rows)
+    split(df, ceiling(seq_len(nrow(df)) / max_rows))
+  }
+  pg <- vp_pages(table_plan(vp_wide()) |> plan_paginate_rows(max_rows = 4, split = two))
+  expect_identical(got, 4L)
+  expect_equal(pg, vp_direct(max_rows = 4, split = two))
+  expect_identical(vapply(pg, function(p) nrow(p$data), 1L), c(4L, 2L))
+})

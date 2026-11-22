@@ -43,7 +43,8 @@
 #'   the case-insensitive match, so regex metacharacters stay literal).
 #' @param backup Logical.  When overwriting in place (`output_file = NULL`),
 #'   first copy the original to `paste0(input_file, ".bak")`.  Default `TRUE`.
-#'   Ignored when `output_file` is given.
+#'   Ignored when `output_file` is given.  When that path is a folder, or the
+#'   copy fails, it stops before the file is overwritten.
 #'
 #' @return The normalised path to the written file, invisibly.
 #'
@@ -124,8 +125,17 @@ rtf_replace_text <- function(input_file,
   # ---- write ------------------------------------------------------------
   if (is.null(output_file)) {
     output_file <- input_file
+    # the backup is made before the file is overwritten, or nothing is
     if (isTRUE(backup)) {
-      file.copy(input_file, paste0(input_file, ".bak"), overwrite = TRUE)
+      bak <- paste0(input_file, ".bak")
+      if (dir.exists(bak)) {
+        stop("rtf_replace_text(): the backup path is a folder: ", bak,
+             "; the file is left as it was.", call. = FALSE)
+      }
+      if (!isTRUE(.copy_backup(input_file, bak))) {
+        stop("rtf_replace_text(): could not write the backup ", bak,
+             "; the file is left as it was.", call. = FALSE)
+      }
     }
   }
   writeBin(charToRaw(iconv(text, from = "UTF-8", to = encoding, sub = "byte")),
@@ -133,6 +143,10 @@ rtf_replace_text <- function(input_file,
 
   invisible(normalizePath(output_file))
 }
+
+# The copy rtf_replace_text() makes before it overwrites a file in place: TRUE
+# when it was written (a function of its own, so a test can make it fail)
+.copy_backup <- function(from, to) file.copy(from, to, overwrite = TRUE)
 
 # Escape regex metacharacters so a fixed string can be embedded in a Perl
 # regular expression (used for the case-insensitive fixed-string path).
