@@ -1,8 +1,8 @@
 # A pull request into next: one quick job -- the package installed and its
 # tests run, on ubuntu with R release; no --as-cran, no other platforms,
 # no pkgdown -- so that next does not queue behind the full matrix.
-# The full R-CMD-check still runs on each push to next (the latest head
-# only), on pull requests into main, and on its schedule.
+# The full R-CMD-check (6 environments) runs on the pull request that takes
+# next into main.
 # The tests run only once the pull request is ready to merge: when it gets
 # the automerge label, and on each push after that (the user, 2026-11-22: the
 # regression tests once before the merge; a push before it tests only the
