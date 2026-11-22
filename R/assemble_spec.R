@@ -382,11 +382,15 @@
     stop("`spec_file` must be NULL or a single path ending in .xlsx or .csv.",
          call. = FALSE)
   }
+  # (the path checked first: tools::file_ext() calls basename(), which stops
+  # on a name the native encoding cannot hold)
+  if (is.character(spec_file) && !is.na(spec_file)) {
+    .check_native_path(spec_file, "spec_file")
+  }
   if (!is.character(spec_file) || is.na(spec_file) ||
       !tolower(tools::file_ext(spec_file)) %in% c("xlsx", "csv")) {
     stop("`spec_file` must end in .xlsx or .csv.", call. = FALSE)
   }
-  .check_native_path(spec_file, "spec_file")
   if (!dir.exists(dirname(spec_file))) {
     stop(sprintf("The folder of `spec_file` does not exist: %s",
                  dirname(spec_file)), call. = FALSE)
