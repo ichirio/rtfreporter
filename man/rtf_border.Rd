@@ -169,11 +169,6 @@ of the selection, so the rules \emph{inside} it are asked for by name with
 \code{border = "tfl"} sets the standard table look.  A border on a single cell
 (\code{\link[=col_cell]{col_cell()}}, \code{cell_styles}) has no inside, so its four edges are just that
 cell's edges.
-
-rtfreporter warns once per session when it meets a border whose edges could
-be read as either the outer edge or every rule.  Naming \code{inside_h} /
-\code{inside_v} says which you mean and silences it -- use \code{"none"} for "no rule
-there".
 }
 
 \examples{

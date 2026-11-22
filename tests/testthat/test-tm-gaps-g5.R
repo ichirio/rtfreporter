@@ -511,13 +511,6 @@ test_that("FT-TB3235 [FR-TB438]: style_header warns with the valid arguments, a 
 
 .g5_edge <- function(style) rtf_border(bottom = rtf_border_line(style))
 
-# Forget that the once-a-session warning was given.
-.g5_reset_edge_warning <- function() {
-  if (exists("border_edge_reading", envir = .deprecation_state, inherits = FALSE)) {
-    rm(list = "border_edge_reading", envir = .deprecation_state)
-  }
-}
-
 test_that("FT-TB3236 [FR-TB439]: style_zone merges onto an empty border and returns a copy", {
   tbl <- rtftable(.g5_one(), border = "none")
   expect_null(tbl$border)
@@ -575,48 +568,6 @@ test_that("FT-TB3239 [FR-TB442]: style_zone merges on every page of a list, a ba
     style_zone(list(t1, data.frame()), body = .g5_edge("single")),
     paste0("`style_zone()` on a list expects every element to be an rtftable (as ",
            "returned by as_rtftables()); element 2 is 'data.frame'."), fixed = TRUE)
-})
-
-test_that("FT-TB3240 [FR-TB443]: the changed edge reading warns once a session, in full", {
-  .g5_reset_edge_warning()
-  on.exit(.g5_reset_edge_warning(), add = TRUE)
-  d <- data.frame(Item = c("a", "b", "c"), A = c("1", "2", "3"), stringsAsFactors = FALSE)
-  tbl <- rtftable(d, border = "none")
-  s <- rtf_border_line()
-  ws <- character()
-  withCallingHandlers(
-    style_zone(tbl, body = rtf_border(top = s)),
-    warning = function(w) {
-      ws <<- c(ws, conditionMessage(w))
-      invokeRestart("muffleWarning")
-    })
-  expect_identical(ws, paste0(
-    "The edges of `rtf_border()` now mean the *outer* edges of whatever you attach it to.\n",
-    "  Before 0.5.0 `left`/`right` were drawn on every cell of a row, and a multi-row zone's\n",
-    "  `top`/`bottom` on every one of its rows.  To keep that look, name the interior rule:\n",
-    "    rtf_border(left = s, right = s, inside_v = s)   # was: left/right alone\n",
-    "    rtf_border(bottom = s, inside_h = s)            # was: bottom alone on a body zone\n",
-    "  Naming `inside_h` / `inside_v` (with `rtf_border_line(\"none\")` for \"no rule\") ",
-    "silences this.\n",
-    "  See ?rtf_border, section \"Writing borders before and after 0.5.0\", for the old ",
-    "and new spelling of each case."))
-  # the second call, and a left/right border, are silent this session
-  expect_silent(style_zone(tbl, body = rtf_border(top = s)))
-  expect_silent(style_zone(tbl, body = rtf_border(left = s)))
-})
-
-test_that("FT-TB3241 [FR-TB443]: naming inside_h or inside_v, or a single row, does not warn", {
-  .g5_reset_edge_warning()
-  on.exit(.g5_reset_edge_warning(), add = TRUE)
-  d <- data.frame(Item = c("a", "b", "c"), A = c("1", "2", "3"), stringsAsFactors = FALSE)
-  tbl <- rtftable(d, border = "none")
-  s <- rtf_border_line()
-  expect_silent(style_zone(tbl, body = rtf_border(top = s, inside_h = "none")))
-  expect_silent(style_zone(tbl, body = rtf_border(left = s, inside_v = "none")))
-  expect_silent(style_zone(rtftable(d[1L, ], border = "none"), body = rtf_border(top = s)))
-  # left/right alone does warn (and only once)
-  expect_warning(style_zone(tbl, body = rtf_border(left = s)),
-                 "The edges of `rtf_border()` now mean the *outer* edges", fixed = TRUE)
 })
 
 # ----------------------------------------------------- rtf_table_style
@@ -871,31 +822,6 @@ test_that("FT-TB3254 [FR-TB477]: a bad side stops naming the slot and what is ac
   expect_error(rtf_border(left = list(1)), paste("`left`", kind), fixed = TRUE)
   expect_error(rtf_border(inside_h = 5), paste("`inside_h`", kind), fixed = TRUE)
   expect_error(rtf_border(inside_v = list()), paste("`inside_v`", kind), fixed = TRUE)
-})
-
-test_that("FT-TB3255 [FR-TB480]: an rtf_border records which of inside_h and inside_v were named", {
-  s <- rtf_border_line()
-  expect_identical(attr(rtf_border(inside_h = s), "inside_named"), c(h = TRUE, v = FALSE))
-  expect_identical(attr(rtf_border(inside_v = s), "inside_named"), c(h = FALSE, v = TRUE))
-  expect_identical(attr(rtf_border(inside_h = s, inside_v = s), "inside_named"),
-                   c(h = TRUE, v = TRUE))
-  expect_identical(attr(rtf_border(left = s, right = s), "inside_named"),
-                   c(h = FALSE, v = FALSE))
-  # the attribute is not part of the value: the six slots are the same
-  expect_identical(names(rtf_border(inside_h = s)), names(rtf_border()))
-})
-
-test_that("FT-TB3256 [FR-TB480]: a left/right border with neither inside rule named warns once", {
-  .g5_reset_edge_warning()
-  on.exit(.g5_reset_edge_warning(), add = TRUE)
-  tbl <- rtftable(data.frame(Item = c("a", "b"), A = c("1", "2"), stringsAsFactors = FALSE),
-                  border = "none")
-  s <- rtf_border_line()
-  expect_warning(style_zone(tbl, last_row = rtf_border(left = s, right = s)),
-                 "The edges of `rtf_border()` now mean the *outer* edges", fixed = TRUE)
-  expect_silent(style_zone(tbl, last_row = rtf_border(left = s, right = s)))
-  .g5_reset_edge_warning()
-  expect_silent(style_zone(tbl, last_row = rtf_border(left = s, right = s, inside_v = "none")))
 })
 
 test_that("FT-TB3257 [FR-TB481]: a line saved under the old class name is read as a side", {
