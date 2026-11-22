@@ -36,6 +36,10 @@ Results of the release test run:
   skipped without it).  No test reaches the network.  The few tests that
   call an external program (LibreOffice to render an RTF, git in a source
   checkout) skip on CRAN and wherever the program is absent.
+* To keep the check time short, the slow validation test families
+  (pairwise and decision-table grids, gap and coverage scenarios) skip on
+  CRAN with `skip_on_cran()`.  Every test runs on GitHub Actions
+  (`NOT_CRAN=true`) for each change and before each release.
 * The screenshots of example output are the PNG files in `man/figures`,
   for the README and the package's website; the example `.rtf` files
   are in the package too.
