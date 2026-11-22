@@ -3,22 +3,32 @@
 # no pkgdown -- so that next does not queue behind the full matrix.
 # The full R-CMD-check still runs on each push to next (the latest head
 # only), on pull requests into main, and on its schedule.
+# The tests run only once the pull request is ready to merge: when it gets
+# the automerge label, and on each push after that (the user, 2026-11-22: the
+# regression tests once before the merge; a push before it tests only the
+# changed area, locally).  Without the label the job is skipped.
 on:
   pull_request:
     branches: [next]
+    types: [opened, synchronize, reopened, labeled]
 
 name: quick-check
 
 permissions:
   contents: read
 
-# a newer push to the same pull request cancels the run still going
-concurrency:
-  group: quick-check-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
 jobs:
   tests:
+    # the automerge label just added, or a push to a pull request that has it
+    # (another label added does not run it again)
+    if: >-
+      (github.event.action == 'labeled' && github.event.label.name == 'automerge') ||
+      (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'automerge'))
+    # a newer run of the same pull request cancels the one still going (here,
+    # not on the workflow: a skipped run must not cancel a running one)
+    concurrency:
+      group: quick-check-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     name: tests (ubuntu-latest, R release)
 

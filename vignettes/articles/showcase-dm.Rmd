@@ -305,17 +305,19 @@ count/percent cell is exactly where formatters differ. (Both render chunks
 reuse `long` from the block just above, and each writes out its own `tfrmt`
 spec in full -- the only line that changes is the count/percent `frmt`.)
 
-A small but important detail first: write the percent as **`x.x`**, not `xx.x`.
-`frmt("xx.x")` right-pads the integer part, so a one-digit percent prints with a
-leading space *inside* the parentheses -- `( 3.5%)`. `frmt("x.x")` gives a clean
-`(3.5%)`.
+The two ways differ in the percent's width. If tfrmt aligns the cell itself,
+the percent needs `frmt("xx.x")`: it right-pads the integer part, so a one-digit
+percent prints with a leading space inside the parentheses -- `( 8.3%)` under
+`(16.3%)` -- and the digits line up. If `rtfreporter` aligns, tfrmt should give
+clean strings (`frmt("x.x")`, `(8.3%)`) and let `align_count_pct` do the padding.
+Zero counts keep tfrmt's own `0 ( 0.0%)`.
 
-**Way 1 -- tfrmt formats and aligns.** The percent uses `x.x`; the count is
-padded to `xx`. `rtfreporter` reads the strings and renders them *as-is*
+**Way 1 -- tfrmt formats and aligns.** The count is padded to `xx` and the
+percent to `xx.x`. `rtfreporter` reads the strings and renders them *as-is*
 (`align_count_pct` left off):
 
 ```{r tfrmt-self}
-# tfrmt formats AND aligns: the count is padded to "xx", the percent is "x.x".
+# tfrmt formats AND aligns: the count is padded to "xx", the percent to "xx.x".
 spec <- tfrmt(
   group = group, label = label, column = column, param = param, value = value,
   body_plan = body_plan(
@@ -328,7 +330,7 @@ spec <- tfrmt(
                    frmt_combine("{Min}, {Max}",
                                 Min = frmt("xx"), Max = frmt("xx"))),
     frmt_structure(c("Age category", "Sex", "Race"), ".default",
-                   frmt_combine("{n} ({pct}%)", n = frmt("xx"), pct = frmt("x.x")))))
+                   frmt_combine("{n} ({pct}%)", n = frmt("xx"), pct = frmt("xx.x")))))
 g1 <- print_to_gt(spec, long)
 
 # tfrmt already aligned the strings; rtfreporter renders them as-is (no

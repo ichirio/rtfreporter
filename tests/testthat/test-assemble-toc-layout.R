@@ -13,7 +13,7 @@ test_that("FT-AS7301 [FR-AS265]: every TOC entry paragraph has a right indent be
   e <- .tt_entries(x)
   expect_length(e, 3L)
   expect_identical(.tl_props(e),
-                   rep("\\ri720\\keep\\fs20\\tqr\\tldot\\tx14112", 3L))
+                   rep("\\ri720\\keep\\fs20\\tqr\\tldot\\tx13680", 3L))
   expect_true(grepl(.tt_long_label(), e[2L], fixed = TRUE))          # one paragraph, the whole label
   expect_true(grepl(.tt_long_label("14.3.2.1"), e[3L], fixed = TRUE))
   expect_identical(sum(grepl("\\\\par\\}$", e)), 3L)
@@ -21,7 +21,7 @@ test_that("FT-AS7301 [FR-AS265]: every TOC entry paragraph has a right indent be
   # the hanging style: the same right indent, \keep and right tab
   dh <- .tt_dir(); on.exit(unlink(dh, recursive = TRUE), add = TRUE)
   e <- .tt_entries(readLines(.tt_case_hanging(dh), warn = FALSE))
-  expect_true(all(grepl("^\\\\li[0-9]+\\\\fi-[0-9]+\\\\ri720\\\\keep\\\\fs20(\\\\tx[0-9]+)*\\\\tqr\\\\tldot\\\\tx14112$",
+  expect_true(all(grepl("^\\\\li[0-9]+\\\\fi-[0-9]+\\\\ri720\\\\keep\\\\fs20(\\\\tx[0-9]+)*\\\\tqr\\\\tldot\\\\tx13680$",
                         .tl_props(e))))
   expect_true(grepl(sub("^Table 14.3.2.1 ", "", .tt_long_label("14.3.2.1")),
                     e[3L], fixed = TRUE))
@@ -34,13 +34,13 @@ test_that("FT-AS7301 [FR-AS265]: every TOC entry paragraph has a right indent be
     ent <- grepl("PAGEREF", p)
     expect_identical(sum(ent), 3L)
     expect_true(all(grepl("\\\\ri720\\\\keep\\\\fs20", p[ent])))
-    expect_true(all(grepl("\\\\tqr\\\\tldot\\\\tx14112 \\{\\\\field", p[ent])))
+    expect_true(all(grepl("\\\\tqr\\\\tldot\\\\tx13680 \\{\\\\field", p[ent])))
     expect_false(any(grepl("\\\\ri[0-9]|\\\\keep", p[!ent])))
     expect_identical(sum(grepl("\\\\b\\\\fs22 (Efficacy|Safety)\\\\par", p[!ent])), 2L)
   }
   # the leader off: the right indent stays, the tab stop too
   e <- .tt_entries(.tt_asm(f, toc = toc, toc_leader = "none"))
-  expect_true(all(grepl("\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tx14112 ", e)))
+  expect_true(all(grepl("\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tx13680 ", e)))
   # the right indent is 6 characters at the entry size: 864 at 12 pt
   e <- .tt_entries(.tt_asm(f, toc = toc, toc_style = list(entry = list(size = 12))))
   expect_true(all(grepl("\\\\ri864\\\\keep\\\\fs24\\\\tqr", e)))
@@ -49,20 +49,21 @@ test_that("FT-AS7301 [FR-AS265]: every TOC entry paragraph has a right indent be
   g <- .tt_inputs(d2, c(t_1 = "A", t_2 = "B"), pages = c(10000L, 1L))
   x <- .tt_asm(g, toc = "auto")
   expect_identical(.tt_pages(x), c(2L, 10002L))
-  expect_true(all(grepl("^\\{\\\\pard\\\\ri840\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ", .tt_entries(x))))
-  # the estimate: at level 2, 14112 - 0 (no indent by default) - 720 (right
-  # indent) = 13392 twips = 111 Courier New characters at 10 pt; a page holds
+  expect_true(all(grepl("^\\{\\\\pard\\\\ri840\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx13680 ", .tt_entries(x))))
+  # the estimate: at level 2, 13680 - 0 (no indent by default) - 720 (right
+  # indent) = 12960 twips = 108 Courier New characters at 10 pt (the estimate,
+  # in floating point, wraps the 108th: 107 fit); a page holds
   # 35 lines
   pages_of <- function(len, level) {
     toc <- data.frame(file = f[rep_len(1:2, 35L)], label = c(rep("x", 34L), strrep("y", len)),
                       level = c(rep(2L, 34L), level))
     sum(grepl("\\\\pagebb", .tt_paras(.tt_asm(f[1:2], toc = toc)))) + 1L
   }
-  expect_identical(pages_of(111L, 2L), 1L)
-  expect_identical(pages_of(112L, 2L), 2L)
-  # (level 3: the same width, 111 characters)
-  expect_identical(pages_of(111L, 3L), 1L)
-  expect_identical(pages_of(112L, 3L), 2L)
+  expect_identical(pages_of(107L, 2L), 1L)
+  expect_identical(pages_of(108L, 2L), 2L)
+  # (level 3: the same width, 107 characters)
+  expect_identical(pages_of(107L, 3L), 1L)
+  expect_identical(pages_of(108L, 3L), 2L)
 })
 
 test_that("FT-AS7302 [FR-AS269]: with hanging = TRUE an entry is <number>\\tab <title> with one left tab stop, at the hang (none after it, so a wrapped tab goes to the page number), \\li<indent + hang>\\fi-<hang>; the hang is the widest number in the TOC and 1 em; a label that does not split is written whole; toc = \"auto\" and assemble_folder() lay out the same; a whole number of twips writes every label whole; the estimate counts the title's lines", {
@@ -81,10 +82,10 @@ test_that("FT-AS7302 [FR-AS269]: with hanging = TRUE an entry is <number>\\tab <
   # x 0.6 em x 10 pt + 1 em = 1680 + 200 = 1880 twips; no level indent by
   # default, so every level has the same \li
   expect_identical(.tl_props(e),
-                   c("\\li1880\\fi-1880\\ri720\\keep\\fs20\\tx1880\\tqr\\tldot\\tx14112",
-                     "\\li1880\\fi-1880\\ri720\\keep\\fs20\\tx1880\\tqr\\tldot\\tx14112",
-                     "\\li1880\\fi-1880\\ri720\\keep\\fs20\\tqr\\tldot\\tx14112",
-                     "\\li1880\\fi-1880\\ri720\\keep\\fs20\\tx1880\\tqr\\tldot\\tx14112"))
+                   c("\\li1880\\fi-1880\\ri720\\keep\\fs20\\tx1880\\tqr\\tldot\\tx13680",
+                     "\\li1880\\fi-1880\\ri720\\keep\\fs20\\tx1880\\tqr\\tldot\\tx13680",
+                     "\\li1880\\fi-1880\\ri720\\keep\\fs20\\tqr\\tldot\\tx13680",
+                     "\\li1880\\fi-1880\\ri720\\keep\\fs20\\tx1880\\tqr\\tldot\\tx13680"))
   expect_identical(.tt_labels(x),
                    c("Table 14.3.2.1\\tab Adverse events by severity",
                      "Table 9.1\\tab Disposition",
@@ -96,14 +97,14 @@ test_that("FT-AS7302 [FR-AS269]: with hanging = TRUE an entry is <number>\\tab <
   # the widest number decides: "Table 9.1" alone, 9 x 120 + 200 = 1280
   e <- .tt_entries(.tt_asm(f[2:3], toc = toc[2:3, c("file", "label", "level")], toc_style = hang))
   expect_identical(.tl_props(e),
-                   c("\\li1280\\fi-1280\\ri720\\keep\\fs20\\tx1280\\tqr\\tldot\\tx14112",
-                     "\\li1280\\fi-1280\\ri720\\keep\\fs20\\tqr\\tldot\\tx14112"))
+                   c("\\li1280\\fi-1280\\ri720\\keep\\fs20\\tx1280\\tqr\\tldot\\tx13680",
+                     "\\li1280\\fi-1280\\ri720\\keep\\fs20\\tqr\\tldot\\tx13680"))
   # no label splits: the hang is 720, every label whole
   e <- .tt_entries(.tt_asm(f[3:4], toc = c("Appendix of sites", "Plot"), toc_style = hang))
-  expect_true(all(grepl("^\\{\\\\pard\\\\li720\\\\fi-720\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx14112 ", e)))
+  expect_true(all(grepl("^\\{\\\\pard\\\\li720\\\\fi-720\\\\ri720\\\\keep\\\\fs20\\\\tqr\\\\tldot\\\\tx13680 ", e)))
   # a whole number of twips: that hang, the label whole
   x <- .tt_asm(f, toc = toc, toc_style = list(entry = list(hanging = 360)))
-  expect_identical(.tl_props(.tt_entries(x))[1L], "\\li360\\fi-360\\ri720\\keep\\fs20\\tqr\\tldot\\tx14112")
+  expect_identical(.tl_props(.tt_entries(x))[1L], "\\li360\\fi-360\\ri720\\keep\\fs20\\tqr\\tldot\\tx13680")
   expect_identical(.tt_labels(x)[1L], "Table 14.3.2.1 Adverse events by severity")
   # off (the default): no \fi, the label whole
   x <- .tt_asm(f, toc = toc)
@@ -114,7 +115,7 @@ test_that("FT-AS7302 [FR-AS269]: with hanging = TRUE an entry is <number>\\tab <
   g <- .tt_inputs(d2, c(t_14_1_1 = "Table 14.1.1 Demographics", t_9_1 = "Table 9.1 Disposition"))
   x <- .tt_asm(g, toc = "auto", toc_style = hang)
   expect_identical(.tl_props(.tt_entries(x)),
-                   rep("\\li1640\\fi-1640\\ri720\\keep\\fs20\\tx1640\\tqr\\tldot\\tx14112", 2L))
+                   rep("\\li1640\\fi-1640\\ri720\\keep\\fs20\\tx1640\\tqr\\tldot\\tx13680", 2L))
   expect_identical(.tt_labels(x), c("Table 14.1.1\\tab Demographics", "Table 9.1\\tab Disposition"))
   # assemble_folder(): the same split, at level 2 (its default)
   d4 <- .tt_dir(); on.exit(unlink(d4, recursive = TRUE), add = TRUE)
@@ -131,16 +132,16 @@ test_that("FT-AS7302 [FR-AS269]: with hanging = TRUE an entry is <number>\\tab <
   expect_true(all(grepl("^\\\\li2000\\\\fi-2000\\\\ri720\\\\keep\\\\fs20\\\\tx2000\\\\tqr",
                         .tl_props(.tt_entries(.tt_asm(g, toc = "auto", toc_style = hang))))))
   # the estimate: the title's lines, at the width beside the hang.  Level 2
-  # with "Table 14.3.2" (hang 1640): 14112 - 0 - 720 - 1640 = 11752 twips =
-  # 97 characters of title; a page holds 35 lines
+  # with "Table 14.3.2" (hang 1640): 13680 - 0 - 720 - 1640 = 11320 twips =
+  # 94 characters of title; a page holds 35 lines
   pages_of <- function(len) {
     toc <- data.frame(file = f[rep_len(1:2, 35L)],
                       label = c(rep("x", 34L), paste("Table 14.3.2", strrep("y", len))),
                       level = 2L)
     sum(grepl("\\\\pagebb", .tt_paras(.tt_asm(f[1:2], toc = toc, toc_style = hang)))) + 1L
   }
-  expect_identical(pages_of(97L), 1L)
-  expect_identical(pages_of(98L), 2L)
+  expect_identical(pages_of(94L), 1L)
+  expect_identical(pages_of(95L), 2L)
   # a Listing number splits too; the option sets the style as the argument does
   old <- options(rtfreporter.toc_style = hang)
   on.exit(options(old), add = TRUE)
@@ -207,7 +208,7 @@ test_that("FT-AS7303 [FR-AS265 FR-AS125 FR-AS130]: the two Word-check books (dat
 }
 
 test_that("FT-AS7304 [FR-AS273 FR-AS238 FR-AS261]: toc_style indent is 0 by default (no \\li on any heading or entry, at levels 1, 2 and 3); a whole number n indents level k (k - 1) x n twips, headings and entries alike, the hang added to it, the estimate at that width; the option sets it and the argument wins; it merges with the other keys; anything but one whole number >= 0 stops", {
-  ent <- "\\ri720\\keep\\fs20\\tqr\\tldot\\tx14112"
+  ent <- "\\ri720\\keep\\fs20\\tqr\\tldot\\tx13680"
   # the default: every heading and entry at the same left position, no \li
   expect_identical(.tl_levels(NULL), rep(c("\\b\\fs22", ent), 3L))
   expect_identical(.tl_levels(list(indent = 0)), .tl_levels(NULL))
@@ -243,28 +244,28 @@ test_that("FT-AS7304 [FR-AS273 FR-AS238 FR-AS261]: toc_style indent is 0 by defa
   hang <- list(entry = list(hanging = TRUE))
   e <- .tt_entries(.tt_asm(f, toc = toc, toc_style = c(hang, list(indent = 600))))
   expect_identical(.tl_props(e),
-                   c("\\li1880\\fi-1880\\ri720\\keep\\fs20\\tx1880\\tqr\\tldot\\tx14112",
-                     "\\li2480\\fi-1880\\ri720\\keep\\fs20\\tx2480\\tqr\\tldot\\tx14112",
-                     "\\li3080\\fi-1880\\ri720\\keep\\fs20\\tx3080\\tqr\\tldot\\tx14112"))
+                   c("\\li1880\\fi-1880\\ri720\\keep\\fs20\\tx1880\\tqr\\tldot\\tx13680",
+                     "\\li2480\\fi-1880\\ri720\\keep\\fs20\\tx2480\\tqr\\tldot\\tx13680",
+                     "\\li3080\\fi-1880\\ri720\\keep\\fs20\\tx3080\\tqr\\tldot\\tx13680"))
   e <- .tt_entries(.tt_asm(f, toc = toc, toc_style = list(entry = list(hanging = 360), indent = 300)))
   expect_identical(sub("\\\\ri.*$", "", .tl_props(e)),
                    c("\\li360\\fi-360", "\\li660\\fi-360", "\\li960\\fi-360"))
-  # the estimate wraps a label at its level's width: 14112 - (k - 1) x n - 720
+  # the estimate wraps a label at its level's width: 13680 - (k - 1) x n - 720
   pages_of <- function(len, level, st) {
     t <- data.frame(file = f[rep_len(1:2, 35L)], label = c(rep("x", 34L), strrep("y", len)),
                     level = c(rep(2L, 34L), level))
     sum(grepl("\\\\pagebb", .tt_paras(.tt_asm(f[1:2], toc = t, toc_style = st)))) + 1L
   }
   i600 <- list(indent = 600)
-  expect_identical(pages_of(106L, 2L, i600), 1L)    # 12792 twips: 106 characters
-  expect_identical(pages_of(107L, 2L, i600), 2L)
-  expect_identical(pages_of(101L, 3L, i600), 1L)    # 12192: 101
-  expect_identical(pages_of(102L, 3L, i600), 2L)
+  expect_identical(pages_of(102L, 2L, i600), 1L)    # 12360 twips: 103 characters, the edge
+  expect_identical(pages_of(103L, 2L, i600), 2L)
+  expect_identical(pages_of(97L, 3L, i600), 1L)     # 11760: 98, the edge
+  expect_identical(pages_of(98L, 3L, i600), 2L)
   i300 <- list(indent = 300)
-  expect_identical(pages_of(108L, 2L, i300), 1L)    # 13092: 108 (109 is at the edge of the width)
-  expect_identical(pages_of(110L, 2L, i300), 2L)
-  expect_identical(pages_of(106L, 3L, i300), 1L)    # 12792: 106
-  expect_identical(pages_of(107L, 3L, i300), 2L)
+  expect_identical(pages_of(105L, 2L, i300), 1L)    # 12660: 105.5
+  expect_identical(pages_of(106L, 2L, i300), 2L)
+  expect_identical(pages_of(102L, 3L, i300), 1L)    # 12360: 103, the edge
+  expect_identical(pages_of(103L, 3L, i300), 2L)
   # the option sets it, the argument wins, and it merges with the other keys
   old <- options(rtfreporter.toc_style = list(indent = 300))
   on.exit(options(old), add = TRUE)
@@ -309,11 +310,11 @@ test_that("FT-AS7305 [FR-AS265 FR-AS269]: the borderline TOCs (labels stepping a
     e <- .tt_entries(x)
     expect_length(e, 14L)
     pr <- .tl_props(e)
-    # the lengths step across the width: 111 characters of a label (default),
-    # 95 of a title beside the hang (hanging), 3 under to 3 over
+    # the lengths step across the width: 107 characters of a label (default),
+    # 92 of a title beside the hang (hanging), 3 under to 3 over
     lab <- .tt_labels(x)
     len <- if (hg) nchar(sub("^[^\\\\]*\\\\tab ", "", lab)) else nchar(lab)
-    expect_identical(len, rep((if (hg) 95L else 111L) + (-3:3), 2L))
+    expect_identical(len, rep((if (hg) 92L else 107L) + (-3:3), 2L))
     li <- as.integer(sub("^\\\\li([0-9]+).*$", "\\1", ifelse(grepl("^\\\\li", pr), pr, "\\li0")))
     # every left stop (\tx not after \tqr) is at most where a wrapped line
     # starts (\li); the right tab is the last stop, at the text width
@@ -321,12 +322,12 @@ test_that("FT-AS7305 [FR-AS265 FR-AS269]: the borderline TOCs (labels stepping a
       as.integer(regmatches(p, gregexpr("(?<=\\\\tx)[0-9]+", p, perl = TRUE))[[1L]])
     })
     expect_true(all(mapply(function(l, s) all(s <= l), li, lefts)))
-    expect_true(all(grepl("\\\\ri720\\\\keep\\\\fs20(\\\\tx[0-9]+)?\\\\tqr\\\\tldot\\\\tx14112$", pr)))
+    expect_true(all(grepl("\\\\ri720\\\\keep\\\\fs20(\\\\tx[0-9]+)?\\\\tqr\\\\tldot\\\\tx13680$", pr)))
     if (hg) {
-      expect_identical(unique(pr), "\\li1880\\fi-1880\\ri720\\keep\\fs20\\tx1880\\tqr\\tldot\\tx14112")
+      expect_identical(unique(pr), "\\li1880\\fi-1880\\ri720\\keep\\fs20\\tx1880\\tqr\\tldot\\tx13680")
       expect_true(all(grepl("^Table 14\\.2\\.[0-9.]+\\\\tab ", lab)))
     } else {
-      expect_identical(unique(pr), "\\ri720\\keep\\fs20\\tqr\\tldot\\tx14112")
+      expect_identical(unique(pr), "\\ri720\\keep\\fs20\\tqr\\tldot\\tx13680")
     }
     # one page of TOC; the two headings
     expect_false(any(grepl("\\\\pagebb", e)))

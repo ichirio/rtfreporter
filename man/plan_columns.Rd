@@ -22,7 +22,9 @@ plan_columns(
 \strong{Named by column} (\code{c(row_label = 5, .values = 2)}, \code{.values} for
 every value column) a reordered table keeps them; unnamed, they are one
 a column in order, as \code{col_rel_width} itself.  A name that is not a
-column of the table stops with the names the table has.  Each width is
+column of the table is skipped, with a warning that names it and the
+columns the table has (one set of widths can serve a one-arm and a
+two-arm table).  Each width is
 a positive finite number: \code{0}, a negative, \code{NA}, \code{Inf} or a string
 stops at \code{plan_columns()}.  A later \code{plan_columns(widths = )} replaces
 the earlier one as a whole: \code{c(AGE = 1200, SEX = 900)} followed by
