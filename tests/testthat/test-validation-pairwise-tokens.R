@@ -290,6 +290,7 @@
 }
 
 test_that("FT-DC293 [FR-DC282 FR-DC283 FR-DC285 FR-DC281 FR-DC111 FR-DC115 FR-DC116 FR-TB176 FR-IX304 FR-IX396 FR-DC331 FR-DC360 FR-IX401]: pairwise -- token x where x cell x rows x document x markup x text", {
+  skip_on_cran()
   old <- options(rtfreporter.render_time = .tk_time,
                  rtfreporter.tokens = list(OUTPUT_POPULATION = "Safety"))
   on.exit(options(old), add = TRUE)
@@ -314,6 +315,7 @@ test_that("FT-DC293 [FR-DC282 FR-DC283 FR-DC285 FR-DC281 FR-DC111 FR-DC115 FR-DC
   cases <- ap$rows
   cases$id <- seq_len(nrow(cases))
   for (i in seq_len(nrow(cases))) {
+    .cran_cut(i)
     cs <- cases[i, ]
     bad <- .tk_case_a(cs, dir, prog)
     expect_identical(bad, character(0),
@@ -357,6 +359,7 @@ test_that("FT-DC293 [FR-DC282 FR-DC283 FR-DC285 FR-DC281 FR-DC111 FR-DC115 FR-DC
 }
 
 test_that("FT-AS147 [FR-AS138 FR-AS140 FR-AS141 FR-IX111 FR-IX384 FR-AS250]: pairwise -- page token x where x sections x cover x assembler x book_page", {
+  skip_on_cran()
   dir <- tempfile("tk_b")
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
@@ -372,6 +375,7 @@ test_that("FT-AS147 [FR-AS138 FR-AS140 FR-AS141 FR-IX111 FR-IX384 FR-AS250]: pai
   expect_setequal(ap$covered, ap$need)
   cases <- ap$rows
   for (i in seq_len(nrow(cases))) {
+    .cran_cut(i)
     cs <- cases[i, ]
     info <- paste(names(cs), unlist(cs), sep = "=", collapse = " ")
     src <- file.path(dir, paste0("in", i))
@@ -438,6 +442,7 @@ test_that("FT-AS147 [FR-AS138 FR-AS140 FR-AS141 FR-IX111 FR-IX384 FR-AS250]: pai
 }
 
 test_that("FT-IX035 [FR-IX304 FR-DC115 FR-DC331 FR-DC118 FR-DC359 FR-IX314 FR-IX402]: decision table -- a token of one's own: the document, the option and rtfreporter's own", {
+  skip_on_cran()
   dir <- tempfile("tk_c")
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
@@ -505,6 +510,7 @@ test_that("FT-IX035 [FR-IX304 FR-DC115 FR-DC331 FR-DC118 FR-DC359 FR-IX314 FR-IX
 # ---------------------------------------------------------------------------
 
 test_that("FT-DC294 [FR-DC283 FR-DC331 FR-DC360 FR-DC284 FR-DC286]: decision table -- an unknown token is printed as written; {SECTION_PAGES} stops", {
+  skip_on_cran()
   dir <- tempfile("tk_d")
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
@@ -551,6 +557,7 @@ test_that("FT-DC294 [FR-DC283 FR-DC331 FR-DC360 FR-DC284 FR-DC286]: decision tab
 })
 
 test_that("FT-DC295 [FR-DC361 FR-DC283 FR-DC360 FR-IX401]: decision table -- {{ and }} are literal braces in a band, as in a column header", {
+  skip_on_cran()
   dir <- tempfile("tk_br")
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
@@ -598,6 +605,7 @@ test_that("FT-DC295 [FR-DC361 FR-DC283 FR-DC360 FR-IX401]: decision table -- {{ 
 })
 
 test_that("FT-IX036 [FR-IX403 FR-IX401 FR-DC361]: decision table -- a token and the braces of ^ / _ markup", {
+  skip_on_cran()
   dir <- tempfile("tk_sc")
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
@@ -641,6 +649,7 @@ test_that("FT-IX036 [FR-IX403 FR-IX401 FR-DC361]: decision table -- a token and 
 # ---------------------------------------------------------------------------
 
 test_that("FT-AS148 [FR-AS138 FR-AS139 FR-AS140 FR-AS141 FR-IX111 FR-IX384]: decision table -- page tokens after assembly: the cached numbers, and fields stay fields", {
+  skip_on_cran()
   dir <- tempfile("tk_e")
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
@@ -674,6 +683,7 @@ test_that("FT-AS148 [FR-AS138 FR-AS139 FR-AS140 FR-AS141 FR-IX111 FR-IX384]: dec
               "<error>"),
     stringsAsFactors = FALSE)
   for (i in seq_len(nrow(cases))) {
+    .cran_cut(i)
     cs <- cases[i, ]
     info <- paste(names(cs), unlist(cs), sep = "=", collapse = " ")
     out <- file.path(dir, sprintf("e%02d.rtf", i))

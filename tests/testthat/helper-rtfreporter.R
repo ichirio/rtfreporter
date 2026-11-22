@@ -29,6 +29,21 @@ local_deprecated <- function(...) {
   invisible()
 }
 
+# cards::ADAE for the hierarchical AE tables that are slow to widen: on CRAN
+# five of its system organ classes (a small and a large one, the one some
+# tests pin, VASCULAR DISORDERS, among them), anywhere else (CI sets
+# NOT_CRAN=true) all of them.  The tests' checks are the same either way;
+# only the number of SOCs they run over differs.
+.cran_socs <- c("CARDIAC DISORDERS", "EYE DISORDERS", "PSYCHIATRIC DISORDERS",
+                "RENAL AND URINARY DISORDERS", "VASCULAR DISORDERS")
+.cran_adae <- function() {
+  ae <- cards::ADAE
+  if (!.on_cran()) return(ae)
+  ae[ae$AEBODSYS %in% .cran_socs, , drop = FALSE]
+}
+# as testthat::skip_on_cran() decides it: not interactive, NOT_CRAN not "true"
+.on_cran <- function() !interactive() && !isTRUE(as.logical(Sys.getenv("NOT_CRAN", "false")))
+
 # Whether the session's native encoding can hold every character of `x`.  A
 # non-ASCII file name or argument name (a Japanese folder, `p<U+5024> = `)
 # cannot be made in a C locale: R stops ("unable to translate ... to native

@@ -152,6 +152,7 @@
 }
 
 test_that("FT-AR110 [FR-AR150 FR-AR151 FR-AR160 FR-AR168 FR-AR170 FR-AR172 FR-AR173 FR-AR175 FR-AR177 FR-AR179 FR-AR180 FR-AR252 FR-IX409]: widen_ard(): columns x cells x levels x labels x sort x na x sep x sort_stat, pairwise", {
+  skip_on_cran()
   cand <- expand.grid(cols = c("one", "two"), cells = c("n", "np"),
                       levels = c("none", "sex", "trt", "both"),
                       labels = c("none", "trt", "sex"), sort = c("no", "-n", "n"),
@@ -162,6 +163,7 @@ test_that("FT-AR110 [FR-AR150 FR-AR151 FR-AR160 FR-AR168 FR-AR170 FR-AR172 FR-AR
   expect_setequal(ap$covered, ap$need)
   expect_lt(nrow(ap$rows), 60L)
   for (i in seq_len(nrow(ap$rows))) {
+    .cran_cut(i)
     r <- ap$rows[i, ]
     two <- r$cols == "two"
     long <- if (two) .wa_long2() else .wa_long1()
@@ -190,6 +192,7 @@ test_that("FT-AR110 [FR-AR150 FR-AR151 FR-AR160 FR-AR168 FR-AR170 FR-AR172 FR-AR
 })
 
 test_that("FT-AR111 [FR-AR166 FR-AR167 FR-AR180 FR-IX409]: widen_ard(): stats x value x na, the decision table", {
+  skip_on_cran()
   long <- .wa_long1()
   x <- .wa_ard(long, FALSE)
   rows <- c(var = "variable", lv = ".label")
@@ -227,6 +230,7 @@ test_that("FT-AR111 [FR-AR166 FR-AR167 FR-AR180 FR-IX409]: widen_ard(): stats x 
 })
 
 test_that("FT-AR112 [FR-AR170 FR-AR175 FR-AR179 FR-AR252 FR-IX409]: widen_ard(): sort and sort_stat against labels, the decision table", {
+  skip_on_cran()
   x <- .wa_ard(.wa_long1(), FALSE)
   # totals across the arms: F 3 + 4 = 7, M 2 + 9 = 11, U 1 (Placebo has none)
   tot <- c(F = 7, M = 11, U = 1)
@@ -238,6 +242,7 @@ test_that("FT-AR112 [FR-AR170 FR-AR175 FR-AR179 FR-AR252 FR-IX409]: widen_ard():
     as.data.frame(do.call(widen_ard, args))
   }
   # labels: none | scoped by the analysis variable; the rows' label text follows
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   for (case in list(list(name = "no labels", labels = NULL, text = c(F = "F", M = "M", U = "U")),
                     list(name = "SEX scoped", labels = scoped, text = shown))) {
     nm <- case$name
@@ -267,6 +272,7 @@ test_that("FT-AR112 [FR-AR170 FR-AR175 FR-AR179 FR-AR252 FR-IX409]: widen_ard():
 })
 
 test_that("FT-AR113 [FR-AR253]: widen_ard(): records of different values in one cell warn, naming the key, the cell and the values; the first is kept", {
+  skip_on_cran()
   x <- .wa_ard(.wa_long2(), TRUE)
   run <- function(x, ...) as.data.frame(widen_ard(x, cols = "TRT", cells = "{n}", ...))
   # SITE is left over: Drug A / F is 3 (S1) and 5 (S2); five cells in all

@@ -12,6 +12,7 @@
 .as_png <- function() testthat::test_path("fixtures", "validation", "dot.png")
 
 test_that("FT-AS118 [FR-AS106]: a cover or contents before a first file with no \\sectd is refused", {
+  skip_on_cran()
   f <- tempfile(fileext = ".rtf")
   writeLines(c("{\\rtf1\\ansi", "\\pard plain text\\par", "}"), f)
   g <- .as_rtf("Table 14.2.1")
@@ -22,6 +23,7 @@ test_that("FT-AS118 [FR-AS106]: a cover or contents before a first file with no 
 })
 
 test_that("FT-AS119 [FR-AS123 FR-AS124 FR-AS129]: a toc of a kind assemble_rtf() does not read, and a toc_leader not listed, are refused", {
+  skip_on_cran()
   f <- c(.as_rtf("Table 14.1.1"), .as_rtf("Table 14.2.1"))
   out <- tempfile(fileext = ".rtf")
   on.exit(unlink(c(f, out)), add = TRUE)
@@ -40,6 +42,7 @@ test_that("FT-AS119 [FR-AS123 FR-AS124 FR-AS129]: a toc of a kind assemble_rtf()
 })
 
 test_that("FT-AS120 [FR-AS155 FR-AS158]: assemble_folder(recursive = ) reaches the sub-folders; its dots go on to assemble_rtf()", {
+  skip_on_cran()
   d <- tempfile("asf-")
   dir.create(file.path(d, "sub"), recursive = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -56,6 +59,7 @@ test_that("FT-AS120 [FR-AS155 FR-AS158]: assemble_folder(recursive = ) reaches t
 })
 
 test_that("FT-AS121 [FR-AS183]: a table given to rtf_figures() is refused, naming the item", {
+  skip_on_cran()
   expect_error(rtf_figures(rtf_document(), list(.as_png(), data.frame(a = 1))),
                "Item 2: a 'data.frame' is not a figure; a table goes in rtf_tables().",
                fixed = TRUE)
@@ -65,6 +69,7 @@ test_that("FT-AS121 [FR-AS183]: a table given to rtf_figures() is refused, namin
 })
 
 test_that("FT-AS122 [FR-AS191 FR-AS192]: rtf_figures(space_before = ) is the empty lines before a figure that shares the page; anything but a whole number of 0 or more is refused", {
+  skip_on_cran()
   base <- rtf_tables(rtf_document(), list(data.frame(a = 1)))
   doc0 <- rtf_figures(base, .as_png(), page_break = FALSE)
   doc2 <- rtf_figures(base, .as_png(), page_break = FALSE, space_before = 2L)
@@ -85,6 +90,7 @@ test_that("FT-AS122 [FR-AS191 FR-AS192]: rtf_figures(space_before = ) is the emp
 })
 
 test_that("FT-AS123 [FR-AS227]: rtfreporter_ai_manual() in an installation without the manual says where the published copy is", {
+  skip_on_cran()
   # the function as it is, in an installation whose inst/ai/ finds nothing
   e <- new.env(parent = environment(rtfreporter_ai_manual))
   e$system.file <- function(...) ""

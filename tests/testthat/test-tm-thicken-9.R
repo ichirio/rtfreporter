@@ -20,6 +20,7 @@
 # ---- blank rows ----------------------------------------------------------------
 
 test_that("FT-TB5901 [FR-TB301]: set_blank_rows() stores sorted unique integer positions (0 before the first row, k after row k) and leaves the data", {
+  skip_on_cran()
   df <- .t9_blank_df()
   # c(4, 2, 2) and 0 and the change spec (changes after rows 2 and 4, no edges)
   # are unioned: 0, 2, 4
@@ -44,6 +45,7 @@ test_that("FT-TB5901 [FR-TB301]: set_blank_rows() stores sorted unique integer p
 })
 
 test_that("FT-TB5902 [FR-TB306]: set_blank_rows() drops NA and positions above nrow() without a warning; -1 is after the last row, as in rtftable()", {
+  skip_on_cran()
   df <- .t9_blank_df()
   expect_no_warning(out <- set_blank_rows(df, blank_rows = c(NA, 99, -1, 2)))
   expect_identical(attr(out, "rtf_blank_rows"), c(2L, 5L))     # 99 and NA gone, -1 = 5
@@ -58,6 +60,7 @@ test_that("FT-TB5902 [FR-TB306]: set_blank_rows() drops NA and positions above n
 })
 
 test_that("FT-TB5903 [FR-TB308]: set_blank_rows(blank_rows = ) resolves a by_change and a by_rule spec on this data frame, each page of as_rtftables() on its own rows", {
+  skip_on_cran()
   d <- data.frame(lab = c("a", "Total", "b", "c", "Total", "d"), v = 1:6,
                   stringsAsFactors = FALSE)
   # "^Total" is row 2 and row 5: a blank before each is after rows 1 and 4
@@ -94,6 +97,7 @@ test_that("FT-TB5903 [FR-TB308]: set_blank_rows(blank_rows = ) resolves a by_cha
 })
 
 test_that("FT-TB5904 [FR-TB309]: set_blank_rows(blank_rows = list(...)) unions the positions of every form and drops duplicates", {
+  skip_on_cran()
   df <- .t9_blank_df()
   one <- function(s) attr(set_blank_rows(df, blank_rows = s), "rtf_blank_rows")
   pos <- c(0, 1, 2)                                   # positions
@@ -120,6 +124,7 @@ test_that("FT-TB5904 [FR-TB309]: set_blank_rows(blank_rows = list(...)) unions t
 })
 
 test_that("FT-TB5905 [FR-TB315]: set_blank_rows(group_by = ) is auto by default, or indent, value, filled, as the pagination splits detect groups; any other value is refused", {
+  skip_on_cran()
   expect_identical(eval(formals(set_blank_rows)$group_by),
                    c("auto", "indent", "value", "filled"))
   d4 <- data.frame(g = c("A", "", "", "B", "", "C"), v = 1:6, stringsAsFactors = FALSE)
@@ -148,6 +153,7 @@ test_that("FT-TB5905 [FR-TB315]: set_blank_rows(group_by = ) is auto by default,
 })
 
 test_that("FT-TB5906 [FR-TB317]: blank_rows_by_change() holds cols, group_by, include_before_first and include_after_last and inserts nothing; the table that receives it does", {
+  skip_on_cran()
   spec <- blank_rows_by_change(c("g", "v"))
   expect_s3_class(spec, "rtf_blank_rows_by_change")
   expect_identical(names(unclass(spec)),
@@ -173,6 +179,7 @@ test_that("FT-TB5906 [FR-TB317]: blank_rows_by_change() holds cols, group_by, in
 })
 
 test_that("FT-TB5907 [FR-TB323]: blank_rows_by_change(group_by = 'auto') picks value, indent or filled from each column's content", {
+  skip_on_cran()
   a <- data.frame(val = c("A", "A", "B", "B"), ind = c("P", "  a", "Q", "  b"),
                   fil = c("A", "", "B", ""), stringsAsFactors = FALSE)
   at <- function(col, m) {
@@ -199,6 +206,7 @@ test_that("FT-TB5907 [FR-TB323]: blank_rows_by_change(group_by = 'auto') picks v
 })
 
 test_that("FT-TB5908 [FR-TB328]: blank_rows_by_change() on no rows gives no blank row; on one row only the before-first and after-last rows", {
+  skip_on_cran()
   spec <- blank_rows_by_change("g")
   df <- .t9_blank_df()
   expect_identical(.resolve_blank_rows(spec, df[0L, ]), integer(0))
@@ -216,6 +224,7 @@ test_that("FT-TB5908 [FR-TB328]: blank_rows_by_change() on no rows gives no blan
 })
 
 test_that("FT-TB5909 [FR-TB329]: a by_change spec resolved on a page never falls on its first or last row, whatever the include_* flags say", {
+  skip_on_cran()
   df <- .t9_blank_df()                       # A A B B C: changes after rows 2 and 4
   flags <- expand.grid(b = c(TRUE, FALSE), a = c(TRUE, FALSE))
   for (i in seq_len(nrow(flags))) {
@@ -241,6 +250,7 @@ test_that("FT-TB5909 [FR-TB329]: a by_change spec resolved on a page never falls
 })
 
 test_that("FT-TB5910 [FR-TB330]: blank_rows_by_rule() holds col, pattern and where; the table that receives it inserts the rows", {
+  skip_on_cran()
   r <- blank_rows_by_rule("g", "^B", "after")
   expect_s3_class(r, "rtf_blank_rows_by_rule")
   expect_identical(unclass(r), list(col = "g", pattern = "^B", where = "after"))
@@ -259,6 +269,7 @@ test_that("FT-TB5910 [FR-TB330]: blank_rows_by_rule() holds col, pattern and whe
 })
 
 test_that("FT-TB5911 [FR-TB333]: blank_rows_by_rule(pattern = ) is matched with grepl() against the column as character; the pattern found anywhere in the value matches, an NA never", {
+  skip_on_cran()
   at <- function(d, pat, where = "after") {
     rtftable(d, blank_rows = blank_rows_by_rule(colnames(d)[1L], pat, where))$blank_rows
   }
@@ -280,6 +291,7 @@ test_that("FT-TB5911 [FR-TB333]: blank_rows_by_rule(pattern = ) is matched with 
 })
 
 test_that("FT-TB5912 [FR-TB339]: blank_rows_by_rule() whose pattern matches no row, or applied to no rows, adds no blank row", {
+  skip_on_cran()
   df <- .t9_blank_df()
   none <- blank_rows_by_rule("g", "^Z")
   expect_length(rtftable(df, blank_rows = none)$blank_rows, 0L)
@@ -315,6 +327,7 @@ test_that("FT-TB5912 [FR-TB339]: blank_rows_by_rule() whose pattern matches no r
 }
 
 test_that("FT-TB5913 [FR-TB341]: set_decimal_split() stores the split as x$decimal_split and changes only the RTF output; a table without the option renders as before", {
+  skip_on_cran()
   d <- data.frame(Item = c("a", "b"), Mean = c("12.5", "3.25"), SD = c("1.0", "0.5"),
                   stringsAsFactors = FALSE)
   tb <- rtftable(d, col_rel_width = c(1, 1, 1))
@@ -350,6 +363,7 @@ test_that("FT-TB5913 [FR-TB341]: set_decimal_split() stores the split as x$decim
 })
 
 test_that("FT-TB5914 [FR-TB349]: set_decimal_split(ratio = NULL) sizes the halves from the widest left and right part present; a ratio strictly between 0 and 1 is the left share and keeps the split point across pages", {
+  skip_on_cran()
   mk <- function(v) rtftable(data.frame(a = c("x", "y"), v = v, stringsAsFactors = FALSE),
                              col_rel_width = c(1, 1))
   edge <- function(tb) .t9_cx(.render_rtftable(tb, 9360L)[2L])[2L]
@@ -378,6 +392,7 @@ test_that("FT-TB5914 [FR-TB349]: set_decimal_split(ratio = NULL) sizes the halve
 })
 
 test_that("FT-TB5915 [FR-TB351]: set_decimal_split(decimal_mark = ) is the separator the cells are split at, the first one in the cell; another single string splits there instead", {
+  skip_on_cran()
   expect_identical(formals(set_decimal_split.rtftable)$decimal_mark, ".")
   d <- data.frame(a = c("1,5", "12,25", "1,2,3"), stringsAsFactors = FALSE)
   expect_identical(set_decimal_split(rtftable(d), cols = 1)$decimal_split$decimal_mark, ".")
@@ -412,6 +427,7 @@ test_that("FT-TB5915 [FR-TB351]: set_decimal_split(decimal_mark = ) is the separ
 })
 
 test_that("FT-TB5916 [FR-TB355]: set_decimal_split(max_chars = 10) is the total measured width above which the allowance is dropped; the boundary is exclusive and Inf never drops it", {
+  skip_on_cran()
   expect_identical(formals(set_decimal_split.rtftable)$max_chars, 10)
   one <- function(v, ...) {
     tb <- set_decimal_split(rtftable(data.frame(a = v, stringsAsFactors = FALSE)), cols = 1, ...)
@@ -445,6 +461,7 @@ test_that("FT-TB5916 [FR-TB355]: set_decimal_split(max_chars = 10) is the total 
 })
 
 test_that("FT-TB5917 [FR-TB359]: a cell is split when it starts with an optional prefix then a digit or the separator and holds a digit; the prefix goes left, a suffix right", {
+  skip_on_cran()
   x <- c("<0.001", ">=1.5", "<=2.5", ">3.5", "~4.5", "+5.5", "-6.5", ".5", "7.5^{a}", "12.0*",
          "5.2%", "100", "1.5.2",
          "<.", ".", "a1.5", "p<0.05", "n", "-", "3 (4)", "")
@@ -470,6 +487,7 @@ test_that("FT-TB5917 [FR-TB359]: a cell is split when it starts with an optional
 })
 
 test_that("FT-TB5918 [FR-TB360]: free text is not split and is written as one cell across the pair as without the option; empty and NA cells give two empty halves", {
+  skip_on_cran()
   d <- data.frame(a = c("p", "q", "r", "s", "t"), v = c("3.45", "n (%)", "Placebo", "", NA),
                   stringsAsFactors = FALSE)
   tb <- rtftable(d, col_rel_width = c(1, 1))
@@ -497,6 +515,7 @@ test_that("FT-TB5918 [FR-TB360]: free text is not split and is written as one ce
 })
 
 test_that("FT-TB5919 [FR-TB362]: a selected column with no separator is left untouched, decided per table: across paginated pages it may be split on one page and not on another", {
+  skip_on_cran()
   d <- data.frame(g = c("a", "b", "c", "d"), v = c("1.5", "2.25", "10", "20"),
                   w = c("5", "6", "7.5", "8"), stringsAsFactors = FALSE)
   pages <- as_rtftables(d, split = "rows", split_rows = 3)        # rows 1-2 | 3-4
@@ -522,6 +541,7 @@ test_that("FT-TB5919 [FR-TB362]: a selected column with no separator is left unt
 })
 
 test_that("FT-TB5920 [FR-TB365]: a table of several data frames has every one scanned for the separator, and the setting survives paginate_cols()", {
+  skip_on_cran()
   d1 <- data.frame(a = "x", v = "1", stringsAsFactors = FALSE)
   d2 <- data.frame(a = "y", v = "2.5", stringsAsFactors = FALSE)
   # the first frame has no separator, the second has: the column is split in both
@@ -563,6 +583,7 @@ test_that("FT-TB5920 [FR-TB365]: a table of several data frames has every one sc
 # ---- auto_col_widths() -----------------------------------------------------------
 
 test_that("FT-TB5921 [FR-TB370]: auto_col_widths(font, font_size_half_points = 18L) measures every character at one average width of the font: Courier's for Courier and unknown fonts, a flat one for Arial; NULL is the rtfreporter.font option", {
+  skip_on_cran()
   expect_identical(formals(auto_col_widths)$font_size_half_points, 18L)
   expect_null(formals(auto_col_widths)$font)
   d <- data.frame(a = strrep("i", 20L), b = strrep("W", 20L), stringsAsFactors = FALSE)
@@ -599,6 +620,7 @@ test_that("FT-TB5921 [FR-TB370]: auto_col_widths(font, font_size_half_points = 1
 # ---- header_map(), add_cont_label() ----------------------------------------------
 
 test_that("FT-TB5922 [FR-TB252]: header_map(x = ) is an rtftable or a list of them", {
+  skip_on_cran()
   d <- data.frame(p = c("u", "v"), k = 1:2, stringsAsFactors = FALSE)
   t1 <- rtftable(d, col_header = list(list(col_cell(1:2, "Top")), c("p", "k")))
   t2 <- rtftable(d, col_header = c("P", "K"))
@@ -628,6 +650,7 @@ test_that("FT-TB5922 [FR-TB252]: header_map(x = ) is an rtftable or a list of th
 })
 
 test_that("FT-TB5923 [FR-TB260]: add_cont_label() prepends one row: paste0(label, cont_label) in column col, every other cell empty (\"\" for character, NA otherwise); the row names are reset", {
+  skip_on_cran()
   df <- data.frame(g = c("B", "B"), n = c(3, 4), i = 1:2, l = c(TRUE, FALSE), s = c("x", "y"),
                    stringsAsFactors = FALSE)
   rownames(df) <- c("r7", "r9")
@@ -664,6 +687,7 @@ test_that("FT-TB5923 [FR-TB260]: add_cont_label() prepends one row: paste0(label
 # ---- set_col_header(), add_header_row() ------------------------------------------
 
 test_that("FT-TB5924 [FR-TB212]: set_col_header(x, ...) replaces the whole column header of a finished rtftable and returns the table; cells resolve against the final printed columns, by name or visible position", {
+  skip_on_cran()
   d <- data.frame(x = c("q", "q"), soc = c("S1", "S1"), pt = c("a", "b"), n = c("1", "2"),
                   m = c("3", "4"), stringsAsFactors = FALSE)
   pg <- as_rtftables(d, drop_cols = "x", stub = stub_spec(c("soc", "pt")))[[1L]]
@@ -699,6 +723,7 @@ test_that("FT-TB5924 [FR-TB212]: set_col_header(x, ...) replaces the whole colum
 })
 
 test_that("FT-TB5925 [FR-TB213]: set_col_header(...) are the header rows, top first: a character vector, a list of col_cell() cells or one prebuilt rtf_col_header(); one argument is a whole header, several are consecutive rows", {
+  skip_on_cran()
   t3 <- rtftable(data.frame(A = "1", B = "2", C = "3", stringsAsFactors = FALSE))
   span <- list(from = 1L, to = 1L, label = "")
   # a character vector: a label row
@@ -730,6 +755,7 @@ test_that("FT-TB5925 [FR-TB213]: set_col_header(...) are the header rows, top fi
 })
 
 test_that("FT-TB5926 [FR-TB216]: a col_cell() pos may be column names, final positions, a range c(a, b) or a selector such as col_key(); a selector that matches no column or non-adjacent columns is an error", {
+  skip_on_cran()
   d <- data.frame(lab = "x", T1__n = "1", T1__p = "2", T2__n = "3", T2__p = "4",
                   check.names = FALSE, stringsAsFactors = FALSE)
   tb <- rtftable(d)
@@ -763,6 +789,7 @@ test_that("FT-TB5926 [FR-TB216]: a col_cell() pos may be column names, final pos
 })
 
 test_that("FT-TB5927 [FR-TB222]: set_col_header(values = ) fills {name} from the row each page's key matches; {{ is a literal brace; render-time tokens are left for the renderer", {
+  skip_on_cran()
   d <- data.frame(period = c("P1", "P1", "P2", "P2"), lab = c("x", "y", "z", "w"),
                   v1 = "1", v2 = "2", stringsAsFactors = FALSE)
   pg <- as_rtftables(d, split = "by_value", group_col = "period", drop_cols = "period")
@@ -797,6 +824,7 @@ test_that("FT-TB5927 [FR-TB222]: set_col_header(values = ) fills {name} from the
 })
 
 test_that("FT-TB5928 [FR-TB223]: set_col_header(by = ) matches the key columns of values on group (default), rows or name; several match on the combination", {
+  skip_on_cran()
   d <- data.frame(period = c("P1", "P1", "P2", "P2"), pg = c("1", "2", "1", "2"),
                   lab = c("x", "y", "z", "w"), v1 = "1", v2 = "2", stringsAsFactors = FALSE)
   pg <- as_rtftables(d, split = "by_value", group_col = "period", page_by = "pg",
@@ -836,6 +864,7 @@ test_that("FT-TB5928 [FR-TB223]: set_col_header(by = ) matches the key columns o
 })
 
 test_that("FT-TB5929 [FR-TB227]: set_col_header() on a list maps over every page of an as_rtftables() list and returns a list of the same names; a table of several data frames takes one header for each", {
+  skip_on_cran()
   d <- data.frame(g = c("a", "a", "b"), v = c("1", "2", "3"), stringsAsFactors = FALSE)
   pg <- as_rtftables(d, split = "by_value", group_col = "g")
   expect_identical(names(pg), c("a", "b"))
@@ -871,6 +900,7 @@ test_that("FT-TB5929 [FR-TB227]: set_col_header() on a list maps over every page
 })
 
 test_that("FT-TB5930 [FR-TB232 FR-TB233]: add_header_row(row) takes a label row (named to place labels by column) or a list of col_cell() cells; .position is top (the default) or bottom", {
+  skip_on_cran()
   t3 <- rtftable(data.frame(a = "1", b = "2", c = "3", stringsAsFactors = FALSE))
   # the table has no header of its own: its column names are the header the row goes next to
   top <- add_header_row(t3, c("A", "B", "C"))
@@ -909,6 +939,7 @@ test_that("FT-TB5930 [FR-TB232 FR-TB233]: add_header_row(row) takes a label row 
 # ---- stub_cols(), stub_spec() ----------------------------------------------------
 
 test_that("FT-TB5931 [FR-TB195]: a label row is emitted at every run of a parent value, a change in a higher-level column starts a new run in every column below it; each level indents one step further", {
+  skip_on_cran()
   nb <- intToUtf8(160L)
   p <- function(k) strrep(nb, 4L * k)
   d <- data.frame(a = c("A", "A", "A", "B", "B", "A"), b = c("b1", "b1", "b2", "b2", "b2", "b2"),
@@ -942,6 +973,7 @@ test_that("FT-TB5931 [FR-TB195]: a label row is emitted at every run of a parent
 })
 
 test_that("FT-TB5932 [FR-TB199]: group_summary names which leaf values mark a row as its group's summary: empty (NA or \"\"), parent (the deepest non-empty parent), all, none or NULL; its statistics go on the group's label row", {
+  skip_on_cran()
   nb <- intToUtf8(160L)
   p <- function(k) strrep(nb, 4L * k)
   d <- data.frame(a = c("A", "A", "A", "B"), b = c("b1", "b1", "", "b2"),
@@ -980,6 +1012,7 @@ test_that("FT-TB5932 [FR-TB199]: group_summary names which leaf values mark a ro
 })
 
 test_that("FT-TB5933 [FR-TB200]: stub_cols(layout = ) merged (the default) replaces the hierarchy columns by one indented stub column; columns keeps them in their original positions with their own headers, a group value on its own row, blank on the member rows, the leaf indented in the leaf column", {
+  skip_on_cran()
   nb <- intToUtf8(160L)
   d <- data.frame(v = c("1", "2", "3"), group = c("A", "A", "B"), label = c("x", "y", "z"),
                   stringsAsFactors = FALSE)
@@ -1017,6 +1050,7 @@ test_that("FT-TB5933 [FR-TB200]: stub_cols(layout = ) merged (the default) repla
 })
 
 test_that("FT-TB5934 [FR-TB201]: stub_cols(label_span = TRUE) renders each group label row as one cell spanning the table, recorded as attr(out, \"rtf_label_rows\") that rtftable(read_attributes = TRUE) consumes; a summary row folded onto a label row is never spanned", {
+  skip_on_cran()
   d <- data.frame(g = c("G1", "G1", "G2"), l = c("G1", "p", "q"), n = c("1", "2", "3"),
                   stringsAsFactors = FALSE)
   expect_false(eval(formals(stub_cols)$label_span))
@@ -1049,6 +1083,7 @@ test_that("FT-TB5934 [FR-TB201]: stub_cols(label_span = TRUE) renders each group
 })
 
 test_that("FT-TB5935 [FR-TB202]: stub_cols() keeps the label attributes of the columns that remain, gives a zero-row stub for no rows, and records the source row of each output row (NA for a label row) as rtf_stub_src", {
+  skip_on_cran()
   d <- data.frame(g = c("G1", "G1"), l = c("p", "q"), n = c("1", "2"), stringsAsFactors = FALSE)
   attr(d$n, "label") <- "N label"
   attr(d$g, "label") <- "Group"
@@ -1076,6 +1111,7 @@ test_that("FT-TB5935 [FR-TB202]: stub_cols() keeps the label attributes of the c
 })
 
 test_that("FT-TB5936 [FR-TB207]: stub_spec(vars, label, indent, group_summary, layout, label_span) returns an rtf_stub_spec carrying every stub_cols() setting, for as_rtftables(stub = )", {
+  skip_on_cran()
   sp <- stub_spec(c("a", "b"), label = "Lab", indent = 2, group_summary = "all",
                   layout = "merged", label_span = TRUE)
   expect_s3_class(sp, "rtf_stub_spec")
@@ -1108,6 +1144,7 @@ test_that("FT-TB5936 [FR-TB207]: stub_spec(vars, label, indent, group_summary, l
 })
 
 test_that("FT-TB5937 [FR-TB211]: print() of an rtf_stub_spec shows the vars, layout and indent, and the label and label_span lines when set", {
+  skip_on_cran()
   plain <- capture.output(print(stub_spec(c("SOC", "PT"))))
   expect_identical(plain[1L], "<rtf_stub_spec>")
   expect_match(plain[2L], "vars +: SOC, PT")
@@ -1146,6 +1183,7 @@ test_that("FT-TB5937 [FR-TB211]: print() of an rtf_stub_spec shows the vars, lay
 .t9_pc_names <- function(pages) unname(lapply(pages, function(p) names(p$data)))
 
 test_that("FT-TB5938 [FR-TB271]: paginate_cols(x, ...) cuts built pages into column blocks and returns a list of rtftable pages, the row-heading columns repeated on every block and the header, widths, col_spec, cell_styles, row_title and blank rows following the kept columns", {
+  skip_on_cran()
   tb <- rtftable(.t9_pc_df(), col_header = .t9_pc_hdr(),
                  column_widths_twips = c(1000L, 1100L, 1200L, 1300L, 1400L),
                  col_spec = list(list(col = 1, bold = TRUE), list(col = 3, align = "right"),
@@ -1201,6 +1239,7 @@ test_that("FT-TB5938 [FR-TB271]: paginate_cols(x, ...) cuts built pages into col
 })
 
 test_that("FT-TB5939 [FR-TB274]: paginate_cols(cut_by = ) takes a list of column blocks, a separator found in the column names, or one key per column, each run of one key being a block", {
+  skip_on_cran()
   d <- .t9_pc_df()
   # a list of column blocks, by position or by name; the kept column is added to each
   expect_identical(.t9_pc_names(paginate_cols(rtftable(d), cut_by = list(2:3, 4:5), fit = FALSE)),
@@ -1234,6 +1273,7 @@ test_that("FT-TB5939 [FR-TB274]: paginate_cols(cut_by = ) takes a list of column
 })
 
 test_that("FT-TB5940 [FR-TB281]: paginate_cols(col_header = ) is the header each page carries, written once in the full table's coordinates and sliced to the page's columns with spanning cells clipped; 'names' builds the two-level header the names carry; NULL slices the table's own header", {
+  skip_on_cran()
   d <- .t9_pc_df()
   hdr <- function(p) p$col_header
   # a label row, in the full table's coordinates (5 labels), sliced to the page's columns
@@ -1284,6 +1324,7 @@ test_that("FT-TB5940 [FR-TB281]: paginate_cols(col_header = ) is the header each
 })
 
 test_that("FT-TB5941 [FR-TB251]: header_map(x) has one row per header cell of every page, with the columns page, name, group, rows, row, cell, from, to and text; a label-row cell covers one column, a spanning cell from..to", {
+  skip_on_cran()
   d <- data.frame(period = c("P1", "P1", "P2"), pg = c("1", "2", "1"), lab = c("x", "y", "z"),
                   v1 = "1", v2 = "2", stringsAsFactors = FALSE)
   pages <- as_rtftables(d, split = "by_value", group_col = "period", page_by = "pg",

@@ -216,6 +216,7 @@
 }
 
 test_that("FT-DC290 [FR-DC189 FR-DC195 FR-DC206 FR-DC211 FR-DC283 FR-DC303 FR-DC305 FR-DC311 FR-TB176 FR-DC357]: pairwise -- block x form x rows x align x width x height x markup x tokens x pages", {
+  skip_on_cran()
   cand <- expand.grid(block = c("titles", "footnotes"), form = c("text", "table"),
                       rows = c("plain", "styled"),
                       align = c("none", "arg", "section", "both"),
@@ -231,6 +232,7 @@ test_that("FT-DC290 [FR-DC189 FR-DC195 FR-DC206 FR-DC211 FR-DC283 FR-DC303 FR-DC
   expect_lt(nrow(ap$rows), 40L)
   set <- ap$rows
   for (i in seq_len(nrow(set))) {
+    .cran_cut(i)
     cs <- as.list(set[i, ])
     expect_identical(.vt_check(cs), character(0),
                      label = paste(unlist(cs), collapse = " / "))
@@ -238,6 +240,7 @@ test_that("FT-DC290 [FR-DC189 FR-DC195 FR-DC206 FR-DC211 FR-DC283 FR-DC303 FR-DC
 })
 
 test_that("FT-DC291 [FR-DC311 FR-DC315 FR-DC357]: decision table -- the block width from rtf_style(), the option and the default, in the table form only", {
+  skip_on_cran()
   rows <- list(
     list(style = NULL,    opt = NULL,   want = 5000L),
     list(style = "page",  opt = NULL,   want = 13680L),
@@ -248,6 +251,7 @@ test_that("FT-DC291 [FR-DC311 FR-DC315 FR-DC357]: decision table -- the block wi
     list(style = NULL,    opt = "page", want = 13680L),
     list(style = 3000L,   opt = "page", want = 3000L))
   n <- 0L
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   for (b in c("titles", "footnotes")) {
     key <- if (b == "titles") "title" else "footnote"
     for (form in c("table", "text")) {
@@ -280,6 +284,7 @@ test_that("FT-DC291 [FR-DC311 FR-DC315 FR-DC357]: decision table -- the block wi
 })
 
 test_that("FT-DC292 [FR-DC206 FR-DC211 FR-DC358]: decision table -- where a footnote row's cells land, with the block's align", {
+  skip_on_cran()
   rows <- list(
     list(row = "FQ1",                            align = NULL,     want = c(l = "FQ1")),
     list(row = "FQ2",                            align = "center", want = c(c = "FQ2")),

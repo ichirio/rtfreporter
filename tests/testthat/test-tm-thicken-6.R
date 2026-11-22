@@ -20,6 +20,7 @@
 .t6_count <- function(txt, what) lengths(regmatches(txt, gregexpr(what, txt, fixed = TRUE)))
 
 test_that("FT-DC5601 [FR-DC110]: rtf_document(watermark = list(1, 2)) stops with the message; a vector of two strings, a number and a zero-length value stop the same way", {
+  skip_on_cran()
   msg <- "`watermark` must be an rtf_watermark object, a single string, or NULL / NA for none."
   expect_error(rtf_document(watermark = list(1, 2)), msg, fixed = TRUE)
   expect_error(rtf_document(watermark = c("A", "B")), msg, fixed = TRUE)
@@ -33,6 +34,7 @@ test_that("FT-DC5601 [FR-DC110]: rtf_document(watermark = list(1, 2)) stops with
 })
 
 test_that("FT-DC5602 [FR-DC114]: rtf_document(program_fallback = 1) stops with the message; so do an empty string, NA and two strings", {
+  skip_on_cran()
   msg <- "`program_fallback` must be a single string: the path of the program that writes the file."
   expect_error(rtf_document(program_fallback = 1), msg, fixed = TRUE)
   expect_error(rtf_document(program_fallback = ""), msg, fixed = TRUE)
@@ -43,6 +45,7 @@ test_that("FT-DC5602 [FR-DC114]: rtf_document(program_fallback = 1) stops with t
 })
 
 test_that("FT-DC5603 [FR-DC230]: rtf_watermark(font = ) of two names stops with the message; a slot vector with an unknown slot stops naming it", {
+  skip_on_cran()
   expect_error(rtf_watermark("X", font = c("A", "B")),
                "`font` must be NULL or one font-family name.", fixed = TRUE)
   expect_error(rtf_watermark("X", font = c(latin = "A", bad = "B")),
@@ -58,6 +61,7 @@ test_that("FT-DC5603 [FR-DC230]: rtf_watermark(font = ) of two names stops with 
 })
 
 test_that("FT-DC5604 [FR-DC102]: font_table declares the fonts: the first is the default, every entry is in \\fonttbl; the default is the font option", {
+  skip_on_cran()
   # the default is list(list(name = "Courier New")), from the option
   expect_identical(rtf_document()$document$font_table, list(list(name = "Courier New")))
   txt0 <- .t6_render(rtf_tables(rtf_document(), .t6_tb()))
@@ -81,6 +85,7 @@ test_that("FT-DC5604 [FR-DC102]: font_table declares the fonts: the first is the
 })
 
 test_that("FT-DC5605 [FR-DC103]: a font_table name that is a vector per script slot writes the slots; a single string writes no slot controls", {
+  skip_on_cran()
   slots <- c(latin = "Arial", east_asian = "MS Gothic", complex = "Arial", hansi = "Calibri")
   txt <- .t6_render(rtf_tables(rtf_document(font_table = list(list(name = slots))), .t6_tb()))
   # the families: latin f0, hansi f1, east_asian f2 (complex = latin shares f0)
@@ -103,6 +108,7 @@ test_that("FT-DC5605 [FR-DC103]: a font_table name that is a vector per script s
 })
 
 test_that("FT-DC5606 [FR-DC105]: color_table declares colours by index; the default is c(\"#000000\"); black and white are reserved, not repeated", {
+  skip_on_cran()
   expect_identical(rtf_document()$document$color_table, c("#000000"))
   def <- .t6_render(rtf_tables(rtf_document(), .t6_tb()))
   expect_identical(.t6_count(def, "{\\colortbl;\\red0\\green0\\blue0;\\red255\\green255\\blue255;}"), 1L)
@@ -130,6 +136,7 @@ test_that("FT-DC5606 [FR-DC105]: color_table declares colours by index; the defa
 })
 
 test_that("FT-DC5607 [FR-DC115]: tokens of one's own fill headers, footers, titles and footnotes when the file is written; NULL gives none", {
+  skip_on_cran()
   mk <- function(...) {
     rtf_document(...) |>
       rtf_section(page = 1, secinfo = list(
@@ -157,6 +164,7 @@ test_that("FT-DC5607 [FR-DC115]: tokens of one's own fill headers, footers, titl
 })
 
 test_that("FT-DC5608 [FR-DC281]: {DATETIME} is the time the file is written, in the option's format (default %d%b%Y  %H:%M); {DATETIME:<format>} takes another; every page shows the same time and rtfreporter.render_time fixes it", {
+  skip_on_cran()
   old <- options(rtfreporter.render_time = as.POSIXct("2026-09-25 10:05:07"),
                  rtfreporter.datetime_format = NULL)
   on.exit(options(old), add = TRUE)
@@ -185,6 +193,7 @@ test_that("FT-DC5608 [FR-DC281]: {DATETIME} is the time the file is written, in 
 })
 
 test_that("FT-DC5609 [FR-DC311]: title_format / footnote_format are text (paragraphs) or table (a one-column table), title_width / footnote_width their width; NULL takes the option, then text for the title and table for the footnote", {
+  skip_on_cran()
   mk <- function(style = NULL) {
     rtf_document(style = style) |>
       rtf_tables(.t6_tb(), titles = list("TTL"), footnotes = list(list("FNO")))
@@ -231,6 +240,7 @@ test_that("FT-DC5609 [FR-DC311]: title_format / footnote_format are text (paragr
 })
 
 test_that("FT-DC5610 [FR-DC252]: rtf_replace_text(backup = TRUE), the default, copies the original to <input>.bak before overwriting in place; FALSE makes no copy; it is ignored with output_file", {
+  skip_on_cran()
   d <- tempfile("t6-")
   dir.create(d)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -266,6 +276,7 @@ test_that("FT-DC5610 [FR-DC252]: rtf_replace_text(backup = TRUE), the default, c
 })
 
 test_that("FT-DC5611 [FR-DC253]: rtf_replace_text(use_regex = FALSE), the default, treats target as a fixed string; TRUE as a Perl-compatible regular expression", {
+  skip_on_cran()
   p <- tempfile(fileext = ".rtf")
   on.exit(unlink(c(p, paste0(p, ".bak"))), add = TRUE)
   expect_identical(formals(rtf_replace_text)$use_regex, FALSE)
