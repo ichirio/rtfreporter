@@ -21,15 +21,23 @@ or \code{"first"}.  Left out (\code{NULL}): \code{"last"}, or what an earlier
 earlier \code{plan_total()} said):
 \describe{
 \item{\code{"cols"}}{the Total \strong{column}, from the records
-with no value of the column key.  With two column keys the
-innermost is folded: \code{cols = c(TRTA, AESEV)} gives each arm a
+with no value of the column key.  With two column keys, the key
+totalled over is the innermost the ARD has such records for, and
+the other is kept: \code{cols = c(TRTA, AESEV)} gives each arm a
 total column from its records with no \code{AESEV} (an AE at any
-grade), placed among that arm's grades.}
+grade), placed among that arm's grades; \code{cols = c(TRTA, variable)}
+with value / change records without \code{TRTA} gives a Total group
+of the arms, value and change under it.  A record that also
+leaves out another key every cell has -- the arms' N tabulated on
+its own, with no \code{PARAM} -- is no Total: it only feeds the
+header's \code{{n}}.}
 \item{\code{"rows"}}{the Total \strong{row}, a shift table's margin: read
 from the column key tabulated by the row keys, without the body's
 variable (\code{ard_tabulate(x, variables = base_gr, by = PARAM)}
 beside the body's \verb{variables = worst_gr, by = c(PARAM, base_gr)}),
-labelled \code{label} and placed by \code{position}.}
+labelled \code{label} and placed by \code{position} in its block (the
+records with its row keys), also when the ARD gives the levels
+no order.}
 \item{\code{"both"}}{both, with the corner (a row key's own tabulation)
 as the Total row's Total column.}
 }

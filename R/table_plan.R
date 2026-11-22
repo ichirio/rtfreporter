@@ -2636,15 +2636,23 @@ plan_nest <- function(.plan, ...) {
 #'   earlier `plan_total()` said):
 #'   \describe{
 #'     \item{`"cols"`}{the Total **column**, from the records
-#'       with no value of the column key.  With two column keys the
-#'       innermost is folded: `cols = c(TRTA, AESEV)` gives each arm a
+#'       with no value of the column key.  With two column keys, the key
+#'       totalled over is the innermost the ARD has such records for, and
+#'       the other is kept: `cols = c(TRTA, AESEV)` gives each arm a
 #'       total column from its records with no `AESEV` (an AE at any
-#'       grade), placed among that arm's grades.}
+#'       grade), placed among that arm's grades; `cols = c(TRTA, variable)`
+#'       with value / change records without `TRTA` gives a Total group
+#'       of the arms, value and change under it.  A record that also
+#'       leaves out another key every cell has -- the arms' N tabulated on
+#'       its own, with no `PARAM` -- is no Total: it only feeds the
+#'       header's `{n}`.}
 #'     \item{`"rows"`}{the Total **row**, a shift table's margin: read
 #'       from the column key tabulated by the row keys, without the body's
 #'       variable (`ard_tabulate(x, variables = base_gr, by = PARAM)`
 #'       beside the body's `variables = worst_gr, by = c(PARAM, base_gr)`),
-#'       labelled `label` and placed by `position`.}
+#'       labelled `label` and placed by `position` in its block (the
+#'       records with its row keys), also when the ARD gives the levels
+#'       no order.}
 #'     \item{`"both"`}{both, with the corner (a row key's own tabulation)
 #'       as the Total row's Total column.}
 #'   }
@@ -4680,23 +4688,27 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     .ard_stop("plan_total(): a Total column is read for a column key; this table has no cols.")
   }
   dir <- tt$direction %||% "cols"
-  if (dir %in% c("rows", "both")) d <- .plan_total_margins(plan, d, tt, cols)
+  # One rule (#1103, #1109): a Total is read from the records that carry
+  # every key the body's cells carry but the one it totals over.  The
+  # column key totalled over is the innermost that has such records: with
+  # cols = c(TRTA, AESEV), each arm's records with no AESEV make that arm's
+  # total column; with cols = c(TRTA, variable) and AVAL / CHG records
+  # without TRTA, the arms are totalled and value / change kept under the
+  # Total.  A record leaving out another key too -- the arms' N (BIGN), no
+  # PARAM -- is no Total; it only feeds the header's N.
+  keys <- .plan_total_keys(plan, d, cols)
+  i <- .plan_total_fold(d, cols, keys)
+  if (dir %in% c("rows", "both")) {
+    d <- .plan_total_margins(plan, d, tt, cols, setdiff(keys, cols[i]))
+  }
   if (identical(dir, "rows")) return(d)
-  # the innermost column key is the one folded: with cols = c(TRTA, AESEV),
-  # each arm's records with no AESEV make that arm's total column; records
-  # with no TRTA either are no column of this table.  When there are none,
-  # an outer key whose records carry the inner keys is folded instead
-  # (#1109): cols = c(TRTA, variable) with AVAL / CHG records without TRTA
-  # make one Total column group, value and change kept under it
   if (!cols[length(cols)] %in% names(d)) return(d)
-  i <- .plan_total_fold(d, cols, dir)
-  at <- .plan_total_at(d, cols, i)
+  at <- .plan_total_at(d, cols, i, keys)
   cols <- cols[i]
   k <- d[[cols]]
   if (!any(at)) {
     .ard_stop(sprintf(paste0(
-      "plan_total(): the ARD has no overall rows, rows without %s.
-",
+      "plan_total(): the ARD has no overall rows, rows without %s.\n",
       "  Ask cards for them: the same analysis without `by` bound under it, ",
       "or ard_stack(.overall = TRUE)."), cols))
   }
@@ -4714,38 +4726,67 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   d
 }
 
-# plan_total(): the index of the column key folded into the Total column --
-# the innermost; when it has no overall rows, the next one out whose
-# records carry the other keys (#1109).  A margin (direction = "both") is
-# read for the innermost only, so there it is always the innermost.
-.plan_total_fold <- function(d, cols, dir = "cols") {
+# The keys a Total keeps: the table's column keys and the columns its row
+# keys read (a name, or a template's {column}) that every cell of the body
+# carries.  A key some cells leave empty (a PT under a SOC row) is no key a
+# Total must carry.
+.plan_total_keys <- function(plan, d, cols) {
+  if (!is.data.frame(d)) return(cols)
+  rk <- .plan_total_row_cols(plan)
+  keys <- intersect(unique(c(cols, setdiff(rk, c(".label", "variable_level")))),
+                    names(d))
+  cell <- .plan_total_body(d) & .plan_total_has(d, intersect(cols, names(d)))
+  if (!any(cell)) return(intersect(cols, names(d)))
+  keys[vapply(keys, function(k) all(!is.na(d[[k]][cell])), TRUE)]
+}
+
+# The columns the row keys read: a name, or a template's {column}
+.plan_total_row_cols <- function(plan) {
+  unlist(lapply(plan$roles$rows %||% list(), function(r) {
+    if (inherits(r, "formula")) {
+      tx <- paste(deparse(r[[length(r)]]), collapse = "")
+      m <- regmatches(tx, gregexpr("\\{[A-Za-z.][A-Za-z0-9._]*", tx))[[1L]]
+      sub("^\\{", "", m)
+    } else as.character(r)
+  }), use.names = FALSE)
+}
+
+# TRUE where a record has a value of every one of `keys`
+.plan_total_has <- function(d, keys) {
+  Reduce(`&`, lapply(keys, function(o) if (o %in% names(d)) !is.na(d[[o]]) else
+    rep(FALSE, nrow(d))), rep(TRUE, nrow(d)))
+}
+
+# The body's records: no key's own tabulation, no study total
+.plan_total_body <- function(d) {
+  own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else rep(FALSE, nrow(d))
+  v <- if ("variable" %in% names(d)) as.character(d$variable) else rep(NA_character_, nrow(d))
+  !own & !(v %in% "..ard_total_n..")
+}
+
+# plan_total(): the index of the column key totalled over -- the innermost
+# that has overall rows (.plan_total_at()), the innermost when none has.
+.plan_total_fold <- function(d, cols, keys = cols) {
   n <- length(cols)
-  if (n < 2L || !identical(dir, "cols") || !is.data.frame(d)) return(n)
+  if (n < 2L || !is.data.frame(d)) return(n)
   for (i in rev(seq_len(n))) {
-    if (cols[i] %in% names(d) && any(.plan_total_at(d, cols, i))) return(i)
+    if (cols[i] %in% names(d) && any(.plan_total_at(d, cols, i, keys))) return(i)
   }
   n
 }
 
-# The overall rows for the column key cols[i]: a statistic with no value of
-# it and a value of every other column key, not a key's own tabulation nor
-# the study total, of an analysis the body has
-.plan_total_at <- function(d, cols, i) {
+# The overall rows for the column key cols[i]: a body statistic with no
+# value of it and a value of every other key the cells carry, of an
+# analysis the body has
+.plan_total_at <- function(d, cols, i, keys = cols) {
   k <- d[[cols[i]]]
-  others <- cols[-i]
-  in_others <- if (length(others)) {
-    Reduce(`&`, lapply(others, function(o) if (o %in% names(d)) !is.na(d[[o]]) else FALSE))
-  } else rep(TRUE, nrow(d))
-  v <- if ("variable" %in% names(d)) as.character(d$variable) else
-    rep(NA_character_, nrow(d))
-  own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else
-    rep(FALSE, nrow(d))
   # only the body's analyses: a test or a difference (plan_compare()) has
   # no column key either, and is no Total
   ctx <- if ("context" %in% names(d)) as.character(d$context) else
     rep(NA_character_, nrow(d))
   body_ctx <- unique(ctx[!is.na(k)])
-  is.na(k) & in_others & !own & !(v %in% "..ard_total_n..") & ctx %in% body_ctx
+  is.na(k) & .plan_total_has(d, setdiff(keys, cols[i])) & .plan_total_body(d) &
+    ctx %in% body_ctx
 }
 
 # plan_total(direction = "rows" / "both"): the margins of a shift table --
@@ -4754,23 +4795,18 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
 # become the body's Total
 # row, last (or first) in each block.  normalize_ard() marks them as the
 # key's own tabulation; their shape says what they are: a key-own record
-# whose variable is a key of this table.  A record with no value of the
-# column key as well (tox_dir by PARAM) is then the Total row's Total
-# column, folded as any overall record.
-.plan_total_margins <- function(plan, d, tt, cols) {
+# whose variable is a key of this table, carrying the keys `carry` (every
+# key of the cells but the column key totalled over).  A record with no
+# value of the column key as well (tox_dir by PARAM) is then the Total
+# row's Total column, folded as any overall record.  The arms' N (TRTA
+# alone, no PARAM) carries too few keys: it is no margin.
+.plan_total_margins <- function(plan, d, tt, cols, carry = character()) {
   own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else rep(FALSE, nrow(d))
   v <- if ("variable" %in% names(d)) as.character(d$variable) else rep(NA_character_, nrow(d))
   # the table's keys: its column keys and the columns its row keys read
-  # (a name, or a template's {column})
-  rk <- unlist(lapply(plan$roles$rows %||% list(), function(r) {
-    if (inherits(r, "formula")) {
-      tx <- paste(deparse(r[[length(r)]]), collapse = "")
-      m <- regmatches(tx, gregexpr("\\{[A-Za-z.][A-Za-z0-9._]*", tx))[[1L]]
-      sub("^\\{", "", m)
-    } else as.character(r)
-  }), use.names = FALSE)
+  rk <- .plan_total_row_cols(plan)
   keys <- setdiff(unique(c(cols, rk)), c("variable", ".label", "variable_level"))
-  m <- own & v %in% keys
+  m <- own & v %in% keys & .plan_total_has(d, setdiff(carry, "variable"))
   if (!any(m)) {
     .ard_stop(sprintf(paste0(
       "plan_total(direction = \"%s\"): the ARD has no margins -- a key's tabulation ",
@@ -4793,6 +4829,12 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   }
   if (".kind" %in% names(d)) d$.kind[m] <- d$.kind[!own & v %in% body][1L]
   if (".label_order" %in% names(d)) {
+    # the body's levels in the order they come when the ARD gives none
+    # (no factor), so the Total row has an order to go first or last in
+    b <- !m & d$variable %in% body
+    if (all(is.na(d$.label_order[b])) && ".label" %in% names(d)) {
+      d$.label_order[b] <- match(d$.label[b], .ard_first_seen(d$.label[b]))
+    }
     lo <- d$.label_order[!m]
     lo <- lo[!is.na(lo)]
     d$.label_order[m] <- if (identical(tt$position, "first")) {
@@ -4800,6 +4842,20 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     } else (if (length(lo)) max(lo) else 0) + 1
   }
   d$.key_own[m] <- FALSE
+  # each margin goes into the block it is the Total of (the records with
+  # its row keys), so a plain -- not a factor -- row key, whose blocks stay
+  # where they are, has its Total row in the block, not after the table
+  rb <- setdiff(carry, c(cols, "variable"))
+  if (length(rb)) {
+    blk <- do.call(paste, c(lapply(rb, function(k) as.character(d[[k]])), sep = "\r"))
+    pos <- as.numeric(seq_len(nrow(d)))
+    # after the block's first record: the rows are made in the order their
+    # records are first seen, and the label's order sorts them within it
+    at <- tapply(pos[!m], blk[!m], min)
+    hit <- m & blk %in% names(at)
+    pos[hit] <- at[blk[hit]] + 0.5
+    d <- d[order(pos, seq_len(nrow(d))), , drop = FALSE]
+  }
   d
 }
 
@@ -4889,32 +4945,20 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     if (length(v)) out[[kind]] <- v
   }
   out <- .plan_levels_names(out)
-  # plan_total(): the Total column in the column key's order
+  # plan_total(): the Total column at `position` in the order of the key it
+  # totals over (.plan_total_fold(), #1103, #1109) -- the data's own order
+  # (the overall rows bound first) would otherwise place it
   tt <- .plan_total_spec(plan)
   cols <- as.character(unlist(out$cols, use.names = FALSE))
-  if (!is.null(tt) && length(cols) == 1L) {
-    lv <- out$levels[[cols]]
-    if (is.null(lv) && identical(tt$position, "first") &&
-        is.data.frame(plan$data) && cols %in% names(plan$data)) {
-      k <- plan$data[[cols]]
-      lv <- if (is.factor(k)) levels(k) else .ard_first_seen(as.character(k[!is.na(k)]))
-    }
-    if (!is.null(lv)) {
-      out$levels <- out$levels %||% list()
-      out$levels[[cols]] <- .plan_total_levels(lv, tt)
-    }
-  } else if (!is.null(tt) && length(cols) > 1L &&
-             !identical(tt$direction %||% "cols", "rows")) {
-    # two column keys (#1103, #1109): the folded key's order, its Total at
-    # `position` -- the data's own order (the overall rows bound first)
-    # would otherwise place it
-    key <- cols[.plan_total_fold(plan$data, cols, tt$direction %||% "cols")]
+  if (!is.null(tt) && length(cols) && !identical(tt$direction %||% "cols", "rows")) {
+    d <- plan$data
+    key <- cols[.plan_total_fold(d, cols, .plan_total_keys(plan, d, cols))]
     lv <- out$levels[[key]]
-    if (is.null(lv) && is.data.frame(plan$data) && key %in% names(plan$data)) {
-      k <- plan$data[[key]]
-      ok <- Reduce(`&`, lapply(cols, function(o)
-        if (o %in% names(plan$data)) !is.na(plan$data[[o]]) else FALSE))
-      lv <- if (is.factor(k)) levels(k) else .ard_first_seen(as.character(k[ok]))
+    if (is.null(lv) && is.data.frame(d) && key %in% names(d) &&
+        (length(cols) > 1L || identical(tt$position, "first"))) {
+      k <- d[[key]]
+      lv <- if (is.factor(k)) levels(k) else
+        .ard_first_seen(as.character(k[.plan_total_has(d, cols)]))
     }
     if (length(lv)) {
       out$levels <- out$levels %||% list()
@@ -5705,8 +5749,7 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
   # column it is; with two column keys, when the outer key is the one
   # folded (#1109), the Total group over the inner key's columns
   tt <- .plan_total_spec(plan)
-  if (!is.null(tt) && (length(cols) == 1L ||
-                       .plan_total_fold(d, cols, tt$direction %||% "cols") == 1L)) {
+  if (!is.null(tt) && .plan_total_fold(d, cols, .plan_total_keys(plan, d, cols)) == 1L) {
     if (!is.null(total)) {
       out[[tt$label]] <- total
     } else {
