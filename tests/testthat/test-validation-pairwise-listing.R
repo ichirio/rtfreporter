@@ -310,9 +310,12 @@ test_that("FT-LS160 [FR-LS253]: listing builders pairwise -- widths x wrap x sep
     expect_identical(sum(ids == "S-02"), 1L, label = lab)
     if (cs$data == "nonascii") {
       expect_true(grepl("\\u-26579?", txt, fixed = TRUE), label = lab)   # U+982D
-      # e acute, upper-cased by the custom rule
-      expect_true(grepl(if (cs$wrap == "custom") "\\u201?" else "\\u233?", txt,
-                        fixed = TRUE), label = lab)
+      # e acute, upper-cased by the custom rule: toupper() as this locale has
+      # it -- an E acute in a UTF-8 locale; in C it leaves non-ASCII alone
+      e_up <- toupper("\u00e9")
+      if (isTRUE(l10n_info()$`UTF-8`)) expect_identical(e_up, "\u00c9", label = lab)
+      e_cp <- utf8ToInt(if (cs$wrap == "custom") e_up else "\u00e9")
+      expect_true(grepl(sprintf("\\u%d?", e_cp), txt, fixed = TRUE), label = lab)
     }
 
     # -- the code written out ------------------------------------------------

@@ -130,6 +130,10 @@ test_that("every code block of the ai-plan-code articles runs, in order", {
     writeLines(enc2utf8(.ai_answer()), con, useBytes = TRUE)
     close(con)
     for (i in seq_along(blocks)) {
+      # (the run block source()s the answer as the article says, with
+      # encoding = "UTF-8": R converts the script to the native encoding,
+      # which must hold its Japanese labels)
+      if (i == 3L) skip_unless_native_can_hold(.ai_answer())
       expect_no_error(suppressWarnings(suppressMessages(.run_script(blocks[[i]], env))),
                       message = paste(lang, "block", i))
     }
