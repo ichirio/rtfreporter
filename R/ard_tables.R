@@ -1724,6 +1724,27 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
     # and dropping it is no reason to lose it.
     total_n <- .ard_total_n_value(gone)
     d <- d[!d$context %in% drop_contexts | by_group, , drop = FALSE]
+    # Nothing left once the dropped contexts are gone (#1092): an ARD of
+    # cards::ard_total_n() alone, say.  There is no table to normalize, and
+    # without this the frame of no rows fails later in base R
+    # ("replacement has 1 row, data has 0").
+    if (!nrow(d) && nrow(gone)) {
+      if (any(.ard_unlist_col(gone[["variable"]]) %in% "..ard_total_n..")) {
+        .ard_stop(paste0(
+          "The ARD has only the total (`..ard_total_n..`, from ",
+          "cards::ard_total_n()) and no statistics of a table.\n",
+          "  Bind it with the table's statistics: ",
+          "cards::bind_ard(cards::ard_summary(adsl, variables = AGE), ",
+          "cards::ard_total_n(adsl))."))
+      }
+      .ard_stop(sprintf(paste0(
+        "The ARD has only rows of the contexts `drop_contexts` drops (%s) ",
+        "and no statistics of a table.\n",
+        "  Bind it with the table's statistics, or keep a context with ",
+        "`drop_contexts = `."),
+        paste(unique(as.character(.ard_unlist_col(gone[["context"]]))),
+              collapse = ", ")))
+    }
   }
 
   # cards' own formatter, when available and not already applied
