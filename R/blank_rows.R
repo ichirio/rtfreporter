@@ -60,9 +60,14 @@
 #'   With several `cols`, a blank is inserted where **any** column's group
 #'   changes.
 #' @param include_before_first Logical. When `TRUE` (default), also insert a
-#'   blank row before the first data row.
+#'   blank row before the first row of the whole data.
 #' @param include_after_last Logical. When `TRUE` (default), also insert a
-#'   blank row after the last data row.
+#'   blank row after the last row of the whole data.
+#'
+#'   On a paginated table (`as_rtftables()`, `plan_blanks()`), a separator
+#'   blank that falls on a page's first or last row is dropped: the page
+#'   edges are `blank_row_first` / `blank_row_end` (`plan_blanks(first = ,
+#'   last = )`), which put a blank at the top and the foot of every page.
 #'
 #' @return An object of class `rtf_blank_rows_by_change`.
 #'
