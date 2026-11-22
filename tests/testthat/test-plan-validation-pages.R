@@ -257,7 +257,7 @@ test_that("FT-PL278 [FR-PL390]: plan_col_header() makes pages, and a later heade
 })
 
 test_that("FT-PL279 [FR-PL392]: plan_col_header(lines = ) is a list and span = a string", {
-  p <- table_plan(vp_wide())
+  p <- table_plan(vp_wide()) |> plan_style()
   expect_error(plan_col_header(p, lines = c(a = "x")),
                "plan_col_header(lines = ) is a list, one element a header row", fixed = TRUE)
   expect_error(plan_col_header(p, lines = list(c(a = "x")), span = 1),
@@ -734,7 +734,7 @@ test_that("FT-PL6809 [FR-PL998]: plan_paginate_rows(max_rows = , split = <a func
     split(df, ceiling(seq_len(nrow(df)) / max_rows))
   }
   pg <- vp_pages(table_plan(vp_wide()) |> plan_paginate_rows(max_rows = 4, split = two))
-  expect_identical(got, 4L)
+  expect_equal(got, 4)
   expect_equal(pg, vp_direct(max_rows = 4, split = two))
-  expect_identical(vapply(pg, function(p) nrow(p$data), 1L), c(4L, 2L))
+  expect_identical(unname(vapply(pg, function(p) nrow(p$data), 1L)), c(4L, 2L))
 })

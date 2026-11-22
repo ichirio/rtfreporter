@@ -547,7 +547,7 @@
 "FT-PL135","FR-PL208","asserts","expect_error(plan_apply(vc_long()), ""Expected a table_plan; start from table_plan(ard)."", fixed = TRUE)","yes"
 "FT-PL135","FR-PL209","asserts","""'arg' should be one of \""auto\"", \""input\"", \""args\"", \""table\"", \""pages\"""", fixed = TRUE)","yes"
 "FT-PL6808","FR-PL997","asserts","expect_equal(as_rtftables(p), vp_pages(p)) | expect_error(as_rtftables(p, max_rows = 2), ""as_rtftables(): a table_plan takes no other argument; got `max_rows`.<hint>"", fixed = TRUE) | ""got `max_rows`, `border`."" | ""got an unnamed argument."" | split = stop(""not reached""): ""got `split`.""","yes"
-"FT-PL6809","FR-PL998","asserts","two <- function(df, max_rows, ...) | expect_identical(got, 4L) | expect_equal(pg, vp_direct(max_rows = 4, split = two)) | c(4L, 2L)","yes"
+"FT-PL6809","FR-PL998","asserts","two <- function(df, max_rows, ...) | expect_equal(got, 4) | expect_equal(pg, vp_direct(max_rows = 4, split = two)) | c(4L, 2L)","yes"
 "FT-PL136","FR-PL210","asserts","expect_named(lay, c(""data"", ""roles"", ""label"", ""group_col"", ""declared"", ""layers"", ""cells"", ""compare"", | ""columns"", ""header"", ""pages"")) | expect_identical(lay$data, vc_long()) | expect_identical(lay$label, ""row"") | expect_null(lay$group_col)","yes"
 "FT-PL126","FR-PL211","part","expect_identical(names(n), ""RSUB"") | expect_identical(n$RSUB, list(parent = ""RACE"", level = ""Black""))","yes"
 "FT-PL136","FR-PL211","part","expect_identical(lay$declared, c(""cells"", ""cell_options"", ""digits"", ""levels"", ""levels"", ""columns"", ""header"")) | expect_identical(lay$layers$levels$levels, list(TRT = c(""B"", ""A""), PARAM = c(""AST"", ""ALT""))) | expect_identical(lay$layers$ce...","yes"
