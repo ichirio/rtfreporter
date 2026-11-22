@@ -30,10 +30,15 @@ With several \code{cols}, a blank is inserted where \strong{any} column's group
 changes.}
 
 \item{include_before_first}{Logical. When \code{TRUE} (default), also insert a
-blank row before the first data row.}
+blank row before the first row of the whole data.}
 
 \item{include_after_last}{Logical. When \code{TRUE} (default), also insert a
-blank row after the last data row.}
+blank row after the last row of the whole data.
+
+On a paginated table (\code{as_rtftables()}, \code{plan_blanks()}), a separator
+blank that falls on a page's first or last row is dropped: the page
+edges are \code{blank_row_first} / \code{blank_row_end} (\verb{plan_blanks(first = ,
+last = )}), which put a blank at the top and the foot of every page.}
 }
 \value{
 An object of class \code{rtf_blank_rows_by_change}.
