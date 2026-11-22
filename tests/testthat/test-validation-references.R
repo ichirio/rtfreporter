@@ -9,7 +9,8 @@
 .ref_review <- function() {
   p <- system.file("validation", "reference_review.csv", package = "rtfreporter")
   if (!nzchar(p)) p <- test_path("..", "..", "inst", "validation", "reference_review.csv")
-  utils::read.csv(p, colClasses = "character", na.strings = "", stringsAsFactors = FALSE)
+  utils::read.csv(p, colClasses = "character", na.strings = "", stringsAsFactors = FALSE,
+                  fileEncoding = "UTF-8")
 }
 
 # md5 of the file's text with the line ends made LF, so a checkout that

@@ -6,7 +6,8 @@
 .leaf_read <- function(f) {
   p <- system.file("validation", f, package = "rtfreporter")
   if (!nzchar(p)) p <- test_path("..", "..", "inst", "validation", f)
-  utils::read.csv(p, colClasses = "character", na.strings = "", stringsAsFactors = FALSE)
+  utils::read.csv(p, colClasses = "character", na.strings = "", stringsAsFactors = FALSE,
+                  fileEncoding = "UTF-8")
 }
 
 # The names of the test_that() blocks of every test file

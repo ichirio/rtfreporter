@@ -103,7 +103,7 @@ test_that("FT-PL901 [FR-PL901]: a listing above its summary, the time points acr
 
 test_that("FT-PL902 [FR-PL901]: the PK parameters across, a page an analyte and group: the same bytes as by hand", {
   pl_skip()
-  adpp <- read.csv(pl_fx("adpp.csv"))
+  adpp <- read.csv(pl_fx("adpp.csv"), fileEncoding = "UTF-8")
   params <- c("C_{max} (ng/mL)", "T_{max} (hr)", "AUC_{last} (ng·hr/mL)",
               "AUC_{inf} (ng·hr/mL)", "t1/2 (hr)")
   ard <- cards::ard_summary(adpp, by = c(ANALYTE, RENALGR, PARAM), variables = AVAL,
