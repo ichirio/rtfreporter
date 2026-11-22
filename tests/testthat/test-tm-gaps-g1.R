@@ -1363,9 +1363,11 @@ test_that("FT-AR3050 [FR-AR233]: list_ard_keys() prints keys, variables, context
 })
 
 test_that("FT-AR3051 [FR-AR234]: list_ard_keys() returns lists invisibly, stats sorted", {
-  invisible(capture.output(vis <- withVisible(list_ard_keys(.g1_keys_ard()))))
-  expect_false(vis$visible)
+  vis <- withVisible(list_ard_keys(.g1_keys_ard()))
+  expect_true(vis$visible)
   x <- vis$value
+  expect_s3_class(x, "rtfreporter_ard_keys")
+  expect_identical(utils::capture.output(y <- list_ard_keys(.g1_keys_ard())), character(0))
   expect_identical(names(x), c("keys", "variables", "contexts", "kinds", "stats"))
   expect_identical(x$keys, c("TRT", "SEX"))
   expect_identical(x$variables, c("AGE", "WT"))

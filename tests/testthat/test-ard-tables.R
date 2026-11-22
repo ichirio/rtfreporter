@@ -333,7 +333,8 @@ test_that("the structural kind is read from the rows, not from the context", {
 
 test_that("list_ard_keys() reports the stable kind next to the context", {
   skip_if_no_cards()
-  out <- utils::capture.output(k <- list_ard_keys(make_ard()))
+  k <- list_ard_keys(make_ard())
+  out <- utils::capture.output(print(k))
   expect_true(any(grepl("Structural kinds", out)))
   expect_false(is.null(k$kinds))
   expect_identical(k$kinds$kind[k$kinds$variable == "AGE"], "continuous")

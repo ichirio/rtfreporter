@@ -65,7 +65,7 @@ This is a tour of what `rtftable()` and the document verbs can do with a
 table you already have as a data frame -- the **bring your own table** path.
 When the statistics are in an analysis results dataset (cards / cardx), the
 recommended route is a table plan instead: start with
-[Get started](rtfreporter.html) and [Tables from an ARD](tables-from-ard.html).
+[Get started](rtfreporter.html) and [Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html).
 
 **Core workflow:**
 
@@ -239,7 +239,7 @@ generate_rtfreport(doc, tempfile(fileext = ".rtf"), overwrite = TRUE)
 By default each table or figure starts a new page (`page_break = TRUE`).
 Here the figure and the summary table go on adjacent pages and share the same
 section header. (`page_break = FALSE` puts a content under the one before it;
-see [Several contents on one page](several-contents.html).)
+see [Several contents on one page](https://ichirio.github.io/rtfreporter/articles/several-contents.html).)
 
 ```{r fig-plus-table, eval = requireNamespace("ggplot2", quietly = TRUE)}
 tbl_summary <- rtftable(
@@ -643,7 +643,7 @@ heavy_tfl <- rtf_table_style_with(tfl,
 )
 ```
 
-How the S3 objects fit together: [Internal class design](internal-design.html).
+How the S3 objects fit together: [Internal class design](https://ichirio.github.io/rtfreporter/articles/internal-design.html).
 
 ---
 
@@ -701,8 +701,8 @@ How the S3 objects fit together: [Internal class design](internal-design.html).
 ## Where next
 
 - [Get started](rtfreporter.html) --- the recommended ARD + plan workflow
-- [Importing tables](importing-tables.html) --- gt, gtsummary, rtables, tfrmt, flextable and huxtable through `as_rtftables()`
-- [Page setup](page-setup.html) --- paper size, orientation, margins
-- [Output options](output.html) --- where the file goes and what it contains
+- [Importing tables](https://ichirio.github.io/rtfreporter/articles/importing-tables.html) --- gt, gtsummary, rtables, tfrmt, flextable and huxtable through `as_rtftables()`
+- [Page setup](https://ichirio.github.io/rtfreporter/articles/page-setup.html) --- paper size, orientation, margins
+- [Output options](https://ichirio.github.io/rtfreporter/articles/output.html) --- where the file goes and what it contains
 
 The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.

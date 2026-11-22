@@ -1131,7 +1131,7 @@
 
 #' What is actually inside an ARD
 #'
-#' Prints, and returns invisibly, the structural facts you need in order to
+#' Returns the structural facts you need in order to
 #' call [normalize_ard()] and [widen_ard()]: the grouping-variable names
 #' that appear in the `group1..groupN` columns, the analysis variables, the
 #' `context` values and the statistics each context carries.  All of it is read from the tibble's
@@ -1139,9 +1139,12 @@
 #'
 #' @param x A cards/cardx ARD (any data frame with the ARD columns).
 #'
-#' @return Invisibly, a list with elements `keys`, `variables`, `contexts`,
-#'   `kinds` (the structural kinds, as printed) and `stats` (a data frame of
-#'   context / stat_name / stat_label).
+#' @return A list of class `"rtfreporter_ard_keys"` with elements `keys`,
+#'   `variables`, `contexts`, `kinds` (the structural kinds, a data frame of
+#'   variable / kind / context, or `NULL` when the ARD cannot be normalised)
+#'   and `stats` (a data frame of context / stat_name / stat_label).  Its
+#'   print method shows them, so typing the call prints them and assigning
+#'   the result prints nothing.
 #'
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
@@ -1149,7 +1152,8 @@
 #'     cards::ADSL, .by = ARM,
 #'     cards::ard_summary(variables = AGE),
 #'     cards::ard_tabulate(variables = SEX))
-#'   keys <- list_ard_keys(ard)    # prints the keys, variables and statistics
+#'   list_ard_keys(ard)            # prints the keys, variables and statistics
+#'   keys <- list_ard_keys(ard)    # prints nothing
 #'   keys$keys
 #' }
 #'
@@ -1184,19 +1188,25 @@ list_ard_keys <- function(x) {
     rownames(kinds) <- NULL
   }
 
-  cat("ARD keys (group1..groupN values) :", paste(keys, collapse = ", "), "\n")
-  cat("Analysis variables               :", paste(vars, collapse = ", "), "\n")
-  cat("Contexts (cards-version specific):", paste(ctx, collapse = ", "), "\n")
-  if (!is.null(kinds)) {
+  structure(list(keys = keys, variables = vars, contexts = ctx,
+                 kinds = kinds, stats = stats),
+            class = "rtfreporter_ard_keys")
+}
+
+#' @export
+print.rtfreporter_ard_keys <- function(x, ...) {
+  cat("ARD keys (group1..groupN values) :", paste(x$keys, collapse = ", "), "\n")
+  cat("Analysis variables               :", paste(x$variables, collapse = ", "), "\n")
+  cat("Contexts (cards-version specific):", paste(x$contexts, collapse = ", "), "\n")
+  if (!is.null(x$kinds)) {
     cat("Structural kinds (stable)        :",
-        paste(.ard_first_seen(kinds$kind), collapse = ", "), "\n")
+        paste(.ard_first_seen(x$kinds$kind), collapse = ", "), "\n")
     cat("\nPer variable -- key `cells` on `kind` unless you need the context:\n")
-    print(kinds, row.names = FALSE)
+    print(x$kinds, row.names = FALSE)
   }
   cat("\nStatistics per context:\n")
-  print(stats, row.names = FALSE)
-  invisible(list(keys = keys, variables = vars, contexts = ctx,
-                 kinds = kinds, stats = stats))
+  print(x$stats, row.names = FALSE)
+  invisible(x)
 }
 
 
@@ -3993,7 +4003,7 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #   `rtfreporter::` / `rtfreporter::`-qualified.
 # @param file Optional path to write the code to.
 #
-# @return The generated code, as a character vector, invisibly.
+# @return The generated code, as an "rtfreporter_plan_code" character vector.
 #
 .ard_template <- function(ard, cols = NULL, hierarchy = character(),
                          file = NULL, pipe = NULL) {
@@ -4156,9 +4166,8 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
     ")")
 
   code <- L[!vapply(L, is.null, logical(1))]
-  cat(paste(code, collapse = "\n"), "\n")
   if (!is.null(file)) writeLines(code, file)
-  invisible(code)
+  structure(code, class = "rtfreporter_plan_code")
 }
 
 

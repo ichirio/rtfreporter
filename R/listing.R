@@ -1139,8 +1139,10 @@ build_listing <- function(data, spec) {
     out[[spec$record_col]] <- if (n == 0L) integer(0) else rep(seq_len(n), nl)
   }
 
-  body <- as.data.frame(out, stringsAsFactors = FALSE, check.names = FALSE)
-  rownames(body) <- NULL
+  # (list2DF(), not as.data.frame(): that one passes the names through
+  # data.frame()'s arguments, and in a non-UTF-8 locale a Japanese column name
+  # loses its encoding on the way)
+  body <- list2DF(out, nrow = total)
   attr(body, "rtf_listing") <- spec
   # The value of each printed column by record id, unwrapped: what a page cut
   # on a column (`page_by`) keys a record on, not the pieces of its wrap.

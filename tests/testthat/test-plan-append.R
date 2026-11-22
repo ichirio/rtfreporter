@@ -46,7 +46,7 @@ pl_by_group <- function(d, cols, levels) {
 
 test_that("FT-PL901 [FR-PL901]: a listing above its summary, the time points across two column blocks: the same bytes as by hand", {
   pl_skip()
-  adpc <- read.csv(pl_fx("adpc.csv"))
+  adpc <- read.csv(pl_fx("adpc.csv"), encoding = "UTF-8")
   adpc <- adpc[adpc$RENALGR %in% c("Normal", "Moderate"), ]
   times <- c("Pre-Dose", paste(c(0.25, 0.5, 1, 1.5, 2, 3, 4, 6, 8, 12, 24, 36, 48), "hr"))
   ard <- cards::ard_summary(adpc[!is.na(adpc$AVAL), ], by = c(ANALYTE, RENALGR, ATPT),
@@ -103,7 +103,7 @@ test_that("FT-PL901 [FR-PL901]: a listing above its summary, the time points acr
 
 test_that("FT-PL902 [FR-PL901]: the PK parameters across, a page an analyte and group: the same bytes as by hand", {
   pl_skip()
-  adpp <- read.csv(pl_fx("adpp.csv"))
+  adpp <- read.csv(pl_fx("adpp.csv"), encoding = "UTF-8")
   params <- c("C_{max} (ng/mL)", "T_{max} (hr)", "AUC_{last} (ng·hr/mL)",
               "AUC_{inf} (ng·hr/mL)", "t1/2 (hr)")
   ard <- cards::ard_summary(adpp, by = c(ANALYTE, RENALGR, PARAM), variables = AVAL,
@@ -135,7 +135,7 @@ test_that("FT-PL902 [FR-PL901]: the PK parameters across, a page an analyte and 
 
 test_that("FT-PL903 [FR-PL901]: the analytes across, a page a group and time point: the same bytes as by hand", {
   pl_skip()
-  adpc <- read.csv(pl_fx("adpc.csv"))
+  adpc <- read.csv(pl_fx("adpc.csv"), encoding = "UTF-8")
   adpc <- adpc[adpc$ATPT %in% c("1 hr", "12 hr"), ]
   ard <- cards::ard_summary(adpc[!is.na(adpc$AVAL), ], by = c(RENALGR, ATPT, ANALYTE),
                             variables = AVAL, statistic = pl_fns)

@@ -933,6 +933,7 @@ test_that("plot objects are drawn into a PNG, and the options are checked", {
 })
 
 test_that("a plot object needs a PNG device", {
+  skip_on_cran()
   old <- options(rtfreporter.png_device = "png"); on.exit(options(old))
   testthat::local_mocked_bindings(capabilities = function(...) c(png = FALSE),
                                   .package = "base")

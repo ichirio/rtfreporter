@@ -54,6 +54,23 @@ entry at the same left position, whatever its level; a whole number
 above 0 indents each level that much more than the one above it
 (\code{list(indent = 600)}: 0, 600 and 1200 twips for levels 1 to 3).}
 }
+
+The list has every \verb{rtfreporter.*} option the package reads.  The others
+are the page (\code{rtfreporter.page.paper_size}, \code{.orientation},
+\code{.margin_top_in}, \code{.margin_bottom_in}, \code{.margin_left_in},
+\code{.margin_right_in}, and \code{.header_dist_in} / \code{.footer_dist_in}, factory
+\code{NULL}: the full top / bottom margin; see \code{\link[=rtf_page]{rtf_page()}}), the text and
+table style (\code{rtfreporter.font_size_half_points}, \code{rtfreporter.font_lang},
+\code{rtfreporter.row_height_twips}, \verb{rtfreporter.cell_padding_*_twips},
+\code{rtfreporter.markup}, \code{rtfreporter.title_format},
+\code{rtfreporter.footnote_format}, \code{rtfreporter.title_width},
+\code{rtfreporter.footnote_width}), \code{rtfreporter.rounding} (\code{\link[=round_num]{round_num()}}),
+\code{rtfreporter.ard_pipe} (\code{\link[=plan_template]{plan_template()}}), the run tokens of
+\code{\link[=generate_rtfreport]{generate_rtfreport()}} (\code{rtfreporter.program},
+\code{rtfreporter.datetime_format}, factory \code{"\\\%d\\\%b\\\%Y  \\\%H:\\\%M"},
+\code{rtfreporter.render_time} and \code{rtfreporter.tokens}) and
+\code{rtfreporter.print_ascii} (factory \code{FALSE}: \code{TRUE} prints an \code{\link[=rtftable]{rtftable()}}
+with ASCII rules).
 }
 \examples{
 rtfreporter_options()

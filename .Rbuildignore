@@ -39,3 +39,4 @@
 ^validation$
 ^\.claude$
 ^\.git$
+^\.gitattributes$

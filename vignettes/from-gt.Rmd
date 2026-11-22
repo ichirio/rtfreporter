@@ -71,7 +71,7 @@ cat("This vignette renders only when the `gt` package is installed.\n")
 > **The second path.** This article is about bringing a table you already
 > have.  When the statistics are in a cards / cardx ARD, the recommended route
 > is a table plan -- see [Get started](rtfreporter.html) and
-> [Tables from an ARD](tables-from-ard.html).
+> [Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html).
 
 The [gt](https://gt.rstudio.com) package by Posit gives users a
 friendly grammar for *display tables* -- `cols_label()`,
@@ -366,7 +366,7 @@ RTF cannot reproduce, so they are intentionally **not** carried through:
 ## Where next
 
 - [From rtables and tern](from-rtables.html) --- the same for an rtables or tern table
-- [Importing tables](importing-tables.html) --- every source `as_rtftables()` reads, flextable and huxtable included
-- [The pharmaverse catalog](tlg-catalog.html) --- the same tables built five different ways
+- [Importing tables](https://ichirio.github.io/rtfreporter/articles/importing-tables.html) --- every source `as_rtftables()` reads, flextable and huxtable included
+- [The pharmaverse catalog](https://ichirio.github.io/rtfreporter/articles/tlg-catalog.html) --- the same tables built five different ways
 
 The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.

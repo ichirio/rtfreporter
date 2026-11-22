@@ -1675,16 +1675,18 @@ test_that("FT-PL3017 [FR-PL331]: plan_empty() twice merges field by field", {
 })
 
 .g3_template <- function(...) {
-  code <- NULL
-  utils::capture.output(code <- plan_template(...))
-  code
+  plan_template(...)
 }
 
 test_that("FT-PL3018 [FR-PL350]: plan_template() prints and returns the pipeline code, which runs to RTF pages", {
   ard <- .g3_ard()
-  out <- utils::capture.output(res <- withVisible(plan_template(ard, cols = "TRT")))
-  expect_false(res$visible)
+  res <- withVisible(plan_template(ard, cols = "TRT"))
+  out <- utils::capture.output(print(res$value))
+  expect_true(res$visible)
   expect_type(res$value, "character")
+  expect_s3_class(res$value, "rtfreporter_plan_code")
+  expect_identical(utils::capture.output(code <- plan_template(ard, cols = "TRT")),
+                   character(0))
   expect_true(length(out) > 5L)                       # it also prints the code
   code <- res$value
   txt <- paste(code, collapse = "

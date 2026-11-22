@@ -661,7 +661,7 @@ test_that("FT-PL6801 [FR-PL901]: a listing above its summary, as two plans joine
   by_sub <- ~ "{USUBJID}/{AGE}/{SEX}"
 
   # ---- the time points across, in two column blocks (a break after 4 hr)
-  adpc <- utils::read.csv(.t13_fx("adpc.csv"))
+  adpc <- utils::read.csv(.t13_fx("adpc.csv"), encoding = "UTF-8")
   adpc <- adpc[adpc$RENALGR %in% c("Normal", "Moderate"), ]
   times <- c("Pre-Dose", paste(c(0.25, 0.5, 1, 1.5, 2, 3, 4, 6, 8, 12, 24, 36, 48), "hr"))
   hand_in <- .t13_records(adpc)
@@ -718,7 +718,7 @@ test_that("FT-PL6801 [FR-PL901]: a listing above its summary, as two plans joine
   expect_false(identical(.t13_bytes(.t13_pl_doc(last_cut, titles, program)), want))
 
   # ---- the PK parameters across, a page an analyte and group
-  adpp <- utils::read.csv(.t13_fx("adpp.csv"))
+  adpp <- utils::read.csv(.t13_fx("adpp.csv"), encoding = "UTF-8")
   params <- c("C_{max} (ng/mL)", "T_{max} (hr)", "AUC_{last} (ng·hr/mL)",
               "AUC_{inf} (ng·hr/mL)", "t1/2 (hr)")
   hand_pp <- adpp
@@ -762,7 +762,7 @@ test_that("FT-PL6801 [FR-PL901]: a listing above its summary, as two plans joine
                                           titles2, program2)), want2)
 
   # ---- the analytes across, a page a group and time point
-  adpc2 <- utils::read.csv(.t13_fx("adpc.csv"))
+  adpc2 <- utils::read.csv(.t13_fx("adpc.csv"), encoding = "UTF-8")
   adpc2 <- adpc2[adpc2$ATPT %in% c("1 hr", "12 hr"), ]
   hand_an <- .t13_records(adpc2)
   hand_an$RENALGR <- factor(hand_an$RENALGR, levels = c("Normal", "Mild", "Moderate"))
