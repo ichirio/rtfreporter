@@ -34,7 +34,7 @@ Install the released version from GitHub, or the development version:
 ``` r
 # install.packages("rtfreporter")   # from CRAN, once it is accepted
 remotes::install_github("ichirio/rtfreporter@v0.9.0")   # the latest release, 0.9.0
-remotes::install_github("ichirio/rtfreporter")          # the development version
+remotes::install_github("ichirio/rtfreporter@next")     # the development version (next)
 ```
 
 0.9.0 removes the functions and arguments 0.8.x deprecated (each 0.8.x
