@@ -10,10 +10,9 @@
 # (a run by hand is marked DRAFT).  A release keeps them as its assets (an
 # artifact is deleted after 90 days).
 on:
-  # (not next: the user, 2026-11-22 -- the full check runs once, when next
-  # goes into main; a release from a frozen next is run by hand first)
-  push:
-    branches: [main]
+  # (the user, 2026-11-22: the 6 environments run once, on the pull request
+  # that takes next into main -- not on a push to next or to main; a release
+  # from a frozen next is run by hand first)
   # (a pull request into next runs quick-check.yaml instead)
   pull_request:
     branches: [main]
