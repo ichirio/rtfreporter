@@ -1574,7 +1574,9 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
     chain(e)
   }
   if (ok(x, identical(verb, "plan_compare"))) return(invisible(NULL))
-  # what was given, said in the words of the help
+  # what was given, said in the words of the help; `nested` is set when the
+  # fault is a list or a vector standing as one element of a chain
+  nested <- FALSE
   what <- function(e, map = FALSE) {
     if (is.null(e)) return("NULL")
     if (inherits(e, "formula")) return("a guard")
@@ -1600,7 +1602,13 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
         return(if (inherits(e, "cell_rows")) "a cell_rows()" else "a named list")
       }
       bad <- bad[[1L]]
-      inner <- if (is.character(bad) && length(bad) > 1L && !anyNA(bad)) {
+      # a list or a vector of templates inside a chain (#1129): said as
+      # such, by type and length alone, not by describing what is inside
+      inner <- if (is.list(bad) && !is.object(bad)) {
+        nested <<- TRUE
+        if (length(bad)) "a list" else "an empty list"
+      } else if (is.character(bad) && length(bad) > 1L && !anyNA(bad)) {
+        nested <<- TRUE
         "a vector of templates"
       } else what(bad)
       return(sprintf("%s with %s in it",
@@ -1616,9 +1624,10 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
   } else {
     "a template, a named vector of templates, guards or cell_rows()"
   }
-  .ard_stop(sprintf(paste0("%s is %s, not %s.\n",
-                           "  A constant cell is written as text: \"-\"."),
-                    arg, shapes, what(x, identical(verb, "plan_compare"))))
+  given <- what(x, identical(verb, "plan_compare"))
+  .ard_stop(sprintf("%s is %s, not %s.\n", arg, shapes, given),
+            if (nested) paste0("  ", .ard_chain_hint, "\n"),
+            "  A constant cell is written as text: \"-\".")
 }
 
 # `round` used to be a verb of its own, and it never earned one: the whole
