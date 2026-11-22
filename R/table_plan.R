@@ -7323,7 +7323,7 @@ plan_layers <- function(.plan) {
 #' Write the plan for you
 #'
 #' The counterpart of `plan_template(form = "widen")` for the deferred form: reads an ARD
-#' and prints a runnable [table_plan()] pipeline, filled in with the keys,
+#' and writes a runnable [table_plan()] pipeline, filled in with the keys,
 #' hierarchy, contexts and statistics it actually found.
 #'
 #' It writes **both halves** --- the ARD to the table, and the table to the
@@ -7344,7 +7344,10 @@ plan_layers <- function(.plan) {
 #' @param pipe `"|>"` or `"%>%"`; `NULL` follows
 #'   `getOption("rtfreporter.ard_pipe")`, then RStudio's own preference,
 #'   then `%>%`.
-#' @return The generated code, as a character vector, invisibly.
+#' @return The generated code, a character vector of class
+#'   `"rtfreporter_plan_code"`, one element per line.  Its print method
+#'   shows the code, so typing the call prints it and assigning the result
+#'   prints nothing.
 #'
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
@@ -7352,7 +7355,8 @@ plan_layers <- function(.plan) {
 #'     cards::ADSL, .by = ARM,
 #'     cards::ard_summary(variables = AGE),
 #'     cards::ard_tabulate(variables = SEX))
-#'   plan_template(ard, cols = "ARM")
+#'   plan_template(ard, cols = "ARM")          # prints the code
+#'   code <- plan_template(ard, cols = "ARM")  # prints nothing
 #' }
 #' @seealso [table_plan()], [plan_apply()]
 #' @export
@@ -7478,9 +7482,14 @@ plan_template <- function(x, cols = NULL, hierarchy = character(),
          "#   plan_apply(p)   the object itself")
 
   code <- L[!vapply(L, is.null, logical(1))]
-  cat(paste(code, collapse = "\n"), "\n")
   if (!is.null(file)) writeLines(code, file)
-  invisible(code)
+  structure(code, class = "rtfreporter_plan_code")
+}
+
+#' @export
+print.rtfreporter_plan_code <- function(x, ...) {
+  cat(paste(unclass(x), collapse = "\n"), "\n")
+  invisible(x)
 }
 
 # The `cells` entries, one per kind, with the digits the ARD already knows.

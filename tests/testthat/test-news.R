@@ -14,6 +14,7 @@ test_that("every level-1 line of NEWS.md is a version", {
 })
 
 test_that("R reads a version from every section of NEWS.md", {
+  skip_on_cran()
   skip_if_not_installed("commonmark")
   skip_if_not_installed("xml2")
   news <- system.file("NEWS.md", package = "rtfreporter")
