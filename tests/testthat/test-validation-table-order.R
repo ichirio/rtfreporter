@@ -14,7 +14,7 @@
   p <- system.file("validation", f, package = "rtfreporter")
   if (!nzchar(p)) p <- test_path("..", "..", "inst", "validation", f)
   utils::read.csv(p, colClasses = "character", na.strings = character(0),
-                  stringsAsFactors = FALSE, fileEncoding = "UTF-8")
+                  stringsAsFactors = FALSE)
 }
 
 # The first row that sorts before the row above it, as a message naming both

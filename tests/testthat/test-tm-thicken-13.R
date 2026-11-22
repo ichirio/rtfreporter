@@ -714,7 +714,7 @@ test_that("FT-PL6801 [FR-PL901]: a listing above its summary, as two plans joine
   expect_false(identical(.t13_bytes(.t13_pl_doc(last_cut, titles, program)), want))
 
   # ---- the PK parameters across, a page an analyte and group
-  adpp <- utils::read.csv(.t13_fx("adpp.csv"), fileEncoding = "UTF-8")
+  adpp <- utils::read.csv(.t13_fx("adpp.csv"))
   params <- c("C_{max} (ng/mL)", "T_{max} (hr)", "AUC_{last} (ng·hr/mL)",
               "AUC_{inf} (ng·hr/mL)", "t1/2 (hr)")
   hand_pp <- adpp

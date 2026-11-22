@@ -121,7 +121,7 @@ write_report(
   file = "ref_conc_cols_time.rtf", program = "plan-append/conc_cols_time.R")
 
 # ---- 2. the PK parameters across ------------------------------------------------
-adpp <- read.csv("adpp.csv", fileEncoding = "UTF-8")
+adpp <- read.csv("adpp.csv")
 adpp$label <- sprintf("%s/%d/%s", adpp$USUBJID, adpp$AGE, adpp$SEX)
 adpp$BLQ <- FALSE
 adpp$RENALGR <- factor(adpp$RENALGR, levels = c("Normal", "Mild", "Moderate"))
