@@ -712,7 +712,7 @@ test_that("FT-PL6807 [FR-PL996]: plan_stub(before = TRUE) with plan_paginate_gro
 })
 
 test_that("FT-PL6808 [FR-PL997]: as_rtftables(<a table_plan>) runs the plan and stops on any other argument, naming it", {
-  p <- table_plan(vp_wide())
+  p <- table_plan(vp_wide()) |> plan_style()
   # the plan alone: its pages, as plan_apply(plan, "pages") gives them
   expect_equal(suppressMessages(as_rtftables(p)), vp_pages(p))
   hint <- paste0("\n  A plan's table settings go in plan_style() and the other plan_*() ",
