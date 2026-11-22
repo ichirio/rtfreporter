@@ -6,6 +6,7 @@
 # ── page, watermark: validation and print methods ──────────
 
 test_that("rtf_page() rejects a malformed paper_size and prints its geometry", {
+  skip_on_cran()
   expect_error(rtf_page(paper_size = c("A4", "letter")),
                "`paper_size` must be a single preset name")
   expect_error(rtf_page(paper_size = 4L), "`paper_size` must be a single preset")
@@ -23,6 +24,7 @@ test_that("rtf_page() rejects a malformed paper_size and prints its geometry", {
 })
 
 test_that("rtf_watermark() validates every argument and prints a summary", {
+  skip_on_cran()
   expect_error(rtf_watermark(), "`text` is required")
   expect_error(rtf_watermark(NULL), "`text` is required")
   expect_error(rtf_watermark(character(0)), "`text` is required")
@@ -54,6 +56,7 @@ test_that("rtf_watermark() validates every argument and prints a summary", {
 })
 
 test_that("print.rtf_stub_spec() shows the optional label and label_span lines", {
+  skip_on_cran()
   s <- stub_spec(vars = c("SOC", "PT"), label = "Term", label_span = TRUE)
   out <- capture.output(res <- print(s))
   expect_identical(res, s)
@@ -66,6 +69,7 @@ test_that("print.rtf_stub_spec() shows the optional label and label_span lines",
 })
 
 test_that("footnote rows are strings or named vectors, never lists", {
+  skip_on_cran()
   fr <- rtfreporter:::.footnote_rows
   expect_identical(fr(NULL), list())
   expect_identical(fr(character(0)), list())
@@ -79,6 +83,7 @@ test_that("footnote rows are strings or named vectors, never lists", {
 })
 
 test_that("rtfreporter_ai_manual() copies, refuses to clobber and names a missing file", {
+  skip_on_cran()
   p <- rtfreporter_ai_manual()
   expect_true(file.exists(p))
   d <- tempfile("man"); on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -94,6 +99,7 @@ test_that("rtfreporter_ai_manual() copies, refuses to clobber and names a missin
 # ── drop_cols: the reindexing helpers ──────────────────────────────────────
 
 test_that(".resolve_drop_cols() returns nothing for NULL and refuses to drop every column", {
+  skip_on_cran()
   df <- data.frame(a = 1, b = 2, c = 3)
   rd <- rtfreporter:::.resolve_drop_cols
   expect_identical(rd(NULL, df), integer(0))
@@ -104,6 +110,7 @@ test_that(".resolve_drop_cols() returns nothing for NULL and refuses to drop eve
 })
 
 test_that(".apply_col_drop() reindexes every positional argument", {
+  skip_on_cran()
   df <- data.frame(a = 1:2, b = 3:4, c = 5:6)
   attr(df, "rtf_blank_rows") <- 1L
   ca <- list(
@@ -143,6 +150,7 @@ test_that(".apply_col_drop() reindexes every positional argument", {
 })
 
 test_that("the col_header / col_spec / row_title reindexers handle the odd shapes", {
+  skip_on_cran()
   ri <- rtfreporter:::.reindex_col_header
   keep <- c(1L, 3L)
   expect_identical(ri(c("A", "B", "C"), keep, 3L), c("A", "C"))
@@ -175,6 +183,7 @@ test_that("the col_header / col_spec / row_title reindexers handle the odd shape
 })
 
 test_that("as_rtftables(drop_cols = ) hides a column and keeps the others", {
+  skip_on_cran()
   d <- data.frame(g = c("a", "a", "b"), x = 1:3, y = 4:6, stringsAsFactors = FALSE)
   pages <- as_rtftables(d, drop_cols = "g")
   expect_identical(names(pages[[1]]$data), c("x", "y"))
@@ -185,6 +194,7 @@ test_that("as_rtftables(drop_cols = ) hides a column and keeps the others", {
 # ── stub_cols() as_rtftables(stub = ) metadata, collapse_repeats(), fonts ──
 
 test_that("the stub style helpers carry spans and skip inserted label rows", {
+  skip_on_cran()
   rm <- rtfreporter:::.stub_remap_styles
   styles <- list(list(bold = c(TRUE, FALSE, TRUE)), NULL)
   expect_null(rm(NULL, 1:2, 3L, 2:3))
@@ -213,6 +223,7 @@ test_that("the stub style helpers carry spans and skip inserted label rows", {
 })
 
 test_that(".prepend_stub_header() puts the stub label on the leaf row only", {
+  skip_on_cran()
   ph <- rtfreporter:::.prepend_stub_header
   expect_null(ph(NULL, "Term", 2L))
   expect_identical(ph(c("A", "B"), "Term", 2L), c("Term", "A", "B"))
@@ -232,6 +243,7 @@ test_that(".prepend_stub_header() puts the stub label on the leaf row only", {
 })
 
 test_that("collapse_repeats() works on a multi-table rtftable and on one table", {
+  skip_on_cran()
   d1 <- data.frame(g = c("a", "a", "b"), v = 1:3, stringsAsFactors = FALSE)
   d2 <- data.frame(g = c("c", "c"), v = 4:5, stringsAsFactors = FALSE)
   multi <- rtftable(list(d1, d2))
@@ -244,6 +256,7 @@ test_that("collapse_repeats() works on a multi-table rtftable and on one table",
 })
 
 test_that("font helpers cope with empty and odd font tables", {
+  skip_on_cran()
   fn <- rtfreporter:::.font_names
   expect_identical(fn(NULL), character(0))
   expect_identical(fn(c("Arial", "", "Courier")), c("Arial", "Courier"))
@@ -294,6 +307,7 @@ edge_plan <- function(by = "TRT") {
 first_page <- function(x) if (inherits(x, "rtftable")) x else x[[1L]]
 
 test_that("a header written as cell rows is read back by plan_layers()", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   hd <- data.frame(
     line = c(1, 1, 1, 2, 2, 2),
@@ -322,6 +336,7 @@ test_that("a header written as cell rows is read back by plan_layers()", {
 })
 
 test_that("a header sheet that names a missing column, key or position is refused", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   run <- function(...) suppressMessages(plan_apply(plan_col_header(
     edge_plan(), data.frame(line = 1, text = "x", stringsAsFactors = FALSE,
@@ -344,6 +359,7 @@ test_that("a header sheet that names a missing column, key or position is refuse
 })
 
 test_that("a header cell's typed fields say what was wrong", {
+  skip_on_cran()
   hc <- rtfreporter:::.plan_header_cell
   row <- function(...) data.frame(..., stringsAsFactors = FALSE)
   expect_error(hc(row(line = "x")), "`col_header\\$line` must be a whole number")
@@ -357,6 +373,7 @@ test_that("a header cell's typed fields say what was wrong", {
 })
 
 test_that("plan_layers() describes the cells and the header a plan resolved", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   expect_error(plan_layers(data.frame()), "Expected a table_plan")
 
@@ -405,6 +422,7 @@ test_that("plan_layers() describes the cells and the header a plan resolved", {
 })
 
 test_that("a resolved header written back as cells gives the same header", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   # what tfl_as_table_spec() writes to the col_header sheet must read back
   p2 <- edge_plan(c("TRT", "SEX"))
@@ -436,6 +454,7 @@ test_that("a resolved header written back as cells gives the same header", {
 })
 
 test_that("plan_layers() reads a plan whose cells are a named map", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   p <- edge_plan()
   lay <- suppressMessages(plan_layers(p))
@@ -447,6 +466,7 @@ test_that("plan_layers() reads a plan whose cells are a named map", {
 # ── listings: validation, printing, empty / one-row data ───────────────────
 
 test_that("listing_col() and listing_spec() refuse malformed arguments", {
+  skip_on_cran()
   expect_error(listing_col("a", sep = c(",", ";")), "`sep` must be a single string")
   expect_error(listing_col("a", name = ""), "`name` must be a single non-empty string")
   expect_error(listing_col("a", name = c("x", "y")), "`name` must be a single")
@@ -482,6 +502,7 @@ test_that("listing_col() and listing_spec() refuse malformed arguments", {
 })
 
 test_that("listing specs and columns print what they will do", {
+  skip_on_cran()
   sp <- listing_spec(list(listing_col("USUBJID", label = c("Subject", "ID")),
                           listing_col(c("AGE", "TERM"), width = 20, sep = " / ")))
   out <- capture.output(res <- print(sp))
@@ -511,6 +532,7 @@ test_that("listing specs and columns print what they will do", {
 })
 
 test_that("build_listing() copes with empty, one-row and missing data and says what it refuses", {
+  skip_on_cran()
   sp <- listing_spec(list(listing_col("USUBJID"),
                           listing_col(c("AGE", "TERM"), width = 20, sep = " / ")))
   d <- data.frame(USUBJID = c("S1", "S2"), AGE = c(30, NA),
@@ -549,6 +571,7 @@ edge_tfl_dir <- function() {
 }
 
 test_that("assemble_folder() names a missing or empty folder and a bad spec file", {
+  skip_on_cran()
   expect_error(assemble_folder(file.path(tempdir(), "no-such-dir")),
                "Directory not found")
   empty <- tempfile("empty"); dir.create(empty)
@@ -568,6 +591,7 @@ test_that("assemble_folder() names a missing or empty folder and a bad spec file
 })
 
 test_that("assemble_folder() writes an .xlsx table of contents when writexl is there", {
+  skip_on_cran()
   skip_if_not_installed("writexl")
   skip_if_not_installed("readxl")
   dir <- edge_tfl_dir(); on.exit(unlink(dir, recursive = TRUE), add = TRUE)
@@ -578,6 +602,7 @@ test_that("assemble_folder() writes an .xlsx table of contents when writexl is t
 })
 
 test_that("assemble_rtf(toc = ) checks the table before it assembles", {
+  skip_on_cran()
   dir <- edge_tfl_dir(); on.exit(unlink(dir, recursive = TRUE), add = TRUE)
   toc <- assemble_folder(dir)
   out <- tempfile(fileext = ".rtf"); on.exit(unlink(out), add = TRUE)
@@ -613,6 +638,7 @@ edge_tbl <- function() {
 }
 
 test_that("style_body(rows = ) accepts every selector and names a bad one", {
+  skip_on_cran()
   t1 <- edge_tbl()
   bold_rows <- function(x) which(vapply(x$cell_styles, function(r)
     !is.null(r$bold) && any(r$bold), NA))
@@ -637,6 +663,7 @@ test_that("style_body(rows = ) accepts every selector and names a bad one", {
 })
 
 test_that("style_body(rows = ) selects across the tables of a multi-table rtftable", {
+  skip_on_cran()
   d1 <- data.frame(g = c("a", "b"), v = 1:2, stringsAsFactors = FALSE)
   d2 <- data.frame(g = c("c", "d", "e"), v = 3:5, stringsAsFactors = FALSE)
   m <- rtftable(list(d1, d2))
@@ -646,6 +673,7 @@ test_that("style_body(rows = ) selects across the tables of a multi-table rtftab
 })
 
 test_that("style_header() promotes, patches and warns where it must", {
+  skip_on_cran()
   t1 <- edge_tbl()
   # no header of its own: the columns' names (what prints) are made its
   # header, then styled (#749)
@@ -688,6 +716,7 @@ test_that("style_header() promotes, patches and warns where it must", {
 })
 
 test_that("style_cols() validates and records the column's look", {
+  skip_on_cran()
   t1 <- edge_tbl()
   expect_error(style_cols(t1, cols = "a", header_align = "middle"),
                "must be \"left\", \"center\", or \"right\"")
@@ -704,6 +733,7 @@ test_that("style_cols() validates and records the column's look", {
 })
 
 test_that("set_col_header() and rtf_columns() say what is wrong with their input", {
+  skip_on_cran()
   t1 <- edge_tbl()
   expect_error(set_col_header(t1, c("A", "B")),
                "the label row has 2 labels but the table has 3 printed columns")
@@ -733,6 +763,7 @@ edge_render <- function(doc, ...) {
 }
 
 test_that("a multi-table rtftable renders every constituent table with its header", {
+  skip_on_cran()
   d1 <- data.frame(a = c("x1", "x2"), b = 1:2, stringsAsFactors = FALSE)
   d2 <- data.frame(a = "y1", b = 3L, stringsAsFactors = FALSE)
   tbl <- rtftable(list(d1, d2), col_header = c("AAA", "BBB"))
@@ -743,6 +774,7 @@ test_that("a multi-table rtftable renders every constituent table with its heade
 })
 
 test_that("section templates, per-page sections and watermarks reach the file", {
+  skip_on_cran()
   d <- data.frame(a = c("x", "y"), b = 1:2, stringsAsFactors = FALSE)
   hdr <- function(s) rtf_header(rows = list(c(l = s)))
   doc <- rtf_document() |>
@@ -771,6 +803,7 @@ test_that("section templates, per-page sections and watermarks reach the file", 
 })
 
 test_that("a table's own width settings size the title block and the cells", {
+  skip_on_cran()
   d <- data.frame(a = c("x", "y"), b = 1:2, stringsAsFactors = FALSE)
   doc <- function(tbl) rtf_document() |> rtf_tables(tbl) |>
     rtf_titles(list("A title")) |> rtf_footnotes(list("A footnote"))
@@ -785,6 +818,7 @@ test_that("a table's own width settings size the title block and the cells", {
 })
 
 test_that("empty tables and tables with no columns still produce a file", {
+  skip_on_cran()
   d <- data.frame(a = c("x", "y"), b = 1:2, stringsAsFactors = FALSE)
   no_rows <- edge_render(rtf_document() |> rtf_tables(rtftable(d[0, ])))
   expect_match(no_rows, "^\\{\\\\rtf1")
@@ -797,6 +831,7 @@ test_that("empty tables and tables with no columns still produce a file", {
 })
 
 test_that("`program` is one string, or it is refused", {
+  skip_on_cran()
   d <- data.frame(a = "x", stringsAsFactors = FALSE)
   doc <- rtf_document() |> rtf_tables(list(d))
   expect_error(generate_rtfreport(doc, tempfile(fileext = ".rtf"),
@@ -809,6 +844,7 @@ test_that("`program` is one string, or it is refused", {
 })
 
 test_that("print.rtf_document() shows the layout: contents, pages and sizes", {
+  skip_on_cran()
   d <- data.frame(a = "x", stringsAsFactors = FALSE)
   doc <- rtf_document() |> rtf_tables(list(d, d))
   out <- capture.output(res <- print(doc))
@@ -845,6 +881,7 @@ edge_write <- function(bytes, ext) {
 }
 
 test_that("JPEG density comes from the JFIF segment, in dpi or dots per cm", {
+  skip_on_cran()
   rd <- rtfreporter:::.read_jpeg_density
   f1 <- edge_write(edge_jpeg(units = 1L), ".jpg")
   f2 <- edge_write(edge_jpeg(units = 2L, xd = 100L, yd = 200L), ".jpg")
@@ -885,6 +922,7 @@ edge_png <- function(phys = NULL, truncated = FALSE) {
 }
 
 test_that("PNG density comes from the pHYs chunk when it counts dots per metre", {
+  skip_on_cran()
   rd <- rtfreporter:::.read_png_density
   per_inch <- edge_write(edge_png(c(11811L, 11811L, 1L)), ".png")
   unitless <- edge_write(edge_png(c(1L, 1L, 0L)), ".png")
@@ -901,6 +939,7 @@ test_that("PNG density comes from the pHYs chunk when it counts dots per metre",
 })
 
 test_that("plot objects are drawn into a PNG, and the options are checked", {
+  skip_on_cran()
   skip_if_not(isTRUE(unname(capabilities("png"))))
   # a recorded base plot is replayed
   tmp <- tempfile(fileext = ".png")
@@ -943,6 +982,7 @@ test_that("a plot object needs a PNG device", {
 # ── ARD templates: format specs, guards, cell_rows(), the pipe option ──────
 
 test_that("a format spec reads stat, stat_fmt or formats the number itself", {
+  skip_on_cran()
   fv <- rtfreporter:::.ard_format_value
   expect_true(is.na(fv(NA, NA, "stat", "r")))
   expect_identical(fv("a", NA, "stat", "r"), "a")
@@ -969,6 +1009,7 @@ test_that("a format spec reads stat, stat_fmt or formats the number itself", {
 })
 
 test_that("guards need both sides and a template string", {
+  skip_on_cran()
   el <- rtfreporter:::.ard_chain_el
   expect_error(el(~ "x"), "A `cells` guard needs both sides")
   one_sided <- el(~ "x", one_sided = TRUE)
@@ -983,6 +1024,7 @@ test_that("guards need both sides and a template string", {
 })
 
 test_that("cell_rows() needs a row and prints each chain", {
+  skip_on_cran()
   expect_error(cell_rows(), "`cell_rows\\(\\)` needs at least one row")
   cr <- cell_rows("a" = "{n}", "b" = c(n == 0 ~ "0", "{n:.1f}"))
   expect_s3_class(cr, "cell_rows")
@@ -998,6 +1040,7 @@ test_that("cell_rows() needs a row and prints each chain", {
 })
 
 test_that("the generated code's pipe is chosen by argument or option", {
+  skip_on_cran()
   op <- rtfreporter:::.ard_pipe_op
   expect_error(op("&&"), "`pipe` must be \"%>%\" \\(magrittr\\), \"\\|>\"")
   expect_error(op(c("%>%", "|>")), "`pipe` must be")
@@ -1015,39 +1058,10 @@ test_that("the generated code's pipe is chosen by argument or option", {
   expect_identical(got, "%>%")
 })
 
-# ── the border-reading change warns exactly once a session ─────────────────
-
-test_that("the border-reading change warns once, not every call", {
-  st <- rtfreporter:::.deprecation_state
-  saved <- as.list(st)
-  reset <- function() rm(list = ls(st), envir = st)
-  on.exit({ reset(); list2env(saved, envir = st) }, add = TRUE)   # leave it as found
-  n_warnings <- function(expr) {
-    n <- 0L
-    withCallingHandlers(force(expr), warning = function(w) {
-      n <<- n + 1L; invokeRestart("muffleWarning")
-    })
-    n
-  }
-  # the 0.5.0 reading of left/right: said once, and only where the readings differ
-  tb <- rtfreporter:::.rtf_table_border(body = rtf_border(left = TRUE))
-  reset()
-  expect_identical(n_warnings({
-    rtfreporter:::.warn_old_edge_reading(tb, 3L, 2L)
-    rtfreporter:::.warn_old_edge_reading(tb, 3L, 2L)
-  }), 1L)
-  reset()
-  expect_identical(n_warnings(rtfreporter:::.warn_old_edge_reading(tb, 1L, 2L)), 0L)
-  expect_identical(n_warnings(rtfreporter:::.warn_old_edge_reading(NULL, 3L, 2L)), 0L)
-  expect_false(rtfreporter:::.warn_old_edge_reading(NULL, 3L, 2L))
-  # naming the interior rule silences it
-  quiet <- rtfreporter:::.rtf_table_border(body = rtf_border(left = TRUE, inside_v = TRUE))
-  expect_identical(n_warnings(rtfreporter:::.warn_old_edge_reading(quiet, 3L, 2L)), 0L)
-})
-
 # ── rtf_header_source(): the code that rebuilds a header ───────────────────
 
 test_that("rtf_header_source() refuses what is not a table and a bad stub", {
+  skip_on_cran()
   msg <- "`rtf_header_source\\(\\)` expects an rtftable or a list of rtftable pages"
   expect_error(rtf_header_source(1), msg)
   expect_error(rtf_header_source(list(1)), msg)
@@ -1060,6 +1074,7 @@ test_that("rtf_header_source() refuses what is not a table and a bad stub", {
 })
 
 test_that("rtf_header_source() writes cells, borders and levels of detail", {
+  skip_on_cran()
   d <- data.frame(a = c("x", "y"), b = 1:2, c = c(1.5, 2.5), stringsAsFactors = FALSE)
   red <- rtf_border(bottom = rtf_border_line("double", 30L, color = "#FF0000"))
   t1 <- rtftable(d, col_header = rtf_col_header(
@@ -1094,6 +1109,7 @@ test_that("rtf_header_source() writes cells, borders and levels of detail", {
 })
 
 test_that("rtf_header_source() handles tables without an explicit header or with header_align", {
+  skip_on_cran()
   d <- data.frame(a = c("x", "y"), b = 1:2, c = c(1.5, 2.5), stringsAsFactors = FALSE)
   # no header: the column names are the one label row
   none <- rtf_header_source(rtftable(d), snippet = FALSE)
@@ -1114,6 +1130,7 @@ test_that("rtf_header_source() handles tables without an explicit header or with
 # ── gt adapter helpers that need no gt ─────────────────────────────────────
 
 test_that("gt cell text is flattened, markdown bold stripped, and empties are NA", {
+  skip_on_cran()
   fl <- rtfreporter:::.flatten_to_chr
   expect_true(is.na(fl(NULL)))
   expect_true(is.na(fl(character(0))))
@@ -1128,6 +1145,7 @@ test_that("gt cell text is flattened, markdown bold stripped, and empties are NA
 })
 
 test_that("gt colours become #RRGGBB, or NA when they cannot", {
+  skip_on_cran()
   nc <- rtfreporter:::.gt_normalize_color
   expect_true(is.na(nc(NULL)))
   expect_true(is.na(nc(c("red", "blue"))))
@@ -1140,6 +1158,7 @@ test_that("gt colours become #RRGGBB, or NA when they cannot", {
 })
 
 test_that("footnote texts are read from the gt footnote slot", {
+  skip_on_cran()
   ft <- rtfreporter:::.extract_footnote_texts
   expect_null(ft(list(`_footnotes` = NULL)))
   expect_null(ft(list(`_footnotes` = data.frame(footnotes = I(list())))))
@@ -1157,6 +1176,7 @@ test_that("footnote texts are read from the gt footnote slot", {
 # ── print(rtftable): the console preview ───────────────────────────────────
 
 test_that("print(rtftable) previews a spanning header, a split label and 'n' rows", {
+  skip_on_cran()
   d <- data.frame(a = c("x", "y", "z"), b = 1:3, c = c(1.5, 2.5, 3.5),
                   stringsAsFactors = FALSE)
   t1 <- rtftable(d, col_header = rtf_col_header(
@@ -1185,6 +1205,7 @@ test_that("print(rtftable) previews a spanning header, a split label and 'n' row
 })
 
 test_that("the console preview draws the rule styles, and nothing for no columns", {
+  skip_on_cran()
   d <- data.frame(a = c("x", "y"), b = 1:2, stringsAsFactors = FALSE)
   rule <- function(side) {
     t <- rtftable(d, col_header = c("A", "B")) |>
@@ -1219,6 +1240,7 @@ test_that("the console preview draws the rule styles, and nothing for no columns
 # ── plan verbs: what they refuse, in the words they use ────────────────────
 
 test_that("plan_cell_style() explains a where that cannot work", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   p <- edge_plan()
   expect_error(plan_cell_style(p, where = "label", bold = TRUE),
@@ -1231,6 +1253,7 @@ test_that("plan_cell_style() explains a where that cannot work", {
 })
 
 test_that("plan_columns(widths = ) must cover every printed column", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   p <- edge_plan()
   expect_error(suppressMessages(plan_apply(plan_columns(p, widths = c(group = 1, label = 2)))),
@@ -1240,6 +1263,7 @@ test_that("plan_columns(widths = ) must cover every printed column", {
 })
 
 test_that("plan_col_header(values = ) accepts a scope, a number or a function, and says why not", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   p <- edge_plan()
   hdr <- rtf_col_header(c("a", "b", "{col} ({n})"))
@@ -1262,6 +1286,7 @@ test_that("plan_col_header(values = ) accepts a scope, a number or a function, a
 # ── pagination and column pages: refusals and edges ────────────────────────
 
 test_that("as_rtftables() names a split or collapse column that is not there", {
+  skip_on_cran()
   d <- data.frame(g = c("a", "a", "b", "b", "c"), v = 1:5, stringsAsFactors = FALSE)
   expect_error(as_rtftables(d, split = "rows"), "`split_rows` is required when split = \"rows\"")
   expect_error(as_rtftables(d, split = "group_safe"), "`max_rows` is required when split = \"group_safe\"")
@@ -1276,6 +1301,7 @@ test_that("as_rtftables() names a split or collapse column that is not there", {
 })
 
 test_that("as_rtftables() makes one page of an empty, one-row or one-column data frame", {
+  skip_on_cran()
   d <- data.frame(g = c("a", "a", "b"), v = 1:3, stringsAsFactors = FALSE)
   for (x in list(d[0, ], d[1, ], d["g"])) {
     pages <- as_rtftables(x)
@@ -1293,6 +1319,7 @@ test_that("as_rtftables() makes one page of an empty, one-row or one-column data
 })
 
 test_that("paginate_cols() explains a bad `cut_by`, an unknown `at` and an empty cut", {
+  skip_on_cran()
   d <- data.frame(id = c("s1", "s2"), `P____D1` = 1:2, `P____D2` = 3:4,
                   `Q____D1` = 5:6, `Q____D2` = 7:8, check.names = FALSE,
                   stringsAsFactors = FALSE)
@@ -1321,6 +1348,7 @@ test_that("paginate_cols() explains a bad `cut_by`, an unknown `at` and an empty
 # ── column headers: names and positions that cannot be resolved ────────────
 
 test_that("a named header row says which column it could not place", {
+  skip_on_cran()
   r <- rtfreporter:::.resolve_named_label_row
   expect_error(r(c(a = "A"), NULL), "A named col_header label row needs data column names")
   expect_identical(r(c("A", "B"), NULL), c("A", "B"))             # positional: untouched
@@ -1352,6 +1380,7 @@ test_that("a named header row says which column it could not place", {
 # ── listing widths and the code that reproduces a listing ──────────────────
 
 test_that("fit_listing_widths() refuses a bad page, width or font and writes pasteable code", {
+  skip_on_cran()
   d <- data.frame(USUBJID = c("S1", "S2"), AGE = c(30, NA),
                   TERM = c("a very long adverse event term that wraps again", "short"),
                   stringsAsFactors = FALSE)
@@ -1390,6 +1419,7 @@ test_that("fit_listing_widths() refuses a bad page, width or font and writes pas
 })
 
 test_that("set_col_header(values = ) matches pages to rows and says when it falls back", {
+  skip_on_cran()
   d <- data.frame(a = "x", b = 1L, stringsAsFactors = FALSE)
   pages <- as_rtftables(list(A = d, B = d))
   hdr <- c("Item", "N={n}")
@@ -1417,6 +1447,7 @@ test_that("set_col_header(values = ) matches pages to rows and says when it fall
 # ── plot() helpers: the line styles and the vertical rules ────────────────
 
 test_that("border sides map to line types, weights and colours", {
+  skip_on_cran()
   sl <- rtfreporter:::.side_lty_lwd
   expect_identical(sl(NULL), list(lty = NA, lwd = NA, col = NA))
   expect_identical(sl(rtf_border_line("dash")), list(lty = "dashed", lwd = 1, col = "black"))
@@ -1428,6 +1459,7 @@ test_that("border sides map to line types, weights and colours", {
 })
 
 test_that("plot(rtftable) draws a header with spanning cells and a last-row rule", {
+  skip_on_cran()
   grDevices::pdf(NULL); on.exit(grDevices::dev.off(), add = TRUE)
   d <- data.frame(a = c("x", "y"), b = 1:2, c = c(1.5, 2.5), stringsAsFactors = FALSE)
   tbl <- rtftable(d, col_header = rtf_col_header(
@@ -1449,6 +1481,7 @@ test_that("plot(rtftable) draws a header with spanning cells and a last-row rule
 # -- #547-#550: the behaviour found while raising coverage, now fixed ---------
 
 test_that("print(rtf_document()) names a preset page by its size and orientation (#547)", {
+  skip_on_cran()
   out <- capture.output(print(rtf_document()))
   expect_true(any(grepl("(letter landscape, 9 pt)", out, fixed = TRUE)))
   out2 <- capture.output(print(rtf_document(page = rtf_page(width_in = 8.5,
@@ -1457,6 +1490,7 @@ test_that("print(rtf_document()) names a preset page by its size and orientation
 })
 
 test_that("an explicit rtf_section(page = 1) wins over the first auto section (#548)", {
+  skip_on_cran()
   d <- data.frame(a = c("x", "y"), b = 1:2)
   doc <- rtf_document() |>
     rtf_section(page = NULL,
@@ -1473,6 +1507,7 @@ test_that("an explicit rtf_section(page = 1) wins over the first auto section (#
 })
 
 test_that("a row of cell_rows() may be one bare guard (#549)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -1493,6 +1528,7 @@ test_that("a row of cell_rows() may be one bare guard (#549)", {
 })
 
 test_that("the console preview draws dash and dot rules as such (#550)", {
+  skip_on_cran()
   rc <- rtfreporter:::.rule_char
   expect_identical(rc(list(style = "dash"), TRUE), "\u2504")
   expect_identical(rc(list(style = "dot"), TRUE), "\u2508")

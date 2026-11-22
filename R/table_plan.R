@@ -2636,16 +2636,18 @@ plan_nest <- function(.plan, ...) {
 #'   earlier `plan_total()` said):
 #'   \describe{
 #'     \item{`"cols"`}{the Total **column**, from the records
-#'       with no value of the column key.  With two column keys, the key
-#'       totalled over is the innermost the ARD has such records for, and
-#'       the other is kept: `cols = c(TRTA, AESEV)` gives each arm a
-#'       total column from its records with no `AESEV` (an AE at any
-#'       grade), placed among that arm's grades; `cols = c(TRTA, variable)`
-#'       with value / change records without `TRTA` gives a Total group
-#'       of the arms, value and change under it.  A record that also
-#'       leaves out another key every cell has -- the arms' N tabulated on
-#'       its own, with no `PARAM` -- is no Total: it only feeds the
-#'       header's `{n}`.}
+#'       with no value of a column key.  With two or more column keys the
+#'       key totalled over is the first one, from the innermost out, that
+#'       has overall rows: records with no value of it and a value of every
+#'       other key the body's cells carry.  `cols = c(TRTA, AESEV)` gives
+#'       each arm a total column from its records with no `AESEV` (an AE at
+#'       any grade), placed among that arm's grades; with no such records,
+#'       the records with no `TRTA` and a grade fold `TRTA` instead, one
+#'       Total column per grade, as `cols = c(TRTA, variable)` with value /
+#'       change records without `TRTA` gives a Total group of the arms,
+#'       value and change under it.  A record that also leaves out another
+#'       key every cell has -- the arms' N tabulated on its own, with no
+#'       `PARAM` -- is no Total: it only feeds the header's `{n}`.}
 #'     \item{`"rows"`}{the Total **row**, a shift table's margin: read
 #'       from the column key tabulated by the row keys, without the body's
 #'       variable (`ard_tabulate(x, variables = base_gr, by = PARAM)`
@@ -2681,6 +2683,21 @@ plan_nest <- function(.plan, ...) {
 #' # The study's wording, and the total before the arms
 #' p |>
 #'   plan_total(label = "All subjects", position = "first") |>
+#'   plan_apply("table")
+#'
+#' # Two column keys, arm by visit, and no overall rows for the visit:
+#' # the arm is folded, a Total column for each visit
+#' st2 <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active", NA), each = 2),
+#'   AVISIT    = rep(c("Week 1", "Week 2"), 3),
+#'   variable  = "AVAL",
+#'   .label    = NA_character_,
+#'   .kind     = "continuous",
+#'   stat_name = "mean",
+#'   stat      = c(1.5, 2.5, 1.8, 2.9, 1.6, 2.7))
+#' table_plan(st2, cols = c("ARM", "AVISIT"), rows = c(group = "variable")) |>
+#'   plan_cells(continuous = c(Mean = "{mean:.1f}")) |>
+#'   plan_total() |>
 #'   plan_apply("table")
 #' @export
 plan_total <- function(.plan, label = NULL, position = NULL, direction = NULL) {
@@ -4968,6 +4985,17 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   out
 }
 
+# plan_paginate_rows(split = ) is a split's name or the caller's own
+# function (as_rtftables(split = f)).  Only a name is one of the named
+# splits, and a function is written in a message as what it is.
+.plan_split_named <- function(split, names) {
+  is.character(split) && length(split) == 1L && split %in% names
+}
+
+.plan_split_label <- function(split) {
+  if (is.function(split)) "<a function>" else sQuote(split)
+}
+
 # The display half, in the order a report is built.  Each step calls the
 # function it stands for with the arguments the caller declared, so nothing
 # here reimplements as_rtftables() or anything around it.
@@ -5089,7 +5117,7 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
       .ard_stop(paste0(
         "plan_paginate_group() splits the pages by the group value, ",
         "and\n  plan_paginate_rows(split = ",
-        sQuote(out$split), ") splits them another way.  Use one.
+        .plan_split_label(out$split), ") splits them another way.  Use one.
 ",
         "  A page per value with a row budget inside is ",
         "plan_paginate_rows(page_by = , max_rows = , split = ),
@@ -5111,10 +5139,10 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   # one: a value split makes a page per value, "rows" cuts at the
   # positions given, "none" makes one page.  Declaring a budget that
   # is then dropped is how someone spends an afternoon raising it and
-  # watching nothing change.
+  # watching nothing change.  A split function of the caller's is given
+  # the budget (as_rtftables() passes it max_rows =), so it has one.
   if (!is.null(out$max_rows) &&
-      !is.null(out$split) &&
-      out$split %in% c("by_value", "rows", "none")) {
+      .plan_split_named(out$split, c("by_value", "rows", "none"))) {
     .ard_stop(paste0(
       "plan_paginate_rows(max_rows = ", out$max_rows, ") has no ",
       "effect with split = ", sQuote(out$split), ".\n",
@@ -7734,6 +7762,18 @@ print.rtfreporter_plan_code <- function(x, ...) {
 
 
 # A plan is a table source: rtf_tables(doc, plan) and
-# as_rtftables(plan) both work through the generic.
+# as_rtftables(plan) both work through the generic.  The plan holds all of
+# its table's settings, so an argument given here would be lost: it stops.
 #' @export
-as_rtftables.table_plan <- function(x, ...) plan_apply(x, "pages")
+as_rtftables.table_plan <- function(x, ...) {
+  dots <- match.call(expand.dots = FALSE)$...
+  if (length(dots)) {
+    nm <- names(dots) %||% character(length(dots))
+    shown <- ifelse(nzchar(nm), paste0("`", nm, "`"), "an unnamed argument")
+    stop("as_rtftables(): a table_plan takes no other argument; got ",
+         paste(shown, collapse = ", "), ".\n  A plan's table settings go in ",
+         "plan_style() and the other plan_*() verbs (plan_paginate_rows() for ",
+         "max_rows and split).", call. = FALSE)
+  }
+  plan_apply(x, "pages")
+}

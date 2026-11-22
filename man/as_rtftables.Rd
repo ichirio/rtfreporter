@@ -818,6 +818,15 @@ Prefer the verbs for complex headers; the arguments are kept for
 convenience and backward compatibility.
 }
 
+\section{A table_plan}{
+
+\code{as_rtftables(plan)} runs a \code{\link[=table_plan]{table_plan()}} to its pages, as
+\code{plan_apply(plan, "pages")} does.  It takes no other argument: one given
+(\code{as_rtftables(plan, max_rows = 20)}) is an error that names it.  A plan's
+table settings go in \code{\link[=plan_style]{plan_style()}} and the other \verb{plan_*()} verbs
+(\code{\link[=plan_paginate_rows]{plan_paginate_rows()}} for \code{max_rows} and \code{split}).
+}
+
 \section{Supplying a source from another package}{
 
 \code{as_rtftables()} is an S3 generic.  Everything listed above is handled by

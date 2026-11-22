@@ -199,6 +199,7 @@
 }
 
 test_that("FT-LS160 [FR-LS253]: listing builders pairwise -- widths x wrap x separator x layout x key x align x page x font x data x gutters", {
+  skip_on_cran()
   des <- .vl_design()
   expect_identical(des$n_full, 58320L)
   # every pair of levels of every two factors is in the candidates, and the
@@ -209,6 +210,7 @@ test_that("FT-LS160 [FR-LS253]: listing builders pairwise -- widths x wrap x sep
   expect_lte(nrow(cases), 40L)
 
   for (r in seq_len(nrow(cases))) {
+    .cran_cut(r)
     cs <- as.list(cases[r, , drop = FALSE])
     lab <- paste0("case ", r, " (", paste(names(cs), unlist(cs), sep = "=", collapse = ", "), ")")
     d <- .vl_data(cs$data)
@@ -335,6 +337,7 @@ test_that("FT-LS160 [FR-LS253]: listing builders pairwise -- widths x wrap x sep
 })
 
 test_that("FT-LS161 [FR-LS156 FR-LS157]: listing builders decision table -- the key column against the record's lines, the blank row and the page", {
+  skip_on_cran()
   dt <- data.frame(
     key       = c(FALSE, TRUE, TRUE, TRUE, TRUE, FALSE),
     key_lines = c(1L, 1L, 1L, 1L, 2L, 2L),

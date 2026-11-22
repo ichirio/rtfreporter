@@ -189,8 +189,10 @@
 # ---- (A) the template's key ------------------------------------------------
 
 test_that("FT-PL916 [FR-PL226 FR-PL227 FR-AR163]: decision table -- the template is the first key set of variable > context > kind > default", {
+  skip_on_cran()
   n <- 0L
   for (var in names(.PC_KEYS)) {
+    .cran_cut(match(var, names(.PC_KEYS)))
     body <- if (var == "AGE") "{mean:.1f}" else "{n:.0f}"
     plain <- if (var == "AGE") "31.2" else "12"
     sets <- .pc_subsets(.PC_ORDER)
@@ -225,6 +227,7 @@ test_that("FT-PL916 [FR-PL226 FR-PL227 FR-AR163]: decision table -- the template
 }
 
 test_that("FT-PL917 [FR-PL239]: decision table -- a split record reads variable > group > context > kind, a whole one variable > context > kind > group", {
+  skip_on_cran()
   base <- table_plan(.pc_sg(), cols = c("TRT", ".stat_group"), rows = c(group = "variable"),
                      label = c(row = "LBL")) |>
     plan_stat_groups(N = "n", msd = c("mean", "sd"), .variables = "ALT", .others = "N")
@@ -233,6 +236,7 @@ test_that("FT-PL917 [FR-PL239]: decision table -- a split record reads variable 
   name <- c(group = "N", context = "ctxc", kind = "continuous")
   n <- 0L
   for (rec in names(order)) {
+    .cran_cut(match(rec, names(order)))
     for (set in .pc_subsets(c("variable", "group", "context", "kind"))) {
       ent <- list(msd = "M{mean:.1f}", default = "D{n:.0f}")
       for (k in set) {
@@ -256,6 +260,7 @@ test_that("FT-PL917 [FR-PL239]: decision table -- a split record reads variable 
 # ---- (C) the digits' key ----------------------------------------------------
 
 test_that("FT-PL918 [FR-PL236 FR-PL240 FR-PL242 FR-PL915]: decision table -- the digits are the first key set of variable > context > kind > default, apart from the template's", {
+  skip_on_cran()
   tpl <- list(AGE = c(Stat = "{mean} ({sd})"), SEX = "{n} ({p:%})")
   cells <- list(ctxc = tpl$AGE, continuous = tpl$AGE, ctxt = tpl$SEX, categorical = tpl$SEX,
                 WT = c(Stat = "{mean:.1f}"))
@@ -263,6 +268,7 @@ test_that("FT-PL918 [FR-PL236 FR-PL240 FR-PL242 FR-PL915]: decision table -- the
   dval <- c(variable = 3L, context = 2L, kind = 1L, default = 0L)
   n <- 0L
   for (var in names(.PC_KEYS)) {
+    .cran_cut(match(var, names(.PC_KEYS)))
     for (set in .pc_subsets(.PC_ORDER)) {
       dig <- list()
       for (k in set) dig[[.pc_key_name(var, k)]] <- dval[[k]]
@@ -291,6 +297,7 @@ test_that("FT-PL918 [FR-PL236 FR-PL240 FR-PL242 FR-PL915]: decision table -- the
 # ---- (D) a statistic falls through -----------------------------------------
 
 test_that("FT-PL919 [FR-PL241 FR-PL242]: decision table -- a statistic the narrower value does not name falls through to the wider one", {
+  skip_on_cran()
   narrow <- list(none = NULL, one = 3L, mean = c(mean = 3L), sd = c(sd = 2L),
                  both = c(mean = 3L, sd = 2L))
   wide <- list(none = NULL, one = 1L, mean = c(mean = 1L), sd = c(sd = 0L),
@@ -298,6 +305,7 @@ test_that("FT-PL919 [FR-PL241 FR-PL242]: decision table -- a statistic the narro
   base <- plan_cells(.pc_base(), c(Stat = "{mean} ({sd})"), SEX = "{n:.0f}", notes = FALSE)
   n <- 0L
   for (a in names(narrow)) {
+    .cran_cut(match(a, names(narrow)))
     for (w in names(wide)) {
       dig <- list(AGE = narrow[[a]], default = wide[[w]])
       dig <- dig[!vapply(dig, is.null, NA)]
@@ -316,6 +324,7 @@ test_that("FT-PL919 [FR-PL241 FR-PL242]: decision table -- a statistic the narro
 # ---- (E) layers ---------------------------------------------------------------
 
 test_that("FT-PL920 [FR-PL229 FR-PL242 FR-IX257 FR-PL916]: decision table -- a later layer replaces the whole entry of the keys it names and keeps the rest", {
+  skip_on_cran()
   base <- plan_cells(.pc_base(), continuous = c(Stat = "{mean} ({sd})"), SEX = "{n:.0f}",
                      notes = FALSE)
   # layers of plan_digits(); the digits of mean and sd for AGE and for WT
@@ -334,6 +343,7 @@ test_that("FT-PL920 [FR-PL229 FR-PL242 FR-IX257 FR-PL916]: decision table -- a l
          age = c(2, 3), wt = c(0, 3)))
   val <- list(AGE = c(31.2468, 4.1357), WT = c(70.4512, 9.8762))
   for (i in seq_along(dt)) {
+    .cran_cut(i)
     row <- dt[[i]]
     p <- base
     for (l in row[!names(row) %in% c("age", "wt")]) p <- .pc_call(plan_digits, p, l)
@@ -370,6 +380,7 @@ test_that("FT-PL920 [FR-PL229 FR-PL242 FR-IX257 FR-PL916]: decision table -- a l
 # ---- (F) pairwise: template x digits ------------------------------------------
 
 test_that("FT-PL921 [FR-PL227 FR-PL240 FR-PL241 FR-IX202 FR-PL915 FR-PL917]: pairwise -- template key x digits key x digits form x token x stat_fmt x value", {
+  skip_on_cran()
   cand <- expand.grid(var = c("AGE", "SEX"),
                       tkey = c("variable", "context", "kind", "unnamed", "default"),
                       dkey = c("variable", "template", "unnamed"),
@@ -389,6 +400,7 @@ test_that("FT-PL921 [FR-PL227 FR-PL240 FR-PL241 FR-IX202 FR-PL915 FR-PL917]: pai
                 SEX = list(one = 2L, by_stat = c(p = 2L), sig = "3s", mixed = c(n = 1, p = "3s")))
   set <- ap$rows
   for (i in seq_len(nrow(set))) {
+    .cran_cut(i)
     r <- set[i, ]
     v <- r$var
     key <- function(k) switch(k, unnamed = "", default = "default",
@@ -422,6 +434,7 @@ test_that("FT-PL921 [FR-PL227 FR-PL240 FR-PL241 FR-IX202 FR-PL915 FR-PL917]: pai
 }
 
 test_that("FT-PL922 [FR-PL244 FR-PL360 FR-PL362 FR-PL363 FR-PL365 FR-PL366 FR-PL912 FR-PL918]: pairwise -- the stub: layout x indent x name x heading x before x digits", {
+  skip_on_cran()
   cand <- expand.grid(layout = c("cells", "rows"), indent = c("unset", "2", "0"),
                       name = c("rl", "row_label"), heading = c("unset", "blank", "Parameter"),
                       before = c(FALSE, TRUE), digits = c("none", "set"), stringsAsFactors = FALSE)
@@ -430,6 +443,7 @@ test_that("FT-PL922 [FR-PL244 FR-PL360 FR-PL362 FR-PL363 FR-PL365 FR-PL366 FR-PL
   expect_lt(nrow(ap$rows), nrow(cand) / 5)
   set <- ap$rows
   for (i in seq_len(nrow(set))) {
+    .cran_cut(i)
     r <- set[i, ]
     p <- table_plan(.pc_lab(), cols = "TRT", rows = c(param = "PARAM"), label = c(row = "stat_name"))
     if (r$layout == "cells") {
@@ -465,6 +479,7 @@ test_that("FT-PL922 [FR-PL244 FR-PL360 FR-PL362 FR-PL363 FR-PL365 FR-PL366 FR-PL
 # ---- (H) rounding ----------------------------------------------------------------
 
 test_that("FT-PL923 [FR-PL243 FR-AR178]: decision table -- the rounding family reaches the digits from any key and a token's own", {
+  skip_on_cran()
   d <- .pc_ard()
   d$stat[d$variable == "AGE" & d$stat_name == "mean"] <- 2.125
   base <- function(t) plan_cells(.pc_base(d), AGE = c(Stat = t), WT = c(Stat = "{mean:.1f}"),
@@ -490,11 +505,13 @@ test_that("FT-PL923 [FR-PL243 FR-AR178]: decision table -- the rounding family r
 # ---- (I) a context or kind digits key, any template key ------------------------
 
 test_that("FT-PL924 [FR-PL242 FR-PL915]: decision table -- a digits key of a context or a kind reaches the cells whatever key their template has", {
+  skip_on_cran()
   tpl <- list(AGE = "{mean} ({sd})", SEX = "{n} ({p:%})")
   x <- list(AGE = c(31.2468, 4.1357), SEX = c(12, 0.6))
   spec <- list(AGE = c("", ""), SEX = c("", "%"))
   n <- 0L
   for (var in names(.PC_KEYS)) {
+    .cran_cut(match(var, names(.PC_KEYS)))
     for (tk in .PC_ORDER) {
       for (dk in c("context", "kind")) {
         cells <- c(stats::setNames(list(.pc_tpl(var, tpl[[var]])), .pc_key_name(var, tk)),
@@ -516,6 +533,7 @@ test_that("FT-PL924 [FR-PL242 FR-PL915]: decision table -- a digits key of a con
 # ---- (J) the digits with stat groups ---------------------------------------------
 
 test_that("FT-PL925 [FR-PL239 FR-PL242 FR-PL915]: decision table -- with stat groups the digits reach split and whole records in the order of their template", {
+  skip_on_cran()
   base <- table_plan(.pc_sg(), cols = c("TRT", ".stat_group"), rows = c(group = "variable"),
                      label = c(row = "LBL")) |>
     plan_stat_groups(N = "n", msd = c("mean", "sd"), .variables = "ALT", .others = "N")
@@ -526,6 +544,7 @@ test_that("FT-PL925 [FR-PL239 FR-PL242 FR-PL915]: decision table -- with stat gr
   nval <- c(ALT = 20, AST = 19)
   n <- 0L
   for (rec in names(order)) {
+    .cran_cut(match(rec, names(order)))
     other <- setdiff(names(order), rec)
     for (tk in c("variable", "group", "default")) {
       tkey <- switch(tk, variable = rec, group = "N", default = "default")

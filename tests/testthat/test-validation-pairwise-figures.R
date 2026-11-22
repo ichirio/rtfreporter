@@ -147,6 +147,7 @@
 }
 
 test_that("FT-AS143 [FR-AS248]: figures pairwise -- source x render size x dpi x device x display size x align x route x count x titles", {
+  skip_on_cran()
   des <- .vf_design()
   expect_identical(des$n_valid, 12636L)
   expect_setequal(des$pw$need, des$every)
@@ -161,6 +162,7 @@ test_that("FT-AS143 [FR-AS248]: figures pairwise -- source x render size x dpi x
   has_emf <- file.exists(files[["emf"]])
   dpi <- .vf_dpi(files)
   # a resolution the file records is the one it was drawn at
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   for (k in c("png", "jpeg")) {
     if (!is.null(switch(k, png = .read_png_density(files[[k]]), jpeg = .read_jpeg_density(files[[k]])))) {
       expect_equal(dpi[[k]], rep(.VF_FILE[[k]]$dpi, 2L), tolerance = 0.01, label = paste(k, "resolution"))
@@ -246,6 +248,7 @@ test_that("FT-AS143 [FR-AS248]: figures pairwise -- source x render size x dpi x
 })
 
 test_that("FT-AS144 [FR-AS199 FR-AS200 FR-AS204]: figures decision table -- the display size against the native size", {
+  skip_on_cran()
   dir <- tempfile("vf")
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)

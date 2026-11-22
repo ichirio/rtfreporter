@@ -523,7 +523,7 @@
 #'
 #' @examples
 #' # two TFL files in a folder, as a study's output
-#' dir <- file.path(tempdir(), "tfl")
+#' dir <- tempfile("tfl")
 #' dir.create(dir, showWarnings = FALSE)
 #' for (t in c("14.1.1", "14.2.1")) {
 #'   doc <- rtf_document() |>
@@ -540,6 +540,7 @@
 #' spec <- assemble_folder(dir)
 #' spec$heading <- "Demographics and safety"
 #' assemble_rtf(toc = spec, output_file = tempfile(fileext = ".rtf"))
+#' unlink(dir, recursive = TRUE)
 #' @export
 assemble_folder <- function(dir, output_file = NULL, spec_file = NULL,
                             recursive = FALSE,

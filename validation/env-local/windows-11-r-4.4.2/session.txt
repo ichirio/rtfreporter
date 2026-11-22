@@ -17,8 +17,7 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
-[1] magrittr_2.0.5         cards_0.7.1            rtfreporter_0.8.2.9100
-[4] testthat_3.3.2        
+[1] magrittr_2.0.5    cards_0.7.1       rtfreporter_0.9.0 testthat_3.3.2   
 
 loaded via a namespace (and not attached):
  [1] tfrmt_0.3.0             writexl_1.5.4           tidyselect_1.2.1       
@@ -33,7 +32,7 @@ loaded via a namespace (and not attached):
 [28] RColorBrewer_1.1-3      pkgload_1.5.2           withr_3.0.2            
 [31] purrr_1.2.2             rlistings_0.2.13        desc_1.4.3             
 [34] grid_4.4.2              gdtools_0.5.0           gtsummary_2.5.0        
-[37] devEMF_4.5-1            nestcolor_0.1.3         ggplot2_4.0.3          
+[37] devEMF_4.6              nestcolor_0.1.3         ggplot2_4.0.3          
 [40] scales_1.4.0            cli_3.6.6               rmarkdown_2.31         
 [43] crayon_1.5.3            ragg_1.5.2              generics_0.1.4         
 [46] rstudioapi_0.18.0       commonmark_2.0.0        readxl_1.4.5           

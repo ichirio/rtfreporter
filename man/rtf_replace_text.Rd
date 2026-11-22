@@ -40,7 +40,8 @@ the case-insensitive match, so regex metacharacters stay literal).}
 
 \item{backup}{Logical.  When overwriting in place (\code{output_file = NULL}),
 first copy the original to \code{paste0(input_file, ".bak")}.  Default \code{TRUE}.
-Ignored when \code{output_file} is given.}
+Ignored when \code{output_file} is given.  When that path is a folder, or the
+copy fails, it stops before the file is overwritten.}
 }
 \value{
 The normalised path to the written file, invisibly.

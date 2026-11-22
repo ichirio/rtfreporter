@@ -35,6 +35,7 @@
 }
 
 test_that("every reference RTF has been read: reference_review.csv holds its md5", {
+  skip_on_cran()
   rv <- .ref_review()
   expect_named(rv, c("file", "md5", "made_by", "verdict", "checked", "problems", "issue", "read"))
   expect_true(all(rv$verdict %in% c("correct", "wrong", "pending-human")))

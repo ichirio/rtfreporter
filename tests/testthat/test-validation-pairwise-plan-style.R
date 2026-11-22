@@ -132,6 +132,7 @@
 }
 
 test_that("FT-PL990 [FR-PL422 FR-PL423 FR-PL424 FR-PL425 FR-PL426 FR-PL427 FR-IX407 FR-PL990]: plan_style(): rules x look x width x heights x padding x font x placement x other settings, pairwise", {
+  skip_on_cran()
   cand <- expand.grid(lapply(.ps_levels, names), stringsAsFactors = FALSE)
   expect_identical(nrow(cand), 61440L)
   ap <- .allpairs(cand)
@@ -143,6 +144,7 @@ test_that("FT-PL990 [FR-PL422 FR-PL423 FR-PL424 FR-PL425 FR-PL426 FR-PL427 FR-IX
               "cell_padding_top_twips", "cell_padding_bottom_twips", "cell_valign",
               "table_align", "font", "font_size_half_points", "table_width_twips")
   for (i in seq_len(nrow(ap$rows))) {
+    .cran_cut(i)
     r <- ap$rows[i, ]
     args <- list()
     for (f in names(.ps_levels)) args <- c(args, .ps_levels[[f]][[r[[f]]]])
@@ -183,6 +185,7 @@ test_that("FT-PL990 [FR-PL422 FR-PL423 FR-PL424 FR-PL425 FR-PL426 FR-PL427 FR-IX
 }
 
 test_that("FT-PL991 [FR-PL424 FR-PL428 FR-PL429 FR-IX407]: plan_style(): border against the border_* zones in one call and across calls, the decision table", {
+  skip_on_cran()
   zones <- c("border_header", "border_spanning", "border_body", "border_first_row",
              "border_last_row")
   d <- .ps_df()
@@ -193,6 +196,7 @@ test_that("FT-PL991 [FR-PL424 FR-PL428 FR-PL429 FR-IX407]: plan_style(): border 
     expect_identical(.ps_rtf(got), .ps_rtf(want), info = info)
   }
   for (b in names(borders)) for (z in zones) {
+    .cran_cut(match(b, names(borders)))
     zone_args <- stats::setNames(list(.ps_zone()), z)
     want <- suppressWarnings(.ps_merged(d, borders[[b]], zone_args))
     one <- do.call(plan_style, c(list(table_plan(d), border = borders[[b]]), zone_args))
@@ -238,6 +242,7 @@ test_that("FT-PL991 [FR-PL424 FR-PL428 FR-PL429 FR-IX407]: plan_style(): border 
 })
 
 test_that("FT-PL992 [FR-PL426 FR-PL427 FR-IX407]: plan_style(): each setting just inside and just outside its limit", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   d <- .ps_df()
   ok <- function(...) expect_s3_class(.ps_pages(plan_style(table_plan(d), ...))[[1L]], "rtftable")
   bad <- function(pattern, ...) {
@@ -262,6 +267,7 @@ test_that("FT-PL992 [FR-PL426 FR-PL427 FR-IX407]: plan_style(): each setting jus
 })
 
 test_that("FT-PL996 [FR-PL974 FR-IX407]: plan_style(): a look flag that is not TRUE (NA, 0, \"yes\") is FALSE, as rtf_table_style() takes it; row_height_exact = NA stops", {
+  skip_on_cran()
   d <- .ps_df()
   off <- .ps_pages(plan_style(table_plan(d), bold = FALSE, italic = FALSE,
                               underline = FALSE, header_bold = FALSE,

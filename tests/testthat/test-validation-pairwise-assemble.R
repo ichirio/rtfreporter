@@ -185,6 +185,7 @@
 }
 
 test_that("FT-AS138 [FR-AS148 FR-AS149 FR-AS150 FR-AS151 FR-AS152 FR-AS153 FR-AS157 FR-AS158 FR-AS242 FR-AS243]: pairwise -- assemble_folder(): number source x listing x sections x names x cover x output x toc_title", {
+  skip_on_cran()
   cand <- expand.grid(src = c("header", "titles", "both"), listing = c("no", "yes"),
                       sections = c("1", "2"), names = c("agree", "reversed"),
                       cover = c("no", "yes"),
@@ -199,6 +200,7 @@ test_that("FT-AS138 [FR-AS148 FR-AS149 FR-AS150 FR-AS151 FR-AS152 FR-AS153 FR-AS
   on.exit(unlink(root, recursive = TRUE), add = TRUE)
   set <- ap$rows
   for (i in seq_len(nrow(set))) {
+    .cran_cut(i)
     cs <- c(as.list(set[i, ]), i = i)
     expect_identical(.va_check_folder(cs, root), character(0),
                      label = paste(unlist(cs), collapse = " / "))
@@ -206,6 +208,7 @@ test_that("FT-AS138 [FR-AS148 FR-AS149 FR-AS150 FR-AS151 FR-AS152 FR-AS153 FR-AS
 })
 
 test_that("FT-AS139 [FR-AS101 FR-AS109 FR-AS111 FR-AS112 FR-AS113 FR-AS115 FR-AS116 FR-AS117 FR-AS125 FR-AS128 FR-AS135]: decision table -- assemble_rtf(): the contents' shape and levels x cover x leader", {
+  skip_on_cran()
   d <- tempfile("va-rtf-")
   dir.create(d)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -238,6 +241,7 @@ test_that("FT-AS139 [FR-AS101 FR-AS109 FR-AS111 FR-AS112 FR-AS113 FR-AS115 FR-AS
                     stringsAsFactors = FALSE)
   expect_identical(nrow(dt), 24L)
   for (i in seq_len(nrow(dt))) {
+    .cran_cut(i)
     k <- kinds[[dt$kind[i]]]
     lab <- paste(dt$kind[i], dt$cover[i], dt$leader[i], sep = " / ")
     out <- file.path(d, sprintf("book-%02d.rtf", i))

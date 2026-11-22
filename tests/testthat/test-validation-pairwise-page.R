@@ -118,6 +118,7 @@
                  margin_left_in = 0.01, margin_right_in = 0.01))
 
 test_that("FT-DC296 [FR-DC152 FR-DC155 FR-DC157 FR-DC159 FR-DC161 FR-DC340 FR-IX309 FR-IX310 FR-IX405]: rtf_page(): paper x orientation x margins x header and footer distance, pairwise", {
+  skip_on_cran()
   cand <- expand.grid(paper = names(.pp_geoms), orient = c("unset", "landscape", "portrait"),
                       margins = names(.pp_margins), header = c("null", "0.3"),
                       footer = c("null", "0.4"), stringsAsFactors = FALSE)
@@ -126,6 +127,7 @@ test_that("FT-DC296 [FR-DC152 FR-DC155 FR-DC157 FR-DC159 FR-DC161 FR-DC340 FR-IX
   expect_setequal(ap$covered, ap$need)
   expect_lt(nrow(ap$rows), 45L)
   for (i in seq_len(nrow(ap$rows))) {
+    .cran_cut(i)
     r <- ap$rows[i, ]
     args <- c(.pp_geoms[[r$paper]], .pp_margins[[r$margins]])
     if (r$orient != "unset") args$orientation <- r$orient
@@ -170,12 +172,14 @@ test_that("FT-DC296 [FR-DC152 FR-DC155 FR-DC157 FR-DC159 FR-DC161 FR-DC340 FR-IX
 })
 
 test_that("FT-DC297 [FR-DC157 FR-DC340 FR-IX309 FR-IX310 FR-IX405]: rtf_page(): explicit sizes against paper_size and orientation, the decision table", {
+  skip_on_cran()
   shapes <- list(land = c(10, 7), port = c(7, 10), square = c(8, 8))
   tab <- expand.grid(shape = names(shapes), paper = c("unset", "A4"),
                      orient = c("unset", "landscape", "portrait"),
                      stringsAsFactors = FALSE)
   expect_identical(nrow(tab), 18L)
   for (i in seq_len(nrow(tab))) {
+    .cran_cut(i)
     r <- tab[i, ]
     sz <- shapes[[r$shape]]
     args <- list(width_in = sz[1L], height_in = sz[2L])

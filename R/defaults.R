@@ -201,10 +201,12 @@ rtfreporter_options <- function() {
 #' @seealso [rtfreporter_options()] to inspect the active values.
 #'
 #' @examples
-#' old <- options(rtfreporter.font = "Arial")
+#' # every rtfreporter.* option as it is now, to put back afterwards
+#' saved <- options()[startsWith(names(options()), "rtfreporter.")]
+#' options(rtfreporter.font = "Arial")
 #' rtfreporter_reset_defaults()       # back to "Courier New"
 #' getOption("rtfreporter.font")
-#' options(old)
+#' options(saved)
 #'
 #' @export
 rtfreporter_reset_defaults <- function() {
