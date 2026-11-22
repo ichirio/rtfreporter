@@ -282,23 +282,13 @@ rtfreporter_ai_manual <- function(dir = NULL, ard = NULL, which = c("user", "dev
 .ai_kit_write_utf8 <- function(lines, dest) {
   con <- file(dest, open = "wb")
   on.exit(close(con))
-  writeLines(.ai_kit_utf8(lines), con, sep = "\n", useBytes = TRUE)
-}
-
-# Text as UTF-8: a string marked with its encoding is converted; an unmarked
-# one that is already valid UTF-8 keeps its bytes (a label whose mark was lost
-# on the way, in a non-UTF-8 locale); any other is native and converted.
-.ai_kit_utf8 <- function(x) {
-  x <- as.character(x)
-  keep <- !is.na(x) & Encoding(x) == "unknown" & validUTF8(x)
-  x[!keep] <- enc2utf8(x[!keep])
-  x
+  writeLines(.as_utf8(lines), con, sep = "\n", useBytes = TRUE)
 }
 
 # `05_ard.csv` as lines, quoted like write.csv() (text quoted, NA empty), but
 # built in UTF-8 rather than through the native encoding.
 .ai_kit_csv <- function(x) {
-  quote <- function(v) paste0("\"", gsub("\"", "\"\"", .ai_kit_utf8(v), fixed = TRUE, useBytes = TRUE), "\"")
+  quote <- function(v) paste0("\"", gsub("\"", "\"\"", .as_utf8(v), fixed = TRUE, useBytes = TRUE), "\"")
   cols <- lapply(x, function(v) {
     if (is.list(v)) v <- vapply(v, function(e) paste(format(unlist(e)), collapse = " "), "")
     out <- if (is.character(v)) quote(v) else as.character(v)

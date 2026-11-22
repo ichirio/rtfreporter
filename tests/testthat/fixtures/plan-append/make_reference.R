@@ -104,7 +104,7 @@ records <- function(d) {
 }
 
 # ---- 1. concentrations, the time points across (two column blocks) ----------
-adpc <- records(read.csv("adpc.csv"))
+adpc <- records(read.csv("adpc.csv", encoding = "UTF-8"))
 adpc <- adpc[adpc$RENALGR %in% c("Normal", "Moderate"), ]
 adpc$RENALGR <- factor(adpc$RENALGR, levels = c("Normal", "Moderate"))
 adpc$ANALYTE <- factor(adpc$ANALYTE, levels = c("Parent", "Metabolite M1"))
@@ -121,7 +121,7 @@ write_report(
   file = "ref_conc_cols_time.rtf", program = "plan-append/conc_cols_time.R")
 
 # ---- 2. the PK parameters across ------------------------------------------------
-adpp <- read.csv("adpp.csv")
+adpp <- read.csv("adpp.csv", encoding = "UTF-8")
 adpp$label <- sprintf("%s/%d/%s", adpp$USUBJID, adpp$AGE, adpp$SEX)
 adpp$BLQ <- FALSE
 adpp$RENALGR <- factor(adpp$RENALGR, levels = c("Normal", "Mild", "Moderate"))
@@ -140,7 +140,7 @@ write_report(
   file = "ref_param_by_group.rtf", program = "plan-append/param_by_group.R")
 
 # ---- 3. the analytes across, a page a group and time point ---------------------
-adpc2 <- records(read.csv("adpc.csv"))
+adpc2 <- records(read.csv("adpc.csv", encoding = "UTF-8"))
 adpc2 <- adpc2[adpc2$ATPT %in% c("1 hr", "12 hr"), ]
 adpc2$RENALGR <- factor(adpc2$RENALGR, levels = c("Normal", "Mild", "Moderate"))
 adpc2$ATPT <- factor(adpc2$ATPT, levels = c("1 hr", "12 hr"))

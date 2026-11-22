@@ -120,6 +120,7 @@
 }
 .eb4_run <- function(cases, run) {
   for (cs in cases) {
+    if (is.null(cs)) next   # (a case left out where it cannot work)
     args <- c(setNames(list(cs$val), cs$arg), cs$more)
     lab  <- sprintf("%s = <%s>", cs$arg, cs$cls)
     if (startsWith(cs$expect, "error:")) {
@@ -168,6 +169,7 @@ test_that("FT-AS142 [FR-AS148 FR-AS153 FR-AS247]: assemble_folder(): equivalence
   nrows <- function(n) function(x) is.data.frame(x) && nrow(x) == n
   out <- function() tempfile(fileext = ".rtf")
   csv_kanji <- file.path(tempdir(), "目次_eb4.csv")
+  nat <- "^`spec_file` has a character the session's native encoding"
   spec_one <- file.path(tempdir(), "eb4_one.csv")
   cases <- list(
     E("dir", "NA", NA, dr),
@@ -192,7 +194,11 @@ test_that("FT-AS142 [FR-AS148 FR-AS153 FR-AS247]: assemble_folder(): equivalence
     E("spec_file", "length 0", character(0), sf),
     E("spec_file", "a folder that is not there", file.path(tempdir(), "eb4_nodir", "t.csv"),
       "^The folder of `spec_file` does not exist: "),
-    O("spec_file", "non-ASCII name", csv_kanji, function(x) is.data.frame(x) && file.exists(csv_kanji)),
+    if (native_can_hold(csv_kanji)) {
+      O("spec_file", "non-ASCII name", csv_kanji, function(x) is.data.frame(x) && file.exists(csv_kanji))
+    } else {
+      E("spec_file", "non-ASCII name, the native encoding cannot hold it", csv_kanji, nat)
+    },
     E("spec_file", "a bad value, a bad dir too", "s.txt", "^`spec_file` must end in .xlsx or .csv.",
       more = list(dir = file.path(tempdir(), "eb4_nope")))
   )
@@ -438,7 +444,11 @@ test_that("FT-PL983 [FR-PL289 FR-PL290 FR-PL292 FR-PL298 FR-PL299 FR-PL300 FR-PL
   by <- "^plan_compare\\(by = \\) is one column, the key that splits the comparisons"
   cases <- list(
     O("p", "a template", "{p.value:.3f}", pv(c("0.031", NA))),
-    O("p値", "a non-ASCII name", "{p.value:.3f}", nms(c("group", "label", "Placebo", "Active", "p値"))),
+    # (an argument name is a symbol, and a symbol is native: where the native
+    # encoding cannot hold it, `p値 = ` cannot be written at all)
+    if (native_can_hold("p値")) {
+      O("p値", "a non-ASCII name", "{p.value:.3f}", nms(c("group", "label", "Placebo", "Active", "p値")))
+    },
     O("diff", "two columns", "{estimate:.1f}", nms(c("group", "label", "Placebo", "Active", "diff", "p")), more = p3),
     O("p", "a map by context", c(stats_t_test = "{p.value:.3f}"), pv(c("0.031", NA))),
     O("p", "a context no record has", c(stats_wilcox_test = "{p.value:.3f}"), pv(c(NA_character_, NA))),
@@ -464,6 +474,7 @@ test_that("FT-PL983 [FR-PL289 FR-PL290 FR-PL292 FR-PL298 FR-PL299 FR-PL300 FR-PL
   expect_error(plan_compare(.eb4_cmp_plan()), own)
   expect_error(plan_compare(.eb4_cmp_plan(), "{p.value:.3f}"), own)
   expect_error(plan_compare(.eb4_cmp_plan(), p = "{p.value:.3f}", p = "{estimate}"), own)
+  skip_unless_native_can_hold("p値")   # the case left out above
 })
 
 test_that("FT-PL984 [FR-PL965 FR-PL966 FR-PL967]: plan_cells() and plan_compare(): equivalence classes and boundaries of a cell rule", {

@@ -130,11 +130,25 @@
 
 # -- Text processing ------------------------------------------------------------
 
+# Text as UTF-8, marked so: a string marked with its encoding is converted; an
+# unmarked one that is already valid UTF-8 keeps its bytes (a value read from
+# a UTF-8 file without `encoding = "UTF-8"` in a C or other non-UTF-8 locale,
+# whose code points utf8ToInt() would otherwise give as NA); any other is
+# native and converted.
+.as_utf8 <- function(x) {
+  x <- as.character(x)
+  keep <- !is.na(x) & Encoding(x) == "unknown" & validUTF8(x)
+  x[!keep] <- enc2utf8(x[!keep])
+  Encoding(x[keep]) <- "UTF-8"
+  x
+}
+
 # Character-level RTF escape + Unicode conversion.
 # Handles: \, {, }, newline -> \line , non-ASCII -> \uN?
 # Does NOT handle markup tokens (^{}, _{}); those are handled by .format_cell_text().
 .rtf_escape_unicode_raw <- function(x) {
   if (!nzchar(x)) return(x)
+  x <- .as_utf8(x)
   chars <- strsplit(x, "", fixed = TRUE)[[1]]
   out <- vapply(chars, function(ch) {
     cp <- utf8ToInt(ch)
