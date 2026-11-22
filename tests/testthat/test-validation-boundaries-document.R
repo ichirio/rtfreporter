@@ -301,6 +301,7 @@
                  "\\\\red255\\\\green255\\\\blue255;\\}")
 
 test_that("FT-DC281 [FR-DC102 FR-DC105 FR-DC106 FR-DC109 FR-DC110 FR-DC114 FR-DC116 FR-DC120 FR-DC122 FR-DC347 FR-DC348 FR-DC349 FR-DC351]: rtf_document(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   C <- .eb_case
   cases <- .eb_cases(
     C("font_table", "valid", list(list(name = "Arial")), "ok:\\\\f0\\\\fnil\\\\fcharset0 Arial;"),
@@ -355,6 +356,7 @@ test_that("FT-DC281 [FR-DC102 FR-DC105 FR-DC106 FR-DC109 FR-DC110 FR-DC114 FR-DC
 })
 
 test_that("FT-DC282 [FR-DC151 FR-DC152 FR-DC153 FR-DC154 FR-DC155 FR-DC156 FR-DC157 FR-DC158 FR-DC159 FR-DC160 FR-DC161 FR-DC352]: rtf_page(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   C <- .eb_case
   letter <- "ok:\\\\paperw15840\\\\paperh12240"
   cases <- .eb_cases(
@@ -400,6 +402,7 @@ test_that("FT-DC282 [FR-DC151 FR-DC152 FR-DC153 FR-DC154 FR-DC155 FR-DC156 FR-DC
 })
 
 test_that("FT-TB773 [FR-TB548 FR-TB549 FR-TB550 FR-TB551 FR-TB552 FR-TB555 FR-TB557 FR-TB558 FR-TB561 FR-TB562 FR-TB564 FR-TB567 FR-TB607 FR-TB568 FR-TB569 FR-TB571 FR-TB572 FR-TB592 FR-TB593 FR-TB594]: rtftable(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   C <- .eb_case
   E <- function(arg, cls, val, pat) C(arg, cls, val, paste0("error:", pat))
   rh  <- "^`row_height_twips` must be a single non-negative integer"
@@ -515,6 +518,7 @@ test_that("FT-TB773 [FR-TB548 FR-TB549 FR-TB550 FR-TB551 FR-TB552 FR-TB555 FR-TB
 })
 
 test_that("FT-TB774 [FR-TB114 FR-TB117 FR-TB124 FR-TB126 FR-TB127 FR-TB128 FR-TB131 FR-TB135 FR-TB137 FR-TB141 FR-TB147 FR-TB149 FR-TB153 FR-TB154 FR-TB595 FR-TB596 FR-TB597 FR-TB598 FR-TB599]: as_rtftables(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   C <- .eb_case
   E <- function(arg, cls, val, pat, more = list()) {
     C(arg, cls, val, paste0("error:", pat), more = more)
@@ -623,6 +627,7 @@ test_that("FT-TB774 [FR-TB114 FR-TB117 FR-TB124 FR-TB126 FR-TB127 FR-TB128 FR-TB
 # ---------------------------------------------------------------------------
 
 test_that("FT-TB775 [FR-TB600 FR-TB601]: twips and font-size arguments take whole numbers only; markup = NA is an error", {
+  skip_on_cran()
   rh <- "^`row_height_twips` must be a single non-negative integer \\(twips\\)"
   fs <- "^`font_size_half_points` must be a single positive integer"
   # The bands and rtf_style() name the function too: `rtf_style(row_height_twips)`.
@@ -689,6 +694,7 @@ test_that("FT-TB775 [FR-TB600 FR-TB601]: twips and font-size arguments take whol
 # ---------------------------------------------------------------------------
 
 test_that("FT-DC283 [FR-DC353]: margins that leave no writable width or height stop the writing", {
+  skip_on_cran()
   w <- function(page) .eb_rtf(rtf_tables(rtf_document(page = page), .eb_df))
   # Landscape Letter: 11 x 8.5 in.
   expect_error(w(rtf_page(margin_left_in = 6, margin_right_in = 6)),

@@ -248,6 +248,7 @@
 }
 
 test_that("FT-TB779 [FR-TB121 FR-TB137 FR-TB150 FR-PL433 FR-IX262 FR-TB608 FR-TB609 FR-TB610 FR-TB611]: pairwise -- split x max_rows x stub x cell_format x first_rows x page_by x blank_rows", {
+  skip_on_cran()
   cand <- expand.grid(split = c("none", "group_safe", "group_force", "by_value"),
                       max_rows = c("none", "3", "5"), stub = c("no", "yes"),
                       cell_format = c("no", "yes"), first_rows = c("no", "end", "inside"),
@@ -269,6 +270,7 @@ test_that("FT-TB779 [FR-TB121 FR-TB137 FR-TB150 FR-PL433 FR-IX262 FR-TB608 FR-TB
 })
 
 test_that("FT-TB780 [FR-TB608 FR-TB609]: decision table -- by_value with max_rows on values that come back later, with and without page_by", {
+  skip_on_cran()
   df <- .vr_data()
   read <- function(p) vapply(p, function(pg) {
     r <- .vr_rows(pg, df)
@@ -298,6 +300,7 @@ test_that("FT-TB780 [FR-TB608 FR-TB609]: decision table -- by_value with max_row
 }
 
 test_that("FT-TB781 [FR-TB150 FR-TB610]: decision table -- a first_rows cut inside a group opens the next page with its continuation row", {
+  skip_on_cran()
   df <- data.frame(grp = rep(c("A", "B"), c(3, 4)), label = paste0("lab", 1:7),
                    val = as.character(1:7), stringsAsFactors = FALSE)
   pg <- function(...) .vr_read(as_rtftables(df, max_rows = 5, first_rows = 2, ...))
@@ -316,6 +319,7 @@ test_that("FT-TB781 [FR-TB150 FR-TB610]: decision table -- a first_rows cut insi
 })
 
 test_that("FT-TB782 [FR-TB596 FR-TB611]: decision table -- by_value with a stub cuts a value's page at max_rows", {
+  skip_on_cran()
   df <- data.frame(grp = rep(c("A", "B"), c(6, 2)), label = paste0("lab", 1:8),
                    period = rep(c("P1", "P2"), 4), val = as.character(1:8),
                    stringsAsFactors = FALSE)
@@ -496,6 +500,7 @@ test_that("FT-TB782 [FR-TB596 FR-TB611]: decision table -- by_value with a stub 
 }
 
 test_that("FT-TB783 [FR-LS156 FR-PL952 FR-TB150 FR-TB610 FR-TB612 FR-TB613]: pairwise -- listing x split x max_rows x first_rows x count_blank_rows x blank_rows x blank_row x blank_row_first x wrap x collapse_repeats", {
+  skip_on_cran()
   cand <- expand.grid(split = c("default", "group_force"), max_rows = c("none", "4", "7"),
                       first_rows = c("none", "end", "inside"), count = c("no", "yes"),
                       blank_rows = c("no", "yes"), blank_row = c("no", "yes"),
@@ -515,6 +520,7 @@ test_that("FT-TB783 [FR-LS156 FR-PL952 FR-TB150 FR-TB610 FR-TB612 FR-TB613]: pai
 })
 
 test_that("FT-TB972 [FR-TB613]: a cut just before a listing record's blank row drops that blank row, with no continuation row", {
+  skip_on_cran()
   rd <- function(p) vapply(p, function(x) {
     d <- x$data
     paste(apply(d, 1L, function(r) {

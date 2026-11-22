@@ -123,6 +123,7 @@
 }
 
 test_that("FT-TB755 [FR-TB101]: as_rtftable() is as_rtftables(split = \"none\")[[1]]; the example", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   d <- data.frame(mpg = c("21.0", "22.8"), cyl = c("6", "4"), gear = c("4", "4"))
   g <- gt::cols_align(gt::cols_label(gt::gt(d), mpg = "MPG", cyl = "Cyl"),
@@ -135,6 +136,7 @@ test_that("FT-TB755 [FR-TB101]: as_rtftable() is as_rtftables(split = \"none\")[
 })
 
 test_that("FT-TB756 [FR-TB584]: gt fills, fonts and Markdown formatting are not carried", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   d <- data.frame(lab = c("x1", "x2"), val = c("1", "2"))
   g <- gt::cols_label(gt::gt(d), lab = gt::md("**Lab**"))
@@ -151,6 +153,7 @@ test_that("FT-TB756 [FR-TB584]: gt fills, fonts and Markdown formatting are not 
 })
 
 test_that("FT-TB757 [FR-TB586]: the body columns are gt's ids, or V1, V2, ... for rtables, flextable and huxtable", {
+  skip_on_cran()
   d <- data.frame(lab = c("x1", "x2"), val = c("1", "2"))
   if (requireNamespace("gt", quietly = TRUE)) {
     expect_identical(names(as_rtftable(gt::gt(d))$data), c("lab", "val"))
@@ -176,6 +179,7 @@ test_that("FT-TB757 [FR-TB586]: the body columns are gt's ids, or V1, V2, ... fo
 })
 
 test_that("FT-TB758 [FR-TB587]: rtf_table_style() checks align, header_align and the twips arguments", {
+  skip_on_cran()
   expect_error(rtf_table_style(align = "middle"),
                "`align` must be \"left\", \"center\" or \"right\".", fixed = TRUE)
   expect_error(rtf_table_style(header_align = 3),
@@ -194,6 +198,7 @@ test_that("FT-TB758 [FR-TB587]: rtf_table_style() checks align, header_align and
 })
 
 test_that("FT-TB759 [FR-TB445 FR-TB446]: the rtf_table_style() example: a header rule and a last-row rule", {
+  skip_on_cran()
   tfl_style <- rtf_table_style(
     border_header   = rtf_border(top = TRUE, bottom = TRUE),
     border_last_row = rtf_border(bottom = TRUE),
@@ -216,6 +221,7 @@ test_that("FT-TB759 [FR-TB445 FR-TB446]: the rtf_table_style() example: a header
 })
 
 test_that("FT-TB760 [FR-TB588]: rtf_table_style_with() checks as rtf_table_style() does; NULL is the default", {
+  skip_on_cran()
   base <- rtf_table_style(header_bold = TRUE, align = "right")
   expect_error(rtf_table_style_with(base, border_header = "x"),
                "`border_header` must be NULL or an rtf_border object.", fixed = TRUE)
@@ -233,6 +239,7 @@ test_that("FT-TB760 [FR-TB588]: rtf_table_style_with() checks as rtf_table_style
 })
 
 test_that("FT-TB761 [FR-TB459 FR-TB460]: the rtf_table_style_tfl() and rtf_table_style_with() examples", {
+  skip_on_cran()
   base <- rtf_table_style_tfl()
   v <- rtf_table_style_with(base, align = "center", row_height_twips = 280L)
   expect_identical(c(v$align, as.character(v$row_height_twips)), c("center", "280"))
@@ -250,6 +257,7 @@ test_that("FT-TB761 [FR-TB459 FR-TB460]: the rtf_table_style_tfl() and rtf_table
 })
 
 test_that("FT-TB762 [FR-TB425 FR-TB430 FR-TB439 FR-TB233]: the style_header() examples", {
+  skip_on_cran()
   df <- data.frame(Item = c("Age", "Sex"), A = 1:2, B = 3:4, C = 5:6)
   hdr <- rtf_col_header(
     list(col_cell(1, ""), col_cell(c(2, 4), "Treatment")),
@@ -280,6 +288,7 @@ test_that("FT-TB762 [FR-TB425 FR-TB430 FR-TB439 FR-TB233]: the style_header() ex
 })
 
 test_that("FT-TB763 [FR-TB589]: style_body() has no per-row height or padding", {
+  skip_on_cran()
   t0 <- rtftable(data.frame(a = c("1", "2")))
   for (a in c("row_height_twips", "cell_padding_left_twips", "cell_padding_top_twips")) {
     expect_warning(t1 <- do.call(style_body, c(list(t0), stats::setNames(list(300), a))),
@@ -290,6 +299,7 @@ test_that("FT-TB763 [FR-TB589]: style_body() has no per-row height or padding", 
 })
 
 test_that("FT-TB764 [FR-TB236]: add_header_row() with a wrong-length row or .position stops", {
+  skip_on_cran()
   t0 <- rtftable(data.frame(Item = "x", A = "1", B = "2"))
   expect_error(add_header_row(t0, c("a", "b")),
                "`col_header` row 1 has 2 labels but the table has 3 columns", fixed = TRUE)
@@ -304,6 +314,7 @@ test_that("FT-TB764 [FR-TB236]: add_header_row() with a wrong-length row or .pos
 })
 
 test_that("FT-TB765 [FR-TB215 FR-TB212 FR-DC287]: set_col_header() takes a partly named row; the examples", {
+  skip_on_cran()
   df <- data.frame(row_label = c("A", "B"), g1 = 1:2, g2 = 3:4, Total = 5:6)
   tbl <- rtftable(df)
   expect_identical(rtf_columns(tbl), c("row_label", "g1", "g2", "Total"))
@@ -331,6 +342,7 @@ test_that("FT-TB765 [FR-TB215 FR-TB212 FR-DC287]: set_col_header() takes a partl
 })
 
 test_that("FT-TB766 [FR-TB346 FR-TB345 FR-TB363]: set_decimal_split() needs cols, NULL clears; the example", {
+  skip_on_cran()
   df <- data.frame(Statistic = c("Mean", "SD", "p-value"),
                    Value = c("12.3", "1.05", "<0.001"))
   expect_error(set_decimal_split(rtftable(df)), "`cols` is required", fixed = TRUE)
@@ -344,6 +356,7 @@ test_that("FT-TB766 [FR-TB346 FR-TB345 FR-TB363]: set_decimal_split() needs cols
 })
 
 test_that("FT-TB767 [FR-TB590]: stub_cols() output goes on through as_rtftables() as an indented table", {
+  skip_on_cran()
   ae <- .a3_ae()
   ae <- rbind(ae[1:2, ], data.frame(soc = "Organ class A", pt = "Term 4", n = "2 (1.4%)"), ae[3, ])
   tb <- stub_cols(ae, vars = c("soc", "pt"))
@@ -361,6 +374,7 @@ test_that("FT-TB767 [FR-TB590]: stub_cols() output goes on through as_rtftables(
 })
 
 test_that("FT-TB768 [FR-TB193 FR-TB196 FR-TB199]: the stub_cols() examples", {
+  skip_on_cran()
   ae <- .a3_ae()
   s <- stub_cols(ae, vars = c("soc", "pt"), label = "System Organ Class / Preferred Term")
   expect_identical(names(s), c("System Organ Class / Preferred Term", "n"))
@@ -384,6 +398,7 @@ test_that("FT-TB768 [FR-TB193 FR-TB196 FR-TB199]: the stub_cols() examples", {
 })
 
 test_that("FT-TB769 [FR-TB591 FR-TB207]: stub_spec() of one column; the stub_vars arguments are gone; the examples", {
+  skip_on_cran()
   d <- data.frame(soc = c("S1", "S1", "S2"), pt = c("p1", "p2", "p3"), n = c("1", "2", "3"))
   one <- stub_spec("soc", label = "Organ")
   p <- as_rtftables(d, stub = one)[[1L]]

@@ -388,6 +388,7 @@
 .eb3_read <- function(f) paste(readLines(f, warn = FALSE), collapse = "\n")
 
 test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS110 FR-AS112 FR-AS114 FR-AS115 FR-AS116 FR-AS118 FR-AS119 FR-AS124 FR-AS127 FR-AS128 FR-AS129 FR-AS133 FR-AS134 FR-AS139 FR-AS238 FR-AS244 FR-AS245 FR-AS246 FR-AS258 FR-AS271]: assemble_rtf(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   C <- .eb3_case
   E <- .eb3_err
   f <- .eb3_files()
@@ -523,6 +524,7 @@ test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS
 })
 
 test_that("FT-AS141 [FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS156 FR-AS157 FR-AS158 FR-AS238 FR-AS271]: assemble_folder(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   C <- .eb3_case
   E <- .eb3_err
   O <- .eb3_obj
@@ -598,6 +600,7 @@ test_that("FT-AS141 [FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS156 FR-AS
                       stringsAsFactors = FALSE)
 
 test_that("FT-LS154 [FR-LS115 FR-LS143 FR-LS144 FR-LS145 FR-LS146 FR-LS151 FR-LS152 FR-LS153 FR-LS154 FR-LS158 FR-LS159 FR-LS160 FR-LS161 FR-LS162 FR-LS163 FR-LS164 FR-LS165 FR-LS251]: listing_col(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   C <- .eb3_case
   E <- .eb3_err
   O <- .eb3_obj
@@ -770,6 +773,7 @@ test_that("FT-LS155 [FR-LS119 FR-LS120 FR-LS121 FR-LS122 FR-LS123 FR-LS124 FR-LS
 })
 
 test_that("FT-LS156 [FR-LS101 FR-LS102 FR-LS109 FR-LS112 FR-LS113 FR-LS114]: build_listing(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   spec <- listing_spec(list(listing_col(c("USUBJID", "AGE")), listing_col("AETERM", width = 8)))
@@ -894,6 +898,7 @@ test_that("FT-LS157 [FR-LS205 FR-LS206 FR-LS212 FR-LS214 FR-LS216 FR-LS217 FR-LS
 })
 
 test_that("FT-LS158 [FR-LS170 FR-LS172 FR-LS174 FR-LS175 FR-LS176 FR-LS177 FR-LS178 FR-LS179 FR-LS180 FR-LS181]: listing_wrap(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   wd <- "^`width` must be a single positive number, or NULL"
@@ -934,6 +939,7 @@ test_that("FT-LS158 [FR-LS170 FR-LS172 FR-LS174 FR-LS175 FR-LS176 FR-LS177 FR-LS
 })
 
 test_that("FT-LS159 [FR-LS233 FR-LS235 FR-LS236 FR-LS238 FR-LS239]: collapse_repeats(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   tb <- rtftable(data.frame(A = c("x", "x", "y"), B = c("1", "1", "2")))
@@ -1025,6 +1031,7 @@ test_that("FT-AR107 [FR-AR119 FR-AR121 FR-AR126]: normalize_ard(): equivalence c
 })
 
 test_that("FT-AR108 [FR-AR156 FR-AR157 FR-AR158 FR-AR180 FR-AR197 FR-AR209 FR-AR247 FR-AR250 FR-AR253]: widen_ard(): equivalence classes and boundaries of na, label and stat_groups", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   d <- normalize_ard(.eb3_ard)
@@ -1076,6 +1083,7 @@ test_that("FT-AR108 [FR-AR156 FR-AR157 FR-AR158 FR-AR180 FR-AR197 FR-AR209 FR-AR
 })
 
 test_that("FT-AR109 [FR-AR213 FR-AR216 FR-AR218 FR-AR219 FR-AR220 FR-AR221 FR-AR224 FR-AR225 FR-AR239 FR-AR251]: pull_ard(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   is <- function(v) function(x) identical(x, v)
@@ -1195,6 +1203,7 @@ test_that("FT-FM102 [FR-FM114 FR-FM115 FR-FM116 FR-FM117 FR-FM118 FR-FM121 FR-FM
 })
 
 test_that("FT-FM103 [FR-FM129 FR-FM131 FR-FM135 FR-FM136 FR-FM137 FR-FM138 FR-FM139 FR-FM141 FR-FM142 FR-FM145 FR-FM146 FR-FM147 FR-FM251 FR-FM252 FR-FM253]: fmt_signif(): equivalence classes and boundaries of its arguments, the rounding boundaries", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   is <- function(v) function(x) identical(x, v)
@@ -1238,6 +1247,7 @@ test_that("FT-FM103 [FR-FM129 FR-FM131 FR-FM135 FR-FM136 FR-FM137 FR-FM138 FR-FM
 })
 
 test_that("FT-FM104 [FR-FM149 FR-FM151 FR-FM152 FR-FM153 FR-FM154 FR-FM155 FR-FM162 FR-FM164 FR-FM165 FR-FM167 FR-FM172 FR-FM173 FR-FM252 FR-FM253]: fmt_numeric(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   df <- data.frame(g = c("Mean", "SD", "x"), v = c(1.25, 2.35, NA), s = c("a", "b", "c"))
@@ -1285,6 +1295,7 @@ test_that("FT-FM104 [FR-FM149 FR-FM151 FR-FM152 FR-FM153 FR-FM154 FR-FM155 FR-FM
 })
 
 test_that("FT-FM105 [FR-FM175 FR-FM176 FR-FM177 FR-FM178 FR-FM183 FR-FM184 FR-FM185 FR-FM186 FR-FM187 FR-FM189 FR-FM190 FR-FM191 FR-FM192 FR-FM193 FR-FM194 FR-FM195 FR-FM196 FR-FM249 FR-FM254 FR-FM255]: fmt_count_pct(): equivalence classes and boundaries of its arguments, the rounding boundaries", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   C <- .eb3_case
@@ -1340,6 +1351,7 @@ test_that("FT-FM105 [FR-FM175 FR-FM176 FR-FM177 FR-FM178 FR-FM183 FR-FM184 FR-FM
 })
 
 test_that("FT-FM106 [FR-FM228 FR-FM233 FR-FM235 FR-FM237 FR-FM238 FR-FM239 FR-FM248 FR-FM254]: fmt_value_paren(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   is <- function(v) function(x) identical(x, v)
@@ -1421,6 +1433,7 @@ test_that("FT-PL973 [FR-PL265 FR-PL275 FR-PL276]: plan_total(): equivalence clas
 })
 
 test_that("FT-PL974 [FR-PL310 FR-PL311 FR-PL960]: plan_sort(): equivalence classes and boundaries of stat and keep", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   kp <- "^plan_sort\\(keep = \\) is TRUE"
@@ -1561,6 +1574,7 @@ test_that("FT-PL978 [FR-PL392]: plan_col_header(): equivalence classes and bound
 })
 
 test_that("FT-PL979 [FR-PL262]: plan_levels(): equivalence classes and boundaries of .drop_empty", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   de <- "^plan_levels\\(.drop_empty = \\) takes variable names"

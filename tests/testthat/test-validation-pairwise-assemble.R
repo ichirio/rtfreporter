@@ -185,6 +185,7 @@
 }
 
 test_that("FT-AS138 [FR-AS148 FR-AS149 FR-AS150 FR-AS151 FR-AS152 FR-AS153 FR-AS157 FR-AS158 FR-AS242 FR-AS243]: pairwise -- assemble_folder(): number source x listing x sections x names x cover x output x toc_title", {
+  skip_on_cran()
   cand <- expand.grid(src = c("header", "titles", "both"), listing = c("no", "yes"),
                       sections = c("1", "2"), names = c("agree", "reversed"),
                       cover = c("no", "yes"),
@@ -207,6 +208,7 @@ test_that("FT-AS138 [FR-AS148 FR-AS149 FR-AS150 FR-AS151 FR-AS152 FR-AS153 FR-AS
 })
 
 test_that("FT-AS139 [FR-AS101 FR-AS109 FR-AS111 FR-AS112 FR-AS113 FR-AS115 FR-AS116 FR-AS117 FR-AS125 FR-AS128 FR-AS135]: decision table -- assemble_rtf(): the contents' shape and levels x cover x leader", {
+  skip_on_cran()
   d <- tempfile("va-rtf-")
   dir.create(d)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)

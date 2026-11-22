@@ -60,6 +60,7 @@
 # ---- as_rtftable() -----------------------------------------------------------
 
 test_that("FT-TB3000 [FR-TB102]: as_rtftable() takes a gt_tbl, an rtables tree, a listing_df and a huxtable", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   skip_if_not_installed("huxtable")
   skip_if_not_installed("rlistings")
@@ -123,6 +124,7 @@ test_that("FT-TB3001 [FR-TB103]: as_rtftable() converts the one table of a gt_gr
 })
 
 test_that("FT-TB3002 [FR-TB107]: as_rtftable(read_meta) reads all by default and only the tokens given", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   g <- gt::gt(data.frame(a = c("x", "y"), b = c(1.5, 2.5), stringsAsFactors = FALSE))
   g <- gt::tab_header(gt::tab_spanner(g, "S", columns = c(a, b)), title = "TT")
@@ -141,6 +143,7 @@ test_that("FT-TB3002 [FR-TB107]: as_rtftable(read_meta) reads all by default and
 })
 
 test_that("FT-TB3003 [FR-TB108]: as_rtftable(...) forwards to rtftable(); an explicit value wins", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   g <- gt::gt(data.frame(a = c("x", "y"), b = c(1.5, 2.5), stringsAsFactors = FALSE))
   g <- gt::cols_label(g, a = "GA", b = "GB")
@@ -155,6 +158,7 @@ test_that("FT-TB3003 [FR-TB108]: as_rtftable(...) forwards to rtftable(); an exp
 })
 
 test_that("FT-TB3004 [FR-TB109]: as_rtftable() acts as as_rtftables()[[1]] for the other settings", {
+  skip_on_cran()
   s <- .g4_soc()
   stub <- stub_spec(c("soc", "pt"))
   expect_identical(as_rtftable(s, stub = stub), as_rtftables(s, stub = stub)[[1L]])
@@ -174,6 +178,7 @@ test_that("FT-TB3004 [FR-TB109]: as_rtftable() acts as as_rtftables()[[1]] for t
 # ---- as_rtftables(): result, sources, read_meta ------------------------------
 
 test_that("FT-TB3005 [FR-TB111]: the list is named for a value-based split and a named list", {
+  skip_on_cran()
   d <- data.frame(grp = c("A", "A", "B"), v = c("1", "2", "3"), stringsAsFactors = FALSE)
   res <- as_rtftables(d, split = "by_value", group_col = "grp")
   expect_identical(names(res), c("A", "B"))
@@ -257,6 +262,7 @@ test_that("FT-TB3007 [FR-TB115]: a gt_group gives one page set per member table"
 })
 
 test_that("FT-TB3008 [FR-TB116]: a list input names pages '<list name>.<page name>'; an empty list gives list()", {
+  skip_on_cran()
   d <- data.frame(grp = c("A", "A", "B"), v = c("1", "2", "3"), stringsAsFactors = FALSE)
   res <- as_rtftables(list(X = d), split = "by_value", group_col = "grp")
   expect_identical(names(res), c("X.A", "X.B"))
@@ -314,6 +320,7 @@ test_that("FT-TB3009 [FR-TB118]: as_rtftables(read_meta) reads all by default an
 })
 
 test_that("FT-TB3010 [FR-TB118]: the rtables 'footnote_marks' token alone converts the marks, and only that", {
+  skip_on_cran()
   skip_if_not_installed("rtables")
   skip_if_not_installed("formatters")
   lyt <- rtables::basic_table(title = "Table 1", main_footer = "Main footer")
@@ -333,6 +340,7 @@ test_that("FT-TB3010 [FR-TB118]: the rtables 'footnote_marks' token alone conver
 })
 
 test_that("FT-TB3011 [FR-TB120]: an unknown read_meta token and a wrong type stop with the given message", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   g <- gt::gt(data.frame(a = "x", stringsAsFactors = FALSE))
   expect_error(
@@ -351,6 +359,7 @@ test_that("FT-TB3011 [FR-TB120]: an unknown read_meta token and a wrong type sto
 # ---- as_rtftables(): split, max_rows, split_rows, group_col, group_by --------
 
 test_that("FT-TB3012 [FR-TB121]: group_safe writes the continuation label for a group over max_rows; none is the default", {
+  skip_on_cran()
   d <- data.frame(grp = c(rep("A", 6), "B", "B"), v = as.character(1:8),
                   stringsAsFactors = FALSE)
   p <- as_rtftables(d, split = "group_safe", max_rows = 4, group_col = "grp",
@@ -371,6 +380,7 @@ test_that("FT-TB3012 [FR-TB121]: group_safe writes the continuation label for a 
 })
 
 test_that("FT-TB3013 [FR-TB122]: a custom split is called with the documented arguments on the cell-formatted body", {
+  skip_on_cran()
   d <- data.frame(grp = c(rep("A", 6), "B", "B"), v = as.character(1:8),
                   stringsAsFactors = FALSE)
   seen <- NULL
@@ -402,6 +412,7 @@ test_that("FT-TB3013 [FR-TB122]: a custom split is called with the documented ar
 })
 
 test_that("FT-TB3014 [FR-TB124]: max_rows is ignored by none and rows and is required by group_safe", {
+  skip_on_cran()
   d <- data.frame(grp = rep(c("A", "B", "C"), each = 2), v = as.character(1:6),
                   stringsAsFactors = FALSE)
   expect_length(as_rtftables(d, max_rows = 3), 1L)                  # split = "none"
@@ -417,6 +428,7 @@ test_that("FT-TB3014 [FR-TB124]: max_rows is ignored by none and rows and is req
 })
 
 test_that("FT-TB3015 [FR-TB126]: split_rows = c(20, 40) cuts 1:19, 20:39, 40:nrow and is ignored by the other splits", {
+  skip_on_cran()
   d <- data.frame(a = as.character(1:60), b = 1:60, stringsAsFactors = FALSE)
   p <- as_rtftables(d, split = "rows", split_rows = c(20, 40))
   expect_equal(vapply(p, function(x) nrow(x$data), integer(1)), c(19L, 20L, 21L))
@@ -434,6 +446,7 @@ test_that("FT-TB3015 [FR-TB126]: split_rows = c(20, 40) cuts 1:19, 20:39, 40:nro
 })
 
 test_that("FT-TB3016 [FR-TB127]: group_col by name or position, NULL = column 1, a factor is coerced for the continuation label", {
+  skip_on_cran()
   f <- data.frame(x = c("a", "b", "c", "d"), grp = c("A", "A", "B", "B"),
                   v = 1:4, stringsAsFactors = FALSE)
   by_name <- as_rtftables(f, split = "group_force", max_rows = 3, group_col = "grp")
@@ -464,6 +477,7 @@ test_that("FT-TB3016 [FR-TB127]: group_col by name or position, NULL = column 1,
 })
 
 test_that("FT-TB3017 [FR-TB130]: a split or group_by that is not listed is refused by match.arg()", {
+  skip_on_cran()
   d <- data.frame(grp = c("A", "B"), v = 1:2, stringsAsFactors = FALSE)
   expect_error(as_rtftables(d, split = "nonsense"),
                "should be one of .none., .rows., .group_safe., .group_force., .by_value.")
@@ -474,6 +488,7 @@ test_that("FT-TB3017 [FR-TB130]: a split or group_by that is not listed is refus
 # ---- as_rtftables(): page_by, sort ------------------------------------------
 
 test_that("FT-TB3018 [FR-TB131]: page_by gathers a scattered value in the body's order; NULL is one page", {
+  skip_on_cran()
   s <- data.frame(pg = c("P1", "P2", "P1"), v = c("a", "b", "c"), stringsAsFactors = FALSE)
   p <- as_rtftables(s, page_by = "pg")
   expect_identical(names(p), c("P1", "P2"))
@@ -486,12 +501,14 @@ test_that("FT-TB3018 [FR-TB131]: page_by gathers a scattered value in the body's
 })
 
 test_that("FT-TB3019 [FR-TB133]: page_by on a column the body lacks stops with the message", {
+  skip_on_cran()
   s <- data.frame(pg = c("P1", "P2"), v = c("a", "b"), stringsAsFactors = FALSE)
   expect_error(as_rtftables(s, page_by = "nope"),
                "`page_by` column 'nope' not found in the table.", fixed = TRUE)
 })
 
 test_that("FT-TB3020 [FR-TB134]: sort_by orders the rows before the pages are cut", {
+  skip_on_cran()
   d <- data.frame(g = c("x", "x", "y", "y", "z"), k = c(5, 3, 4, 1, 2),
                   stringsAsFactors = FALSE)
   p <- as_rtftables(d, sort_by = "k", split = "group_force", max_rows = 2, group_col = "g")
@@ -503,6 +520,7 @@ test_that("FT-TB3020 [FR-TB134]: sort_by orders the rows before the pages are cu
 })
 
 test_that("FT-TB3021 [FR-TB135]: sort_desc is ignored without sort_by; FALSE and NULL are ascending", {
+  skip_on_cran()
   d <- data.frame(g = c("x", "x", "y", "y", "z"), k = c(5, 3, 4, 1, 2),
                   stringsAsFactors = FALSE)
   expect_equal(as_rtftables(d, sort_desc = TRUE)[[1L]]$data$k, d$k)
@@ -515,6 +533,7 @@ test_that("FT-TB3021 [FR-TB135]: sort_desc is ignored without sort_by; FALSE and
 # ---- as_rtftables(): blank rows ---------------------------------------------
 
 test_that("FT-TB3022 [FR-TB139]: blank_rows NULL gives none; integer positions and a list of forms are taken", {
+  skip_on_cran()
   df <- data.frame(a = c("p", "q", "r", "s", "t"), stringsAsFactors = FALSE)
   expect_null(as_rtftables(df)[[1L]]$blank_rows)
   expect_null(as_rtftables(df, blank_rows = NULL)[[1L]]$blank_rows)
@@ -528,6 +547,7 @@ test_that("FT-TB3022 [FR-TB139]: blank_rows NULL gives none; integer positions a
 })
 
 test_that("FT-TB3023 [FR-TB140]: a blank_rows entry of no accepted form stops", {
+  skip_on_cran()
   df <- data.frame(a = c("p", "q"), stringsAsFactors = FALSE)
   expect_error(as_rtftables(df, blank_rows = list(TRUE)),
                "Unrecognised `blank_rows` entry: TRUE", fixed = TRUE)
@@ -538,6 +558,7 @@ test_that("FT-TB3023 [FR-TB140]: a blank_rows entry of no accepted form stops", 
 # ---- as_rtftables(): cell formats, na ---------------------------------------
 
 test_that("FT-TB3024 [FR-TB143]: align_count_pct is ignored when cell_format is given", {
+  skip_on_cran()
   cn <- data.frame(l = c("a", "b"), v = c("5 (10.0)", "10 (5.0)"), stringsAsFactors = FALSE)
   fmt <- function(x) paste0("[", x, "]")
   both <- as_rtftables(cn, align_count_pct = TRUE, cell_format = fmt)[[1L]]$data
@@ -552,6 +573,7 @@ test_that("FT-TB3024 [FR-TB143]: align_count_pct is ignored when cell_format is 
 })
 
 test_that("FT-TB3025 [FR-TB144]: align_count_pct of no accepted kind stops with the message", {
+  skip_on_cran()
   cn <- data.frame(l = "a", v = "5 (10.0)", stringsAsFactors = FALSE)
   expect_error(
     as_rtftables(cn, align_count_pct = 3),
@@ -560,6 +582,7 @@ test_that("FT-TB3025 [FR-TB144]: align_count_pct of no accepted kind stops with 
 })
 
 test_that("FT-TB3026 [FR-TB145]: one formatter hits every data column but column 1; NULL leaves the body", {
+  skip_on_cran()
   c2 <- data.frame(l = c("a", "bb"), x = c("5", "10"), y = c("1 (2)", "33 (4)"),
                    stringsAsFactors = FALSE)
   nb <- .g4_nbsp
@@ -577,6 +600,7 @@ test_that("FT-TB3026 [FR-TB145]: one formatter hits every data column but column
 })
 
 test_that("FT-TB3027 [FR-TB147]: na prints in every column, with and without a formatter; '' leaves the cell empty", {
+  skip_on_cran()
   n <- data.frame(l = c("a", NA), v = c("1 (2.0)", NA), w = c(NA, "22 (3.0)"),
                   stringsAsFactors = FALSE)
   plain <- as_rtftables(n, na = "n/a")[[1L]]$data
@@ -601,6 +625,7 @@ test_that("FT-TB3027 [FR-TB147]: na prints in every column, with and without a f
 })
 
 test_that("FT-TB3028 [FR-TB148]: na treats NaN as missing, prints Inf and -Inf, and leaves the strings 'NA' and 'NaN'", {
+  skip_on_cran()
   m <- data.frame(l = letters[1:5], v = c(NaN, -Inf, Inf, NA, 2),
                   s = c("NA", "NaN", "NA", "NaN", "x"), stringsAsFactors = FALSE)
   b <- as_rtftables(m, na = "-")[[1L]]$data
@@ -609,6 +634,7 @@ test_that("FT-TB3028 [FR-TB148]: na treats NaN as missing, prints Inf and -Inf, 
 })
 
 test_that("FT-TB3029 [FR-TB151]: first_rows with a custom split stops with the message", {
+  skip_on_cran()
   d <- data.frame(g = c("x", "x", "y", "y", "z"), k = c(5, 3, 4, 1, 2),
                   stringsAsFactors = FALSE)
   expect_error(
@@ -620,6 +646,7 @@ test_that("FT-TB3029 [FR-TB151]: first_rows with a custom split stops with the m
 # ---- as_rtftables(): listing, stub, widths, forwarded settings -----------------
 
 test_that("FT-TB3030 [FR-TB155]: a listing spec joins, wraps and gutters the columns and gives the header", {
+  skip_on_cran()
   tb <- as_rtftables(.g4_adsl(), listing = .g4_spec())[[1L]]
   b <- tb$data
   expect_identical(names(b), c("USUBJID", ".sp1", "AEDECOD", ".sp2", "ARM"))
@@ -641,6 +668,7 @@ Arm")))   # wrapped to the width of 12
 })
 
 test_that("FT-TB3031 [FR-TB157]: listing on a source it cannot apply to stops with each message", {
+  skip_on_cran()
   skip_if_not_installed("rlistings")
   skip_if_not_installed("gt")
   lst <- rlistings::as_listing(data.frame(a = c("x", "y"), b = c("p", "q"),
@@ -689,6 +717,7 @@ test_that("FT-TB3032 [FR-TB161]: drop_cols, sort_by and group_by refer to the re
 })
 
 test_that("FT-TB3033 [FR-TB163]: auto_width sizes each column to its widest content and does not change the table width", {
+  skip_on_cran()
   df <- data.frame(lab = c("a", "bbbbbbbbbbbbbbbbbb"), x = c("1", "2"), z = c("1", "2"),
                    stringsAsFactors = FALSE)
   names(df)[2L] <- "A very long header label here"
@@ -709,6 +738,7 @@ test_that("FT-TB3033 [FR-TB163]: auto_width sizes each column to its widest cont
 })
 
 test_that("FT-TB3034 [FR-TB164]: table_width_twips is NULL by default and holds with and without auto_width", {
+  skip_on_cran()
   df <- data.frame(lab = c("a", "b"), x = c("1", "2"), stringsAsFactors = FALSE)
   expect_null(as_rtftables(df)[[1L]]$table_width_twips)
   on <- as_rtftables(df, auto_width = TRUE, table_width_twips = 6000L)[[1L]]
@@ -719,6 +749,7 @@ test_that("FT-TB3034 [FR-TB164]: table_width_twips is NULL by default and holds 
 })
 
 test_that("FT-TB3035 [FR-TB166]: forwarded arguments reach every page; explicit wins; col_header is resolved after the stub", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   x1 <- data.frame(a = c("1", "2"), b = c("3", "4"), stringsAsFactors = FALSE)
   x2 <- data.frame(a = "5", b = "6", stringsAsFactors = FALSE)
@@ -745,6 +776,7 @@ test_that("FT-TB3035 [FR-TB166]: forwarded arguments reach every page; explicit 
 })
 
 test_that("FT-TB3036 [FR-TB167]: cell_styles of the caller, one per row, follow their rows through the stub and the split", {
+  skip_on_cran()
   d <- data.frame(a = c("a", "b", "c"), b = 1:3, stringsAsFactors = FALSE)
   bold_row <- function(k) lapply(1:3, function(i) list(bold = i == k))
   p <- as_rtftables(d, cell_styles = bold_row(1), split = "group_force", max_rows = 2,
@@ -840,6 +872,7 @@ test_that("FT-TB3037 [FR-TB170]: rtf_tables() takes a plan, as_rtftables() pages
 })
 
 test_that("FT-TB3038 [FR-TB172]: titles: one block per table, NULL none, styled rows, blank rows, centred and bold by default", {
+  skip_on_cran()
   d <- .g4_df(2)
   two <- rtf_tables(rtf_document(), list(d, d), titles = list(list("A"), list("B")))
   expect_identical(two$contents[[1L]]$title, list("A"))
@@ -863,6 +896,7 @@ test_that("FT-TB3038 [FR-TB172]: titles: one block per table, NULL none, styled 
 })
 
 test_that("FT-TB3039 [FR-TB173]: footnotes: one block per table, NULL none, left-aligned and no rule by default", {
+  skip_on_cran()
   d <- .g4_df(2)
   two <- rtf_tables(rtf_document(), list(d, d), footnotes = list(list("F1"), list("F2")))
   expect_identical(two$contents[[1L]]$footnote, list("F1"))
@@ -879,6 +913,7 @@ test_that("FT-TB3039 [FR-TB173]: footnotes: one block per table, NULL none, left
 })
 
 test_that("FT-TB3040 [FR-TB175]: titles and footnotes of the wrong length stop with the full message", {
+  skip_on_cran()
   d <- data.frame(A = 1L)
   expect_error(
     rtf_tables(rtf_document(), list(d), footnotes = list("a", "b")),
@@ -893,6 +928,7 @@ test_that("FT-TB3040 [FR-TB175]: titles and footnotes of the wrong length stop w
 })
 
 test_that("FT-TB3041 [FR-TB176]: page-number tokens in a title and a footnote reach the file", {
+  skip_on_cran()
   d <- .g4_df(2)
   txt <- .g4_rtf(rtf_tables(
     rtf_document(), list(d, d),
@@ -929,6 +965,7 @@ test_that("FT-TB3041 [FR-TB176]: page-number tokens in a title and a footnote re
 })
 
 test_that("FT-TB3042 [FR-TB177]: auto_section opens a section where the name changes and appends the heading to the common header", {
+  skip_on_cran()
   d <- function(v) data.frame(a = v, stringsAsFactors = FALSE)
   base <- rtf_section(rtf_document(),
                       secinfo = list(header = rtf_header(rows = list(c(l = "Study")))))
@@ -965,6 +1002,7 @@ test_that("FT-TB3042 [FR-TB177]: auto_section opens a section where the name cha
 })
 
 test_that("FT-TB3043 [FR-TB178]: section_label_align sets the alignment of the section label row", {
+  skip_on_cran()
   d <- function(v) data.frame(a = v, stringsAsFactors = FALSE)
   base <- rtf_section(rtf_document(),
                       secinfo = list(header = rtf_header(rows = list(c(l = "Study")))))
@@ -988,6 +1026,7 @@ test_that("FT-TB3043 [FR-TB178]: section_label_align sets the alignment of the s
 })
 
 test_that("FT-TB3044 [FR-TB182]: page_break takes one value each; TRUE is the default; later pages and the first content begin a page", {
+  skip_on_cran()
   df <- function(n) .g4_df(n)
   doc <- rtf_tables(rtf_document(), list(df(3), df(3), df(3)),
                     page_break = c(TRUE, FALSE, FALSE))
@@ -1015,6 +1054,7 @@ test_that("FT-TB3044 [FR-TB182]: page_break takes one value each; TRUE is the de
 })
 
 test_that("FT-TB3045 [FR-TB184]: first_rows on a data frame and an rtftable: every later page has its title, header and footnote", {
+  skip_on_cran()
   base <- rtf_tables(rtf_document(), list(.g4_df(3)), titles = list("Table 1"))
   hdr <- paste0("Item", .g4_bs, "cell")
   for (src in list(.g4_df(10, "Row"), rtftable(.g4_df(10, "Row")))) {
@@ -1032,6 +1072,7 @@ test_that("FT-TB3045 [FR-TB184]: first_rows on a data frame and an rtftable: eve
 })
 
 test_that("FT-TB3046 [FR-TB188]: cont_title is a line under the title of the pages after the shared one; NULL gives none", {
+  skip_on_cran()
   base <- rtf_tables(rtf_document(), list(.g4_df(3)), titles = list("Table 1"))
   doc <- rtf_tables(base, .g4_df(10, "Row"), titles = list("Table 2"), page_break = FALSE,
                     first_rows = 3, cont_title = "(continued)")
@@ -1060,6 +1101,7 @@ test_that("FT-TB3046 [FR-TB188]: cont_title is a line under the title of the pag
 })
 
 test_that("FT-TB3047 [FR-TB192]: rtf_tables() reads a gt as as_rtftables() does, alone and in a list", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   g <- gt::gt(data.frame(a = c("x", "y"), b = c(1.5, 2.5), stringsAsFactors = FALSE))
   g <- gt::cols_label(g, a = "GA", b = "GB")
@@ -1089,6 +1131,7 @@ test_that("FT-TB3047 [FR-TB192]: rtf_tables() reads a gt as as_rtftables() does,
 }
 
 test_that("FT-TB3048 [FR-TB199]: group_summary folds an empty ('' or NA) and a parent-equal leaf onto the group's label row", {
+  skip_on_cran()
   nb4 <- strrep(.g4_nbsp, 4L)
   mk <- function(pt) data.frame(soc = c("S1", "S1", "S1", "S2", "S2"), pt = pt,
                                 n = as.character(1:5), stringsAsFactors = FALSE)
@@ -1121,6 +1164,7 @@ test_that("FT-TB3048 [FR-TB199]: group_summary folds an empty ('' or NA) and a p
 })
 
 test_that("FT-TB3049 [FR-TB200]: the merged layout gives one indented stub column in place of the hierarchy", {
+  skip_on_cran()
   d <- data.frame(group = c("A", "A", "B"), label = c("x", "y", "z"), v = c("1", "2", "3"),
                   stringsAsFactors = FALSE)
   out <- stub_cols(d, vars = c("group", "label"))
@@ -1132,6 +1176,7 @@ test_that("FT-TB3049 [FR-TB200]: the merged layout gives one indented stub colum
 })
 
 test_that("FT-TB3050 [FR-TB207]: stub_spec() carries group_summary and as_rtftables() folds as stub_cols() does", {
+  skip_on_cran()
   d <- data.frame(SOC = c("S1", "S1", "S1", "S2", "S2"), PT = c("", "p1", "p2", "S2", "p3"),
                   N = as.character(1:5), stringsAsFactors = FALSE)
   sp <- stub_spec(c("SOC", "PT"), group_summary = "all")
@@ -1145,6 +1190,7 @@ test_that("FT-TB3050 [FR-TB207]: stub_spec() carries group_summary and as_rtftab
 })
 
 test_that("FT-TB3051 [FR-TB208]: stub_spec() takes the defaults of stub_cols()", {
+  skip_on_cran()
   sp <- stub_spec(c("SOC", "PT"))
   expect_identical(sp$group_summary, c("empty", "parent"))
   expect_identical(sp$group_summary, eval(formals(stub_cols)$group_summary))
@@ -1155,6 +1201,7 @@ test_that("FT-TB3051 [FR-TB208]: stub_spec() takes the defaults of stub_cols()",
 })
 
 test_that("FT-TB3052 [FR-TB210]: stub_spec(layout) is refused at construction; the other settings when the stub is built", {
+  skip_on_cran()
   expect_error(stub_spec(c("SOC", "PT"), layout = "nope"),
                "should be one of .merged., .columns.")
   sp <- stub_spec(c("SOC", "PT"), indent = -1)          # no error here
@@ -1166,6 +1213,7 @@ test_that("FT-TB3052 [FR-TB210]: stub_spec(layout) is refused at construction; t
 })
 
 test_that("FT-TB3053 [FR-TB211]: print() of a stub_spec shows the vars, layout and indent", {
+  skip_on_cran()
   sp <- stub_spec(c("SOC", "PT"), indent = 2, layout = "columns")
   expect_output(print(sp), "<rtf_stub_spec>", fixed = TRUE)
   expect_output(print(sp), "vars +: SOC, PT")
@@ -1176,6 +1224,7 @@ test_that("FT-TB3053 [FR-TB211]: print() of a stub_spec shows the vars, layout a
 # ---- set_col_header(), add_header_row(), header_map() -------------------------------
 
 test_that("FT-TB3054 [FR-TB212]: set_col_header() cells by visible position land on the final printed columns", {
+  skip_on_cran()
   d <- data.frame(x = c("q", "q"), soc = c("S1", "S1"), pt = c("a", "b"), n = c("1", "2"),
                   m = c("3", "4"), stringsAsFactors = FALSE)
   pg <- as_rtftables(d, drop_cols = "x", stub = stub_spec(c("soc", "pt")))[[1L]]
@@ -1193,6 +1242,7 @@ test_that("FT-TB3054 [FR-TB212]: set_col_header() cells by visible position land
 })
 
 test_that("FT-TB3055 [FR-TB213]: set_col_header(...) takes a prebuilt header, one argument as a whole header, several as rows", {
+  skip_on_cran()
   t2 <- rtftable(data.frame(A = 1, B = 2))
   pre <- set_col_header(t2, rtf_col_header(list(col_cell(1:2, "Top")), c("a", "b")))
   expect_identical(pre$col_header, list(list(list(from = 1L, to = 2L, label = "Top")),
@@ -1204,6 +1254,7 @@ test_that("FT-TB3055 [FR-TB213]: set_col_header(...) takes a prebuilt header, on
 })
 
 test_that("FT-TB3056 [FR-TB216]: a col_cell pos may be a selector; one matching no column or non-adjacent columns is an error", {
+  skip_on_cran()
   d <- data.frame(lab = "x", `T1__n` = "1", `T1__p` = "2", `T2__n` = "3",
                   check.names = FALSE, stringsAsFactors = FALSE)
   tb <- rtftable(d)
@@ -1234,6 +1285,7 @@ test_that("FT-TB3056 [FR-TB216]: a col_cell pos may be a selector; one matching 
 }
 
 test_that("FT-TB3057 [FR-TB223]: set_col_header(by = c('group', 'rows')) matches on the combination", {
+  skip_on_cran()
   pg <- .g4_vt_pages()
   expect_identical(names(pg), c("P1...1", "P1...2", "P2...1", "P2...2"))
   hh <- rtf_col_header(list(col_cell(2:3, "Grp (N={n})")), c("Lab", "a", "b"))
@@ -1262,6 +1314,7 @@ test_that("FT-TB3057 [FR-TB223]: set_col_header(by = c('group', 'rows')) matches
 })
 
 test_that("FT-TB3058 [FR-TB227]: set_col_header() on a named list returns a list of the same names", {
+  skip_on_cran()
   d1 <- data.frame(Item = "Age", A = "1", B = "3", stringsAsFactors = FALSE)
   out <- set_col_header(list(a = rtftable(d1), b = rtftable(d1)), c("I", "P", "D"))
   expect_type(out, "list")
@@ -1276,6 +1329,7 @@ test_that("FT-TB3058 [FR-TB227]: set_col_header() on a named list returns a list
 })
 
 test_that("FT-TB3059 [FR-TB232]: add_header_row() places a named character row by column name", {
+  skip_on_cran()
   t2 <- rtftable(data.frame(a = "1", b = "2", stringsAsFactors = FALSE))
   x <- add_header_row(t2, c(b = "B2", a = "A2"))
   expect_identical(x$col_header[[1L]], c("A2", "B2"))
@@ -1285,6 +1339,7 @@ test_that("FT-TB3059 [FR-TB232]: add_header_row() places a named character row b
 })
 
 test_that("FT-TB3060 [FR-TB251]: header_map() has one row per header cell of every page; a label cell covers one column", {
+  skip_on_cran()
   pg <- set_col_header(.g4_vt_pages(), list(col_cell(2:3, "Grp")), c("Lab", "a", "b"))
   hm <- header_map(pg)
   expect_identical(names(hm), c("page", "name", "group", "rows", "row", "cell", "from", "to",
@@ -1303,6 +1358,7 @@ test_that("FT-TB3060 [FR-TB251]: header_map() has one row per header cell of eve
 })
 
 test_that("FT-TB3061 [FR-TB253]: header_map() gives group (else the name without '...n') and rows (NA when none)", {
+  skip_on_cran()
   pg <- set_col_header(.g4_vt_pages(), list(col_cell(2:3, "Grp")), c("Lab", "a", "b"))
   hm <- header_map(pg)
   first <- hm[!duplicated(hm$page), ]
@@ -1322,6 +1378,7 @@ test_that("FT-TB3061 [FR-TB253]: header_map() gives group (else the name without
 })
 
 test_that("FT-TB3062 [FR-TB254]: header_map() gives no row to a page without a header; a zero-row frame has the same columns", {
+  skip_on_cran()
   d <- data.frame(p = c("u", "v"), k = 1:2, stringsAsFactors = FALSE)
   with_hdr <- rtftable(d, col_header = c("p", "k"))
   mixed <- header_map(list(with_hdr, rtftable(d)))
@@ -1334,6 +1391,7 @@ test_that("FT-TB3062 [FR-TB254]: header_map() gives no row to a page without a h
 })
 
 test_that("FT-TB3063 [FR-TB260]: add_cont_label() puts NA in a non-character column and resets the row names", {
+  skip_on_cran()
   df <- data.frame(g = c("B", "B"), n = c(3, 4), stringsAsFactors = FALSE)
   rownames(df) <- c("r7", "r9")
   out <- add_cont_label(df, "G")
@@ -1356,6 +1414,7 @@ test_that("FT-TB3063 [FR-TB260]: add_cont_label() puts NA in a non-character col
 }
 
 test_that("FT-TB3064 [FR-TB271]: each column block's header holds the kept column and that block's labels", {
+  skip_on_cran()
   tb <- rtftable(.g4_pc_df(), col_header = .g4_pc_hdr())
   pg <- paginate_cols(tb, at = 4, fit = FALSE)
   expect_length(pg, 2L)
@@ -1372,6 +1431,7 @@ test_that("FT-TB3064 [FR-TB271]: each column block's header holds the kept colum
 })
 
 test_that("FT-TB3065 [FR-TB272]: a list of pages is cut alike; positions refer to the printed columns", {
+  skip_on_cran()
   tb <- rtftable(.g4_pc_df(), col_header = .g4_pc_hdr())
   out <- paginate_cols(list(a = tb, b = tb), at = 4, fit = FALSE)
   expect_length(out, 4L)
@@ -1402,6 +1462,7 @@ test_that("FT-TB3065 [FR-TB272]: a list of pages is cut alike; positions refer t
 })
 
 test_that("FT-TB3066 [FR-TB283]: paginate_cols() with no way to cut, or two, stops with the full message", {
+  skip_on_cran()
   tb <- rtftable(.g4_pc_df())
   expect_error(paginate_cols(tb),
                "One of `at` (the columns to cut before), `cut_by` or `every` is required.",
@@ -1417,6 +1478,7 @@ test_that("FT-TB3066 [FR-TB283]: paginate_cols() with no way to cut, or two, sto
 })
 
 test_that("FT-TB3067 [FR-TB285]: every column kept stops with the message of at/every or of cut_by", {
+  skip_on_cran()
   tb <- rtftable(.g4_pc_df())
   expect_error(paginate_cols(tb, at = 4, keep = 1:5),
                "`paginate_cols()` produced no column blocks: every column is a kept (row-heading) column.",
@@ -1427,6 +1489,7 @@ test_that("FT-TB3067 [FR-TB285]: every column kept stops with the message of at/
 })
 
 test_that("FT-TB3068 [FR-TB286]: paginate_cols() on a list that is not pages, or pages of differing columns, stops", {
+  skip_on_cran()
   expect_error(
     paginate_cols(list(1, 2), at = 2),
     "`paginate_cols()` on a list expects every element to be an rtftable (as returned by as_rtftables()); element 1 is 'numeric'.",
@@ -1445,6 +1508,7 @@ test_that("FT-TB3068 [FR-TB286]: paginate_cols() on a list that is not pages, or
 }
 
 test_that("FT-TB3069 [FR-TB301]: set_blank_rows() gives sorted, unique integer positions and leaves the data", {
+  skip_on_cran()
   df <- .g4_blank_df()
   out <- set_blank_rows(df, blank_rows = c(3, 1, 3, 0))
   expect_identical(attr(out, "rtf_blank_rows"), c(0L, 1L, 3L))
@@ -1454,6 +1518,7 @@ test_that("FT-TB3069 [FR-TB301]: set_blank_rows() gives sorted, unique integer p
 })
 
 test_that("FT-TB3070 [FR-TB306]: set_blank_rows() drops an NA and a position above nrow(data) without a warning; -1 is after the last row", {
+  skip_on_cran()
   df <- .g4_blank_df()
   expect_identical(attr(set_blank_rows(df, blank_rows = c(-1, 2)), "rtf_blank_rows"),
                    c(2L, nrow(df)))
@@ -1464,6 +1529,7 @@ test_that("FT-TB3070 [FR-TB306]: set_blank_rows() drops an NA and a position abo
 })
 
 test_that("FT-TB3071 [FR-TB308]: a by_change spec is resolved on this data frame, each page on its own rows", {
+  skip_on_cran()
   df <- .g4_blank_df()
   expect_identical(attr(set_blank_rows(df, blank_rows = blank_rows_by_change("g")),
                         "rtf_blank_rows"), c(2L, 4L))
@@ -1478,6 +1544,7 @@ test_that("FT-TB3071 [FR-TB308]: a by_change spec is resolved on this data frame
 })
 
 test_that("FT-TB3072 [FR-TB309]: a plain list of forms is unioned, duplicates dropped", {
+  skip_on_cran()
   df <- .g4_blank_df()
   out <- set_blank_rows(df, blank_rows = list(1L, blank_rows_by_change("g"),
                                               blank_rows_by_rule("g", "^C")))
@@ -1486,6 +1553,7 @@ test_that("FT-TB3072 [FR-TB309]: a plain list of forms is unioned, duplicates dr
 })
 
 test_that("FT-TB3073 [FR-TB313]: set_blank_rows(group_col) names the column groups are detected on", {
+  skip_on_cran()
   d3 <- data.frame(id = c("x1", "x2", "x3", "x4"), grp = c("A", "A", "B", "B"),
                    stringsAsFactors = FALSE)
   at <- function(...) attr(set_blank_rows(d3, "between_groups", ...), "rtf_blank_rows")
@@ -1499,6 +1567,7 @@ test_that("FT-TB3073 [FR-TB313]: set_blank_rows(group_col) names the column grou
 })
 
 test_that("FT-TB3074 [FR-TB315]: set_blank_rows(group_by) auto equals the matching mode; a bogus value is refused", {
+  skip_on_cran()
   d4 <- data.frame(g = c("A", "", "", "B", "", "C"), v = 1:6, stringsAsFactors = FALSE)
   at <- function(...) attr(set_blank_rows(d4, "between_groups", ...), "rtf_blank_rows")
   expect_identical(at(group_by = "filled"), c(3L, 5L))
@@ -1513,6 +1582,7 @@ test_that("FT-TB3074 [FR-TB315]: set_blank_rows(group_by) auto equals the matchi
 })
 
 test_that("FT-TB3075 [FR-TB317]: blank_rows_by_change() holds its four settings and no positions; set_blank_rows() resolves it", {
+  skip_on_cran()
   x <- blank_rows_by_change(c("a", "b"), group_by = "value", include_before_first = FALSE,
                             include_after_last = TRUE)
   expect_s3_class(x, "rtf_blank_rows_by_change")
@@ -1529,6 +1599,7 @@ test_that("FT-TB3075 [FR-TB317]: blank_rows_by_change() holds its four settings 
 })
 
 test_that("FT-TB3076 [FR-TB318]: a change in any of the columns gets a blank row", {
+  skip_on_cran()
   df <- data.frame(a = c("p", "p", "q", "q", "q"), b = c("u", "v", "v", "w", "w"),
                    stringsAsFactors = FALSE)
   expect_identical(rtftable(df, blank_rows = blank_rows_by_change("a"))$blank_rows,
@@ -1540,6 +1611,7 @@ test_that("FT-TB3076 [FR-TB318]: a change in any of the columns gets a blank row
 })
 
 test_that("FT-TB3077 [FR-TB323]: blank_rows_by_change(group_by = 'auto') on an indented column acts as 'indent'", {
+  skip_on_cran()
   d6 <- data.frame(g = c("P", "  a", "  b", "Q", "  c"), stringsAsFactors = FALSE)
   auto <- rtftable(d6, blank_rows = blank_rows_by_change("g", group_by = "auto"))$blank_rows
   indent <- rtftable(d6, blank_rows = blank_rows_by_change("g", group_by = "indent"))$blank_rows
@@ -1550,6 +1622,7 @@ test_that("FT-TB3077 [FR-TB323]: blank_rows_by_change(group_by = 'auto') on an i
 })
 
 test_that("FT-TB3078 [FR-TB325 FR-TB326]: any include_before_first / include_after_last other than TRUE counts as FALSE", {
+  skip_on_cran()
   df <- data.frame(a = c("p", "p", "q", "q", "q"), stringsAsFactors = FALSE)
   for (v in list("yes", 1, NA, FALSE)) {
     before <- rtftable(df, blank_rows = blank_rows_by_change("a", include_before_first = v))
@@ -1562,6 +1635,7 @@ test_that("FT-TB3078 [FR-TB325 FR-TB326]: any include_before_first / include_aft
 })
 
 test_that("FT-TB3079 [FR-TB327]: a column that is not in the data warns and the other columns still apply", {
+  skip_on_cran()
   df <- data.frame(a = c("p", "p", "q", "q", "q"), stringsAsFactors = FALSE)
   expect_warning(
     tb <- rtftable(df, blank_rows = blank_rows_by_change(c("x", "a"))),
@@ -1570,6 +1644,7 @@ test_that("FT-TB3079 [FR-TB327]: a column that is not in the data warns and the 
 })
 
 test_that("FT-TB3080 [FR-TB328]: one row has no change to find: only the before-first and after-last rows", {
+  skip_on_cran()
   one <- data.frame(g = "A", stringsAsFactors = FALSE)
   expect_identical(rtftable(one, blank_rows = blank_rows_by_change("g"))$blank_rows,
                    c(0L, 1L))
@@ -1578,6 +1653,7 @@ test_that("FT-TB3080 [FR-TB328]: one row has no change to find: only the before-
 })
 
 test_that("FT-TB3081 [FR-TB329]: a by_change spec resolved on a page never falls on its first or last row", {
+  skip_on_cran()
   df <- .g4_blank_df()
   spec <- blank_rows_by_change("g", include_before_first = TRUE, include_after_last = TRUE)
   pos <- attr(set_blank_rows(df, blank_rows = spec), "rtf_blank_rows")
@@ -1588,6 +1664,7 @@ test_that("FT-TB3081 [FR-TB329]: a by_change spec resolved on a page never falls
 })
 
 test_that("FT-TB3082 [FR-TB330]: blank_rows_by_rule() holds col, pattern and where", {
+  skip_on_cran()
   x <- blank_rows_by_rule("lab", "^Total", "after")
   expect_s3_class(x, "rtf_blank_rows_by_rule")
   expect_identical(names(unclass(x)), c("col", "pattern", "where"))
@@ -1598,6 +1675,7 @@ test_that("FT-TB3082 [FR-TB330]: blank_rows_by_rule() holds col, pattern and whe
 })
 
 test_that("FT-TB3083 [FR-TB333]: a missing value in the column never matches the pattern", {
+  skip_on_cran()
   df <- data.frame(lab = c("a", NA, "Total"), stringsAsFactors = FALSE)
   expect_identical(rtftable(df, blank_rows = blank_rows_by_rule("lab", "."))$blank_rows,
                    c(0L, 2L))                    # rows 1 and 3, a blank before each
@@ -1613,6 +1691,7 @@ test_that("FT-TB3083 [FR-TB333]: a missing value in the column never matches the
 }
 
 test_that("FT-TB3084 [FR-TB341]: the console preview of a split table shows the cells unsplit", {
+  skip_on_cran()
   tb <- rtftable(.g4_ds_df())
   sp <- set_decimal_split(tb, cols = 2)
   expect_false(is.null(sp$decimal_split))
@@ -1624,6 +1703,7 @@ test_that("FT-TB3084 [FR-TB341]: the console preview of a split table shows the 
 })
 
 test_that("FT-TB3085 [FR-TB343]: set_decimal_split() on a list of non-tables stops with the message", {
+  skip_on_cran()
   expect_error(
     set_decimal_split(list(1, 2), cols = 1),
     "`set_decimal_split()` on a list expects every element to be an rtftable (as returned by as_rtftables()); element 1 is 'numeric'.",
@@ -1631,6 +1711,7 @@ test_that("FT-TB3085 [FR-TB343]: set_decimal_split() on a list of non-tables sto
 })
 
 test_that("FT-TB3086 [FR-TB344]: set_decimal_split(cols) is stored as positions of the final printed columns", {
+  skip_on_cran()
   tb <- rtftable(.g4_ds_df())
   expect_identical(set_decimal_split(tb, cols = 2L)$decimal_split$cols, 2L)
   expect_identical(set_decimal_split(tb, cols = list("Mean", 3L))$decimal_split$cols, c(2L, 3L))
@@ -1643,6 +1724,7 @@ test_that("FT-TB3086 [FR-TB344]: set_decimal_split(cols) is stored as positions 
 })
 
 test_that("FT-TB3087 [FR-TB347]: set_decimal_split(cols) of a missing column or an outside position stops with the message", {
+  skip_on_cran()
   tb <- rtftable(.g4_ds_df())
   expect_error(set_decimal_split(tb, cols = "Nope"),
                "`set_decimal_split(cols)` column 'Nope' not found in the table.", fixed = TRUE)
@@ -1651,6 +1733,7 @@ test_that("FT-TB3087 [FR-TB347]: set_decimal_split(cols) of a missing column or 
 })
 
 test_that("FT-TB6701 [FR-TB120]: a read_meta token another adapter knows is skipped, a token no adapter knows stops, a wrong type stops", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   g <- gt::tab_header(gt::gt(data.frame(p = "x", stringsAsFactors = FALSE)), title = "TT")
   df <- data.frame(a = 1:2, b = 3:4)

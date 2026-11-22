@@ -101,6 +101,7 @@ test_that("FT-IX6801 [FR-IX319]: column_widths_twips wins outright and its sum i
 }
 
 test_that("FT-IX6802 [FR-IX321]: page_by moves group_col to the first column outside it, and with split = \"by_value\" the group is the outer axis and page_by the inner one, a group's pages keeping its name alone", {
+  skip_on_cran()
   lab <- .t13_lab()
   meta <- function(p) attr(p$data, "rtf_paginate_meta", exact = TRUE)
   first <- function(pg) unname(vapply(pg, function(p) p$data[[1L]][1L], ""))
@@ -155,6 +156,7 @@ test_that("FT-IX6802 [FR-IX321]: page_by moves group_col to the first column out
 }
 
 test_that("FT-IX6803 [FR-IX324]: with count_blank_rows a separator blank never lands on a page's first or last row, survives where a page holds two groups, and an explicit position is honoured wherever it lands", {
+  skip_on_cran()
   d <- .t13_nine()
   pages <- function(blank, mr) {
     as_rtftables(d, split = "group_safe", max_rows = mr, group_col = "G",
@@ -215,6 +217,7 @@ test_that("FT-IX6803 [FR-IX324]: with count_blank_rows a separator blank never l
 }
 
 test_that("FT-IX6804 [FR-IX330]: set_decimal_split() on a column with style_cols() / style_body() settings: per-cell alignment, border, fill and font follow onto both halves, the halves stay right and left, no interior rule or padding", {
+  skip_on_cran()
   df <- data.frame(Statistic = c("n", "Mean", "Category"),
                    Value = c("12", "3.45", "n (%)"), stringsAsFactors = FALSE)
   vert <- rtf_border(left = rtf_border_line("single"), right = rtf_border_line("single"),
@@ -303,6 +306,7 @@ test_that("FT-IX6804 [FR-IX330]: set_decimal_split() on a column with style_cols
 }
 
 test_that("FT-IX6805 [FR-IX338]: one rtf_border() is the whole table at rtftable(border = ), one kind of row at style_zone(), one cell at col_cell(border = ): the edges are the selection's outer frame, inside_h and inside_v the rules between its rows and cells", {
+  skip_on_cran()
   df <- data.frame(a = c("r1", "r2"), b = c("x", "y"), c = c("p", "q"),
                    stringsAsFactors = FALSE)
   # top single, bottom double, left dot, right dash, a thick rule between the

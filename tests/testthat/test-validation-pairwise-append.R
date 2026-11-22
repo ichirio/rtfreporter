@@ -373,6 +373,7 @@
 }
 
 test_that("FT-PL985 [FR-PL968 FR-PL903 FR-PL904 FR-PL905 FR-PL432 FR-PL433 FR-PL437]: pairwise -- plan_append() parts x heading x na x columns x paging x split x blank rows", {
+  skip_on_cran()
   dir <- tempfile("pa_a")
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
@@ -437,6 +438,7 @@ test_that("FT-PL985 [FR-PL968 FR-PL903 FR-PL904 FR-PL905 FR-PL432 FR-PL433 FR-PL
 }
 
 test_that("FT-PL986 [FR-PL969 FR-PL905 FR-PL433]: decision table -- a page break one row before, on and one row after a part's boundary", {
+  skip_on_cran()
   dir <- tempfile("pa_b")
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
@@ -537,6 +539,7 @@ test_that("FT-PL986 [FR-PL969 FR-PL905 FR-PL433]: decision table -- a page break
 }
 
 test_that("FT-LS162 [FR-LS254 FR-PL189 FR-PL196 FR-PL184 FR-PL432 FR-LS156]: decision table -- plan_listing(): a wrapped record, the key and the blank row at a page edge", {
+  skip_on_cran()
   dir <- tempfile("pa_c")
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
@@ -620,6 +623,7 @@ test_that("FT-LS162 [FR-LS254 FR-PL189 FR-PL196 FR-PL184 FR-PL432 FR-LS156]: dec
 })
 
 test_that("FT-LS163 [FR-LS255 FR-LS254]: a plan_listing() record longer than a page continues on the next page with no empty row before it", {
+  skip_on_cran()
   d <- data.frame(ID = c("S-01", "S-01"),
                   TERM = c("Headache", "Nausea and vomiting after the dose"),
                   SEV = c("MILD", "MODERATE"), stringsAsFactors = FALSE)
@@ -650,6 +654,7 @@ test_that("FT-LS163 [FR-LS255 FR-LS254]: a plan_listing() record longer than a p
 })
 
 test_that("FT-PL987 [FR-PL970]: plan_append() on a plan with plan_listing() stops and names the contents of a document", {
+  skip_on_cran()
   rec <- data.frame(ID = c("S-01", "S-01", "S-02", "S-02"), TP = rep(c("t1", "t2"), 2),
                     V = c(1.5, 2.5, 3.5, 4.5))
   lng <- data.frame(TP = c("t1", "t2"), variable = "V", stat_name = "mean",

@@ -165,6 +165,7 @@
 }
 
 test_that("FT-TB701 [FR-TB273 FR-TB274 FR-TB275 FR-TB276 FR-TB277 FR-TB278 FR-TB279 FR-TB281 FR-TB282 FR-TB289 FR-TB560]: pairwise -- cut x keep x spanner x allow_span_break x widths x fit x row pages x order", {
+  skip_on_cran()
   cand <- expand.grid(cut = c("fits", "every", "at", "list", "sep"), keep = c("default", "none", "two"),
                       span = c("none", "within", "across"), allow = c(TRUE, FALSE),
                       widths = c("default", "rel", "twips"), fit = c(TRUE, FALSE),
@@ -257,6 +258,7 @@ test_that("FT-TB701 [FR-TB273 FR-TB274 FR-TB275 FR-TB276 FR-TB277 FR-TB278 FR-TB
 }
 
 test_that("FT-PL926 [FR-PL433 FR-PL434 FR-PL435 FR-IX262 FR-TB121 FR-TB138 FR-PL920]: decision table -- split x a group longer than the budget x min_group_rows", {
+  skip_on_cran()
   dt <- data.frame(
     split = c("none", "rows", rep(c("group_safe", "group_force"), each = 4)),
     max   = c(NA, NA, rep(c(6, 6, 4, 4), 2)),
@@ -302,6 +304,7 @@ test_that("FT-PL926 [FR-PL433 FR-PL434 FR-PL435 FR-IX262 FR-TB121 FR-TB138 FR-PL
 # ---- (C) pairwise: the row axis ----------------------------------------------
 
 test_that("FT-PL927 [FR-PL433 FR-PL435 FR-PL436 FR-PL437 FR-PL192 FR-TB137 FR-IX262 FR-PL919]: pairwise -- split x max_rows x min_group_rows x cont_label x blank rows x page_by x titles", {
+  skip_on_cran()
   cand <- expand.grid(split = c("group_safe", "group_force"), max = c(3L, 5L, 8L), mgr = c(0L, 2L),
                       cont = c("default", "custom"), blanks = c("none", "between"),
                       by = c("none", "period"), titles = c("none", "set"), stringsAsFactors = FALSE)
@@ -409,6 +412,7 @@ test_that("FT-PL927 [FR-PL433 FR-PL435 FR-PL436 FR-PL437 FR-PL192 FR-TB137 FR-IX
 }
 
 test_that("FT-TB702 [FR-TB279 FR-PL461 FR-PL467 FR-TB280]: decision table -- the page order of group, row and column pages under every order", {
+  skip_on_cran()
   rp <- as_rtftables(.vp_both(), page_by = "PER", split = "by_value", group_col = "GRP")
   # G1 in P1 and P2, G2 in P1: the group outside the period
   expect_identical(vapply(rp, function(p) paste(p$data$R, collapse = " "), "", USE.NAMES = FALSE),
@@ -481,6 +485,7 @@ test_that("FT-TB702 [FR-TB279 FR-PL461 FR-PL467 FR-TB280]: decision table -- the
 }
 
 test_that("FT-PL928 [FR-PL433 FR-TB137 FR-TB138 FR-IX324]: counted blank rows with the group splits -- the groups are read as without them, a separator costs a row only between two groups on one page", {
+  skip_on_cran()
   dt <- data.frame(
     split = rep(c("group_safe", "group_force"), each = 4),
     max   = rep(c(3, 3, 4, 4), 2),
@@ -514,6 +519,7 @@ test_that("FT-PL928 [FR-PL433 FR-TB137 FR-TB138 FR-IX324]: counted blank rows wi
 })
 
 test_that("FT-PL929 [FR-TB137]: between_groups puts no blank row after a continuation row", {
+  skip_on_cran()
   pg <- as_rtftables(.vp_recs(), split = "group_force", max_rows = 4, group_col = "G",
                      blank_rows = "between_groups", min_group_rows = 0)
   expect_identical(.vp_layb(pg), "r01 r02 r03_ r04 | B+ r05 r06 r07 | B+ r08_ r09 r10 | r11 r12 r13 r14")
@@ -524,6 +530,7 @@ test_that("FT-PL929 [FR-TB137]: between_groups puts no blank row after a continu
 })
 
 test_that("FT-TB703 [FR-TB279]: a plain value split is the group axis of paginate_cols(order = )", {
+  skip_on_cran()
   d <- .vp_both()[-1L]
   rp <- as_rtftables(d, split = "by_value", group_col = "GRP", max_rows = 2)
   expect_identical(vapply(rp, function(p) attr(p$data, "rtf_paginate_meta")$page_group, ""),
@@ -538,6 +545,7 @@ test_that("FT-TB703 [FR-TB279]: a plain value split is the group axis of paginat
 })
 
 test_that("FT-TB704 [FR-TB282 FR-TB289]: allow_span_break = FALSE does not stop on the empty cell under the columns no spanner covers", {
+  skip_on_cran()
   d <- data.frame(ROW = c("a", "b"), A1 = "1", A2 = "2", B1 = "3", B2 = "4", B3 = "5")
   t <- rtftable(d, col_header = list(list(col_cell(2:3, "Span A")), names(d)))
   pg <- paginate_cols(t, at = "B2", allow_span_break = FALSE)
@@ -547,6 +555,7 @@ test_that("FT-TB704 [FR-TB282 FR-TB289]: allow_span_break = FALSE does not stop 
 })
 
 test_that("FT-TB705 [FR-TB279]: order = \"across\" takes one column block after another, \"down\" one row page after another", {
+  skip_on_cran()
   # two row pages (page_by) x three column blocks, as the help draws them
   d <- data.frame(PER = rep(c("P1", "P2"), each = 2), R = sprintf("r%02d", 1:4),
                   X1 = "x", X2 = "x", Y1 = "y", Y2 = "y", Z1 = "z", Z2 = "z")
@@ -559,6 +568,7 @@ test_that("FT-TB705 [FR-TB279]: order = \"across\" takes one column block after 
 })
 
 test_that("FT-PL930 [FR-TB138 FR-PL435]: min_group_rows counts a group's rows after its first row", {
+  skip_on_cran()
   # B (r04..r08) starts on a page of 5 with two rows, r04 and r05: one after its
   # first row, so min_group_rows = 2 moves it and 1 leaves it
   lay <- function(mgr) {

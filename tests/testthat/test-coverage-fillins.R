@@ -6,6 +6,7 @@
 # ── R/blank_rows.R: input validation + edge-case returns ────────────
 
 test_that("blank_rows_by_change() / by_rule() reject malformed arguments", {
+  skip_on_cran()
   expect_error(blank_rows_by_change(cols = character(0)),
                "non-empty character")
   expect_error(blank_rows_by_change(cols = NULL),
@@ -17,6 +18,7 @@ test_that("blank_rows_by_change() / by_rule() reject malformed arguments", {
 })
 
 test_that(".resolve_blank_rows() handles NULL / unknown / non-matching specs", {
+  skip_on_cran()
   # NULL spec -> integer(0)
   expect_identical(
     rtfreporter:::.resolve_blank_rows(NULL, data.frame(x = 1:3)),
@@ -31,6 +33,7 @@ test_that(".resolve_blank_rows() handles NULL / unknown / non-matching specs", {
 })
 
 test_that("blank_rows_by_change() warns + ignores missing columns", {
+  skip_on_cran()
   df <- data.frame(grp = c("A", "A", "B"), x = 1:3)
   spec <- blank_rows_by_change(cols = "missing_column")
   expect_warning(
@@ -40,6 +43,7 @@ test_that("blank_rows_by_change() warns + ignores missing columns", {
 })
 
 test_that("blank_rows_by_rule() warns + returns empty when col is missing", {
+  skip_on_cran()
   df <- data.frame(grp = c("A", "B", "A"), x = 1:3)
   spec <- blank_rows_by_rule(col = "missing_column", pattern = "^A$")
   expect_warning(
@@ -50,6 +54,7 @@ test_that("blank_rows_by_rule() warns + returns empty when col is missing", {
 })
 
 test_that("blank_rows_by_rule() with a pattern that matches nothing -> empty", {
+  skip_on_cran()
   df <- data.frame(grp = c("A", "B", "A"), x = 1:3)
   spec <- blank_rows_by_rule(col = "grp", pattern = "Z+")
   out <- rtfreporter:::.resolve_blank_rows(spec, df)
@@ -57,6 +62,7 @@ test_that("blank_rows_by_rule() with a pattern that matches nothing -> empty", {
 })
 
 test_that(".resolve_blank_rows() of an empty data.frame returns integer(0)", {
+  skip_on_cran()
   df0  <- data.frame(grp = character(0))
   spec <- blank_rows_by_change(cols = "grp")
   expect_identical(rtfreporter:::.resolve_blank_rows(spec, df0), integer(0))
@@ -69,11 +75,13 @@ test_that(".resolve_blank_rows() of an empty data.frame returns integer(0)", {
 # ── R/gt_adapter.R: extractor early returns ────────────────────────
 
 test_that(".extract_titles() returns NULL on a synthetic gt with no heading", {
+  skip_on_cran()
   fake <- structure(list(), class = c("gt_tbl", "list"))
   expect_null(rtfreporter:::.extract_titles(fake))
 })
 
 test_that(".parse_one_width() classifies px / pct / unknown / missing", {
+  skip_on_cran()
   expect_identical(rtfreporter:::.parse_one_width("100px")$kind, "px")
   expect_identical(rtfreporter:::.parse_one_width("40%")$kind,   "pct")
   expect_identical(rtfreporter:::.parse_one_width("3em")$kind,   "unknown")
@@ -81,6 +89,7 @@ test_that(".parse_one_width() classifies px / pct / unknown / missing", {
 })
 
 test_that(".extract_spanners_body() maps contiguous spanners; skips others", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   g <- gt::gt(head(mtcars, 1)[, c("mpg", "cyl", "disp")]) |>
     gt::tab_spanner(label = "Engine", columns = c(cyl, disp))
@@ -93,6 +102,7 @@ test_that(".extract_spanners_body() maps contiguous spanners; skips others", {
 })
 
 test_that(".strip_html_from_df() normalises break-only cells to empty", {
+  skip_on_cran()
   df  <- data.frame(a = c("<br />", "x<br/>y", "<b>z</b>"),
                     stringsAsFactors = FALSE)
   out <- rtfreporter:::.strip_html_from_df(df)
@@ -102,6 +112,7 @@ test_that(".strip_html_from_df() normalises break-only cells to empty", {
 })
 
 test_that(".extract_source_notes() handles all-NA notes -> NULL", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   g <- gt::gt(head(mtcars, 1)) |>
     gt::tab_source_note("ok")
@@ -111,6 +122,7 @@ test_that(".extract_source_notes() handles all-NA notes -> NULL", {
 })
 
 test_that(".extract_titles() returns NULL when only NA pieces are present", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   g <- gt::gt(head(mtcars, 1)) |>
     gt::tab_header(title = NA_character_, subtitle = NA_character_)
@@ -118,6 +130,7 @@ test_that(".extract_titles() returns NULL when only NA pieces are present", {
 })
 
 test_that(".gt_to_rtftable_kwargs() rejects a non-gt argument", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   expect_error(
     rtfreporter:::.gt_to_rtftable_kwargs(list()),
@@ -126,6 +139,7 @@ test_that(".gt_to_rtftable_kwargs() rejects a non-gt argument", {
 })
 
 test_that(".merge_gt_block() returns user when set, gt fallback otherwise", {
+  skip_on_cran()
   expect_identical(rtfreporter:::.merge_gt_block("U", "G"), "U")
   expect_identical(rtfreporter:::.merge_gt_block(NULL, "G"), "G")
   expect_null(rtfreporter:::.merge_gt_block(NULL, NULL))
@@ -135,6 +149,7 @@ test_that(".merge_gt_block() returns user when set, gt fallback otherwise", {
 # ── R/as_rtftable.R: merger edge cases ──────────────────────────────
 
 test_that(".merge_col_spec() returns either operand when the other is NULL", {
+  skip_on_cran()
   expect_null(rtfreporter:::.merge_col_spec(NULL, NULL))
   u <- list(list(col = 1L, bold = TRUE))
   expect_identical(rtfreporter:::.merge_col_spec(u, NULL), u)
@@ -142,6 +157,7 @@ test_that(".merge_col_spec() returns either operand when the other is NULL", {
 })
 
 test_that(".merge_col_spec() handles user entries that target NEW columns", {
+  skip_on_cran()
   gt_spec   <- list(list(col = 1L, align = "right"))
   user_spec <- list(list(col = 2L, italic = TRUE))     # new column 2
   out <- rtfreporter:::.merge_col_spec(user_spec, gt_spec)
@@ -150,6 +166,7 @@ test_that(".merge_col_spec() handles user entries that target NEW columns", {
 })
 
 test_that("as_rtftable() forwards `...` to rtftable (e.g. col_rel_width passes through)", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   g   <- gt::gt(head(mtcars, 1)[, c("mpg", "cyl")])
   tbl <- as_rtftable(g, read_meta = FALSE, col_rel_width = c(2, 1))
@@ -160,12 +177,14 @@ test_that("as_rtftable() forwards `...` to rtftable (e.g. col_rel_width passes t
 # ── R/paginate.R (.paginate_df): defensive empty-input paths ──────────────────────
 
 test_that(".paginate_df() of an empty data.frame returns one empty chunk", {
+  skip_on_cran()
   res <- rtfreporter:::.paginate_df(data.frame(x = integer(0)), max_rows = 5L)
   expect_length(res, 1L)
   expect_identical(nrow(res[[1L]]), 0L)
 })
 
 test_that(".paginate_df() of a one-page-fit data.frame returns the same data", {
+  skip_on_cran()
   # Hits the `nrow(df) <= max_rows -> single-chunk` early-return path.
   # `.paginate_df()` attaches an `rtf_paginate_meta` attribute to every
   # chunk; compare values only (drop attributes for the equality test).
@@ -178,6 +197,7 @@ test_that(".paginate_df() of a one-page-fit data.frame returns the same data", {
 })
 
 test_that(".paginate_df() errors on a list containing a garbage entry", {
+  skip_on_cran()
   expect_error(
     rtfreporter:::.paginate_df(data.frame(x = 1:5), max_rows = 3L,
                                blank_rows = list("not_a_spec_string")),

@@ -52,6 +52,7 @@
 }
 
 test_that("FT-AR5501 [FR-AR108]: normalize_ard() returns a factor key as a factor with its declared levels (unused included), a character key as character", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   dat <- data.frame(AGE = c(10, 20, 33, 41, 5, 6),
                     TRT = c("A", "B", "A", "B", "B", "A"))
@@ -73,6 +74,7 @@ test_that("FT-AR5501 [FR-AR108]: normalize_ard() returns a factor key as a facto
 })
 
 test_that("FT-AR5502 [FR-AR114]: normalize_ard(hierarchy = ) folds the rows of its variables into their key columns, with .label the deepest value and .depth its position; a variable outside it is depth 0 labelled by variable_level", {
+  skip_on_cran()
   h <- rbind(
     .t5_soc()[1:4, ],
     data.frame(group1 = "TRT", group1_level = c("A", "B"), group2 = NA_character_,
@@ -101,6 +103,7 @@ test_that("FT-AR5502 [FR-AR114]: normalize_ard(hierarchy = ) folds the rows of i
 })
 
 test_that("FT-AR5503 [FR-AR120]: a dropped ..ard_total_n.. row is kept as ard_total_n and .total_n when the ARD states exactly one total; two different totals are not remembered", {
+  skip_on_cran()
   with_totals <- function(vals) {
     d <- .t5_base()
     tot <- d[rep(1L, length(vals)), ]
@@ -160,6 +163,7 @@ test_that("FT-AR5504 [FR-AR138]: normalize_ard(stack = ) naming a column the fra
 })
 
 test_that("FT-AR5505 [FR-AR145]: widen_ard() fills a cell from the first template of its chain that resolves; a template naming a statistic the record lacks makes the cell NA, not an error", {
+  skip_on_cran()
   d <- normalize_ard(.t5_cat())
   w <- function(cells) widen_ard(d, cols = "TRT", cells = cells, notes = FALSE)
   # the first template that resolves wins (n 4 5 1, p 0.4 0.5 0.1 in arm A)
@@ -177,6 +181,7 @@ test_that("FT-AR5505 [FR-AR145]: widen_ard() fills a cell from the first templat
 })
 
 test_that("FT-AR5506 [FR-AR172]: widen_ard(labels = list(SEX = c(SEX = ..., F = ...))) recodes the analysis variable's levels in the label column, its own entry being the variable's label", {
+  skip_on_cran()
   d <- normalize_ard(.t5_cat())
   lab <- list(SEX = c(SEX = "Sex", F = "Female"))
   got <- widen_ard(d, cols = "TRT", rows = c(group = "variable"), cells = "{n:.0f}",
@@ -242,6 +247,7 @@ test_that("FT-AR5507 [FR-AR176]: widen_ard(sort = ) takes the scoped forms: one 
 })
 
 test_that("FT-AR5508 [FR-AR186]: widen_ard(show_keys = ) keeps the own tabulation of those row keys in the body as a variable's block; NULL leaves a key's own counts out", {
+  skip_on_cran()
   x <- data.frame(
     group1 = "TRT", group1_level = c("A", "B", "A", "B"),
     group2 = NA_character_, group2_level = NA_character_,

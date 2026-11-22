@@ -112,6 +112,7 @@ test_that("FT-TB6102 [FR-TB103]: as_rtftable() converts the one table of a gt_gr
 })
 
 test_that("FT-TB6103 [FR-TB109]: as_rtftable(drop_cols, sort_by, collapse_repeats, listing, header_sep, stub) act on the one page as in as_rtftables()", {
+  skip_on_cran()
   s <- data.frame(soc = c("S1", "S1", "S2"), pt = c("p1", "p2", "p3"),
                   n = c("1", "2", "3"), x = c("q", "r", "s"), stringsAsFactors = FALSE)
   # drop_cols removes the column
@@ -258,6 +259,7 @@ test_that("FT-TB6105 [FR-TB115]: a gt_group, a tfrmt page_plan render and a tbl_
 })
 
 test_that("FT-TB6106 [FR-TB116]: a list is flattened in order: one page keeps its name, several get name...n, a named split gets <list name>.<page name>, an empty list is list()", {
+  skip_on_cran()
   d <- data.frame(grp = c("A", "A", "B"), v = c("1", "2", "3"), stringsAsFactors = FALSE)
   df <- data.frame(x = 1:6)
   p <- as_rtftables(list(X = df, Y = df[1:2, , drop = FALSE]), split = "group_force",
@@ -374,6 +376,7 @@ test_that("FT-TB6107 [FR-TB118]: read_meta is TRUE by default, FALSE reads the b
 })
 
 test_that("FT-TB6108 [FR-TB148]: na = counts NaN as missing, Inf / -Inf print, the strings 'NA' and 'NaN' stay, the NAs collapse_repeats writes stay blank", {
+  skip_on_cran()
   m <- data.frame(g = c("a", "a", "b", "b", "b"), v = c(NaN, -Inf, Inf, NA, 2),
                   s = c("NA", "NaN", "NA", "NaN", "x"), stringsAsFactors = FALSE)
   b <- as_rtftables(m, na = "-")[[1L]]$data
@@ -401,6 +404,7 @@ test_that("FT-TB6108 [FR-TB148]: na = counts NaN as missing, Inf / -Inf print, t
 })
 
 test_that("FT-TB6109 [FR-TB155]: as_rtftables(listing = ) is NULL by default and reshapes a data.frame or tibble as build_listing() does", {
+  skip_on_cran()
   adsl <- data.frame(
     USUBJID = c("01-701-1015", "01-701-1023", "01-701-1028"),
     AEDECOD = c("HYPERGLYCAEMIA", "UPPER RESPIRATORY TRACT INFECTION", "SKIN ULCER"),
@@ -444,6 +448,7 @@ test_that("FT-TB6109 [FR-TB155]: as_rtftables(listing = ) is NULL by default and
 })
 
 test_that("FT-TB6110 [FR-TB119]: a data.frame's column label is its header label (on by default, 'labels'), a column without one keeps its name, tokens of other adapters are ignored", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   df <- data.frame(a = 1:2, b = 3:4, c = 5:6)
   attr(df$a, "label") <- "Label A"
@@ -548,6 +553,7 @@ test_that("FT-TB6111 [FR-TB161]: the stub is built before pagination, so drop_co
 }
 
 test_that("FT-TB6112 [FR-TB162]: header_sep rebuilds the spanning header from the names: stacked rows, merged adjacent cells, leaf names, blank cells, the default separators, NULL, literal separators", {
+  skip_on_cran()
   # three levels: Trt (columns 2-5) over A (2-3) and B (4-5) over the leaves; label has no
   # separator and keeps its name on the leaf row, Total____n has two segments
   nm <- c("label", "Trt____A____n", "Trt____A____pct", "Trt____B____n", "Trt____B____pct", "Total____n")
@@ -596,6 +602,7 @@ test_that("FT-TB6112 [FR-TB162]: header_sep rebuilds the spanning header from th
 }
 
 test_that("FT-TB6113 [FR-TB163]: auto_width = TRUE sizes each column to its widest content via auto_col_widths() and divides the table, it does not set its width; FALSE is the default", {
+  skip_on_cran()
   df <- data.frame(lab = c("a", "bbbbbbbbbbbbbbbbbb"), x = c("1", "2"), z = c("1", "2"),
                    stringsAsFactors = FALSE)
   names(df)[2L] <- "A very long header label here"
@@ -627,6 +634,7 @@ test_that("FT-TB6113 [FR-TB163]: auto_width = TRUE sizes each column to its wide
 })
 
 test_that("FT-TB6114 [FR-TB164]: table_width_twips is the table's total width in twips, NULL by default, as rtftable(table_width_twips = ) means it, with or without auto_width", {
+  skip_on_cran()
   df <- data.frame(lab = c("a", "b"), x = c("1", "2"), z = c("3", "4"), stringsAsFactors = FALSE)
   expect_null(formals(as_rtftables.default)$table_width_twips)
   expect_null(as_rtftables(df)[[1L]]$table_width_twips)
@@ -649,6 +657,7 @@ test_that("FT-TB6114 [FR-TB164]: table_width_twips is the table's total width in
 })
 
 test_that("FT-TB6115 [FR-TB166]: as_rtftables(...) forwards col_header, col_spec, row_title, col_rel_width, column_widths_twips, row_height_twips and cell_styles to every page; an explicit value wins over the source's; col_header is resolved after the stub and drop_cols", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   d <- data.frame(a = c("1", "2", "3"), b = c("4", "5", "6"), c = c("7", "8", "9"),
                   stringsAsFactors = FALSE)
@@ -695,6 +704,7 @@ test_that("FT-TB6115 [FR-TB166]: as_rtftables(...) forwards col_header, col_spec
 })
 
 test_that("FT-TB6116 [FR-TB167]: a caller's cell_styles with one element per body row follow their rows through the stub, the sort and the page split", {
+  skip_on_cran()
   d <- data.frame(k = c("c", "a", "b"), v = c("3", "1", "2"), stringsAsFactors = FALSE)
   # row i is bold when i is 1, i.e. the row "c / 3" in the caller's order
   sty <- lapply(1:3, function(i) list(bold = i == 1L))
@@ -872,6 +882,7 @@ test_that("FT-TB6119 [FR-TB577]: from a gt_tbl or gtsummary table as_rtftables()
 })
 
 test_that("FT-TB6120 [FR-TB578]: explicit gt::tab_style() declarations are carried (borders, bold, italic, underline, align on spanners, labels, body and stub cells); a label border promotes the label row; the verbs override; transparent theme borders are not carried", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   d <- data.frame(Item = c("Age", "Sex"), P = c("1", "2"), A = c("3", "4"), B = c("5", "6"),
                   stringsAsFactors = FALSE)
@@ -1005,6 +1016,7 @@ test_that("FT-TB6122 [FR-TB580]: from a flextable as_rtftables() reads the displ
 })
 
 test_that("FT-TB6123 [FR-TB581]: from a huxtable as_rtftables() reads the displayed text (number_format applied), the leaf labels and spanning header, the per-column alignment and the caption as the title; no footnotes", {
+  skip_on_cran()
   skip_if_not_installed("huxtable")
   d <- data.frame(a = c("x", "y"), b = c(1.234, 2.5), c = c(10, 20), stringsAsFactors = FALSE)
   hx <- huxtable::as_hux(d, add_colnames = TRUE)

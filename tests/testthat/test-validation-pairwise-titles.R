@@ -216,6 +216,7 @@
 }
 
 test_that("FT-DC290 [FR-DC189 FR-DC195 FR-DC206 FR-DC211 FR-DC283 FR-DC303 FR-DC305 FR-DC311 FR-TB176 FR-DC357]: pairwise -- block x form x rows x align x width x height x markup x tokens x pages", {
+  skip_on_cran()
   cand <- expand.grid(block = c("titles", "footnotes"), form = c("text", "table"),
                       rows = c("plain", "styled"),
                       align = c("none", "arg", "section", "both"),
@@ -239,6 +240,7 @@ test_that("FT-DC290 [FR-DC189 FR-DC195 FR-DC206 FR-DC211 FR-DC283 FR-DC303 FR-DC
 })
 
 test_that("FT-DC291 [FR-DC311 FR-DC315 FR-DC357]: decision table -- the block width from rtf_style(), the option and the default, in the table form only", {
+  skip_on_cran()
   rows <- list(
     list(style = NULL,    opt = NULL,   want = 5000L),
     list(style = "page",  opt = NULL,   want = 13680L),
@@ -282,6 +284,7 @@ test_that("FT-DC291 [FR-DC311 FR-DC315 FR-DC357]: decision table -- the block wi
 })
 
 test_that("FT-DC292 [FR-DC206 FR-DC211 FR-DC358]: decision table -- where a footnote row's cells land, with the block's align", {
+  skip_on_cran()
   rows <- list(
     list(row = "FQ1",                            align = NULL,     want = c(l = "FQ1")),
     list(row = "FQ2",                            align = "center", want = c(c = "FQ2")),

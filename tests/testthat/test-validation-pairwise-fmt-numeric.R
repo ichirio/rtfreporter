@@ -92,6 +92,7 @@
 }
 
 test_that("FT-FM108 [FR-FM148 FR-FM149 FR-FM151 FR-FM152 FR-FM153 FR-FM154 FR-FM155 FR-FM156 FR-FM157 FR-FM158 FR-FM160 FR-FM161 FR-FM162 FR-IX404]: fmt_numeric(): mode x cols x small x rounding x na x a rule's own small, pairwise", {
+  skip_on_cran()
   mode <- c("signif", "digits", "by_all", "by_default")
   cand <- expand.grid(mode = mode, cols = c("A", "AB", "pos", "AC"),
                       small = c("signif", "fixed"), rounding = c("NULL", "r", "sas"),
@@ -146,6 +147,7 @@ test_that("FT-FM108 [FR-FM148 FR-FM149 FR-FM151 FR-FM152 FR-FM153 FR-FM154 FR-FM
 })
 
 test_that("fmt_numeric() anchors: the help's own values for small and rounding, per mode", {
+  skip_on_cran()
   v <- data.frame(k = c("a", "b"), x = c(0.0004567, 23.445))
   expect_identical(fmt_numeric(v, "x", signif = 4)$x[1L], "0.0004567")
   expect_identical(fmt_numeric(v, "x", signif = 4, small = "fixed")$x[1L], "0.000")
@@ -157,6 +159,7 @@ test_that("fmt_numeric() anchors: the help's own values for small and rounding, 
 })
 
 test_that("FT-FM109 [FR-FM152 FR-FM159 FR-FM165 FR-FM166 FR-FM167 FR-FM169 FR-FM170 FR-FM171 FR-IX404]: fmt_numeric(): the calls it refuses, accepts or returns whole, by by x signif x digits x formats", {
+  skip_on_cran()
   d <- .fn_df()
   full <- list(n = list(digits = 0), Mean = list(signif = 4), SD = list(signif = 3))
   err <- function(..., msg) expect_error(fmt_numeric(d, ...), msg, fixed = TRUE)

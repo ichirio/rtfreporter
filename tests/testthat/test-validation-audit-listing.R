@@ -100,6 +100,7 @@
 #   a column not found; not an rtftable                     | FR-LS238/239| FT-LS011, FT-LS018, FT-TB100
 
 test_that("FT-LS151 [FR-LS248]: listing_take() and listing_split_after() take one string and one width or separator", {
+  skip_on_cran()
   for (bad in list(c("a", "b"), NA_character_, 1L, character(0))) {
     expect_error(listing_take(bad, 3), "`listing_take()`: `x` must be one string.", fixed = TRUE)
     expect_error(listing_split_after(bad, "/"), "`listing_split_after()`: `text` must be one string.",
@@ -117,6 +118,7 @@ test_that("FT-LS151 [FR-LS248]: listing_take() and listing_split_after() take on
 })
 
 test_that("FT-LS152 [FR-LS249]: listing_split_after() takes any separator literally", {
+  skip_on_cran()
   expect_identical(listing_split_after("a\\Eb\\Ec", "\\E"), c("a\\E", "b\\E", "c"))
   expect_identical(listing_split_after("a\\b", "\\"), c("a\\", "b"))
   expect_identical(listing_split_after("a.*b.*", ".*"), c("a.*", "b.*"))
@@ -130,6 +132,7 @@ test_that("FT-LS152 [FR-LS249]: listing_split_after() takes any separator litera
 })
 
 test_that("FT-LS153 [FR-LS250]: a landscape A4 page with half-inch margins holds 159 characters at 8pt, 142 at 9pt", {
+  skip_on_cran()
   d <- data.frame(USUBJID = c("EX-001", "EX-002"), AETERM = c("HEADACHE", "NAUSEA"))
   spec <- listing_spec(list(listing_col("USUBJID"), listing_col("AETERM")))
   pg <- rtf_page(paper_size = "A4", orientation = "landscape",

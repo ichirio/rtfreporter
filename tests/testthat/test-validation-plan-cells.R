@@ -189,6 +189,7 @@
 # ---- (A) the template's key ------------------------------------------------
 
 test_that("FT-PL916 [FR-PL226 FR-PL227 FR-AR163]: decision table -- the template is the first key set of variable > context > kind > default", {
+  skip_on_cran()
   n <- 0L
   for (var in names(.PC_KEYS)) {
     .cran_cut(match(var, names(.PC_KEYS)))
@@ -226,6 +227,7 @@ test_that("FT-PL916 [FR-PL226 FR-PL227 FR-AR163]: decision table -- the template
 }
 
 test_that("FT-PL917 [FR-PL239]: decision table -- a split record reads variable > group > context > kind, a whole one variable > context > kind > group", {
+  skip_on_cran()
   base <- table_plan(.pc_sg(), cols = c("TRT", ".stat_group"), rows = c(group = "variable"),
                      label = c(row = "LBL")) |>
     plan_stat_groups(N = "n", msd = c("mean", "sd"), .variables = "ALT", .others = "N")
@@ -258,6 +260,7 @@ test_that("FT-PL917 [FR-PL239]: decision table -- a split record reads variable 
 # ---- (C) the digits' key ----------------------------------------------------
 
 test_that("FT-PL918 [FR-PL236 FR-PL240 FR-PL242 FR-PL915]: decision table -- the digits are the first key set of variable > context > kind > default, apart from the template's", {
+  skip_on_cran()
   tpl <- list(AGE = c(Stat = "{mean} ({sd})"), SEX = "{n} ({p:%})")
   cells <- list(ctxc = tpl$AGE, continuous = tpl$AGE, ctxt = tpl$SEX, categorical = tpl$SEX,
                 WT = c(Stat = "{mean:.1f}"))
@@ -294,6 +297,7 @@ test_that("FT-PL918 [FR-PL236 FR-PL240 FR-PL242 FR-PL915]: decision table -- the
 # ---- (D) a statistic falls through -----------------------------------------
 
 test_that("FT-PL919 [FR-PL241 FR-PL242]: decision table -- a statistic the narrower value does not name falls through to the wider one", {
+  skip_on_cran()
   narrow <- list(none = NULL, one = 3L, mean = c(mean = 3L), sd = c(sd = 2L),
                  both = c(mean = 3L, sd = 2L))
   wide <- list(none = NULL, one = 1L, mean = c(mean = 1L), sd = c(sd = 0L),
@@ -320,6 +324,7 @@ test_that("FT-PL919 [FR-PL241 FR-PL242]: decision table -- a statistic the narro
 # ---- (E) layers ---------------------------------------------------------------
 
 test_that("FT-PL920 [FR-PL229 FR-PL242 FR-IX257 FR-PL916]: decision table -- a later layer replaces the whole entry of the keys it names and keeps the rest", {
+  skip_on_cran()
   base <- plan_cells(.pc_base(), continuous = c(Stat = "{mean} ({sd})"), SEX = "{n:.0f}",
                      notes = FALSE)
   # layers of plan_digits(); the digits of mean and sd for AGE and for WT
@@ -375,6 +380,7 @@ test_that("FT-PL920 [FR-PL229 FR-PL242 FR-IX257 FR-PL916]: decision table -- a l
 # ---- (F) pairwise: template x digits ------------------------------------------
 
 test_that("FT-PL921 [FR-PL227 FR-PL240 FR-PL241 FR-IX202 FR-PL915 FR-PL917]: pairwise -- template key x digits key x digits form x token x stat_fmt x value", {
+  skip_on_cran()
   cand <- expand.grid(var = c("AGE", "SEX"),
                       tkey = c("variable", "context", "kind", "unnamed", "default"),
                       dkey = c("variable", "template", "unnamed"),
@@ -428,6 +434,7 @@ test_that("FT-PL921 [FR-PL227 FR-PL240 FR-PL241 FR-IX202 FR-PL915 FR-PL917]: pai
 }
 
 test_that("FT-PL922 [FR-PL244 FR-PL360 FR-PL362 FR-PL363 FR-PL365 FR-PL366 FR-PL912 FR-PL918]: pairwise -- the stub: layout x indent x name x heading x before x digits", {
+  skip_on_cran()
   cand <- expand.grid(layout = c("cells", "rows"), indent = c("unset", "2", "0"),
                       name = c("rl", "row_label"), heading = c("unset", "blank", "Parameter"),
                       before = c(FALSE, TRUE), digits = c("none", "set"), stringsAsFactors = FALSE)
@@ -472,6 +479,7 @@ test_that("FT-PL922 [FR-PL244 FR-PL360 FR-PL362 FR-PL363 FR-PL365 FR-PL366 FR-PL
 # ---- (H) rounding ----------------------------------------------------------------
 
 test_that("FT-PL923 [FR-PL243 FR-AR178]: decision table -- the rounding family reaches the digits from any key and a token's own", {
+  skip_on_cran()
   d <- .pc_ard()
   d$stat[d$variable == "AGE" & d$stat_name == "mean"] <- 2.125
   base <- function(t) plan_cells(.pc_base(d), AGE = c(Stat = t), WT = c(Stat = "{mean:.1f}"),
@@ -497,6 +505,7 @@ test_that("FT-PL923 [FR-PL243 FR-AR178]: decision table -- the rounding family r
 # ---- (I) a context or kind digits key, any template key ------------------------
 
 test_that("FT-PL924 [FR-PL242 FR-PL915]: decision table -- a digits key of a context or a kind reaches the cells whatever key their template has", {
+  skip_on_cran()
   tpl <- list(AGE = "{mean} ({sd})", SEX = "{n} ({p:%})")
   x <- list(AGE = c(31.2468, 4.1357), SEX = c(12, 0.6))
   spec <- list(AGE = c("", ""), SEX = c("", "%"))
@@ -524,6 +533,7 @@ test_that("FT-PL924 [FR-PL242 FR-PL915]: decision table -- a digits key of a con
 # ---- (J) the digits with stat groups ---------------------------------------------
 
 test_that("FT-PL925 [FR-PL239 FR-PL242 FR-PL915]: decision table -- with stat groups the digits reach split and whole records in the order of their template", {
+  skip_on_cran()
   base <- table_plan(.pc_sg(), cols = c("TRT", ".stat_group"), rows = c(group = "variable"),
                      label = c(row = "LBL")) |>
     plan_stat_groups(N = "n", msd = c("mean", "sd"), .variables = "ALT", .others = "N")

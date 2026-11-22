@@ -175,6 +175,7 @@
 }
 
 test_that("FT-TB988 [FR-TB366 FR-TB369 FR-TB370 FR-TB371 FR-TB372 FR-TB373 FR-TB374 FR-TB375 FR-TB626 FR-TB627 FR-IX406]: auto_col_widths(): data x header x font x size x table width x minimum x padding x protected columns, pairwise", {
+  skip_on_cran()
   cand <- expand.grid(data = c("base", "short"),
                       header = names(.aw_headers), font = c("NULL", "Courier New", "courier"),
                       size = c(18L, 24L), width = c("NULL", "wide", "narrow"),
@@ -210,6 +211,7 @@ test_that("FT-TB988 [FR-TB366 FR-TB369 FR-TB370 FR-TB371 FR-TB372 FR-TB373 FR-TB
 })
 
 test_that("FT-TB989 [FR-TB371 FR-TB372 FR-TB374 FR-IX406]: auto_col_widths(): protect_cols against the table width, the decision table", {
+  skip_on_cran()
   d <- .aw_df()
   nat <- as.integer(auto_col_widths(d))
   expect_gt(min(nat), 720L)
@@ -248,6 +250,7 @@ test_that("FT-TB989 [FR-TB371 FR-TB372 FR-TB374 FR-IX406]: auto_col_widths(): pr
 })
 
 test_that("FT-TB990 [FR-TB371 FR-TB372 FR-TB374 FR-TB626 FR-TB627 FR-IX406]: auto_col_widths(): the minimum against the table width, the decision table", {
+  skip_on_cran()
   d <- .aw_df_short()
   nat <- auto_col_widths(d)
   expect_identical(nat, c(1588L, 1588L, 720L, 720L))

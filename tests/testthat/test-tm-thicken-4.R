@@ -12,6 +12,7 @@
 }
 
 test_that("FT-PL5301 [FR-PL446]: a row budget with split rows / none / by_value stops at plan_apply(), saying what to do", {
+  skip_on_cran()
   p <- table_plan(.t4_wide())
   # split = "rows": the message names the budget and the split, and says to drop it
   e <- tryCatch(plan_apply(plan_paginate_rows(p, max_rows = 4, split = "rows", break_before = 3), "args"),
@@ -34,6 +35,7 @@ test_that("FT-PL5301 [FR-PL446]: a row budget with split rows / none / by_value 
 })
 
 test_that("FT-PL5302 [FR-PL457]: plan_paginate_group(heading = , heading_at = ) that is not allowed stops, with the message", {
+  skip_on_cran()
   p <- table_plan(.t4_wide())
   msg_h <- "plan_paginate_group(heading = ) is one text with `{value}` and `{n}`: \"Treatment: {value} (N={n})\"."
   for (bad in list(c("a", "b"), "", NA_character_, 1, character(0), TRUE)) {
@@ -51,6 +53,7 @@ test_that("FT-PL5302 [FR-PL457]: plan_paginate_group(heading = , heading_at = ) 
 })
 
 test_that("FT-PL5303 [FR-PL960]: plan_sort(keep = , stat = ) and plan_filter(by = ) refuse what is not allowed, with the message", {
+  skip_on_cran()
   p <- table_plan(.t4_wide())
   mk <- "plan_sort(keep = ) is TRUE (the sort keys stay) or FALSE (hide them)."
   for (bad in list(NA, "yes", 1, c(TRUE, FALSE), c(TRUE, TRUE), logical(0))) {
@@ -126,6 +129,7 @@ test_that("FT-PL5303 [FR-PL960]: plan_sort(keep = , stat = ) and plan_filter(by 
 .t4_tab <- function(p) as.data.frame(plan_apply(p, "table"))
 
 test_that("FT-PL5304 [FR-PL201]: plan_apply(stage = 'input') is the frame going in: roles copied, label coalesced, overall rows relabelled; a finished table or listing is the data", {
+  skip_on_cran()
   d <- data.frame(TRT = rep(c("A", "B"), each = 4L), PC = rep(c("ALT", "AST"), 4L),
                   STAT = rep(c("n", "mean"), each = 2L, times = 2L),
                   VAL = c(20, 19, 31.2, 28.7, 18, 17, 33.1, 30.2),
@@ -218,6 +222,7 @@ test_that("FT-PL5305 [FR-PL211 FR-PL212 FR-PL213]: plan_layers() declared order,
 })
 
 test_that("FT-PL5306 [FR-PL227]: one unnamed entry is the default; variable, context, kind, stat group and default entries are picked by specificity", {
+  skip_on_cran()
   b <- function(v, x, ctx) data.frame(
     group1 = "TRT", group1_level = rep(c("A", "B"), each = 2L), variable = v,
     variable_level = NA_character_, context = ctx, stat_name = rep(c("N", "mean"), 2L),
@@ -257,6 +262,7 @@ test_that("FT-PL5306 [FR-PL227]: one unnamed entry is the default; variable, con
 })
 
 test_that("FT-PL5307 [FR-PL232]: plan_cells(notes = TRUE) says which statistics no template used, notes = FALSE says nothing, also under rtf_tables()", {
+  skip_on_cran()
   d <- .t4_ard()
   said <- function(f) {
     out <- character()
@@ -281,6 +287,7 @@ test_that("FT-PL5307 [FR-PL232]: plan_cells(notes = TRUE) says which statistics 
 })
 
 test_that("FT-PL5308 [FR-PL268]: two column keys fold the innermost into <value>____Total; records with no outer key make no column; no overall rows stops", {
+  skip_on_cran()
   rec <- function(g1, l1, g2, l2, x) data.frame(
     group1 = g1, group1_level = l1, group2 = g2, group2_level = l2, variable = "AGE",
     variable_level = NA_character_, context = "continuous", stat_name = "mean",
@@ -407,6 +414,7 @@ test_that("FT-PL5312 [FR-PL331]: plan_empty() twice: the later text, when, posit
 }
 
 test_that("FT-PL5313 [FR-PL350 FR-PL355]: plan_template() writes the table_plan pipeline (rows, cells, display verbs) and, with form = 'widen', the immediate form with the keys outside cols as rows", {
+  skip_on_cran()
   ard <- .t4_hier()
   res <- withVisible(plan_template(ard, cols = "TRT"))
   out <- utils::capture.output(print(res$value))
@@ -455,6 +463,7 @@ test_that("FT-PL5313 [FR-PL350 FR-PL355]: plan_template() writes the table_plan 
 })
 
 test_that("FT-PL5314 [FR-PL352]: plan_template() writes plan_col_header(values = list(n = TRUE), header = function(n) ...) only for one cols key with one denominator per column; otherwise a comment, and the code still parses", {
+  skip_on_cran()
   one <- .t4_template(.t4_ard(), cols = "TRT")
   txt <- paste(one, collapse = "\n")
   expect_true(grepl("rtfreporter::plan_col_header(\n    values = list(n = TRUE),\n    header = function(n)", txt, fixed = TRUE))
@@ -487,6 +496,7 @@ test_that("FT-PL5314 [FR-PL352]: plan_template() writes plan_col_header(values =
 })
 
 test_that("FT-PL5315 [FR-PL358]: plan_template(pipe = NULL) follows the option, then RStudio's preference, then %>%; another value stops", {
+  skip_on_cran()
   ard <- .t4_ard()
   old <- options(rtfreporter.ard_pipe = NULL)
   on.exit(options(old), add = TRUE)
@@ -551,6 +561,7 @@ test_that("FT-PL5316 [FR-PL361 FR-PL476]: the derived stub is the row keys (or g
 })
 
 test_that("FT-PL5317 [FR-PL400]: a hidden column still does its work: a page_by key hidden cuts and names the pages; positions count the printed columns", {
+  skip_on_cran()
   w <- data.frame(grp = c("A", "A", "B", "B"), label = c("n", "Mean", "n", "Mean"),
                   X = c("1", "2.5", "3", "4.5"), Y = c("7", "8.5", "9", "10.5"), stringsAsFactors = FALSE)
   p <- table_plan(w) |> plan_paginate_rows(page_by = "grp", max_rows = 10, split = "group_safe") |>
@@ -578,6 +589,7 @@ test_that("FT-PL5317 [FR-PL400]: a hidden column still does its work: a page_by 
 })
 
 test_that("FT-PL5318 [FR-PL126 FR-PL128]: table_plan() refuses a raw cards ARD or a non-data-frame, and a stat = naming parts wrongly", {
+  skip_on_cran()
   # a raw cards ARD (context and the group pairs, no .label / .kind) and anything that is no data frame
   raw <- data.frame(group1 = "TRT", group1_level = c("A", "B"), variable = "AGE",
                     context = "continuous", stat_name = "mean", stat_label = "Mean",
@@ -602,6 +614,7 @@ test_that("FT-PL5318 [FR-PL126 FR-PL128]: table_plan() refuses a raw cards ARD o
 })
 
 test_that("FT-PL5319 [FR-PL377]: {n} in a spanner takes the single value given; {n:sum} totals the columns the cell covers (Total left out); {n:<column>} names one column", {
+  skip_on_cran()
   rec <- function(g1, l1, x) data.frame(
     group1 = g1, group1_level = l1, variable = "AGE", variable_level = NA_character_,
     context = "continuous", stat_name = "mean", stat_label = "mean", stat = x,
@@ -714,6 +727,7 @@ test_that("FT-PL5321 [FR-PL385]: values = list(n = 'page', N = 'table') chooses 
 })
 
 test_that("FT-PL5322 [FR-PL387]: plan_col_header(header_sep = ) is as_rtftables(header_sep = ), splits a plain table's names into spanning rows and wins over plan_columns(sep = )", {
+  skip_on_cran()
   w <- data.frame(label = c("a", "b"), `Placebo--F` = c("1", "2"), `Placebo--M` = c("3", "4"),
                   `Drug--F` = c("5", "6"), check.names = FALSE, stringsAsFactors = FALSE)
   p <- table_plan(w) |> plan_col_header(header_sep = "--")
@@ -734,6 +748,7 @@ test_that("FT-PL5322 [FR-PL387]: plan_col_header(header_sep = ) is as_rtftables(
 })
 
 test_that("FT-PL5323 [FR-PL944]: plan_paginate_rows(max_rows = ) with the split left out pages with 'group_safe' (a listing leaves it to the listing); a split with no row budget stops", {
+  skip_on_cran()
   d <- data.frame(grp = rep(c("A", "B", "C"), each = 2L), v = as.character(1:6), stringsAsFactors = FALSE)
   p <- table_plan(d)
   # the split left out: group_safe (whole groups to a page), the budget kept
@@ -760,6 +775,7 @@ test_that("FT-PL5323 [FR-PL944]: plan_paginate_rows(max_rows = ) with the split 
 })
 
 test_that("FT-PL5324 [FR-PL906]: a part carrying a whole-table setting, another column key or a non-plan stops; a part may carry its own row verbs and runs on its own", {
+  skip_on_cran()
   rec <- data.frame(ID = rep(c("A", "B"), each = 3), T = rep(c("t1", "t2", "t3"), 2),
                     V = c(1.234, 2.5, NA, 3, 4.25, 5), stringsAsFactors = FALSE)
   long <- data.frame(T = c("t1", "t2", "t3"), variable = "V", stat_name = "mean", stat = c(1.5, 2.5, 3.5),

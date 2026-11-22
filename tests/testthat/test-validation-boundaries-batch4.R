@@ -159,6 +159,7 @@
 }
 
 test_that("FT-AS142 [FR-AS148 FR-AS153 FR-AS247]: assemble_folder(): equivalence classes and boundaries of dir, recursive and spec_file", {
+  skip_on_cran()
   E <- .eb4_err
   O <- .eb4_obj
   d <- .eb4_dirs()
@@ -218,6 +219,7 @@ test_that("FT-AS142 [FR-AS148 FR-AS153 FR-AS247]: assemble_folder(): equivalence
 # ---- fmt_signif() / fmt_numeric() --------------------------------------------
 
 test_that("FT-FM107 [FR-FM146 FR-FM173]: fmt_signif() and fmt_numeric(): zero significant digits, the minimum of digits and signif", {
+  skip_on_cran()
   E <- .eb4_err
   O <- .eb4_obj
   is <- function(v) function(x) identical(x, v)
@@ -274,6 +276,7 @@ test_that("FT-FM107 [FR-FM146 FR-FM173]: fmt_signif() and fmt_numeric(): zero si
 }
 
 test_that("FT-PL980 [FR-PL157 FR-PL160 FR-PL161 FR-PL162 FR-PL163 FR-PL961]: plan_columns(): equivalence classes and boundaries of widths and decimal", {
+  skip_on_cran()
   E <- .eb4_err
   O <- .eb4_obj
   wd <- "^plan_columns\\(widths = \\) is positive finite numbers, one a column in order or named by column."
@@ -323,6 +326,7 @@ test_that("FT-PL980 [FR-PL157 FR-PL160 FR-PL161 FR-PL162 FR-PL163 FR-PL961]: pla
 })
 
 test_that("FT-PL981 [FR-PL257 FR-PL258 FR-PL261 FR-PL930 FR-PL932 FR-PL962 FR-PL963]: plan_labels(): equivalence classes and boundaries of its entries", {
+  skip_on_cran()
   E <- .eb4_err
   O <- .eb4_obj
   tb <- function(p) plan_apply(p, "table")
@@ -376,6 +380,7 @@ test_that("FT-PL981 [FR-PL257 FR-PL258 FR-PL261 FR-PL930 FR-PL932 FR-PL962 FR-PL
 }
 
 test_that("FT-PL982 [FR-PL318 FR-PL319 FR-PL323 FR-PL324 FR-PL964]: plan_nest(): equivalence classes and boundaries of its entries", {
+  skip_on_cran()
   E <- .eb4_err
   O <- .eb4_obj
   ind <- strrep(" ", 4)
@@ -479,6 +484,7 @@ test_that("FT-PL983 [FR-PL289 FR-PL290 FR-PL292 FR-PL298 FR-PL299 FR-PL300 FR-PL
 })
 
 test_that("FT-PL984 [FR-PL965 FR-PL966 FR-PL967]: plan_cells() and plan_compare(): equivalence classes and boundaries of a cell rule", {
+  skip_on_cran()
   E <- .eb4_err
   O <- .eb4_obj
   # plan_cells(continuous = ) over AGE by arm, no comparison records
