@@ -39,3 +39,11 @@ Results of the release test run:
 * The screenshots of example output are the PNG files in `man/figures`,
   for the README and the package's website; the example `.rtf` files
   are in the package too.
+* The installed size is about 8 MB, which may give an "installed package
+  size" NOTE.  Most of it is two folders the package is validated with:
+  `inst/rtf-examples` (about 5 MB, the reference RTF outputs the tests
+  compare against and the user opens as examples) and `inst/validation`
+  (about 2 MB, the requirements, the traceability between them and the
+  tests, and the review records; the tests read them).  They are kept in
+  the package so that a user can re-run the validation on their own
+  installation.
