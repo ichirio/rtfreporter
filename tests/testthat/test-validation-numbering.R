@@ -76,6 +76,7 @@
 .vn_static <- function(x) .vn_tok(x, "Pg [0-9]+ of [0-9]+")
 
 test_that("FT-AS126 [FR-AS125 FR-AS126 FR-AS130 FR-AS140 FR-AS141 FR-IX111 FR-IX383 FR-IX384 FR-AS235 FR-IX396]: decision table -- cover x contents pages x inputs, one page sequence", {
+  skip_on_cran()
   d <- tempfile("vn-in-")
   o <- tempfile("vn-out-")
   dir.create(d)
@@ -94,6 +95,7 @@ test_that("FT-AS126 [FR-AS125 FR-AS126 FR-AS130 FR-AS140 FR-AS141 FR-IX111 FR-IX
                     inputs = c("two", "three"), stringsAsFactors = FALSE)
   expect_identical(nrow(dt), 12L)
   for (i in seq_len(nrow(dt))) {
+    .cran_cut(i)
     r <- dt[i, ]
     label <- paste(r$cover, r$toc, r$inputs, sep = " / ")
     files <- inputs[[r$inputs]]
@@ -130,6 +132,7 @@ test_that("FT-AS126 [FR-AS125 FR-AS126 FR-AS130 FR-AS140 FR-AS141 FR-IX111 FR-IX
 })
 
 test_that("FT-AS127 [FR-IX383 FR-IX385]: decision table -- assemble_folder() numbers as assemble_rtf() does with the same contents", {
+  skip_on_cran()
   d <- tempfile("vn-fold-")
   o <- tempfile("vn-fold-out-")
   dir.create(d)

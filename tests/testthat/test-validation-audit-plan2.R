@@ -126,6 +126,7 @@
 .nb <- function(k) strrep(" ", k)
 
 test_that("FT-PL954 [FR-PL945]: plan_append(name = ) is one non-empty string, the part's entry in plan_layers()", {
+  skip_on_cran()
   parent <- .a2_parent()
   for (bad in list("", NA_character_, c("a", "b"), 1)) {
     expect_error(parent |> plan_append(.a2_child(), name = bad),
@@ -138,6 +139,7 @@ test_that("FT-PL954 [FR-PL945]: plan_append(name = ) is one non-empty string, th
 })
 
 test_that("FT-PL955 [FR-PL946]: a part takes the parent's cells, labels and row-key levels it does not say, key by key", {
+  skip_on_cran()
   parent <- table_plan(.a2_two(c(1.25, 2.5, 3.75, 4)), cols = "T", rows = c(group = "variable")) |>
     plan_cells(c(Mean = "{mean:.1f}")) |>
     plan_labels(variable = c(V = "Vee", W = "Dub")) |>
@@ -159,6 +161,7 @@ test_that("FT-PL955 [FR-PL946]: a part takes the parent's cells, labels and row-
 })
 
 test_that("FT-PL956 [FR-PL947]: every part is folded into the parent's plan_stub(name = , indent = )", {
+  skip_on_cran()
   parent <- .a2_parent() |> plan_stub(name = "Subject", indent = 2L)
   t <- .a2_tab(parent |> plan_append(.a2_child()))
   expect_identical(names(t), c("Subject", "t1", "t2", "t3", ".part"))
@@ -166,6 +169,7 @@ test_that("FT-PL956 [FR-PL947]: every part is folded into the parent's plan_stub
 })
 
 test_that("FT-PL957 [FR-PL948]: the whole table's settings may come before plan_append(); the later of two wins", {
+  skip_on_cran()
   hdr <- function(p) plan_apply(p, "pages")[[1L]]$col_header[[1L]]
   before <- .a2_parent() |> plan_col_header(rtf_col_header(c("Subject", "{col}"))) |>
     plan_append(.a2_child())
@@ -178,6 +182,7 @@ test_that("FT-PL957 [FR-PL948]: the whole table's settings may come before plan_
 })
 
 test_that("FT-PL958 [FR-PL949]: a part may filter, sort and order its own rows and leave cols out; a column style stops", {
+  skip_on_cran()
   m <- .a2_mean()
   two <- rbind(m, transform(m, variable = "Z", stat = c(9, 8, 7)))
   child <- table_plan(two, cols = "T", rows = c(group = "variable")) |>
@@ -204,6 +209,7 @@ test_that("FT-PL958 [FR-PL949]: a part may filter, sort and order its own rows a
 })
 
 test_that("FT-PL959 [FR-PL950]: the parent's plan_blanks(first = , last = ) are the table's top and bottom", {
+  skip_on_cran()
   pg <- plan_apply(.a2_parent() |> plan_append(.a2_child()) |>
                      plan_blanks(first = TRUE, last = TRUE), "pages")[[1L]]
   expect_identical(nrow(pg$data), 4L)                 # no blank row between the parts
@@ -219,6 +225,7 @@ test_that("FT-PL959 [FR-PL950]: the parent's plan_blanks(first = , last = ) are 
   stringsAsFactors = FALSE)
 
 test_that("FT-PL960 [FR-PL951]: plan_listing() takes bare column names as listing_col(<name>)", {
+  skip_on_cran()
   bare <- plan_apply(table_plan(.a2_ae()) |> plan_listing("USUBJID", "AETERM"))
   cols <- plan_apply(table_plan(.a2_ae()) |>
                        plan_listing(listing_col("USUBJID"), listing_col("AETERM")))
@@ -227,6 +234,7 @@ test_that("FT-PL960 [FR-PL951]: plan_listing() takes bare column names as listin
 })
 
 test_that("FT-PL961 [FR-PL952]: a wrapped record moves whole to the next page; one longer than a page is cut", {
+  skip_on_cran()
   base <- table_plan(.a2_ae()) |>
     plan_listing(listing_col("USUBJID", width = 8), listing_col("AETERM", width = 10))
   terms <- function(mr) {
@@ -247,6 +255,7 @@ test_that("FT-PL961 [FR-PL952]: a wrapped record moves whole to the next page; o
 # ---- plan_hide(), plan_cell_style() ----------------------------------------------
 
 test_that("FT-PL962 [FR-PL953]: a hidden column still carries a sort and a style condition", {
+  skip_on_cran()
   tbl <- data.frame(ID = c("b", "a", "c"), K = c(2, 1, 3),
                     Placebo = c("1", "2", "3"), Active = c("4", "5", "6"))
   pg <- plan_apply(table_plan(tbl) |> plan_hide("K") |> plan_sort("K") |>
@@ -258,6 +267,7 @@ test_that("FT-PL962 [FR-PL953]: a hidden column still carries a sort and a style
 })
 
 test_that("FT-PL963 [FR-PL954]: plan_cell_style(cols = ) follows its column when plan_levels() reorders the columns", {
+  skip_on_cran()
   st <- data.frame(ARM = rep(c("Drug A", "Placebo"), each = 2), variable = "AGE",
                    .label = NA, .kind = "continuous", stat_name = rep(c("mean", "sd"), 2),
                    stat = c(50, 10, 52, 9))
@@ -274,6 +284,7 @@ test_that("FT-PL963 [FR-PL954]: plan_cell_style(cols = ) follows its column when
 # ---- plan_layers(), plan_compare(), plan_n_candidates() ------------------------------
 
 test_that("FT-PL964 [FR-PL955]: plan_layers()$header$source is \"cells\" for a header given as cell rows", {
+  skip_on_cran()
   st <- data.frame(ARM = c("A", "B"), variable = "AGE", .label = NA, .kind = "continuous",
                    stat_name = "mean", stat = c(50, 52))
   p <- table_plan(st, cols = "ARM", rows = c(group = "variable")) |>
@@ -288,6 +299,7 @@ test_that("FT-PL964 [FR-PL955]: plan_layers()$header$source is \"cells\" for a h
 })
 
 test_that("FT-PL965 [FR-PL956]: a comparison record whose variable has no block in the body has no row", {
+  skip_on_cran()
   st <- data.frame(ARM = rep(c("A", "B"), each = 2), variable = "AGE", .label = NA,
                    .kind = "continuous", stat_name = rep(c("mean", "sd"), 2),
                    stat = c(50, 10, 52, 9), context = "summary")
@@ -304,6 +316,7 @@ test_that("FT-PL965 [FR-PL956]: a comparison record whose variable has no block 
 })
 
 test_that("FT-PL966 [FR-PL957]: {n} left unmade with two populations prints each page's, with a warning", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   lb <- data.frame(USUBJID = rep(sprintf("S%02d", 1:10), 2),
                    PARAM = rep(c("ALT", "HGB"), each = 10),
@@ -336,6 +349,7 @@ test_that("FT-PL966 [FR-PL957]: {n} left unmade with two populations prints each
 })
 
 test_that("FT-PL988 [FR-PL971]: an arm over variable_level (a shift table) reads each page's N from the arm's own tabulation", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   # invented: each subject once a parameter; fewer have ALT than HGB
   sub <- data.frame(USUBJID = sprintf("S%02d", 1:12), TRT = rep(c("A", "B"), each = 6),

@@ -57,6 +57,7 @@ vi_titles <- function(ct) {
 # ---- precedence ------------------------------------------------------------
 
 test_that("FT-IX010 [FR-IX257]: plan_digits() plan-wide and per variable give the same table in either order", {
+  skip_on_cran()
   wide_first <- vi_tab(vi_base() |> plan_digits(1) |> plan_digits(AST = 3))
   var_first <- vi_tab(vi_base() |> plan_digits(AST = 3) |> plan_digits(1))
   expect_identical(wide_first, var_first)
@@ -68,6 +69,7 @@ test_that("FT-IX010 [FR-IX257]: plan_digits() plan-wide and per variable give th
 })
 
 test_that("FT-IX012 [FR-IX258]: plan_levels() and plan_sort(\"levels(<key>)\") order the rows the same whichever is called first", {
+  skip_on_cran()
   p <- table_plan(vi_counts(), cols = "TRT", rows = c(param = "PARAM"),
                   label = c(visit = "VISIT")) |>
     plan_cells("{n:.0f}", notes = FALSE)
@@ -80,6 +82,7 @@ test_that("FT-IX012 [FR-IX258]: plan_levels() and plan_sort(\"levels(<key>)\") o
 })
 
 test_that("FT-IX013 [FR-IX259]: plan_paginate_rows() written twice: the later budget cuts the pages", {
+  skip_on_cran()
   d <- vi_wide()
   two_then_four <- vi_pages(table_plan(d) |>
                               plan_paginate_rows(max_rows = 2, split = "group_safe") |>
@@ -94,6 +97,7 @@ test_that("FT-IX013 [FR-IX259]: plan_paginate_rows() written twice: the later bu
 })
 
 test_that("FT-IX014 [FR-IX260]: rtf_tables(titles = , footnotes = ) win over a plan's plan_titles() / plan_footnotes(); left out, the plan's blocks are the page's", {
+  skip_on_cran()
   p <- table_plan(vi_wide()) |> plan_titles("Plan title") |>
     plan_footnotes("Plan footnote") |> plan_style()
   given <- rtf_document() |> rtf_tables(p, titles = "Call title", footnotes = "Call footnote")
@@ -111,6 +115,7 @@ test_that("FT-IX014 [FR-IX260]: rtf_tables(titles = , footnotes = ) win over a p
 })
 
 test_that("FT-IX015 [FR-IX261]: the page name auto_title adds is the last row of the title block, after plan_titles()' rows", {
+  skip_on_cran()
   p <- table_plan(vi_wide()) |>
     plan_paginate_group(col = "grp", heading = "Group {value}", heading_at = "title") |>
     plan_titles("Table 1", "By group")
@@ -133,6 +138,7 @@ test_that("FT-IX015 [FR-IX261]: the page name auto_title adds is the last row of
 # ---- an argument that changes what another one sees ---------------------------
 
 test_that("FT-IX016 [FR-IX263]: plan_stub(before = TRUE) hands plan_paginate_rows() the folded rows, grouped under the stub's headings: the same pages as folding inside", {
+  skip_on_cran()
   d <- vi_wide()
   before <- vi_pages(table_plan(d) |>
                        plan_stub(vars = c("grp", "label"), name = "rl", before = TRUE) |>
@@ -151,6 +157,7 @@ test_that("FT-IX016 [FR-IX263]: plan_stub(before = TRUE) hands plan_paginate_row
 })
 
 test_that("FT-IX017 [FR-IX253]: with plan_stub(before = TRUE) a bare plan_cell_style() formula sees the folded keys and styles the rows it chooses", {
+  skip_on_cran()
   d <- vi_wide()
   pg <- vi_pages(table_plan(d) |>
                    plan_stub(vars = c("grp", "label"), name = "rl", before = TRUE) |>
@@ -167,6 +174,7 @@ test_that("FT-IX017 [FR-IX253]: with plan_stub(before = TRUE) a bare plan_cell_s
 })
 
 test_that("FT-IX018 [FR-IX253]: with plan_stub(before = TRUE) a heading row has no source row, so a condition on a key reads NA there", {
+  skip_on_cran()
   d <- vi_wide()
   pg <- vi_pages(table_plan(d) |>
                    plan_stub(vars = c("grp", "label"), name = "rl", before = TRUE) |>
@@ -180,6 +188,7 @@ test_that("FT-IX018 [FR-IX253]: with plan_stub(before = TRUE) a heading row has 
 # ---- combinations that once had a bug ----------------------------------------
 
 test_that("FT-IX019 [FR-IX264]: auto_section = TRUE: a value's pages cut by the row budget keep their carried titles, whether the page opens the section or continues it (#728)", {
+  skip_on_cran()
   g <- data.frame(G = c(rep("Cohort A", 5), "Cohort B"),
                   S = c("n", "Mean", "SD", "Min", "Max", "n"),
                   V = as.character(1:6), stringsAsFactors = FALSE)
@@ -206,6 +215,7 @@ test_that("FT-IX019 [FR-IX264]: auto_section = TRUE: a value's pages cut by the 
 })
 
 test_that("FT-IX020 [FR-IX265]: a later content's font and colour are added after the document's own, so the first content keeps its indices (#730)", {
+  skip_on_cran()
   df <- function(n) data.frame(Item = sprintf("Row %02d", seq_len(n)), N = seq_len(n))
   bs <- intToUtf8(92)
   first <- rtf_document() |>
@@ -232,6 +242,7 @@ test_that("FT-IX020 [FR-IX265]: a later content's font and colour are added afte
 })
 
 test_that("FT-IX021 [FR-IX266]: a footer, like a header, starts in the document's font -- \\f0, or the slots' default command -- then its own (#732)", {
+  skip_on_cran()
   bs <- intToUtf8(92)
   df <- data.frame(a = c("x", "y"), b = c("1", "2"), stringsAsFactors = FALSE)
   doc <- function() {
@@ -301,6 +312,7 @@ vi_pics <- function(doc) {
 }
 
 test_that("FT-IX027 [FR-IX353]: as_rtftables(blank_row_first = ) given by the caller wins over listing_spec(blank_row_first = ), in both orders", {
+  skip_on_cran()
   blanks <- function(spec, ...) {
     pages <- as_rtftables(vi_ae(), listing = spec, max_rows = 3, ...)
     unique(lapply(pages, function(p) attr(p$data, "rtf_blank_rows")))
@@ -315,6 +327,7 @@ test_that("FT-IX027 [FR-IX353]: as_rtftables(blank_row_first = ) given by the ca
 })
 
 test_that("FT-IX028 [FR-IX354]: fit_listing_widths(total_width = ) wins over page, font and font_size_half_points, which are then not read", {
+  skip_on_cran()
   d <- vi_ae()
   given <- fit_listing_widths(d, vi_lspec(), total_width = 40)
   expect_identical(attr(given, "rtf_listing_fit")$total_width, 40L)
@@ -335,6 +348,7 @@ test_that("FT-IX028 [FR-IX354]: fit_listing_widths(total_width = ) wins over pag
 })
 
 test_that("FT-IX029 [FR-IX377]: normalize_ard(stack_sep = , stack_nest = ) change nothing without stack", {
+  skip_on_cran()
   a <- rbind(
     vi_ard_rows("TRT", "Drug A", "AGE", NA, "summary", "mean", 41.5),
     vi_ard_rows("TRT", "Placebo", "AGE", NA, "summary", "mean", 43.0))
@@ -351,6 +365,7 @@ test_that("FT-IX029 [FR-IX377]: normalize_ard(stack_sep = , stack_nest = ) chang
 })
 
 test_that("FT-IX030 [FR-IX379]: in widen_ard(sort = ), a column of the result wins over a statistic of the same name", {
+  skip_on_cran()
   # two statistics with the same values, F 9 and M 1: `w`, and one named
   # `label` like the result's label column
   a <- rbind(
@@ -369,6 +384,7 @@ test_that("FT-IX030 [FR-IX379]: in widen_ard(sort = ), a column of the result wi
 })
 
 test_that("FT-IX031 [FR-IX385]: assemble_folder() numbers the pages as assemble_rtf() does: no numbering command from either, the same cached numbers", {
+  skip_on_cran()
   d <- tempfile("ix-asm-")
   o <- tempfile("ix-out-")
   dir.create(d)
@@ -403,6 +419,7 @@ test_that("FT-IX031 [FR-IX385]: assemble_folder() numbers the pages as assemble_
 })
 
 test_that("FT-IX032 [FR-IX387]: rtfplot(width_twips = ) alone derives the height from the image, height_twips alone the width; both are used as given", {
+  skip_on_cran()
   png <- vi_png(300L, 150L)                        # 2:1
   on.exit(unlink(png), add = TRUE)
   one <- function(...) vi_pics(rtf_figures(rtf_document(), rtfplot(png, ...)))[c("w", "h")]
@@ -412,6 +429,7 @@ test_that("FT-IX032 [FR-IX387]: rtfplot(width_twips = ) alone derives the height
 })
 
 test_that("FT-IX033 [FR-IX391]: rtf_figures(width_twips = , height_twips = , align = ) size a path, but an rtfplot() keeps its own size and alignment", {
+  skip_on_cran()
   png <- vi_png(300L, 150L)
   on.exit(unlink(png), add = TRUE)
   own <- rtfplot(png, width_twips = 3000L, align = "left")
@@ -424,6 +442,7 @@ test_that("FT-IX033 [FR-IX391]: rtf_figures(width_twips = , height_twips = , ali
 })
 
 test_that("FT-IX034 [FR-IX383]: the page numbers cached in the contents follow the one sequence from the first page, a cover counted", {
+  skip_on_cran()
   d <- tempfile("ix-cov-")
   o <- tempfile("ix-cov-out-")
   dir.create(d)

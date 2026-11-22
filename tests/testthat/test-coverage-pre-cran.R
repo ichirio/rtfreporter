@@ -7,6 +7,7 @@
 # ── borders: the internal rtf_table_border() ────────────────────────────────
 
 test_that("print.rtf_table_border() shows the outer and inside rules", {
+  skip_on_cran()
   tb <- rtfreporter:::.rtf_table_border(header = rtf_border(top = TRUE),
                                         outer = rtf_border(top = TRUE),
                                         inside_h = rtf_border_line(),
@@ -24,6 +25,7 @@ test_that("print.rtf_table_border() shows the outer and inside rules", {
 # ── cell helpers: cell_rows(), fmt_right_align(), fmt_count_pct() ──────────
 
 test_that("cell_rows() keeps unnamed rows and refuses an empty call", {
+  skip_on_cran()
   r <- cell_rows("{n}", "{p}")
   expect_s3_class(r, "cell_rows")
   expect_identical(names(r), c("", ""))
@@ -32,6 +34,7 @@ test_that("cell_rows() keeps unnamed rows and refuses an empty call", {
 })
 
 test_that("fmt_right_align() returns empty and all-blank input unchanged", {
+  skip_on_cran()
   expect_identical(fmt_right_align(character(0)), character(0))
   # NA becomes `na`; nothing left to pad, so no padding is added
   expect_identical(fmt_right_align(c("", " ", NA)), c("", " ", ""))
@@ -42,6 +45,7 @@ test_that("fmt_right_align() returns empty and all-blank input unchanged", {
 })
 
 test_that("fmt_count_pct() warns once when a fraction is above 1", {
+  skip_on_cran()
   st <- rtfreporter:::.deprecation_state
   key <- "warn:fmt_count_pct_fraction"
   old <- st[[key]]
@@ -60,6 +64,7 @@ test_that("fmt_count_pct() warns once when a fraction is above 1", {
 # ── listing_disp_width() ────────────────────────────────────────────────────
 
 test_that("listing_disp_width() takes NA as empty and non-character input", {
+  skip_on_cran()
   got <- listing_disp_width(c("ab", NA, ""))
   expect_type(got, "integer")
   expect_identical(got, c(2L, 0L, 0L))
@@ -77,6 +82,7 @@ pc_multi <- function() {
 }
 
 test_that("style_header() restyles the header of every data frame (#699)", {
+  skip_on_cran()
   m <- pc_multi()
   expect_length(m$col_header_list, 2L)
   s <- style_header(m, label = "Bee", cols = 2)
@@ -96,6 +102,7 @@ test_that("style_header() restyles the header of every data frame (#699)", {
 })
 
 test_that("set_col_header(values = ) fills a single table's tokens", {
+  skip_on_cran()
   t1 <- rtftable(data.frame(a = c("x", "y"), b = c("1", "2")))
   expect_message(
     got <- set_col_header(t1, rtf_col_header(c("A", "N={n}")),
@@ -107,6 +114,7 @@ test_that("set_col_header(values = ) fills a single table's tokens", {
 })
 
 test_that("collapse_repeats() blanks repeats within each data frame", {
+  skip_on_cran()
   m <- rtftable(list(data.frame(a = c("x", "x"), b = c("1", "2")),
                      data.frame(a = c("y", "y"), b = c("3", "4"))))
   got <- collapse_repeats(m, "a")
@@ -119,6 +127,7 @@ test_that("collapse_repeats() blanks repeats within each data frame", {
 # ── rtf_section(): no section, a page vector, refused shapes ───────────────
 
 test_that("rtf_section() stores an empty section, or one for several pages", {
+  skip_on_cran()
   d <- rtf_document()
   one <- rtf_section(d, page = 1)
   expect_identical(one$sections[["1"]], list(header = NULL, footer = NULL))
@@ -171,6 +180,7 @@ pc_plan <- function() {
 }
 
 test_that("plan_cells() and plan_empty() check their options", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   p <- pc_plan()
   expect_identical(plan_cells(p), p)        # nothing declared, nothing added
@@ -184,6 +194,7 @@ test_that("plan_cells() and plan_empty() check their options", {
 })
 
 test_that("plan_layers() reads a single template and the compare columns", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("cardx")
   skip_if_not_installed("broom", minimum_version = "1.0.8")

@@ -10,6 +10,7 @@
 }
 
 test_that("FT-LS5801 [FR-LS118]: listing_spec() holds the columns and every setting resolved against the template; printing shows them", {
+  skip_on_cran()
   sp <- listing_spec(list(listing_col(c("A", "B"), width = 8, name = "AB"), listing_col("C")))
   expect_s3_class(sp, "rtf_listing_spec")
   expect_identical(vapply(sp$cols, function(cl) cl$name, ""), c("AB", "C"))
@@ -40,6 +41,7 @@ test_that("FT-LS5801 [FR-LS118]: listing_spec() holds the columns and every sett
 })
 
 test_that("FT-LS5802 [FR-LS129]: wrap = f lays out cells and derived headers alike, one variable at a time under stack; NULL and listing_wrap change nothing", {
+  skip_on_cran()
   d <- .t8_df()
   rec <- new.env()
   rec$calls <- list()
@@ -80,6 +82,7 @@ test_that("FT-LS5802 [FR-LS129]: wrap = f lays out cells and derived headers ali
 })
 
 test_that("FT-LS5803 [FR-LS130]: a custom wrap is called positionally with (text, width, sep, layout) and returns one element per line", {
+  skip_on_cran()
   d <- data.frame(A = c("x1", "p1"), B = c("y", "q"), stringsAsFactors = FALSE)
   seen <- list()
   # the formals are named a, b, c, d: only a positional call can reach them
@@ -113,6 +116,7 @@ test_that("FT-LS5803 [FR-LS130]: a custom wrap is called positionally with (text
 })
 
 test_that("FT-LS5804 [FR-LS131]: record = TRUE / FALSE / a name sets the record column; as_rtftables(listing = ) keeps a record on one page and does not print it", {
+  skip_on_cran()
   # three records of three physical rows (two lines and the blank row) each
   d <- data.frame(A = c("x1", "p1", "r1"), B = c("y", "q", "s"), stringsAsFactors = FALSE)
   cols <- list(listing_col(c("A", "B"), width = 5, name = "AB"))
@@ -137,6 +141,7 @@ test_that("FT-LS5804 [FR-LS131]: record = TRUE / FALSE / a name sets the record 
 })
 
 test_that("FT-LS5805 [FR-LS142]: listing_col(\"USUBJID\") takes the first var as the name, no width, no label, and the listing's own sep, align and layout; printing shows it", {
+  skip_on_cran()
   cl <- listing_col("USUBJID")
   expect_s3_class(cl, "rtf_listing_col")
   expect_identical(cl$vars, "USUBJID")
@@ -163,6 +168,7 @@ test_that("FT-LS5805 [FR-LS142]: listing_col(\"USUBJID\") takes the first var as
 })
 
 test_that("FT-LS5806 [FR-LS148]: a label that is one string with no breaks is wrapped to width by the cells' rule, or left on one line with no width", {
+  skip_on_cran()
   d <- data.frame(PT = "x", AGESEX = "y", stringsAsFactors = FALSE)
   lab <- function(...) {
     sp <- listing_spec(list(listing_col(...)), spacer = FALSE)
@@ -184,6 +190,7 @@ test_that("FT-LS5806 [FR-LS148]: a label that is one string with no breaks is wr
 })
 
 test_that("FT-LS5807 [FR-LS149]: label = NULL derives the header from the data's label attributes, else the names, joined with sep and wrapped like the cells, or from fit_listing_widths(labels = )", {
+  skip_on_cran()
   d <- data.frame(A = "Alpha", B = "x", stringsAsFactors = FALSE)
   attr(d$A, "label") <- "Subject ID"                       # B has none: its name is used
   lab <- function(width = NULL, ...) {
@@ -214,6 +221,7 @@ test_that("FT-LS5807 [FR-LS149]: label = NULL derives the header from the data's
 })
 
 test_that("FT-LS5808 [FR-LS152]: listing_col(name = ) is the output column name; NULL uses the first var", {
+  skip_on_cran()
   d <- .t8_df()
   nm <- function(cl) names(build_listing(d, listing_spec(list(cl), spacer = FALSE, record = FALSE)))
   expect_identical(nm(listing_col("A", name = "COL01")), "COL01")
@@ -232,6 +240,7 @@ test_that("FT-LS5808 [FR-LS152]: listing_col(name = ) is the output column name;
 })
 
 test_that("FT-LS5809 [FR-LS153]: rel_width is the relative column width; NULL uses width, else the longest label line, else 10", {
+  skip_on_cran()
   d <- data.frame(A = "a", stringsAsFactors = FALSE)
   rw <- function(cl) as_rtftables(d, listing = listing_spec(list(cl), spacer = FALSE))[[1L]]$col_rel_width
   expect_identical(rw(listing_col("A", rel_width = 12, width = 5)), 12)       # given: wins over width
@@ -246,6 +255,7 @@ test_that("FT-LS5809 [FR-LS153]: rel_width is the relative column width; NULL us
 })
 
 test_that("FT-LS5810 [FR-LS154]: listing_col(align = ) is the column's alignment; NULL takes the listing's own", {
+  skip_on_cran()
   d <- .t8_df()
   al <- function(spec) vapply(as_rtftables(d, listing = spec)[[1L]]$col_spec, function(s) s$align, "")
   cols <- list(listing_col("A", align = "right"), listing_col("B", align = "center"), listing_col("C"))
@@ -259,6 +269,7 @@ test_that("FT-LS5810 [FR-LS154]: listing_col(align = ) is the column's alignment
 })
 
 test_that("FT-LS5811 [FR-LS171]: listing_wrap() is the multiline rule; on one string stack breaks after every separator, a listing calls it per value as flow", {
+  skip_on_cran()
   d <- data.frame(A = c("Alpha", "Beta"), B = c("one two three", "x"), C = c("a/b/c", "d"),
                   stringsAsFactors = FALSE)
   cols <- function() list(listing_col(c("A", "B"), width = 8, name = "AB"), listing_col("C", width = 20))
@@ -283,6 +294,7 @@ test_that("FT-LS5811 [FR-LS171]: listing_wrap() is the multiline rule; on one st
 })
 
 test_that("FT-LS5812 [FR-LS172]: listing_wrap() breaks first after the separator, which stays on the line it closes; sep = \"\" or NULL skips it; \".\" is literal", {
+  skip_on_cran()
   # "Nausea/and vomiting" in 8: after the "/" (kept on the first line), then at the word
   expect_identical(listing_wrap("Nausea/and vomiting", 8, "/"), c("Nausea/", "and", "vomiting"))
   expect_identical(listing_wrap("Nausea/and vomiting", 8), c("Nausea/", "and", "vomiting"))   # "/" is the default
@@ -297,6 +309,7 @@ test_that("FT-LS5812 [FR-LS172]: listing_wrap() breaks first after the separator
 })
 
 test_that("FT-LS5813 [FR-LS173]: listing_wrap() breaks a piece still too wide after a space, a comma or a hyphen, filling each line as far as width allows", {
+  skip_on_cran()
   # after a space: "aa " + "bb " = 6 fits in 6, "cc " does not; "cc dd" is 5
   expect_identical(listing_wrap("aa bb cc dd", 6, ""), c("aa bb", "cc dd"))
   # after a comma
@@ -316,6 +329,7 @@ test_that("FT-LS5813 [FR-LS173]: listing_wrap() breaks a piece still too wide af
 })
 
 test_that("FT-LS5814 [FR-LS185]: the emitted wrap source begins with a header naming the version, the entry function and the contract, and keeps the rule's comments", {
+  skip_on_cran()
   src <- as.character(unclass(listing_wrap_code("house_rule")))
   # the header: eleven comment lines and a blank line
   head11 <- src[1:12]
@@ -342,6 +356,7 @@ test_that("FT-LS5814 [FR-LS185]: the emitted wrap source begins with a header na
 })
 
 test_that("FT-LS5815 [FR-LS189]: listing_code() returns one element per line, of class rtf_listing_code, printing the code, and parsing it gives back the spec", {
+  skip_on_cran()
   d <- data.frame(USUBJID = c("S-001", "S-002"), AGE = c("30", "41"), AETERM = c("Headache", "Nausea and vomiting"),
                   stringsAsFactors = FALSE)
   sp <- listing_spec(list(listing_col(c("USUBJID", "AGE")), listing_col("AETERM")))
@@ -369,6 +384,7 @@ test_that("FT-LS5815 [FR-LS189]: listing_code() returns one element per line, of
 })
 
 test_that("FT-LS5816 [FR-LS191]: listing_code() writes each column's own settings and a multi-line label that survives the round trip", {
+  skip_on_cran()
   sp <- listing_spec(list(
     listing_col(c("A", "B"), width = 12, sep = " | ", layout = "flow", name = "X", rel_width = 7,
                 align = "center", collapse_repeats = TRUE, label = "L1\nL2"),
@@ -396,6 +412,7 @@ test_that("FT-LS5816 [FR-LS191]: listing_code() writes each column's own setting
 })
 
 test_that("FT-LS5817 [FR-LS247]: catx() with sep missing, not a character, of length other than one or NA stops with the message", {
+  skip_on_cran()
   msg <- "`sep` must be a single string."
   expect_error(catx(), msg, fixed = TRUE)
   expect_error(catx(1, "a"), msg, fixed = TRUE)
@@ -410,6 +427,7 @@ test_that("FT-LS5817 [FR-LS247]: catx() with sep missing, not a character, of le
 })
 
 test_that("FT-LS5818 [FR-LS251]: a fractional or infinite width, an infinite rel_width or spacer_rel_width stops with the messages of FR-LS160, FR-LS161 and FR-LS138, without a warning", {
+  skip_on_cran()
   warned <- character(0)
   msg_of <- function(expr) {
     withCallingHandlers(tryCatch({ expr; NA_character_ }, error = function(e) conditionMessage(e)),
@@ -430,6 +448,7 @@ test_that("FT-LS5818 [FR-LS251]: a fractional or infinite width, an infinite rel
 })
 
 test_that("FT-LS5819 [FR-LS252]: total_width, min_width, font_size_half_points and font refuse what is not whole or not a name, with the messages; a named font is measured by its latin one", {
+  skip_on_cran()
   d <- data.frame(A = c("aaaa", "bb"), B = c("c", "dddddd"), stringsAsFactors = FALSE)
   sp <- listing_spec(list(listing_col("A"), listing_col("B")))
   tw <- "`total_width` must be a single positive number of characters."
@@ -471,6 +490,7 @@ test_that("FT-LS5819 [FR-LS252]: total_width, min_width, font_size_half_points a
 .t8_w <- function(spec) vapply(spec$cols, function(cl) cl$width, 1L)
 
 test_that("FT-LS5820 [FR-LS205]: fit_listing_widths() returns the same spec with a width on every column and attaches the measurement, which print() shows", {
+  skip_on_cran()
   d <- .t8_fit_df()
   sp <- .t8_fit_spec()
   f <- fit_listing_widths(d, sp, total_width = 60)
@@ -500,6 +520,7 @@ test_that("FT-LS5820 [FR-LS205]: fit_listing_widths() returns the same spec with
 })
 
 test_that("FT-LS5821 [FR-LS207]: the gutters come out of the budget first, spacer_rel_width characters each (a fraction allowed), none when spacer = FALSE", {
+  skip_on_cran()
   d <- .t8_fit_df()
   cols <- listing_spec(list(listing_col("ID"), listing_col("AGE"), listing_col("TERM")))$cols
   fit_w <- function(...) {
@@ -526,6 +547,7 @@ test_that("FT-LS5821 [FR-LS207]: the gutters come out of the budget first, space
 })
 
 test_that("FT-LS5822 [FR-LS208]: widths the author set are kept, taken out of the budget, and the others fit around them; all set comes back unchanged", {
+  skip_on_cran()
   d <- .t8_fit_df()
   sp <- listing_spec(list(listing_col("ID", width = 10), listing_col("AGE"), listing_col("TERM")))
   f <- fit_listing_widths(d, sp, total_width = 60)
@@ -549,6 +571,7 @@ test_that("FT-LS5822 [FR-LS208]: widths the author set are kept, taken out of th
 })
 
 test_that("FT-LS5823 [FR-LS209]: a column's demand is the largest of the probs quantile of its cells, the header's height need, its widest unbreakable token and min_width, then scaled to the budget", {
+  skip_on_cran()
   # Q: one cell of 20 characters among three of 1; H: a header of 19 characters that can break;
   # T: a header with one 12-character token; M: nothing but min_width
   d <- data.frame(Q = c("a", "a", "a", strrep("q", 20)), H = "x", T = "y", M = "z", stringsAsFactors = FALSE)
@@ -581,6 +604,7 @@ test_that("FT-LS5823 [FR-LS209]: a column's demand is the largest of the probs q
 })
 
 test_that("FT-LS5824 [FR-LS211]: the fit writes rel_width and a frozen label only where the author set none, with only the label's structural breaks, and renders the same table", {
+  skip_on_cran()
   d <- data.frame(A = c("aaa", "bbb"), B = c("cc", "dd"), C = c("e", "f"), stringsAsFactors = FALSE)
   attr(d$A, "label") <- "Alpha label words"
   attr(d$B, "label") <- "Beta\nline2"
@@ -607,6 +631,7 @@ test_that("FT-LS5824 [FR-LS211]: the fit writes rel_width and a frozen label onl
 })
 
 test_that("FT-LS5825 [FR-LS212]: page takes the paper size, orientation and margins the listing is rendered on (an rtf_page() or a list of its fields); NULL is the defaults; total_width wins", {
+  skip_on_cran()
   d <- .t8_fit_df()
   sp <- .t8_fit_spec(spacer = FALSE)
   total <- function(...) sum(.t8_w(fit_listing_widths(d, sp, ...)))
@@ -632,6 +657,7 @@ test_that("FT-LS5825 [FR-LS212]: page takes the paper size, orientation and marg
 })
 
 test_that("FT-LS5826 [FR-LS217]: labels gives the words for variables without label attributes; the header is derived from them, joined with sep and wrapped to the width fitted, and the width measures them", {
+  skip_on_cran()
   d <- data.frame(USUBJID = c("S-001", "S-002"), AGE = c("30", "41"), stringsAsFactors = FALSE)
   sp <- listing_spec(list(listing_col(c("USUBJID", "AGE"), name = "UA"), listing_col("AGE", name = "A2")), spacer = FALSE)
   labs <- c(USUBJID = "Unique Subject Identifier", AGE = "Age")
@@ -657,6 +683,7 @@ test_that("FT-LS5826 [FR-LS217]: labels gives the words for variables without la
 })
 
 test_that("FT-LS5827 [FR-LS218]: header_lines is how tall a header may be (default 4): a lower value buys width, Inf asks only for the unbreakable token, and a width the author set stays", {
+  skip_on_cran()
   expect_identical(formals(fit_listing_widths)$header_lines, 4L)
   d <- data.frame(H = "x", F = "y", stringsAsFactors = FALSE)
   labs <- c(H = "aaaa bbbb cccc dddd", F = "f")            # H's header is 19 wide, token 4
@@ -682,6 +709,7 @@ test_that("FT-LS5827 [FR-LS218]: header_lines is how tall a header may be (defau
 })
 
 test_that("FT-LS5828 [FR-LS236]: collapse_repeats() on a list of pages collapses each page independently and gives what as_rtftables(collapse_repeats = ) gives", {
+  skip_on_cran()
   df <- data.frame(g = c("A", "A", "A", "A", "B"), v = 1:5, stringsAsFactors = FALSE)
   # split_rows are the positions cut before: pages of rows 1-2, 3-4 and 5
   pages <- as_rtftables(df, split = "rows", split_rows = c(3, 5))
@@ -714,6 +742,7 @@ test_that("FT-LS5828 [FR-LS236]: collapse_repeats() on a list of pages collapses
 }
 
 test_that("FT-AS5801 [FR-AS252]: rtfplot() of a plot object refuses a render_format that is not png or emf, emf without devEMF, emf with render_dpi / png_device, and a file with render_format", {
+  skip_on_cran()
   draw <- function() plot(1)
   fmt <- "`render_format` must be \"png\" or \"emf\"."
   for (bad in list("svg", c("png", "emf"), NA_character_, "PNG", 1)) {
@@ -743,6 +772,7 @@ test_that("FT-AS5801 [FR-AS252]: rtfplot() of a plot object refuses a render_for
 })
 
 test_that("FT-AS5802 [FR-AS220 FR-AS221]: shell = is the shell as text or a UTF-8 file (BOM, any line end, trailing blanks dropped), written to 07_shell.md and last in PASTE.md; text that is not text or a file in another encoding stops", {
+  skip_on_cran()
   d <- .t8_dir()
   sh <- c("Table 14.1.1  Demographics", "    Placebo   Drug X", "性別  n (%)")
   # NULL (the default) writes none
@@ -784,6 +814,7 @@ test_that("FT-AS5802 [FR-AS220 FR-AS221]: shell = is the shell as text or a UTF-
 })
 
 test_that("FT-AS5803 [FR-AS253]: rtf_figures() hands render_format, render_width, render_height, render_dpi and png_device to each plot object as rtfplot() takes them, never to a file, and an rtfplot() keeps its format", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("devEMF")
   skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
   d <- .t8_dir()
@@ -827,6 +858,7 @@ test_that("FT-AS5803 [FR-AS253]: rtf_figures() hands render_format, render_width
 })
 
 test_that("FT-AS5804 [FR-AS258]: a table with no label column, or a row whose label is NA, takes the label from its file's title as toc = auto does; a label given wins; the outline entry is the same", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   f <- .tt_inputs(d, c(t_14_1_1 = "Table 14.1.1 Demographics", t_14_2_1 = "Table 14.2.1 Adverse Events"))
   f <- c(f, .tt_input(d, "untitled_listing.rtf", title = NULL))
@@ -850,6 +882,7 @@ test_that("FT-AS5804 [FR-AS258]: a table with no label column, or a row whose la
 })
 
 test_that("FT-AS5805 [FR-AS267]: a heading is printed once, above the entry of the row where its value changes; NA or empty prints none, a value that comes back prints again; no heading column, no heading", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B", t_14_3_1 = "C", t_14_4_1 = "D", t_14_5_1 = "E", t_14_6_1 = "F"))
   # X X (NA) "" Y X: X once for rows 1-2 (the NA and the empty heading print none and do not
@@ -878,6 +911,7 @@ test_that("FT-AS5805 [FR-AS267]: a heading is printed once, above the entry of t
 })
 
 test_that("FT-AS5806 [FR-AS255]: toc_title fills the session's tokens (braces of a value escaped), {DATETIME}, {PROGRAM} and the page tokens; an unknown token stays as text; a document's own token is not known", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f <- c(.tt_input(d, "t_14_1_1.rtf", "Table 14.1.1 {STUDY} Demographics", tokens = list(STUDY = "DOC-7")),
          .tt_input(d, "t_14_2_1.rtf", "Table 14.2.1 B"))
@@ -908,6 +942,7 @@ test_that("FT-AS5806 [FR-AS255]: toc_title fills the session's tokens (braces of
 })
 
 test_that("FT-AS5807 [FR-AS256]: toc_title named l, c or r is aligned left, centre or right, unnamed centred; a title that is not one string or a name that is not l, c or r stops", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B"))
   title <- function(t) .tt_paras(.tt_asm(f, toc = "auto", toc_title = t))[1L]
