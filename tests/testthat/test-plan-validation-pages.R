@@ -58,7 +58,7 @@ test_that("FT-PL270 [FR-PL353 FR-PL356]: plan_template() guesses cols with a NOT
   adsl$SEX <- as.character(adsl$SEX)
   ard <- cards::ard_stack(adsl, .by = c(TRT, SEX),
                           cards::ard_summary(variables = AGE))
-  code <- utils::capture.output(invisible(plan_template(ard, pipe = "|>")))
+  code <- utils::capture.output(print(plan_template(ard, pipe = "|>")))
   expect_true(any(grepl("NOTE: `cols` was not given; the first key is used.", code,
                         fixed = TRUE)))
   expect_true(any(grepl("NOTE: keys outside `cols` became row keys: SEX", code,
@@ -70,11 +70,11 @@ test_that("FT-PL270 [FR-PL353 FR-PL356]: plan_template() guesses cols with a NOT
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
   f <- file.path(dir, "plan.R")
-  out <- utils::capture.output(code2 <- plan_template(ard, cols = "TRT", pipe = "|>",
-                                                      file = f))
+  code2 <- plan_template(ard, cols = "TRT", pipe = "|>", file = f)
+  out <- utils::capture.output(print(code2))
   expect_true(file.exists(f))
-  expect_identical(readLines(f), code2)
-  expect_identical(out[nzchar(out)][1:3], code2[1:3])
+  expect_identical(readLines(f), as.character(code2))
+  expect_identical(out[nzchar(out)][1:3], as.character(code2)[1:3])
 })
 
 test_that("FT-PL271 [FR-PL354]: plan_template(hierarchy = ) writes the hierarchy, the overall label and the label role", {
@@ -86,7 +86,7 @@ test_that("FT-PL271 [FR-PL354]: plan_template(hierarchy = ) writes the hierarchy
   ard <- cards::ard_stack_hierarchical(
     adae, variables = c(AESOC, AEDECOD), by = TRT, denominator = adsl,
     id = USUBJID, over_variables = TRUE)
-  code <- utils::capture.output(invisible(
+  code <- utils::capture.output(print(
     plan_template(ard, cols = "TRT", hierarchy = c("AESOC", "AEDECOD"), pipe = "|>")))
   expect_true(any(grepl('hierarchy = c("AESOC", "AEDECOD")', code, fixed = TRUE)))
   expect_true(any(grepl('overall   = "Any event"', code, fixed = TRUE)))

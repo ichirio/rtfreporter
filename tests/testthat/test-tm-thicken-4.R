@@ -398,16 +398,18 @@ test_that("FT-PL5312 [FR-PL331]: plan_empty() twice: the later text, when, posit
 })
 
 .t4_template <- function(...) {
-  code <- NULL
-  utils::capture.output(code <- plan_template(...))
-  code
+  plan_template(...)
 }
 
 test_that("FT-PL5313 [FR-PL350 FR-PL355]: plan_template() writes the table_plan pipeline (rows, cells, display verbs) and, with form = 'widen', the immediate form with the keys outside cols as rows", {
   ard <- .t4_hier()
-  out <- utils::capture.output(res <- withVisible(plan_template(ard, cols = "TRT")))
-  expect_false(res$visible)
+  res <- withVisible(plan_template(ard, cols = "TRT"))
+  out <- utils::capture.output(print(res$value))
+  expect_true(res$visible)
   expect_type(res$value, "character")
+  expect_s3_class(res$value, "rtfreporter_plan_code")
+  expect_identical(utils::capture.output(code <- plan_template(ard, cols = "TRT")),
+                   character(0))
   expect_gt(length(out), 5L)                          # it prints the code as well
   txt <- paste(res$value, collapse = "\n")
   has <- function(x, t = txt) grepl(x, t, fixed = TRUE)

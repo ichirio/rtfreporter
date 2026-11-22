@@ -237,6 +237,7 @@ test_that("FT-AS3007 [FR-AS115]: a toc table prints a heading above an entry whe
 })
 
 test_that("FT-AS3008 [FR-AS117]: an .xlsx toc without readxl stops with its message, and an existing .xlsx is read as the table", {
+  skip_on_cran()
   skip_if_not_installed("writexl")
   skip_if_not_installed("readxl")
   d <- .g2_dir()
@@ -498,6 +499,7 @@ test_that("FT-AS3016 [FR-AS153]: no spec_file writes no file; a spec_file is wri
 })
 
 test_that("FT-AS3017 [FR-AS154]: an .xlsx spec_file without writexl stops with its message", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   .g2_demo(file.path(d, "a.rtf"), "Table 1 A")
@@ -965,6 +967,7 @@ test_that("FT-AS3034 [FR-AS203]: a plot object without sizes is drawn 6.5 x 4.5 
 })
 
 test_that("FT-AS3035 [FR-AS207]: an option png_device that is not auto, ragg or png stops with the message naming the option", {
+  skip_on_cran()
   old <- options(rtfreporter.png_device = "svg")
   on.exit(options(old), add = TRUE)
   expect_error(
@@ -1115,6 +1118,7 @@ test_that("FT-AS3042 [FR-AS224]: overwrite = TRUE restores a changed file of the
 })
 
 test_that("FT-AS3043 [FR-AS226]: a dir that is a file stops with the full message, and a file that cannot be written with could not write", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -1137,6 +1141,7 @@ test_that("FT-AS3043 [FR-AS226]: a dir that is a file stops with the full messag
 })
 
 test_that("FT-AS3044 [FR-AS228]: building the kit calls no network function", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -1160,6 +1165,7 @@ test_that("FT-AS3044 [FR-AS228]: building the kit calls no network function", {
 })
 
 test_that("FT-AS3045 [FR-AS232]: the validation kit not installed, or a file that cannot be written, stops with the messages", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -1299,6 +1305,7 @@ test_that("FT-DC3003 [FR-DC109]: watermark = an rtf_watermark() writes one shape
 })
 
 test_that("FT-DC3004 [FR-DC111]: the program of rtf_document(program = ) fills {PROGRAM}, {PROGRAM_FULL}, {PROGRAM_NAME} and {PROGRAM_DIR}; NULL takes the option rtfreporter.program, else the script Rscript runs", {
+  skip_on_cran()
   mk <- function(...) {
     rtf_document(...) |>
       rtf_section(page = 1, secinfo = list(header = NULL, footer = rtf_footer(list(
@@ -1867,6 +1874,7 @@ test_that("FT-DC3031 [FR-DC263]: rtfreporter_options() has one element per rtfre
   nms <- c("rtfreporter.page.paper_size", "rtfreporter.page.orientation",
            "rtfreporter.page.margin_top_in", "rtfreporter.page.margin_bottom_in",
            "rtfreporter.page.margin_left_in", "rtfreporter.page.margin_right_in",
+           "rtfreporter.page.header_dist_in", "rtfreporter.page.footer_dist_in",
            "rtfreporter.font", "rtfreporter.font_size_half_points", "rtfreporter.font_lang",
            "rtfreporter.row_height_twips", "rtfreporter.cell_padding_left_twips",
            "rtfreporter.cell_padding_right_twips", "rtfreporter.cell_padding_top_twips",
@@ -1875,7 +1883,9 @@ test_that("FT-DC3031 [FR-DC263]: rtfreporter_options() has one element per rtfre
            "rtfreporter.title_width", "rtfreporter.footnote_width",
            "rtfreporter.figure.default_dpi", "rtfreporter.png_device",
            "rtfreporter.rounding", "rtfreporter.ard_pipe",
-           "rtfreporter.toc_style")
+           "rtfreporter.toc_style", "rtfreporter.program",
+           "rtfreporter.datetime_format", "rtfreporter.render_time",
+           "rtfreporter.tokens", "rtfreporter.print_ascii")
   saved <- stats::setNames(lapply(nms, getOption), nms)
   on.exit(options(saved), add = TRUE)
   rtfreporter_reset_defaults()
@@ -1912,6 +1922,8 @@ test_that("FT-DC3032 [FR-DC264]: the factory baseline is landscape Letter with 0
          rtfreporter.page.margin_bottom_in = 0.75,
          rtfreporter.page.margin_left_in = 0.75,
          rtfreporter.page.margin_right_in = 0.75,
+         rtfreporter.page.header_dist_in = NULL,
+         rtfreporter.page.footer_dist_in = NULL,
          rtfreporter.font = "Courier New",
          rtfreporter.font_size_half_points = 18L,
          rtfreporter.font_lang = NULL,
@@ -1929,7 +1941,12 @@ test_that("FT-DC3032 [FR-DC264]: the factory baseline is landscape Letter with 0
          rtfreporter.png_device = "auto",
          rtfreporter.rounding = "r",
          rtfreporter.ard_pipe = NULL,
-         rtfreporter.toc_style = NULL))
+         rtfreporter.toc_style = NULL,
+         rtfreporter.program = NULL,
+         rtfreporter.datetime_format = "%d%b%Y  %H:%M",
+         rtfreporter.render_time = NULL,
+         rtfreporter.tokens = NULL,
+         rtfreporter.print_ascii = FALSE))
 })
 
 test_that("FT-DC3033 [FR-DC267]: rtfreporter_reset_defaults() returns invisibly the factory list it applied", {
@@ -1986,6 +2003,7 @@ test_that("FT-DC3035 [FR-DC274]: generate_rtfreport() writes over an existing fi
 })
 
 test_that("FT-DC3036 [FR-DC278]: with no program said, the script Rscript runs, the document knitr is knitting and the file in RStudio's editor are found and named in a message", {
+  skip_on_cran()
   mk <- function() {
     rtf_document() |>
       rtf_section(page = 1, secinfo = list(header = NULL, footer = rtf_footer(list(

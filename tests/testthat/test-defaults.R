@@ -77,3 +77,35 @@ test_that("a header/footer distance option is honoured, and the page key wins (#
   # Explicit page key beats the option.
   expect_match(.gen(.doc1(list(header_dist_in = 0.25))), "\\\\headery360")
 })
+
+test_that("FT-DC6804 [FR-DC388]: the factory baseline names every rtfreporter.* option the package reads and every one its help names", {
+  nms <- names(rtfreporter:::.rtfreporter_factory_defaults())
+  opt_re <- "rtfreporter[.][a-z][a-z_.]*[a-z_]"
+  # read: each "rtfreporter.<name>" string in the package's functions
+  ns <- asNamespace("rtfreporter")
+  src <- unlist(lapply(ls(ns, all.names = TRUE), function(n) {
+    f <- get(n, envir = ns)
+    if (is.function(f)) deparse(f)
+  }))
+  lit <- unlist(regmatches(src, gregexpr(paste0("\"", opt_re, "\""), src)))
+  read <- unique(gsub("\"", "", lit, fixed = TRUE))
+  expect_true(all(c("rtfreporter.program", "rtfreporter.tokens",
+                    "rtfreporter.print_ascii") %in% read))
+  expect_identical(setdiff(read, nms), character(0))
+  # the help: each name in the Rd files; a family (rtfreporter.page.*,
+  # rtfreporter.cell_padding_*_twips) is read as "rtfreporter.page" and
+  # "rtfreporter.cell_padding_", and needs one option of its own
+  db <- tryCatch(tools::Rd_db("rtfreporter"), error = function(e) list())
+  if (!length(db) && dir.exists(test_path("..", "..", "man"))) {
+    db <- tools::Rd_db(dir = test_path("..", ".."))
+  }
+  skip_if(!length(db), "no help pages to read")
+  txt <- vapply(db, function(rd) paste(as.character(rd), collapse = ""), "")
+  named <- unique(unlist(regmatches(txt, gregexpr(opt_re, txt))))
+  expect_true("rtfreporter.toc_style" %in% named)
+  known <- vapply(named, function(p) {
+    p %in% nms || any(startsWith(nms, paste0(p, "."))) ||
+      (endsWith(p, "_") && any(startsWith(nms, p)))
+  }, TRUE)
+  expect_identical(named[!known], character(0))
+})
