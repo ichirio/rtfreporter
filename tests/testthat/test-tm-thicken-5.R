@@ -130,6 +130,7 @@ test_that("FT-AR5503 [FR-AR120]: a dropped ..ard_total_n.. row is kept as ard_to
 })
 
 test_that("FT-AR5504 [FR-AR138]: normalize_ard(stack = ) naming a column the frame has stops, and stack_nest with NAME_outer there stops, with the messages", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   k <- data.frame(
     TRT = rep(c("P", "Q"), 3L), SOC = rep(c("A", "B", "Z"), each = 2L),
     variable = "AE", variable_level = NA_character_, context = "categorical",
@@ -201,6 +202,7 @@ test_that("FT-AR5506 [FR-AR172]: widen_ard(labels = list(SEX = c(SEX = ..., F = 
 })
 
 test_that("FT-AR5507 [FR-AR176]: widen_ard(sort = ) takes the scoped forms: one spread column, a group's own row carried to its rows, the largest or smallest across the columns, levels()", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   h <- normalize_ard(.t5_soc(), hierarchy = c("AESOC", "AETERM"))
   w <- function(...) {
     widen_ard(h, cols = "TRT", rows = c(soc = "AESOC", pt = "AETERM"), cells = "{n:.0f}",

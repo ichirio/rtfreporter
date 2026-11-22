@@ -162,6 +162,7 @@ test_that("FT-AR110 [FR-AR150 FR-AR151 FR-AR160 FR-AR168 FR-AR170 FR-AR172 FR-AR
   expect_setequal(ap$covered, ap$need)
   expect_lt(nrow(ap$rows), 60L)
   for (i in seq_len(nrow(ap$rows))) {
+    .cran_cut(i)
     r <- ap$rows[i, ]
     two <- r$cols == "two"
     long <- if (two) .wa_long2() else .wa_long1()
@@ -238,6 +239,7 @@ test_that("FT-AR112 [FR-AR170 FR-AR175 FR-AR179 FR-AR252 FR-IX409]: widen_ard():
     as.data.frame(do.call(widen_ard, args))
   }
   # labels: none | scoped by the analysis variable; the rows' label text follows
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   for (case in list(list(name = "no labels", labels = NULL, text = c(F = "F", M = "M", U = "U")),
                     list(name = "SEX scoped", labels = scoped, text = shown))) {
     nm <- case$name

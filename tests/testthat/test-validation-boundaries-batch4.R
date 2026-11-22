@@ -426,6 +426,7 @@ test_that("FT-PL982 [FR-PL318 FR-PL319 FR-PL323 FR-PL324 FR-PL964]: plan_nest():
 }
 
 test_that("FT-PL983 [FR-PL289 FR-PL290 FR-PL292 FR-PL298 FR-PL299 FR-PL300 FR-PL301]: plan_compare(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   E <- .eb4_err
   O <- .eb4_obj
   p3 <- list(p = "{p.value:.3f}")

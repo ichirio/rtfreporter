@@ -51,6 +51,7 @@
 # ------------------------------------------------- default_col_widths, text_width_in
 
 test_that("FT-TB6001 [FR-TB376]: default_col_widths() is a named vector, smallest data column 1, and what rtftable() and plan_columns(widths = ) use", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("cards")
   d <- data.frame(Characteristic = c("Age (years)", "  Mean (SD)", "  Median"),
                   Placebo = c("", "75.2 (8.59)", "76.0"),
@@ -609,6 +610,7 @@ test_that("FT-TB6020 [FR-TB436]: style_header() on a table with no header of its
 })
 
 test_that("FT-TB6021 [FR-TB439 FR-TB440]: style_zone() merges each rtf_border() onto its zone side by side, from an empty border, returning a copy; a NULL zone is untouched, no zone returns the table", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   t0 <- .t10_hdr_tbl(n = FALSE, border = "none")
   expect_null(t0$border)
   .t10_reset_edge_warning()
@@ -879,6 +881,7 @@ test_that("FT-TB6028 [FR-TB473]: rtf_border() is a list of class rtf_border with
 })
 
 test_that("FT-TB6029 [FR-TB474]: rtf_border(top, bottom, left, right) take TRUE, FALSE or none, a style name, an rtf_border_line() or NULL", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   for (side in c("top", "bottom", "left", "right")) {
     mk <- function(v) do.call(rtf_border, stats::setNames(list(v), side))
     # TRUE: single, 15 twips, black (colour NULL)

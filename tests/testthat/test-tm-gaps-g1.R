@@ -437,6 +437,7 @@ test_that("FT-AR7001 [FR-AR130]: a plain data frame is read in an R where cards 
 })
 
 test_that("FT-AR3017 [FR-AR131]: hierarchical ARD with a separate overall block: arm key filled", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("cards")
   adsl <- data.frame(USUBJID = paste0("S", 1:6),
                      TRT = c("A", "A", "A", "B", "B", "B"))
@@ -465,6 +466,7 @@ test_that("FT-AR3017 [FR-AR131]: hierarchical ARD with a separate overall block:
 })
 
 test_that("FT-AR3018 [FR-AR136]: a stack that is not a named list of character layers stops", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   d <- .g1_base()
   msg <- "`stack` is a named list: a new key's name and its layers, a variable each"
   expect_error(normalize_ard(d, stack = list(g = character())), msg, fixed = TRUE)
@@ -581,6 +583,7 @@ test_that("FT-AR3021 [FR-AR150]: column order: first seen, `levels` or factor; a
 })
 
 test_that("FT-AR3022 [FR-AR153]: rows keys are named by name, column, a leading dot dropped", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   d <- normalize_ard(.g1_hier(), hierarchy = .g1_hier_cols, overall = "Any TEAE")
   tbl <- widen_ard(d, cols = "TRT", rows = c("AESOC", a = "AETERM", ".depth"),
                    cells = "{n:.0f}", notes = FALSE)
@@ -608,6 +611,7 @@ test_that("FT-AR3022 [FR-AR153]: rows keys are named by name, column, a leading 
 })
 
 test_that("FT-AR3023 [FR-AR154]: rows = NULL: `group` for several variables, none with hierarchy", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   flat <- widen_ard(normalize_ard(.g1_base()), cols = "TRT", cells = .g1_cells(),
                     notes = FALSE)
   expect_identical(names(flat), c("group", "label", "A", "B"))
@@ -684,6 +688,7 @@ test_that("FT-AR3026 [FR-AR160]: default cells is {n} ({p}); a chain tries the t
 })
 
 test_that("FT-AR3027 [FR-AR161]: guards are judged over the record's statistics and keys", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   d <- normalize_ard(.g1_cat())
   tbl <- widen_ard(d, cols = "TRT", cells = c(n == 0 ~ "0", "{n} ({p})"),
                    notes = FALSE)
@@ -714,6 +719,7 @@ test_that("FT-AR3027 [FR-AR161]: guards are judged over the record's statistics 
 })
 
 test_that("FT-AR3028 [FR-AR163]: a cells map is looked up by variable, context, kind, default", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   mk <- function(var, ctx, vl = NA_character_, sn = "mean", st = c(12.34, 15.67)) {
     data.frame(group1 = "TRT", group1_level = c("A", "B"), variable = var,
                variable_level = vl, context = ctx, stat_name = sn,
@@ -846,6 +852,7 @@ test_that("FT-AR3031 [FR-AR166]: stats = 'rows' ignores cells and labels by stat
 })
 
 test_that("FT-AR3032 [FR-AR168]: levels order a row key by output name, label rows, variables", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   x <- data.frame(
     group1 = "TRT", group1_level = rep(c("A", "B"), each = 2L),
     group2 = "SEX", group2_level = rep(c("F", "M"), 2L),
@@ -1242,6 +1249,7 @@ test_that("FT-AR3046 [FR-AR216]: pull_ard() names keys by grouping variable, or 
 })
 
 test_that("FT-AR3047 [FR-AR220]: pull_ard(levels = ) orders by levels, factor, first seen", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("cards")
   dat <- data.frame(AGE = c(10, 20, 33, 41, 5, 6),
                     TRT = factor(c("A", "B", "A", "B", "B", "A"), levels = c("B", "A")))
@@ -1375,6 +1383,7 @@ test_that("FT-AR3051 [FR-AR234]: list_ard_keys() returns lists invisibly, stats 
 # ----------------------------------------- cells reached by different values
 
 test_that("FT-AR3052 [FR-AR253]: stats = 'rows' stops on cells of different values", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   x <- data.frame(
     group1 = "TRT", group1_level = rep(c("A", "B"), 2L),
     variable = "SEX", variable_level = "F", context = "categorical",

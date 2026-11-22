@@ -209,6 +209,7 @@ test_that("FT-LS160 [FR-LS253]: listing builders pairwise -- widths x wrap x sep
   expect_lte(nrow(cases), 40L)
 
   for (r in seq_len(nrow(cases))) {
+    .cran_cut(r)
     cs <- as.list(cases[r, , drop = FALSE])
     lab <- paste0("case ", r, " (", paste(names(cs), unlist(cs), sep = "=", collapse = ", "), ")")
     d <- .vl_data(cs$data)

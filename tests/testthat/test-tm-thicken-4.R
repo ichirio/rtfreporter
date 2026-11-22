@@ -160,6 +160,7 @@ test_that("FT-PL5304 [FR-PL201]: plan_apply(stage = 'input') is the frame going 
 })
 
 test_that("FT-PL5305 [FR-PL211 FR-PL212 FR-PL213]: plan_layers() declared order, merged layers, columns and parsed cells / compare", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   p <- table_plan(.t4_ard(), cols = "TRT") |>
     plan_cells("{mean}", notes = FALSE) |>
     plan_levels(TRT = c("B", "A")) |> plan_levels(SEX = c("M", "F")) |>
@@ -310,6 +311,7 @@ test_that("FT-PL5308 [FR-PL268]: two column keys fold the innermost into <value>
 })
 
 test_that("FT-PL5309 [FR-PL304 FR-PL305]: plan_sort() on an ARD plan is widen_ard(sort = ) only; on a finished table as_rtftables(sort_by = ) with sort_desc; keys by output name", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   p <- .t4_hier_plan()
   a <- plan_apply(p |> plan_sort(".overall", "soc", "-n"), "args")
   expect_identical(a$widen$sort, c(".overall", "soc", "-n"))   # as widen_ard(sort = )
@@ -344,6 +346,7 @@ test_that("FT-PL5309 [FR-PL304 FR-PL305]: plan_sort() on an ARD plan is widen_ar
 })
 
 test_that("FT-PL5310 [FR-PL307]: '<stat>@<key>' carries the group's own row's value to its rows; .overall first; .depth puts a level's own row before its nested rows", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   p <- .t4_hier_plan()
   # -n@soc: SOCs by their own count (S3 12, S1 10, S2 4 in arm A), each with its PTs;
   # the overall row (18) is its own group and comes first
@@ -364,6 +367,7 @@ test_that("FT-PL5310 [FR-PL307]: '<stat>@<key>' carries the group's own row's va
 })
 
 test_that("FT-PL5311 [FR-PL313]: plan_sort() twice uses the last call's keys; keep = left out keeps the earlier; sorting alone gives no pages", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   p <- .t4_hier_plan()
   expect_identical(plan_apply(p |> plan_sort("-label") |> plan_sort("label"), "args")$widen$sort, "label")
   expect_identical(.t4_tab(p |> plan_sort("-label") |> plan_sort("label")), .t4_tab(p |> plan_sort("label")))
@@ -379,6 +383,7 @@ test_that("FT-PL5311 [FR-PL313]: plan_sort() twice uses the last call's keys; ke
 })
 
 test_that("FT-PL5312 [FR-PL331]: plan_empty() twice: the later text, when, position and footnote win; a field left out keeps the earlier", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   p <- table_plan(.t4_hier(), cols = "TRT", rows = c(soc = "AESOC")) |> plan_cells("{n}", notes = FALSE)
   em <- function(p) plan_layers(p)$layers$empty
   all1 <- p |> plan_empty(text = "none", when = "no_rows", position = "first", footnote = "f1")
@@ -506,6 +511,7 @@ test_that("FT-PL5315 [FR-PL358]: plan_template(pipe = NULL) follows the option, 
 
 test_that("FT-PL5316 [FR-PL361 FR-PL476]: the derived stub is the row keys (or group) and the label, less page keys and hidden columns; groups are the outermost printed row key, never a page key", {
   # rows left to the analysis variable: the key is `group` (AGE and HGT here)
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   b <- function(v, x) data.frame(
     group1 = "TRT", group1_level = rep(c("A", "B"), each = 2L), variable = v,
     variable_level = NA_character_, context = "continuous", stat_name = rep(c("N", "mean"), 2L),
@@ -621,6 +627,7 @@ test_that("FT-PL5319 [FR-PL377]: {n} in a spanner takes the single value given; 
 })
 
 test_that("FT-PL5320 [FR-PL381]: a header sheet's cols (name, position, range, .values, KEY = value) and span (each, NA, a key) resolve on the page and are read back as cells", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   p <- table_plan(.t4_ard2(), cols = c("TRT", "SEX"), rows = c(group = "variable")) |>
     plan_cells("{mean}", notes = FALSE)
   expect_identical(names(.t4_tab(p)), c("group", "label", "Placebo____F", "Placebo____M", "Drug____F", "Drug____M"))
@@ -669,6 +676,7 @@ test_that("FT-PL5320 [FR-PL381]: a header sheet's cols (name, position, range, .
 })
 
 test_that("FT-PL5321 [FR-PL385]: values = list(n = 'page', N = 'table') chooses the population on pages split by a group value; a named list makes each name a token", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("cards")
   adsl <- data.frame(USUBJID = sprintf("S%02d", 1:20), stringsAsFactors = FALSE)
   lb <- expand.grid(USUBJID = adsl$USUBJID, PARAM = c("ALT", "HGB"), stringsAsFactors = FALSE)

@@ -104,6 +104,7 @@ test_that("FT-FM108 [FR-FM148 FR-FM149 FR-FM151 FR-FM152 FR-FM153 FR-FM154 FR-FM
   colsets <- list(A = "A", AB = c("A", "B"), pos = c(2, 3), AC = c("A", "C"))
   d <- .fn_df()
   for (i in seq_len(nrow(ap$rows))) {
+    .cran_cut(i)
     r <- ap$rows[i, ]
     na <- if (r$na == "dash") "-" else ""
     rounding <- if (r$rounding == "NULL") NULL else r$rounding

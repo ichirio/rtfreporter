@@ -308,6 +308,7 @@ test_that("FT-TB785 [FR-TB545 FR-TB547 FR-TB548 FR-TB552 FR-TB555 FR-TB564 FR-TB
   W <- utils::tail(.ts_render(rtftable(.ts_data()))[[1L]]$cellx, 1L)
   set <- ap$rows
   for (i in seq_len(nrow(set))) {
+    .cran_cut(i)
     cs <- as.list(set[i, ])
     expect_identical(.ts_check(cs, W), character(0), label = paste(unlist(cs), collapse = " / "))
   }
@@ -348,6 +349,7 @@ test_that("FT-TB787 [FR-TB569 FR-TB570 FR-IX395 FR-IX335 FR-TB448 FR-TB450 FR-TB
   sets <- list(c("T", "T"), c("A T", "A"), c("T S", "T"), c("T H", "T"),
                c("T O", "T"), c("S H O", "S"), c("A T S H O", "A"))
   for (key in names(read)) {
+    .cran_cut(match(key, names(read)))
     v <- if (key == "row_height_twips") val$row_height_twips else val$pad
     for (s in sets) {
       src <- strsplit(s[1L], " ")[[1L]]
@@ -717,6 +719,7 @@ test_that("FT-TB975 [FR-IX397 FR-IX330 FR-IX331 FR-TB408 FR-TB422 FR-TB430 FR-TB
   expect_setequal(ap$covered, ap$need)
   expect_lt(nrow(ap$rows), 40L)
   for (i in seq_len(nrow(ap$rows))) {
+    .cran_cut(i)
     cs <- as.list(ap$rows[i, ])
     expect_identical(.ts_verbs_check(cs), character(0), label = paste(unlist(cs), collapse = " / "))
   }
@@ -757,6 +760,7 @@ test_that("FT-TB976 [FR-IX398 FR-IX332 FR-TB439 FR-TB430 FR-TB408 FR-TB345]: dec
          t0 |> set_decimal_split(cols = 2, ratio = 0.6)),
     list(t0 |> set_decimal_split(cols = 2) |> set_decimal_split(cols = NULL), t0))
   for (k in seq_along(dt)) {
+    .cran_cut(k)
     expect_identical(.ts_body(dt[[k]][[1L]]), .ts_body(dt[[k]][[2L]]), label = sprintf("row %d", k))
   }
   # and the rows say something: each pair differs from the plain table but
@@ -872,6 +876,7 @@ test_that("FT-TB978 [FR-IX399 FR-IX330 FR-TB363 FR-TB364 FR-TB349 FR-TB360 FR-TB
   expect_lt(nrow(ap$rows), 25L)
   W <- utils::tail(.ts_render(rtftable(.ts_data()))[[1L]]$cellx, 1L)
   for (i in seq_len(nrow(ap$rows))) {
+    .cran_cut(i)
     cs <- as.list(ap$rows[i, ])
     expect_identical(.ts_split_check(cs, W), character(0), label = paste(unlist(cs), collapse = " / "))
   }
@@ -898,6 +903,7 @@ test_that("FT-TB979 [FR-TB617 FR-IX400 FR-TB434 FR-IX333 FR-IX398]: decision tab
     other_row = list(t2, function(x) suppressWarnings(hb(x)),
                      function(a) grepl("\\\\b ", a$ct)))
   for (nm in names(dt)) {
+    .cran_cut(match(nm, names(dt)))
     d <- dt[[nm]]
     before <- promote(d[[2L]](d[[1L]]))
     after <- d[[2L]](promote(d[[1L]]))

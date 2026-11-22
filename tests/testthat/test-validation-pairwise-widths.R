@@ -186,6 +186,7 @@ test_that("FT-TB988 [FR-TB366 FR-TB369 FR-TB370 FR-TB371 FR-TB372 FR-TB373 FR-TB
   expect_setequal(ap$covered, ap$need)
   expect_lt(nrow(ap$rows), 70L)
   for (i in seq_len(nrow(ap$rows))) {
+    .cran_cut(i)
     r <- ap$rows[i, ]
     d <- if (r$data == "short") .aw_df_short() else .aw_df()
     font <- if (r$font == "NULL") NULL else r$font

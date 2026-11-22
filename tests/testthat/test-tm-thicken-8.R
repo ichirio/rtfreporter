@@ -784,6 +784,7 @@ test_that("FT-AS5802 [FR-AS220 FR-AS221]: shell = is the shell as text or a UTF-
 })
 
 test_that("FT-AS5803 [FR-AS253]: rtf_figures() hands render_format, render_width, render_height, render_dpi and png_device to each plot object as rtfplot() takes them, never to a file, and an rtfplot() keeps its format", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("devEMF")
   skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
   d <- .t8_dir()

@@ -269,6 +269,7 @@ test_that("FT-PL6205 [FR-PL987]: a content's own title or footnote border wins o
 }
 
 test_that("FT-PL6206 [FR-PL409]: plan_cell_style(cols = , <attributes>) without where is style_cols() on those columns, every column when cols is left out, .values the value columns; a border there is the header cells', said once, pointing to where = ~ TRUE", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   d <- .t12_tbl()
   base <- .t12_direct(d)[[1L]]
   attrs <- list(list(bold = TRUE), list(italic = TRUE), list(underline = TRUE),
@@ -363,6 +364,7 @@ test_that("FT-PL6207 [FR-PL428]: plan_style() called twice merges field by field
 })
 
 test_that("FT-PL6208 [FR-PL429]: plan_style(border = , border_<zone> = ) in one call or across calls in either order is the preset with each zone merged side by side; a whole-table rtf_border() is expanded first; border_group and the look fields keep the preset's rules", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   d <- .t12_tbl()
   dbl <- rtf_border(bottom = "double")
   zones <- c("header", "spanning", "body", "first_row", "last_row")
@@ -500,6 +502,7 @@ test_that("FT-PL6211 [FR-PL981]: on each page's last row the last_row zone wins 
 })
 
 test_that("FT-PL6212 [FR-PL990]: plan_style(border = \"tfl\" or no border) with a look field keeps the preset's rules, header_row over and under; border_group adds to them; \"none\" stays without rules; zones without border stay the only rules; no look field is as before", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   d <- .t12_tbl()
   dir <- function(...) .t12_direct(d, ...)
   tfl <- rtfreporter:::.normalize_table_border("tfl")
@@ -569,6 +572,7 @@ test_that("FT-PL6212 [FR-PL990]: plan_style(border = \"tfl\" or no border) with 
 .t12_cells <- function(t, i) unlist(t[i, c("t1", "t2", "t3")], use.names = FALSE)
 
 test_that("FT-PL6213 [FR-PL903]: plan_append(part = ) puts a part's rows under the parent's in the order declared, each under its name; a missing column or statistic prints the part's own empty text, a heading row stays empty; digits inherited key by key, the part's own win; a name twice stops", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   one <- .t12_child(c("mean", "sd"), ~ "Summary")
   two <- .t12_child("mean", ~ "Other")
   # the rows: the parent's, then each part's heading and statistics, in the order declared
@@ -664,6 +668,7 @@ test_that("FT-PL6214 [FR-PL907]: the whole table's settings read the stack: the 
 
 test_that("FT-PL6215 [FR-PL984]: a plan verb records only the arguments its call gives: a later call of the same verb keeps an earlier call's value, the documented default applies when no call gives one, a single call gives the pages it gave before", {
   # plan_stub(before): TRUE survives a later call without it; FALSE is the default; an explicit FALSE resets
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   p <- table_plan(.t12_nd_ard(), cols = "ARM", rows = c(group = "variable")) |>
     plan_cells(continuous = c(Mean = "{mean:.1f}"), categorical = "{n}") |>
     plan_labels(AGE = "Age (years)", SEX = "Sex")
@@ -725,6 +730,7 @@ test_that("FT-PL6215 [FR-PL984]: a plan verb records only the arguments its call
 # ------------------------------------------------------------------- AS
 
 test_that("FT-AS6201 [FR-AS219]: rtfreporter_ai_manual(ard = ) adds 05_ard.csv (the normalized ARD, every row up to 2,000, else each analysis' first 30) and 06_ard_shape.md (keys, which come together, each variable's statistics, a starting table_plan()); without it 00_START_HERE.md says how to add them", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   ard <- cards::bind_ard(
@@ -779,6 +785,7 @@ test_that("FT-AS6201 [FR-AS219]: rtfreporter_ai_manual(ard = ) adds 05_ard.csv (
 })
 
 test_that("FT-AS6202 [FR-AS228]: the kit's text files are UTF-8 whatever the locale, the Japanese labels of the ARD kept, and nothing is sent anywhere", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("cards")
   df <- data.frame(g = c("A", "B"), AGE = c(30, 40), stringsAsFactors = FALSE)
   ard <- cards::ard_continuous(df, by = g, variables = AGE,
@@ -932,6 +939,7 @@ test_that("FT-AS6205 [FR-AS265]: a label too long for a line stays in its one pa
 })
 
 test_that("FT-AS6206 [FR-AS269]: toc_style entry hanging is FALSE by default (no \\fi, as before), TRUE writes \\li<indent + 720>\\fi-720, a whole number h writes \\li<indent + h>\\fi-h, headings are not affected, the estimate counts the wrapped lines with h less width, anything else or another key stops naming it; the option works and the argument wins", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B", t_14_3_1 = "C"))
   toc <- .t12_hang_toc(f)
@@ -1138,6 +1146,7 @@ test_that("FT-DC6202 [FR-DC361]: in a header, footer, title or footnote {{ is { 
 })
 
 test_that("FT-DC6203 [FR-DC362]: rtf_header(border = ) / rtf_footer(border = ) is the band's border as a whole: top above the first row, bottom below the last, inside_h between, left / right on the outer edges of every row, inside_v between cells, all the four outer edges; after drop_empty_rows; a one-row band and a top rule alone are as before", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   rows3 <- list(c(l = "Ra", r = "Rb"), c(l = "Sa", c = "Sb", r = "Sc"), c(c = "Tc"))
   for (kind in c("header", "footer")) {
     mkdoc <- function(rows, border, ...) {
@@ -1210,6 +1219,7 @@ test_that("FT-DC6203 [FR-DC362]: rtf_header(border = ) / rtf_footer(border = ) i
 })
 
 test_that("FT-DC6204 [FR-DC363]: a header, footer or footnote row given as a list takes border = merged side by side over the block's (\"none\" erases), on its outer edges and inside_v; a line both adjacent rows draw is drawn once as the upper row's bottom; a lower row's top with nothing above stays; its colour is in the colour table", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   own <- function(cols, border) list(columns = cols, border = border)
   # (1) the row's sides win over the block's, side by side; "none" erases one
   s1 <- function(k) list(own(c(l = paste0(k, "1a"), r = paste0(k, "1b")), rtf_border(bottom = TRUE)),
@@ -1260,6 +1270,7 @@ test_that("FT-DC6204 [FR-DC363]: a header, footer or footnote row given as a lis
 })
 
 test_that("FT-DC6205 [FR-DC383]: a footnote block in its table form is placed as its content is: \\trqc under a centred figure or table, \\trqr under a right one, neither under a left one; as wide as its content by default, footnote_width = \"page\" the writable width placed the same; a page header and footer not placed; the text form has no table placement", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   png <- test_path("fixtures", "validation", "dot.png")
   fig <- function(align, style = NULL) {
     rtf_document(style = style) |>
@@ -1503,6 +1514,7 @@ test_that("FT-IX6206 [FR-IX334]: style_body(background = ) overrides the column'
 })
 
 test_that("FT-IX6207 [FR-IX301]: the program for the run tokens is, in order, generate_rtfreport(program = ), rtf_document(program = ), options(rtfreporter.program), the program found (source(), Rscript, knitr, RStudio in that order), then program_fallback of the call, then the document's; a program said is not announced, one found or fallen back to is said in a message", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   fb <- function(...) {
     rtf_document(...) |>
       rtf_section(page = 1, secinfo = list(header = NULL,

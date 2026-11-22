@@ -1339,6 +1339,7 @@ test_that("FT-TB3282 [FR-TB578]: the other verbs override what was read from gt"
 })
 
 test_that("FT-TB3283 [FR-TB579]: an rtables column split gives exact leaf labels and spanners", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("rtables")
   skip_if_not_installed("formatters")
   set.seed(1)
@@ -1431,6 +1432,7 @@ test_that("FT-TB3287 [FR-TB592]: table_align and cell_valign of length 0, 2, NUL
 })
 
 test_that("FT-TB3288 [FR-TB603]: rtf_tables(first_rows = ) not a whole number of rows stops", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   d <- data.frame(Item = c("a", "b"), V = c("1", "2"), stringsAsFactors = FALSE)
   msg <- "rtf_tables(): `first_rows` is a whole number of rows, 1 or more."
   for (bad in list(Inf, 0, -1, 1.5, NA, "2", TRUE, c(1, 2), numeric(0))) {

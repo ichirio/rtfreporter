@@ -231,6 +231,7 @@ test_that("FT-DC290 [FR-DC189 FR-DC195 FR-DC206 FR-DC211 FR-DC283 FR-DC303 FR-DC
   expect_lt(nrow(ap$rows), 40L)
   set <- ap$rows
   for (i in seq_len(nrow(set))) {
+    .cran_cut(i)
     cs <- as.list(set[i, ])
     expect_identical(.vt_check(cs), character(0),
                      label = paste(unlist(cs), collapse = " / "))
@@ -248,6 +249,7 @@ test_that("FT-DC291 [FR-DC311 FR-DC315 FR-DC357]: decision table -- the block wi
     list(style = NULL,    opt = "page", want = 13680L),
     list(style = 3000L,   opt = "page", want = 3000L))
   n <- 0L
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   for (b in c("titles", "footnotes")) {
     key <- if (b == "titles") "title" else "footnote"
     for (form in c("table", "text")) {

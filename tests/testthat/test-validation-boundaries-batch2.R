@@ -513,12 +513,14 @@ test_that("FT-DC285 [FR-DC203 FR-DC204 FR-DC205 FR-DC206 FR-DC207 FR-DC213 FR-DC
 }
 
 test_that("FT-DC286 [FR-DC295 FR-DC297 FR-DC300 FR-DC302 FR-DC325 FR-DC326 FR-DC327 FR-DC328 FR-DC331 FR-DC341 FR-DC342 FR-DC343 FR-DC354 FR-TB600]: rtf_header(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   .eb2_run(.eb2_band_cases("rtf_header"), .eb2_band_run(rtf_header, "header"))
   # No rule by default.
   expect_null(rtf_header(c(l = "A"))$border)
 })
 
 test_that("FT-DC287 [FR-DC295 FR-DC297 FR-DC300 FR-DC302 FR-DC325 FR-DC326 FR-DC327 FR-DC328 FR-DC331 FR-DC341 FR-DC342 FR-DC343 FR-DC354 FR-TB600]: rtf_footer(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   .eb2_run(.eb2_band_cases("rtf_footer"), .eb2_band_run(rtf_footer, "footer"))
   # A top rule by default.
   expect_true(inherits(rtf_footer(c(l = "A"))$border, "rtf_border"))
@@ -591,6 +593,7 @@ test_that("FT-DC288 [FR-DC309 FR-DC310 FR-DC311 FR-DC320 FR-DC321 FR-DC322 FR-DC
     E("footnotes", "border a string", list(border = "top"), "^`rtf_style\\(footnotes\\)\\$border` must be NULL or an rtf_border\\(\\) object"),
     E("header", "color a name", list(color = "red"), "^`rtf_style\\(header\\)\\$color` must be NULL or a 6-digit hex colour")
   )
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   for (s in c("table", "titles", "footnotes", "header", "footer")) {
     S <- function(cls, val, pat) E(s, cls, val, sprintf(pat, s))
     cases <- c(cases, list(
@@ -832,6 +835,7 @@ test_that("FT-PL968 [FR-PL462 FR-PL464 FR-PL467 FR-PL470 FR-PL471 FR-TB284 FR-TB
 })
 
 test_that("FT-PL969 [FR-PL240 FR-PL241 FR-PL243 FR-PL246 FR-PL248 FR-PL249]: plan_digits(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   vals <- function(v) function(t) identical(t$Placebo, v)
   O <- .eb2_obj
   E <- .eb2_err
@@ -1039,6 +1043,7 @@ test_that("FT-TB778 [FR-TB607 FR-PL187]: a blank_rows position past the last row
     plan_blanks  = function(b) plan_apply(plan_blanks(table_plan(grp), where = b))[[1]]$blank_rows
   )
   for (nm in names(run)) {
+    .cran_cut(match(nm, names(run)))
     f <- run[[nm]]
     expect_error(f(7), oor("7"), info = nm)
     expect_error(f(-2), oor("-2"), info = nm)

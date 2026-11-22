@@ -395,7 +395,10 @@ test_that("FT-PL985 [FR-PL968 FR-PL903 FR-PL904 FR-PL905 FR-PL432 FR-PL433 FR-PL
   expect_setequal(ap$need, setdiff(.pa_pairs(levels), never))
   expect_setequal(ap$covered, ap$need)
   cases <- ap$rows
-  for (i in seq_len(nrow(cases))) .pa_case(cases[i, ], dir)
+  for (i in seq_len(nrow(cases))) {
+    .cran_cut(i)
+    .pa_case(cases[i, ], dir)
+  }
 })
 
 # ---------------------------------------------------------------------------
@@ -479,6 +482,7 @@ test_that("FT-PL986 [FR-PL969 FR-PL905 FR-PL433]: decision table -- a page break
     paste0(s(5), " | S-06 N Mean SD"))
   expect_identical(length(want), nrow(cases))
   for (i in seq_len(nrow(cases))) {
+    .cran_cut(i)
     cs <- cases[i, ]
     info <- paste(names(cs), unlist(cs), sep = "=", collapse = " ")
     p <- .pa_plan_b(cs$n1, cs$heading == "present", cs$blanks, cs$split)
@@ -575,6 +579,7 @@ test_that("FT-LS162 [FR-LS254 FR-PL189 FR-PL196 FR-PL184 FR-PL432 FR-LS156]: dec
       c(dizz, "_"), c("S-03|Cough|MILD", "_")))
   expect_identical(length(want), nrow(cases))
   for (i in seq_len(nrow(cases))) {
+    .cran_cut(i)
     cs <- cases[i, ]
     info <- paste(names(cs), unlist(cs), sep = "=", collapse = " ")
     p <- .pa_listing_plan(cs$max_rows, cs$blanks, cs$collapse, cs$first)

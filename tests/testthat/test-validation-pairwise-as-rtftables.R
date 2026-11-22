@@ -262,6 +262,7 @@ test_that("FT-TB779 [FR-TB121 FR-TB137 FR-TB150 FR-PL433 FR-IX262 FR-TB608 FR-TB
   expect_lt(nrow(ap$rows), 30L)
   set <- ap$rows
   for (i in seq_len(nrow(set))) {
+    .cran_cut(i)
     cs <- as.list(set[i, ])
     expect_identical(.vr_check(cs), character(0), label = paste(unlist(cs), collapse = " / "))
   }
@@ -507,6 +508,7 @@ test_that("FT-TB783 [FR-LS156 FR-PL952 FR-TB150 FR-TB610 FR-TB612 FR-TB613]: pai
   expect_lt(nrow(ap$rows), 20L)
   set <- ap$rows
   for (i in seq_len(nrow(set))) {
+    .cran_cut(i)
     cs <- as.list(set[i, ])
     expect_identical(.vl_check(cs), character(0), label = paste(unlist(cs), collapse = " / "))
   }

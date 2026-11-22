@@ -186,6 +186,7 @@ test_that("FT-IX5701 [FR-IX123]: a header and a footer in their own font both st
 })
 
 test_that("FT-IX5702 [FR-IX201]: plan_cells(value = ) changes a cell only with stats = \"rows\"; with templates {x} reads stat_fmt, else stat", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   tab <- function(ard, ...) plan_apply(table_plan(ard, cols = "TRT") |> plan_cells(..., notes = FALSE), "table")
   # stats = "rows": value picks the column the cells hold
   by_stat <- tab(.t7_ard(), stats = "rows")                    # value = "stat" (the default)

@@ -175,6 +175,7 @@ test_that("FT-TB701 [FR-TB273 FR-TB274 FR-TB275 FR-TB276 FR-TB277 FR-TB278 FR-TB
   expect_lt(nrow(ap$rows), nrow(cand) / 50)
   set <- ap$rows
   for (i in seq_len(nrow(set))) {
+    .cran_cut(i)
     r <- set[i, ]
     label <- paste(r$cut, r$keep, r$span, r$allow, r$widths, r$fit, r$rowpages, r$order, sep = " / ")
     keep <- switch(r$keep, default = 1L, none = integer(0), two = 1:2)
@@ -279,6 +280,7 @@ test_that("FT-PL926 [FR-PL433 FR-PL434 FR-PL435 FR-IX262 FR-TB121 FR-TB138 FR-PL
       "r01 r02 r03 | r04 r05 r06 | B+ r07 r08 | r09 r10 | r11 r12 r13 r14"),
     stringsAsFactors = FALSE)
   for (i in seq_len(nrow(dt))) {
+    .cran_cut(i)
     r <- dt[i, ]
     label <- paste(r$split, r$max, r$mgr, sep = " / ")
     p <- table_plan(.vp_recs())
@@ -310,6 +312,7 @@ test_that("FT-PL927 [FR-PL433 FR-PL435 FR-PL436 FR-PL437 FR-PL192 FR-TB137 FR-IX
   d0 <- .vp_recs()
   size <- table(d0$G)
   for (i in seq_len(nrow(set))) {
+    .cran_cut(i)
     r <- set[i, ]
     label <- paste(r$split, r$max, r$mgr, r$cont, r$blanks, r$by, r$titles, sep = " / ")
     cont <- if (r$cont == "default") " (Cont.)" else " - continued"
@@ -420,6 +423,7 @@ test_that("FT-TB702 [FR-TB279 FR-PL461 FR-PL467 FR-TB280]: decision table -- the
                c("cols", "group", "rows"))
   ref <- NULL
   for (i in seq_along(orders)) {
+    .cran_cut(i)
     o <- orders[[i]]
     label <- paste(o, collapse = ",")
     pg <- paginate_cols(rp, every = 2, keep = 1:3, order = o)
@@ -494,6 +498,7 @@ test_that("FT-PL928 [FR-PL433 FR-TB137 FR-TB138 FR-IX324]: counted blank rows wi
       "r01 r02 r03 | r04 r05 r06 | B+ r07 r08 | r09 r10 | r11 r12 r13 r14"),
     stringsAsFactors = FALSE)
   for (i in seq_len(nrow(dt))) {
+    .cran_cut(i)
     r <- dt[i, ]
     label <- paste(r$split, r$max, r$mgr, sep = " / ")
     for (gc in list("G", NULL)) {

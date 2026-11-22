@@ -39,6 +39,7 @@
 }
 
 test_that("FT-IX6801 [FR-IX319]: column_widths_twips wins outright and its sum is the width; col_rel_width apportions the total; table_width_twips beats table_width_pct; no width gives the writable page; an explicit col_rel_width beats auto_width", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   writable <- 13680L
   # the same spellings through rtftable() and through as_rtftables()
   built <- list(
@@ -357,6 +358,7 @@ test_that("FT-IX6805 [FR-IX338]: one rtf_border() is the whole table at rtftable
 }
 
 test_that("FT-TB6801 [FR-TB184]: rtf_tables(first_rows = ) is NULL by default; with page_break = FALSE it puts that many rows of the one table on the shared page and paginates the rest as the table says, each page with its title, header and footnote, for a table_plan, a data frame and an rtftable", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   expect_null(formals(rtf_tables)$first_rows)
   base <- rtf_tables(rtf_document(), list(.t13_items(3L)), titles = list("Table 1"))
   hdr <- paste0("Item", .t13_bs, "cell")
@@ -507,6 +509,7 @@ test_that("FT-TB6801 [FR-TB184]: rtf_tables(first_rows = ) is NULL by default; w
 }
 
 test_that("FT-DC6801 [FR-DC315]: the order is the module's own argument > the rtf_style() section > the shared level > the rtfreporter.* option > the baseline, for the five option keys in every module they reach, and the argument by rtftable(), rtf_table_style() and as_rtftables()", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   # the ladder: each rung sets one more source above the ones before it
   ladder <- list(none = character(0), option = "option",
                  shared = c("shared", "option"),
@@ -651,6 +654,7 @@ test_that("FT-DC6801 [FR-DC315]: the order is the module's own argument > the rt
                                     else 100 * stats::sd(x) / mean(x))
 
 test_that("FT-PL6801 [FR-PL901]: a listing above its summary, as two plans joined by plan_append(), gives byte for byte the RTF of the same table built by hand: the time points across in two column blocks, the PK parameters across, the analytes across; the table's verbs before or after plan_append() give the same bytes, and the later of two wins", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
   stub <- "Subject ID/Age (years)/Gender"

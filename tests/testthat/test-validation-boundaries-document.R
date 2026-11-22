@@ -631,6 +631,7 @@ test_that("FT-TB775 [FR-TB600 FR-TB601]: twips and font-size arguments take whol
   bad <- list(fraction = 240.7, string = "240", logical = TRUE, NA_ = NA,
               NA_real = NA_real_, factor = factor("240"))
   for (nm in names(bad)) {
+    .cran_cut(match(nm, names(bad)))
     v <- bad[[nm]]
     expect_error(rtftable(.eb_df, row_height_twips = v), rh, info = nm)
     expect_error(rtftable(.eb_df, font_size_half_points = v), fs, info = nm)

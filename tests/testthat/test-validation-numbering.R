@@ -94,6 +94,7 @@ test_that("FT-AS126 [FR-AS125 FR-AS126 FR-AS130 FR-AS140 FR-AS141 FR-IX111 FR-IX
                     inputs = c("two", "three"), stringsAsFactors = FALSE)
   expect_identical(nrow(dt), 12L)
   for (i in seq_len(nrow(dt))) {
+    .cran_cut(i)
     r <- dt[i, ]
     label <- paste(r$cover, r$toc, r$inputs, sep = " / ")
     files <- inputs[[r$inputs]]

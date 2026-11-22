@@ -249,6 +249,7 @@ test_that("FT-DC248 [FR-DC311 FR-DC315]: decision table -- argument > section > 
   cases <- .sp_cases_a()
   expect_identical(nrow(cases), 122L)
   for (i in seq_len(nrow(cases))) {
+    .cran_cut(i)
     set <- strsplit(cases$set[i], " ", fixed = TRUE)[[1L]]
     r <- .sp_run(cases$key[i], cases$module[i], set)
     expect_identical(r$got, r$want,
@@ -270,6 +271,7 @@ test_that("FT-DC249 [FR-DC315 FR-DC318]: pairwise -- key x module x the two sour
   expect_lt(nrow(ap$rows), nrow(cand) / 3)
   set <- ap$rows
   for (i in seq_len(nrow(set))) {
+    .cran_cut(i)
     src <- strsplit(set$pair[i], " ", fixed = TRUE)[[1L]]
     r <- .sp_run(set$key[i], set$module[i], src, route = set$route[i])
     expect_identical(r$got, r$want,

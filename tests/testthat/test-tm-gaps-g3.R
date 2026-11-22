@@ -1433,6 +1433,7 @@ test_that("FT-PL3004 [FR-PL121]: a hierarchy with an overall row: the overall ro
 })
 
 test_that("FT-PL3005 [FR-PL144 FR-PL145 FR-PL149]: plan_filter() parents keep / drop, and the unnamed-condition stop", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   base <- .g3_hier_plan()
   keep <- .g3_tab(plan_filter(base, p >= 0.30))
   # a SOC stays exactly when a child is kept: S2 (own .20, P3 .35) and S3
@@ -1579,6 +1580,7 @@ test_that("FT-PL3011 [FR-PL232 FR-PL233]: notes = TRUE says which statistics no 
 }
 
 test_that("FT-PL3012 [FR-PL254]: later plan_levels() add a key; the same key is replaced; a map handed whole is its entries", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   p <- .g3_lab_plan() |> plan_levels(TRT = c("B", "A")) |>
     plan_levels(list(PARAM = c("AST", "ALT")))
   expect_identical(plan_layers(p)$layers$levels$levels,
@@ -1632,6 +1634,7 @@ test_that("FT-PL3014 [FR-PL268]: plan_total() makes no Total column for records 
 })
 
 test_that("FT-PL3015 [FR-PL305]: a row key's empty value (a group's own row) comes first in its group, ascending or descending", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   for (key in c("pt", "-pt")) {
     tab <- .g3_tab(.g3_hier_plan() |> plan_sort(key))
     for (s in c("S1", "S2", "S3")) {
@@ -1655,6 +1658,7 @@ test_that("FT-PL3016 [FR-PL307]: .overall puts the overall rows first", {
 })
 
 test_that("FT-PL3017 [FR-PL331]: plan_empty() twice merges field by field", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   d <- .g3_hier()
   p <- table_plan(d, cols = "TRT", rows = c(soc = "AESOC")) |>
     plan_cells("{n}", notes = FALSE)
@@ -1785,6 +1789,7 @@ test_that("FT-PL3021 [FR-PL358]: the pipe follows the option, then RStudio's pre
 }
 
 test_that("FT-PL3022 [FR-PL361 FR-PL476]: the derived stub leaves out the page key and the hidden columns; its headings are the outermost printed key", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   p <- .g3_site_plan()
   expect_identical(names(.g3_tab(p)), c("site", "soc", "pt", "label", "A", "B"))
   # no page key, nothing hidden: every row key and the label are folded
@@ -1810,6 +1815,7 @@ test_that("FT-PL3022 [FR-PL361 FR-PL476]: the derived stub leaves out the page k
 })
 
 test_that("FT-PL3023 [FR-PL455]: with plan_stub() the pages are cut by value, then each page's stub is folded", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   p <- .g3_site_plan()
   pg <- plan_apply(p |> plan_paginate_group(col = "soc", keep = FALSE) |> plan_stub(),
                    "pages")
@@ -1831,6 +1837,7 @@ test_that("FT-PL3023 [FR-PL455]: with plan_stub() the pages are cut by value, th
 })
 
 test_that("FT-PL3024 [FR-PL373]: a header set with rtf_col_header() is on every page, and a full-length row stays positional", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   p <- .g3_site_plan() |> plan_paginate_group(col = "soc", keep = FALSE) |> plan_stub()
   hdr <- rtf_col_header(c("Term", "Group A", "Group B"))
   pg <- plan_apply(p |> plan_col_header(header = hdr), "pages")

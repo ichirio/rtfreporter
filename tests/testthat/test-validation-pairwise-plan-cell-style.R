@@ -141,6 +141,7 @@ test_that("FT-PL993 [FR-PL404 FR-PL408 FR-PL409 FR-PL410 FR-PL416 FR-PL417 FR-PL
   bord <- rtf_border(bottom = TRUE)
   places <- c("cols", "header", "where", "formula")
   for (pl in places) for (a in c(.cs_attrs, "border")) {
+    .cran_cut(match(pl, places))
     label <- paste(pl, a)
     if (pl == "formula" && a == "border") next
     args <- list(table_plan(d))
@@ -198,6 +199,7 @@ test_that("FT-PL994 [FR-PL404 FR-PL405 FR-PL407 FR-PL408 FR-PL409 FR-PL410 FR-PL
   d <- .cs_tbl()
   base <- .cs_snapshot(.cs_pg(table_plan(d) |> plan_style()))
   for (i in seq_len(nrow(ap$rows))) {
+    .cran_cut(i)
     r <- ap$rows[i, ]
     cols <- switch(r$cols, all = NULL, A = "A", AB = c("A", "B"))
     attrs <- attr_sets[[r$attrs]]

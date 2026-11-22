@@ -187,6 +187,7 @@ test_that("FT-TB5209 [FR-TB603]: as_rtftables(first_rows = ) that is not one who
 })
 
 test_that("FT-TB5210 [FR-TB605]: indent and group_summary of a folding stub stop in every entry point", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   h <- .t3_h()
   v <- c("SOC", "PT")
   ie <- "`indent` must be a single non-negative integer."
@@ -219,6 +220,7 @@ test_that("FT-TB5210 [FR-TB605]: indent and group_summary of a folding stub stop
 })
 
 test_that("FT-TB5211 [FR-TB606]: a column position that is TRUE, a fraction or a factor stops; NA is out of range", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   h <- .t3_h()
   wide <- data.frame(P = "ALT", D1 = "1", D8 = "2", D15 = "3", stringsAsFactors = FALSE)
   num <- data.frame(g = c("a", "b"), v = c(1.234, 2.5), stringsAsFactors = FALSE)

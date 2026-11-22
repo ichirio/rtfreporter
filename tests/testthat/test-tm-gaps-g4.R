@@ -89,6 +89,7 @@ test_that("FT-TB3000 [FR-TB102]: as_rtftable() takes a gt_tbl, an rtables tree, 
 })
 
 test_that("FT-TB3001 [FR-TB103]: as_rtftable() converts the one table of a gt_group and of a tbl_split", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("gt")
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("tfrmt")
@@ -190,6 +191,7 @@ test_that("FT-TB3005 [FR-TB111]: the list is named for a value-based split and a
 })
 
 test_that("FT-TB3006 [FR-TB114]: as_rtftables() gives the rendered body of each source", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("gt")
   skip_if_not_installed("huxtable")
   skip_if_not_installed("flextable")
@@ -222,6 +224,7 @@ test_that("FT-TB3006 [FR-TB114]: as_rtftables() gives the rendered body of each 
 })
 
 test_that("FT-TB3007 [FR-TB115]: a gt_group gives one page set per member table", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("gt")
   skip_if_not_installed("tfrmt")
   d4 <- data.frame(a = as.character(1:4), b = letters[1:4], stringsAsFactors = FALSE)
@@ -262,6 +265,7 @@ test_that("FT-TB3008 [FR-TB116]: a list input names pages '<list name>.<page nam
 })
 
 test_that("FT-TB3009 [FR-TB118]: as_rtftables(read_meta) reads all by default and only the token given", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("gt")
   g <- gt::gt(data.frame(a = c("x", "y"), b = c(1.5, 2.5), stringsAsFactors = FALSE))
   g <- gt::tab_spanner(g, "S", columns = c(a, b))
@@ -657,6 +661,7 @@ test_that("FT-TB3031 [FR-TB157]: listing on a source it cannot apply to stops wi
 })
 
 test_that("FT-TB3032 [FR-TB161]: drop_cols, sort_by and group_by refer to the reshaped body; a stubbed source gets no second stub", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   st <- .g4_soc()
   stub <- stub_spec(c("soc", "pt"))
   r <- as_rtftables(st, stub = stub, drop_cols = "x", sort_by = "n", sort_desc = TRUE)[[1L]]
@@ -786,6 +791,7 @@ test_that("FT-TB3036 [FR-TB167]: cell_styles of the caller, one per row, follow 
 .g4_bs <- "\\"
 
 test_that("FT-TB3037 [FR-TB170]: rtf_tables() takes a plan, as_rtftables() pages, a gt, a gtsummary table, a plot and a list", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("cards")
   skip_if_not_installed("gt")
   skip_if_not_installed("gtsummary")

@@ -685,6 +685,7 @@ test_that("FT-AS3023 [FR-AS180]: a single path, a single drawing function, a plo
 })
 
 test_that("FT-AS3024 [FR-AS181]: a PNG path, a JPEG path, a patchwork, a lattice object, a gtable and a recorded base plot are each one figure", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("ggplot2")
   skip_if_not_installed("patchwork")
   skip_if_not_installed("lattice")
@@ -917,6 +918,7 @@ test_that("FT-AS3032 [FR-AS197]: rtfplot() reads an upper-case .PNG's pixel size
 })
 
 test_that("FT-AS3033 [FR-AS198]: a ggplot, a lattice object, a patchwork and a gtable are each drawn into an image of render_width x render_height", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("ggplot2")
   skip_if_not_installed("patchwork")
   skip_if_not_installed("lattice")
@@ -1048,6 +1050,7 @@ test_that("FT-AS3039 [FR-AS218]: which = \"dev\" writes the developer manual alo
 })
 
 test_that("FT-AS3040 [FR-AS219]: 05_ard.csv holds every normalized row up to 2,000, else each analysis' first 30; 06_ard_shape.md lists each variable's statistics", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("cards")
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -1864,6 +1867,7 @@ test_that("FT-DC3030 [FR-DC254]: rtf_replace_text() is case-sensitive by default
 # ---- options / generate_rtfreport / rtf_style / bands -----------------------
 
 test_that("FT-DC3031 [FR-DC263]: rtfreporter_options() has one element per rtfreporter.* default, each the option's value where set and the factory baseline otherwise", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   nms <- c("rtfreporter.page.paper_size", "rtfreporter.page.orientation",
            "rtfreporter.page.margin_top_in", "rtfreporter.page.margin_bottom_in",
            "rtfreporter.page.margin_left_in", "rtfreporter.page.margin_right_in",

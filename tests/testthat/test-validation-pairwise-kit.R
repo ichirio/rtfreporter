@@ -95,6 +95,7 @@ test_that("FT-AS145 [FR-AS229 FR-AS230 FR-AS232]: validation kit decision table 
                     state = c("missing", "empty", "user_file", "earlier_kit"),
                     stringsAsFactors = FALSE)
   for (r in seq_len(nrow(dt))) {
+    .cran_cut(r)
     cs <- dt[r, ]
     lab <- paste(cs$state, cs$overwrite)
     d <- tempfile("vk")
@@ -159,6 +160,7 @@ test_that("FT-AS146 [FR-AS249]: validation kit pairwise -- build_user_matrix.R o
   expect_lte(nrow(cases), 20L)
 
   for (r in seq_len(nrow(cases))) {
+    .cran_cut(r)
     cs <- as.list(cases[r, , drop = FALSE])
     lab <- paste0("case ", r, " (", paste(names(cs), unlist(cs), sep = "=", collapse = ", "), ")")
     d <- tempfile("vk")

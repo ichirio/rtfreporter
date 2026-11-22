@@ -314,6 +314,7 @@ test_that("FT-DC293 [FR-DC282 FR-DC283 FR-DC285 FR-DC281 FR-DC111 FR-DC115 FR-DC
   cases <- ap$rows
   cases$id <- seq_len(nrow(cases))
   for (i in seq_len(nrow(cases))) {
+    .cran_cut(i)
     cs <- cases[i, ]
     bad <- .tk_case_a(cs, dir, prog)
     expect_identical(bad, character(0),
@@ -372,6 +373,7 @@ test_that("FT-AS147 [FR-AS138 FR-AS140 FR-AS141 FR-IX111 FR-IX384 FR-AS250]: pai
   expect_setequal(ap$covered, ap$need)
   cases <- ap$rows
   for (i in seq_len(nrow(cases))) {
+    .cran_cut(i)
     cs <- cases[i, ]
     info <- paste(names(cs), unlist(cs), sep = "=", collapse = " ")
     src <- file.path(dir, paste0("in", i))
@@ -674,6 +676,7 @@ test_that("FT-AS148 [FR-AS138 FR-AS139 FR-AS140 FR-AS141 FR-IX111 FR-IX384]: dec
               "<error>"),
     stringsAsFactors = FALSE)
   for (i in seq_len(nrow(cases))) {
+    .cran_cut(i)
     cs <- cases[i, ]
     info <- paste(names(cs), unlist(cs), sep = "=", collapse = " ")
     out <- file.path(dir, sprintf("e%02d.rtf", i))

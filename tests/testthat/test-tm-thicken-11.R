@@ -29,6 +29,7 @@
 }
 
 test_that("FT-TB6101 [FR-TB102]: as_rtftable(x = ) takes a gt_tbl, a gtsummary table, an rtables tree, a listing_df, a flextable, a huxtable, a data.frame and a tibble", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("gt")
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("rlistings")
@@ -74,6 +75,7 @@ test_that("FT-TB6101 [FR-TB102]: as_rtftable(x = ) takes a gt_tbl, a gtsummary t
 })
 
 test_that("FT-TB6102 [FR-TB103]: as_rtftable() converts the one table of a gt_group() , a gt_split(), a tfrmt page_plan render and a one-member tbl_split", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("gt")
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("tfrmt")
@@ -146,6 +148,7 @@ test_that("FT-TB6103 [FR-TB109]: as_rtftable(drop_cols, sort_by, collapse_repeat
 })
 
 test_that("FT-TB6104 [FR-TB114]: as_rtftables(x = ) takes every kind of source and a list of them; the body is the rendered body", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("gt")
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("rlistings")
@@ -199,6 +202,7 @@ test_that("FT-TB6104 [FR-TB114]: as_rtftables(x = ) takes every kind of source a
 })
 
 test_that("FT-TB6105 [FR-TB115]: a gt_group, a tfrmt page_plan render and a tbl_split give one page set per member; an empty gt_group gives list()", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("gt")
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("tfrmt")
@@ -281,6 +285,7 @@ test_that("FT-TB6106 [FR-TB116]: a list is flattened in order: one page keeps it
 })
 
 test_that("FT-TB6107 [FR-TB118]: read_meta is TRUE by default, FALSE reads the body only, tokens read what they name (gt, gtsummary, rtables, rlistings, data.frame)", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("gt")
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("rtables")
@@ -472,6 +477,7 @@ test_that("FT-TB6110 [FR-TB119]: a data.frame's column label is its header label
 })
 
 test_that("FT-TB6111 [FR-TB161]: the stub is built before pagination, so drop_cols, group_col, sort_by, group_by = 'indent' and the splits refer to the reshaped body; a source with an indented stub gets no second one", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("gt")
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("tfrmt")
@@ -716,6 +722,7 @@ test_that("FT-TB6116 [FR-TB167]: a caller's cell_styles with one element per bod
 })
 
 test_that("FT-TB6117 [FR-TB170]: rtf_tables(tables = ) takes a table_plan, as_rtftables() pages, a bare data.frame, an rtftable, an rtfplot, a gt_tbl, a gtsummary table, a list of these and an object with a registered as_rtftables() method", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("cards")
   skip_if_not_installed("gt")
   skip_if_not_installed("gtsummary")
@@ -781,6 +788,7 @@ test_that("FT-TB6117 [FR-TB170]: rtf_tables(tables = ) takes a table_plan, as_rt
 })
 
 test_that("FT-TB6118 [FR-TB192]: rtf_tables() given a gt or gtsummary table, alone or in a list, reads its labels, alignment, titles and source notes as as_rtftables() does; read_gt is gone", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("gt")
   skip_if_not_installed("gtsummary")
   g <- gt::gt(data.frame(a = c("x", "y"), b = c(1.5, 2.5), stringsAsFactors = FALSE))
@@ -822,6 +830,7 @@ test_that("FT-TB6118 [FR-TB192]: rtf_tables() given a gt or gtsummary table, alo
 })
 
 test_that("FT-TB6119 [FR-TB577]: from a gt_tbl or gtsummary table as_rtftables() reads the labels, alignment, spanners, widths (px and pct), caption, title and subtitle, source notes and the in-cell footnote marks", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("gt")
   skip_if_not_installed("gtsummary")
   g <- gt::gt(data.frame(a = c("x", "y"), b = c(1.5, 2.5), c = c(3, 4)))
@@ -923,6 +932,7 @@ test_that("FT-TB6120 [FR-TB578]: explicit gt::tab_style() declarations are carri
 })
 
 test_that("FT-TB6121 [FR-TB579]: from an rtables VTableTree as_rtftables() reads the column labels, row labels with their indent in the stub, the nested column split as a spanning header, titles and footers, and the {N} marks as ^{N}", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("rtables")
   skip_if_not_installed("formatters")
   df <- data.frame(ARM = rep(c("A", "B"), each = 4), SEX = rep(c("F", "M"), 4),
@@ -962,6 +972,7 @@ test_that("FT-TB6121 [FR-TB579]: from an rtables VTableTree as_rtftables() reads
 })
 
 test_that("FT-TB6122 [FR-TB580]: from a flextable as_rtftables() reads the displayed text (labels and colformat_*() included), the leaf labels and spanning header, the per-column alignment, the caption as title and the footer as footnote", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("flextable")
   d <- data.frame(a = c("x", "y"), b = c(1.234, 2.5), c = c(1234, 20), stringsAsFactors = FALSE)
   ft <- flextable::flextable(d)
@@ -1058,6 +1069,7 @@ test_that("FT-TB6123 [FR-TB581]: from a huxtable as_rtftables() reads the displa
 }
 
 test_that("FT-TB6124 [FR-TB632]: a flextable with header labels, merges, colformat_*(), footers and footnote() marks, or no rows, is read and written without an error: the displayed values, escaped, once per merged area, no markup, no literal NA", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("flextable")
   ft <- flextable::flextable
   d <- .t11_ft_df()
@@ -1139,6 +1151,7 @@ test_that("FT-TB6124 [FR-TB632]: a flextable with header labels, merges, colform
 })
 
 test_that("FT-TB6125 [FR-TB633]: a huxtable with number_format, a caption, merged cells, header_rows() or no rows is read and written without an error: the displayed values, escaped, once per merged area, no markup, no literal NA, an NA or empty caption gives no title", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("huxtable")
   hx <- huxtable::as_hux(.t11_ft_df(), add_colnames = TRUE)
   # number_format: a sprintf format, a function, scientific, NA, a number of digits
