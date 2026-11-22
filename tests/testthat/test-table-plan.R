@@ -620,8 +620,7 @@ test_that("plan_cell_style() says where as well as how", {
 test_that("plan_template() writes a plan that runs to the pages", {
   skip_if_no_cards2()
   ard <- plan_ard()
-  gen <- utils::capture.output(code <- plan_template(ard, cols = "TRT",
-                                                     pipe = "|>"))
+  code <- plan_template(ard, cols = "TRT", pipe = "|>")
   expect_true(any(grepl("normalize_ard()", code, fixed = TRUE)))
   expect_true(any(grepl("table_plan(", code, fixed = TRUE)))
   expect_true(any(grepl("plan_cells(", code, fixed = TRUE)))
@@ -643,7 +642,7 @@ test_that("plan_template() writes a plan that runs to the pages", {
 test_that("plan_template() derives the stub and leaves the rest to be edited", {
   skip_if_no_cards2()
   code <- utils::capture.output(
-    invisible(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
+    print(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
   # the stub is not written at all: plan_stub() works it out from what
   # table_plan(rows = ) and plan_row_group() already declared
   expect_false(any(grepl("vars", code, fixed = TRUE)))
@@ -654,9 +653,9 @@ test_that("plan_template() derives the stub and leaves the rest to be edited", {
 test_that("plan_template() takes the pipe like plan_template(form = 'spread') does", {
   skip_if_no_cards2()
   base <- utils::capture.output(
-    invisible(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
+    print(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
   mag <- utils::capture.output(
-    invisible(plan_template(plan_ard(), cols = "TRT", pipe = "%>%")))
+    print(plan_template(plan_ard(), cols = "TRT", pipe = "%>%")))
   expect_false(any(grepl("%>%", base, fixed = TRUE)))
   expect_true(any(grepl("library(magrittr)", mag, fixed = TRUE)))
 })
@@ -669,7 +668,7 @@ test_that("the generated header writes a real newline escape", {
     cards::ard_summary(variables = AGE,
                           statistic = ~ list(N = function(x) length(x))))
   code <- utils::capture.output(
-    invisible(plan_template(ard, cols = "ARM", pipe = "|>")))
+    print(plan_template(ard, cols = "ARM", pipe = "|>")))
   expect_true(any(grepl("plan_col_header", code, fixed = TRUE)))
   # ONE backslash, not two: the generated file is R source
   one <- paste0('"', '\\', 'nN = "')
@@ -682,7 +681,7 @@ test_that("plan_template() invents no header when the N is ambiguous", {
   skip_if_no_cards2()
   # two continuous variables disagree about N, so nothing is guessed
   code <- utils::capture.output(
-    invisible(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
+    print(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
   expect_false(any(grepl("rtfreporter::plan_col_header(", code, fixed = TRUE)))
   # and the pipeline still parses: the trailing pipe must have been removed
   expect_silent(parse(text = paste(code, collapse = "\n")))

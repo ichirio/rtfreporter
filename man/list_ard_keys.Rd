@@ -10,12 +10,15 @@ list_ard_keys(x)
 \item{x}{A cards/cardx ARD (any data frame with the ARD columns).}
 }
 \value{
-Invisibly, a list with elements \code{keys}, \code{variables}, \code{contexts},
-\code{kinds} (the structural kinds, as printed) and \code{stats} (a data frame of
-context / stat_name / stat_label).
+A list of class \code{"rtfreporter_ard_keys"} with elements \code{keys},
+\code{variables}, \code{contexts}, \code{kinds} (the structural kinds, a data frame of
+variable / kind / context, or \code{NULL} when the ARD cannot be normalised)
+and \code{stats} (a data frame of context / stat_name / stat_label).  Its
+print method shows them, so typing the call prints them and assigning
+the result prints nothing.
 }
 \description{
-Prints, and returns invisibly, the structural facts you need in order to
+Returns the structural facts you need in order to
 call \code{\link[=normalize_ard]{normalize_ard()}} and \code{\link[=widen_ard]{widen_ard()}}: the grouping-variable names
 that appear in the \code{group1..groupN} columns, the analysis variables, the
 \code{context} values and the statistics each context carries.  All of it is read from the tibble's
@@ -27,7 +30,8 @@ if (requireNamespace("cards", quietly = TRUE)) {
     cards::ADSL, .by = ARM,
     cards::ard_summary(variables = AGE),
     cards::ard_tabulate(variables = SEX))
-  keys <- list_ard_keys(ard)    # prints the keys, variables and statistics
+  list_ard_keys(ard)            # prints the keys, variables and statistics
+  keys <- list_ard_keys(ard)    # prints nothing
   keys$keys
 }
 

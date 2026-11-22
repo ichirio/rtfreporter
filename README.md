@@ -346,9 +346,9 @@ by, the authors of these packages.
 
 Issues and pull requests are very welcome at
 <https://github.com/ichirio/rtfreporter>. Please read
-[`CONTRIBUTING.md`](CONTRIBUTING.md) and the
-[code of conduct](CODE_OF_CONDUCT.md) first.
+[`CONTRIBUTING.md`](https://github.com/ichirio/rtfreporter/blob/main/CONTRIBUTING.md) and the
+[code of conduct](https://github.com/ichirio/rtfreporter/blob/main/CODE_OF_CONDUCT.md) first.
 
 ## License
 
-Apache License 2.0 © 2026 Yoichi Masui. See [`LICENSE.md`](LICENSE.md).
+Apache License 2.0 © 2026 Yoichi Masui. See [`LICENSE.md`](https://github.com/ichirio/rtfreporter/blob/main/LICENSE.md).

@@ -216,6 +216,27 @@
 
 # ── TOC entry helpers (exported) ───────────────────────────────────────────
 
+# A path the session's native encoding cannot hold (a Japanese name in a C
+# locale) cannot be opened, listed or even split by dirname(): base R stops
+# with "unable to translate ... to native encoding".  Say so, and what to do,
+# before any file is touched.  A string not marked UTF-8 or latin1 is native
+# already and passes as it is.
+.check_native_path <- function(path, arg) {
+  path <- path[!is.na(path)]
+  enc <- Encoding(path)
+  bad <- vapply(seq_along(path), function(i) {
+    enc[i] %in% c("UTF-8", "latin1") && is.na(iconv(path[i], enc[i], ""))
+  }, logical(1L))
+  if (any(bad)) {
+    stop(sprintf(paste0("`%s` has a character the session's native encoding ",
+                        "(LC_CTYPE \"%s\") cannot hold, so R cannot open it: ",
+                        "run R in a UTF-8 locale, or give the file or folder ",
+                        "an ASCII name."),
+                 arg, Sys.getlocale("LC_CTYPE")), call. = FALSE)
+  }
+  invisible()
+}
+
 # The scalar arguments of assemble_rtf(): each one value of its kind, so a
 # typo is an error instead of a base-R message or a silent default.
 .check_assemble_args <- function(output_file, overwrite, cover, toc_title,
@@ -226,6 +247,7 @@
   if (!one_string(output_file) || !nzchar(output_file)) {
     stop("`output_file` must be a single non-empty file path.", call. = FALSE)
   }
+  .check_native_path(output_file, "output_file")
   if (!dir.exists(dirname(output_file))) {
     stop(sprintf("The folder of `output_file` does not exist: %s",
                  dirname(output_file)), call. = FALSE)
@@ -1132,6 +1154,7 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
     stop("`input_files` must be a character vector with at least 2 elements.",
          call. = FALSE)
   }
+  .check_native_path(input_files, "input_files")
   for (f in input_files) {
     if (!file.exists(f)) stop(sprintf("Input file not found: %s", f),
                               call. = FALSE)

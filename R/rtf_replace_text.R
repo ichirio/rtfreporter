@@ -110,6 +110,9 @@ rtf_replace_text <- function(input_file,
   } else {
     if (!use_regex) {
       patterns <- vapply(patterns, .escape_regex, character(1L))
+      # A fixed replacement is literal text: double each backslash so gsub()
+      # does not read "\line" as an escape or "\1" as a back-reference.
+      replacement <- gsub("\\", "\\\\", replacement, fixed = TRUE)
     }
     if (case_insensitive) {
       patterns <- paste0("(?i)", patterns)

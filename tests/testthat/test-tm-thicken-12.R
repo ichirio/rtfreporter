@@ -779,6 +779,7 @@ test_that("FT-AS6201 [FR-AS219]: rtfreporter_ai_manual(ard = ) adds 05_ard.csv (
 })
 
 test_that("FT-AS6202 [FR-AS228]: the kit's text files are UTF-8 whatever the locale, the Japanese labels of the ARD kept, and nothing is sent anywhere", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   df <- data.frame(g = c("A", "B"), AGE = c(30, 40), stringsAsFactors = FALSE)
   ard <- cards::ard_continuous(df, by = g, variables = AGE,

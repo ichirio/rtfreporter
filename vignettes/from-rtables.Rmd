@@ -68,7 +68,7 @@ library(rtfreporter)
 > **The second path.** This article is about bringing a table you already
 > have.  When the statistics are in a cards / cardx ARD, the recommended route
 > is a table plan -- see [Get started](rtfreporter.html) and
-> [Tables from an ARD](tables-from-ard.html).
+> [Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html).
 
 An [rtables](https://CRAN.R-project.org/package=rtables) table --
 including the tables [tern](https://CRAN.R-project.org/package=tern)'s
@@ -122,12 +122,12 @@ labels.
 ## Splitting a long table across pages
 
 `as_rtftables()` pages the table: `split` and `max_rows` say how, as for any
-source -- see [Paginating with as_rtftables()](pagination.html).
+source -- see [Paginating with as_rtftables()](https://ichirio.github.io/rtfreporter/articles/pagination.html).
 
 <!-- where-next -->
 
 ## Where next
 
 - [From gt and gtsummary](from-gt.html) --- the same for a gt or gtsummary table
-- [Importing tables](importing-tables.html) --- every source `as_rtftables()` reads
-- [The pharmaverse catalog](tlg-catalog.html) --- tern tables and others, to RTF
+- [Importing tables](https://ichirio.github.io/rtfreporter/articles/importing-tables.html) --- every source `as_rtftables()` reads
+- [The pharmaverse catalog](https://ichirio.github.io/rtfreporter/articles/tlg-catalog.html) --- tern tables and others, to RTF

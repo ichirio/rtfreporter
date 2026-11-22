@@ -249,14 +249,16 @@ test_that("FT-AR094 [FR-AR236 FR-AR237]: list_ard_keys() lists a grouping variab
   a$group2 <- NA_character_
   a$group2_level <- NA_character_
   out <- NULL
-  expect_output(out <- list_ard_keys(rbind(a, b)), "ARD keys (group1..groupN values) : TRT, SITE",
+  out <- list_ard_keys(rbind(a, b))
+  expect_output(print(out), "ARD keys (group1..groupN values) : TRT, SITE",
                 fixed = TRUE)
   expect_identical(out$keys, c("TRT", "SITE"))
   # no grouping variable at all
   one <- .ar_ard()
   one <- one[one$variable == "AGE", setdiff(names(one), c("group1", "group1_level")),
              drop = FALSE]
-  expect_output(out <- list_ard_keys(one), "ARD keys (group1..groupN values) :  \n",
+  out <- list_ard_keys(one)
+  expect_output(print(out), "ARD keys (group1..groupN values) :  \n",
                 fixed = TRUE)
   expect_null(out$keys)
 })
