@@ -4,7 +4,8 @@
 #
 #  Multi-row column headers were historically split across two arguments --
 #  `col_header` (label rows + nested spanning rows) and `spanning_header`
-#  (a single span row placed above col_header).  The split made it awkward
+#  (a single span row placed above col_header; since removed, see below).
+#  The split made it awkward
 #  to span at the top-most level using `col_header` alone and forced two
 #  different cell-spec shapes (`from = / to =` versus a plain character
 #  vector).
@@ -38,7 +39,8 @@
 #    "A | B | C"                       -> single label row
 #    list(c("A","B"), c("X","Y"))      -> multi-row labels
 #    list(list(list(from=1,to=2,label="X")), c("A","B")) -> spanning + labels
-#  The old `spanning_header =` argument is also unchanged.
+#  The old `spanning_header =` argument was removed: a span row above the
+#  labels is now the first row of `col_header`.
 #  ============================================================================
 
 

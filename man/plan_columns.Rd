@@ -35,7 +35,7 @@ one call.}
 (\code{.values} for every value column), \code{\link[=set_decimal_split]{set_decimal_split()}}'s \code{cols}, by
 name.  A value that is not column names (\code{NA}, \code{""}, a number) stops at
 \code{plan_columns()}; a name that is not a column of the table stops when
-the plan is applied, as a \code{widths} name does (a hidden column's name is
+the plan is applied (a hidden column's name is
 allowed and changes nothing).}
 
 \item{row_title}{The row-heading columns, \code{rtftable(row_title = )}, by

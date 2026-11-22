@@ -255,7 +255,7 @@ that does not refresh fields shows them too.
 
 \examples{
 # two TFL files in a folder, as a study's output
-dir <- file.path(tempdir(), "tfl")
+dir <- tempfile("tfl")
 dir.create(dir, showWarnings = FALSE)
 for (t in c("14.1.1", "14.2.1")) {
   doc <- rtf_document() |>
@@ -292,5 +292,6 @@ assemble_rtf(
   ),
   overwrite = TRUE
 )
+unlink(c(dir, out), recursive = TRUE)
 
 }

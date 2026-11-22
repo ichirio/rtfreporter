@@ -1521,6 +1521,7 @@ test_that(".kind is decided per summary, not per variable", {
 
 test_that("normalize_ard() keeps `stat` numeric when a statistic is text", {
   skip_if_no_cards()
+  skip_if_not_installed("dplyr")
   ard <- make_ard()
   # a test's result rows, as cardx::ard_stats_t_test() writes them: numbers
   # beside text (method, alternative) and a flag (paired)

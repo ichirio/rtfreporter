@@ -404,6 +404,7 @@ test_that("FT-TB6108 [FR-TB148]: na = counts NaN as missing, Inf / -Inf print, t
 })
 
 test_that("FT-TB6109 [FR-TB155]: as_rtftables(listing = ) is NULL by default and reshapes a data.frame or tibble as build_listing() does", {
+  skip_if_not_installed("tibble")
   skip_on_cran()
   adsl <- data.frame(
     USUBJID = c("01-701-1015", "01-701-1023", "01-701-1028"),

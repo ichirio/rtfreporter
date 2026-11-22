@@ -113,8 +113,10 @@
 #' if (requireNamespace("cards", quietly = TRUE)) {
 #'   ard <- cards::ard_stack(cards::ADSL, .by = ARM,
 #'                           cards::ard_tabulate(variables = c(SEX, AGEGR1)))
-#'   kit <- rtfreporter_ai_manual(file.path(tempdir(), "kit"), ard = ard, overwrite = TRUE)
-#'   basename(kit)
+#'   kit_dir <- tempfile("kit")
+#'   kit <- rtfreporter_ai_manual(kit_dir, ard = ard, overwrite = TRUE)
+#'   print(basename(kit))
+#'   unlink(kit_dir, recursive = TRUE)
 #' }
 #' @export
 rtfreporter_ai_manual <- function(dir = NULL, ard = NULL, which = c("user", "dev"),

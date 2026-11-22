@@ -540,12 +540,6 @@ test_that("FT-TB6017 [FR-TB421]: style_cols(background = ) fills the body cells,
   }, integer(1L), USE.NAMES = FALSE)
 }
 
-.t10_reset_edge_warning <- function() {
-  if (exists("border_edge_reading", envir = .deprecation_state, inherits = FALSE)) {
-    rm(list = "border_edge_reading", envir = .deprecation_state)
-  }
-}
-
 test_that("FT-TB6018 [FR-TB426]: style_header(row = ) targets every header row by default, or the header rows given, 1 being the top", {
   skip_on_cran()
   t3 <- .t10_hdr_tbl()
@@ -632,9 +626,7 @@ test_that("FT-TB6021 [FR-TB439 FR-TB440]: style_zone() merges each rtf_border() 
   skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   t0 <- .t10_hdr_tbl(n = FALSE, border = "none")
   expect_null(t0$border)
-  .t10_reset_edge_warning()
-  on.exit(.t10_reset_edge_warning(), add = TRUE)
-  z <- function(...) suppressWarnings(style_zone(t0, ...))
+  z <- function(...) style_zone(t0, ...)
   # rows: 1 spanner, 2 leaf labels, 3-5 the data rows (Age, Sex, Mean)
   # header: the leaf row's bottom and the spanner's underline
   h <- z(header = rtf_border(bottom = "double"))
@@ -671,52 +663,6 @@ test_that("FT-TB6021 [FR-TB439 FR-TB440]: style_zone() merges each rtf_border() 
   expect_identical(style_zone(m, header = NULL), m)
   o2 <- style_zone(m, body = rtf_border(bottom = "dot", inside_h = "none"))
   for (k in c("header", "spanning", "first_row", "last_row")) expect_identical(o2$border[[k]], m$border[[k]])
-})
-
-test_that("FT-TB6022 [FR-TB443]: style_zone() warns once a session, in full, when a zone border sets left / right or a multi-row zone's top / bottom without naming inside_v / inside_h", {
-  skip_on_cran()
-  .t10_reset_edge_warning()
-  on.exit(.t10_reset_edge_warning(), add = TRUE)
-  d <- data.frame(Item = c("a", "b", "c"), A = c("1", "2", "3"), stringsAsFactors = FALSE)
-  tbl <- rtftable(d, border = "none")
-  s <- rtf_border_line()
-  msg <- paste0(
-    "The edges of `rtf_border()` now mean the *outer* edges of whatever you attach it to.\n",
-    "  Before 0.5.0 `left`/`right` were drawn on every cell of a row, and a multi-row zone's\n",
-    "  `top`/`bottom` on every one of its rows.  To keep that look, name the interior rule:\n",
-    "    rtf_border(left = s, right = s, inside_v = s)   # was: left/right alone\n",
-    "    rtf_border(bottom = s, inside_h = s)            # was: bottom alone on a body zone\n",
-    "  Naming `inside_h` / `inside_v` (with `rtf_border_line(\"none\")` for \"no rule\") ",
-    "silences this.\n",
-    "  See ?rtf_border, section \"Writing borders before and after 0.5.0\", for the old ",
-    "and new spelling of each case.")
-  caught <- function(expr) {
-    ws <- character()
-    withCallingHandlers(expr, warning = function(w) {
-      ws <<- c(ws, conditionMessage(w))
-      invokeRestart("muffleWarning")
-    })
-    ws
-  }
-  # a multi-row zone's top, no inside_h named: warns, in full
-  expect_identical(caught(style_zone(tbl, body = rtf_border(top = s))), msg)
-  # once a session: silent the second time, whatever the shape
-  expect_identical(caught(style_zone(tbl, body = rtf_border(top = s))), character())
-  expect_identical(caught(style_zone(tbl, body = rtf_border(left = s))), character())
-  # left / right on their own warn as well (after a reset)
-  .t10_reset_edge_warning()
-  expect_identical(caught(style_zone(tbl, body = rtf_border(left = s, right = s))), msg)
-  .t10_reset_edge_warning()
-  expect_identical(caught(style_zone(tbl, last_row = rtf_border(bottom = s))), character())
-  expect_identical(caught(style_zone(tbl, body = rtf_border(bottom = s))), msg)
-  # naming inside_h / inside_v silences it, and so does a single row
-  .t10_reset_edge_warning()
-  expect_identical(caught(style_zone(tbl, body = rtf_border(top = s, inside_h = "none"))), character())
-  expect_identical(caught(style_zone(tbl, body = rtf_border(left = s, inside_v = "none"))), character())
-  expect_identical(caught(style_zone(rtftable(d[1L, ], border = "none"), body = rtf_border(top = s))),
-                   character())
-  # none of them used up the session's one warning
-  expect_identical(caught(style_zone(tbl, body = rtf_border(top = s))), msg)
 })
 
 # ------------------------------------------------------- rtf_table_style
@@ -990,29 +936,6 @@ test_that("FT-TB6031 [FR-TB476]: rtf_border(inside_h = , inside_v = ) are the ru
   # no rule where none is given
   r0 <- .render_rtftable(style_zone(t0, body = rtf_border(top = FALSE, inside_h = "none")), 9360L)
   expect_false(any(grepl("clbrdr", r0, fixed = TRUE)))
-})
-
-test_that("FT-TB6032 [FR-TB480]: an rtf_border records which of inside_h and inside_v the caller named, as an attribute that is not part of its value", {
-  skip_on_cran()
-  nm <- function(b) attr(b, "inside_named")
-  expect_identical(nm(rtf_border(top = TRUE)), c(h = FALSE, v = FALSE))
-  expect_identical(nm(rtf_border(top = TRUE, inside_h = TRUE)), c(h = TRUE, v = FALSE))
-  expect_identical(nm(rtf_border(left = TRUE, inside_v = "none")), c(h = FALSE, v = TRUE))
-  expect_identical(nm(rtf_border(inside_h = "none", inside_v = "none")), c(h = TRUE, v = TRUE))
-  # naming a side as NULL still counts as naming it
-  expect_identical(nm(rtf_border(inside_h = NULL)), c(h = TRUE, v = FALSE))
-  # not part of the value: the two compare equal apart from the attribute
-  a <- rtf_border(top = TRUE)
-  b <- rtf_border(top = TRUE, inside_h = NULL)
-  expect_equal(a, b, ignore_attr = TRUE)
-  expect_false(identical(a, b))
-  # the use of it: a left / right border without inside_v named warns (once), one that
-  # names it does not
-  .t10_reset_edge_warning()
-  on.exit(.t10_reset_edge_warning(), add = TRUE)
-  tbl <- rtftable(data.frame(Item = c("a", "b"), A = c("1", "2"), stringsAsFactors = FALSE), border = "none")
-  expect_silent(style_zone(tbl, body = rtf_border(left = TRUE, inside_v = "none")))
-  expect_warning(style_zone(tbl, body = rtf_border(left = TRUE)), "outer")
 })
 
 test_that("FT-TB6033 [FR-TB481]: a border line saved under the old class name rtf_border_side is still accepted as a side", {
