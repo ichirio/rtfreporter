@@ -342,6 +342,7 @@
 }
 .eb3_run <- function(cases, run) {
   for (cs in cases) {
+    if (is.null(cs)) next   # (a case left out where it cannot work)
     args <- c(setNames(list(cs$val), cs$arg), cs$more)
     lab  <- sprintf("%s = <%s>", cs$arg, cs$cls)
     kind <- sub(":.*", "", cs$expect)
@@ -398,6 +399,10 @@ test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS
   nf  <- "^Input file not found"
   two <- "^`input_files` must be a character vector with at least 2 elements"
   of  <- "^`output_file` must be a single non-empty file path"
+  # (a non-ASCII name is written in a UTF-8 locale; where the native encoding
+  # cannot hold it, R cannot open it: the error says so)
+  nat <- "^`output_file` has a character the session's native encoding"
+  out_kanji <- file.path(tempdir(), "出力.rtf")
   ow  <- "^`overwrite` must be TRUE or FALSE"
   cv  <- "^`cover` must be NULL or a list with the fields title"
   len <- "^`toc` must be a character vector the same length as `input_files`"
@@ -415,7 +420,8 @@ test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS
     E("input_files", "a missing file", c(a, file.path(dirname(a), "nope.rtf")), nf),
     C("input_files", "the same file twice", c(a, a), "ok", more = list(toc = "auto"),
       chk = function(x) grepl("bkmkstart tfl_t14_1_1_1", x) && grepl("bkmkstart tfl_t14_1_1_2", x)),
-    C("output_file", "non-ASCII name", file.path(tempdir(), "出力.rtf"), "ok:Table 14.2.1"),
+    if (native_can_hold(out_kanji)) C("output_file", "non-ASCII name", out_kanji, "ok:Table 14.2.1")
+    else E("output_file", "non-ASCII name, the native encoding cannot hold it", out_kanji, nat),
     E("output_file", "NA", NA_character_, of),
     E("output_file", "empty string", "", of),
     E("output_file", "length 2", c(tempfile(), tempfile()), of),
@@ -531,8 +537,11 @@ test_that("FT-AS141 [FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS156 FR-AS
   empty <- tempfile("eb3empty")
   dir.create(empty)
   kanji <- file.path(tempfile("eb3k"), "試験")
-  dir.create(kanji, recursive = TRUE)
-  file.copy(f, kanji)
+  if (native_can_hold(kanji)) {
+    dir.create(kanji, recursive = TRUE)
+    file.copy(f, kanji)
+  }
+  nat <- "^`dir` has a character the session's native encoding"
   out_exists <- tempfile(fileext = ".rtf")
   writeLines("{\\rtf1 x}", out_exists)
   sf  <- "^`spec_file` must end in .xlsx or .csv."
@@ -541,7 +550,8 @@ test_that("FT-AS141 [FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS156 FR-AS
   nrows <- function(n) function(x) is.data.frame(x) && nrow(x) == n
   cases <- list(
     O("dir", "valid", d, nrows(2)),
-    O("dir", "non-ASCII", kanji, nrows(2)),
+    if (native_can_hold(kanji)) O("dir", "non-ASCII", kanji, nrows(2))
+    else E("dir", "non-ASCII, the native encoding cannot hold it", kanji, nat),
     E("dir", "not there", file.path(d, "nope"), "^Directory not found"),
     E("dir", "no .rtf file", empty, "^No RTF files found."),
     O("output_file", "NULL", NULL, nrows(2)),

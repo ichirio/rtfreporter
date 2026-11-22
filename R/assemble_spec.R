@@ -373,6 +373,7 @@
   if (!is.character(dir) || length(dir) != 1L || is.na(dir) || !nzchar(dir)) {
     stop("`dir` must be a single folder path.", call. = FALSE)
   }
+  .check_native_path(dir, "dir")
   if (!is.logical(recursive) || length(recursive) != 1L || is.na(recursive)) {
     stop("`recursive` must be TRUE or FALSE.", call. = FALSE)
   }
@@ -385,6 +386,7 @@
       !tolower(tools::file_ext(spec_file)) %in% c("xlsx", "csv")) {
     stop("`spec_file` must end in .xlsx or .csv.", call. = FALSE)
   }
+  .check_native_path(spec_file, "spec_file")
   if (!dir.exists(dirname(spec_file))) {
     stop(sprintf("The folder of `spec_file` does not exist: %s",
                  dirname(spec_file)), call. = FALSE)
