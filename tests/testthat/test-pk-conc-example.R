@@ -306,7 +306,7 @@ test_that("both blocks end at the same right edge", {
 
 test_that("data-raw/gen_pk_conc.R is present and self-consistent", {
   path <- testthat::test_path("..", "..", "data-raw", "gen_pk_conc.R")
-  skip_if_not(file.exists(path), "data-raw/ is not in the installed package")
+  skip_if_not(file.exists(path), "needs data-raw/ of the source checkout; runs where the tests run from the checkout")
   src <- readLines(path, warn = FALSE)
   expect_true(any(grepl("set_decimal_split", src)))
   expect_true(any(grepl("paginate_cols", src)))

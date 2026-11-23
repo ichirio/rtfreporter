@@ -99,7 +99,7 @@ test_that("FT-DC6804 [FR-DC388]: the factory baseline names every rtfreporter.* 
   if (!length(db) && dir.exists(test_path("..", "..", "man"))) {
     db <- tools::Rd_db(dir = test_path("..", ".."))
   }
-  skip_if(!length(db), "no help pages to read")
+  skip_if(!length(db), "needs the help pages (the installed Rd database or the man/ folder); runs wherever either is present, as on every CI job")
   txt <- vapply(db, function(rd) paste(as.character(rd), collapse = ""), "")
   named <- unique(unlist(regmatches(txt, gregexpr(opt_re, txt))))
   expect_true("rtfreporter.toc_style" %in% named)

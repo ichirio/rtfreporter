@@ -93,7 +93,7 @@ test_that("rtfreporter_ai_manual(dir, ard = ): the ARD's rows and its shape", {
 
 test_that("the kit's examples are the three-step layout and use only exported functions", {
   kit <- system.file("ai", "kit", package = "rtfreporter")
-  skip_if(!nzchar(kit), "the kit is not installed")
+  skip_if(!nzchar(kit), "needs the installed AI kit (inst/ai/kit); runs wherever the package is installed, as on every CI job")
   ex <- names(asNamespace("rtfreporter")$.__NAMESPACE__.$exports)
   for (f in c("02_example_orr_subgroups.R", "03_example_ae_soc_pt.R", "04_example_demographics.R")) {
     src <- readLines(file.path(kit, f), warn = FALSE)
@@ -111,16 +111,16 @@ test_that("the public links name the newest RELEASE, not the dev version", {
   # the link must name the released manual -- which also means it changes once
   # per release rather than every time the development counter moves.
   repo <- test_path("..", "..")
-  skip_if_not(dir.exists(file.path(repo, ".git")), "not a source checkout")
+  skip_if_not(dir.exists(file.path(repo, ".git")), "needs the git source checkout (.git folder); runs where the tests run from the checkout")
   tags <- suppressWarnings(system2("git", c("-C", repo, "tag", "-l", "v*",
                                             "--sort=-v:refname"),
                                    stdout = TRUE, stderr = FALSE))
-  skip_if(length(tags) == 0L, "no release tags")
+  skip_if(length(tags) == 0L, "needs a release tag (v*) in the git history; runs once 0.9.0 is tagged")
   rel <- sub("^v", "", tags[[1L]])
 
   for (f in c("README.md", "_pkgdown.yml")) {
     p <- file.path(repo, f)
-    skip_if_not(file.exists(p), paste(f, "not available"))
+    skip_if_not(file.exists(p), paste(f, "needs the source checkout (not in the installed package); runs where the tests run from the checkout"))
     L <- readLines(p, encoding = "UTF-8", warn = FALSE)
     hit <- grep("rtfreporter-ai-(user|dev)-manual-[0-9]", L, value = TRUE)
     expect_gt(length(hit), 0L)
@@ -137,7 +137,7 @@ test_that("the version-stamped file the links point at is the one published", {
   # this asserts the naming the links assume, so a rename cannot go unnoticed.
   v <- .pkg_version()
   p <- test_path("..", "..", ".github", "workflows", "pkgdown.yaml")
-  skip_if_not(file.exists(p), "workflow not available (installed package)")
+  skip_if_not(file.exists(p), "needs .github/workflows/pkgdown.yaml of the source checkout; runs where the tests run from the checkout")
   L <- readLines(p, encoding = "UTF-8", warn = FALSE)
   expect_true(any(grepl('cp "inst/ai/${name}.md" "docs/ai/${name}-${version}.md"',
                         L, fixed = TRUE)),

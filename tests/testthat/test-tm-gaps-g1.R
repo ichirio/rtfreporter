@@ -396,13 +396,13 @@ test_that("FT-AR7001 [FR-AR130]: a plain data frame is read in an R where cards 
   skip_on_covr()
   rscript <- file.path(R.home("bin"),
                        if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
-  if (!file.exists(rscript)) skip("no Rscript to start a child R")
+  if (!file.exists(rscript)) skip("needs Rscript in R.home(\"bin\") to start a child R; present in every standard R installation")
   pkg <- find.package("rtfreporter")
   if (!file.exists(file.path(pkg, "Meta", "package.rds"))) {
-    skip("rtfreporter is not installed (tests run from source): nothing to give a child R")
+    skip("needs rtfreporter installed, not run from source, to give a child R; runs in R CMD check, where the package is installed")
   }
   if (nzchar(system.file(package = "cards", lib.loc = c(.Library, .Library.site)))) {
-    skip("cards is in R's own library: a child R cannot be kept from it")
+    skip("needs cards outside R's own library, so a child R can be kept from it; runs where cards is in a user library")
   }
   # the child's library holds only rtfreporter; its Imports are base packages
   tmp <- tempfile("ft-ar7001-")

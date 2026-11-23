@@ -109,7 +109,7 @@ test_that("shell = a sheet copied from Excel into Notepad: tabs, CRLF, a BOM; Sh
   expect_identical(readLines(file.path(d, "07_shell.md"), encoding = "UTF-8"), want)
   # Shift-JIS (ANSI on a Japanese Windows) and UTF-16 ("Unicode"): how to save it
   sjis <- iconv(enc2utf8(txt), "UTF-8", "CP932", toRaw = TRUE)[[1L]]
-  skip_if(is.null(sjis), "no CP932 converter")
+  skip_if(is.null(sjis), "needs iconv to convert to CP932 (Shift_JIS); runs wherever iconv supports it")
   expect_error(read_as(sjis), "not UTF-8 .*Shift-JIS.*Encoding: UTF-8")
   utf16 <- c(as.raw(c(0xff, 0xfe)), iconv(enc2utf8(txt), "UTF-8", "UTF-16LE", toRaw = TRUE)[[1L]])
   expect_error(read_as(utf16), "UTF-16 .*Encoding: UTF-8")

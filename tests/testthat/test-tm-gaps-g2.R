@@ -2213,7 +2213,7 @@ test_that("FT-DC3038 [FR-DC281]: {DATETIME} is taken once per file (every page s
       break
     }
   }
-  skip_if(is.null(other), "no non-English time locale installed")
+  skip_if(is.null(other), "needs a non-English time locale (Japanese, German or French) installed; runs where one is, as on the local Windows runs")
   expect_false(identical(format(as.POSIXct("2026-09-25"), "%b"), "Sep"))
   expect_true(grepl("M 25Sep2026  10:05", .render_to_string(doc2), fixed = TRUE))
 })
