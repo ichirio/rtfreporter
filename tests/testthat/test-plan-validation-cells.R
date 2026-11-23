@@ -1082,6 +1082,58 @@ test_that("FT-PL6803 [FR-PL993]: a listing with records, or with no plan_empty()
   expect_true(grepl("AETERM", bare, fixed = TRUE))
 })
 
+test_that("FT-PL2060 [FR-PL999]: plan_is_empty() says what plan_empty() judged, once the plan is resolved", {
+  # invented counts: an overall row and one event, then the same with no event
+  ae <- data.frame(ARM = rep(c("Placebo", "Active"), 2),
+                   .label = rep(c("Any adverse event", "Headache"), each = 2),
+                   .overall = rep(c(TRUE, FALSE), each = 2),
+                   .kind = "categorical", stat_name = "n", stat = c(3, 4, 2, 3))
+  sae <- data.frame(ARM = c("Placebo", "Active"), .label = "Any serious adverse event",
+                    .overall = TRUE, .kind = "categorical", stat_name = "n", stat = 0)
+  mk <- function(d) table_plan(d, cols = "ARM") |> plan_cells(categorical = "{n}")
+  run <- function(p) suppressMessages(plan_apply(p, "table"))
+
+  # not resolved yet: NA, with or without plan_empty()
+  p <- mk(ae) |> plan_empty()
+  expect_identical(plan_is_empty(p), NA)
+  expect_identical(plan_is_empty(mk(ae)), NA)
+  # resolved, with events: FALSE
+  run(p)
+  expect_identical(plan_is_empty(p), FALSE)
+  # no body row left but the overall row (n >= 5 drops the events): TRUE
+  p1 <- mk(ae) |> plan_filter(n >= 5) |> plan_empty(when = "no_rows")
+  run(p1)
+  expect_identical(plan_is_empty(p1), TRUE)
+  # the overall row 0 in every column: TRUE
+  p2 <- mk(sae) |> plan_empty(when = "overall_zero")
+  run(p2)
+  expect_identical(plan_is_empty(p2), TRUE)
+  # "overall_zero" is not "no rows": the overall row is not 0
+  p3 <- mk(ae) |> plan_filter(n >= 5) |> plan_empty(when = "overall_zero")
+  run(p3)
+  expect_identical(plan_is_empty(p3), FALSE)
+  # resolved with no plan_empty(): NA
+  q <- mk(ae)
+  run(q)
+  expect_identical(plan_is_empty(q), NA)
+  # a plan to the pages, with a footnote: the same answer
+  p4 <- mk(sae) |> plan_stub(name = "Event") |> plan_empty(footnote = "None.")
+  suppressMessages(plan_apply(p4))
+  expect_identical(plan_is_empty(p4), TRUE)
+  # a listing: no record TRUE, a record FALSE, before resolving NA
+  cols <- function(d) table_plan(d) |>
+    plan_listing(listing_col("USUBJID"), listing_col("AETERM")) |> plan_empty()
+  none <- cols(data.frame(USUBJID = character(), AETERM = character()))
+  some <- cols(data.frame(USUBJID = c("S1", "S2"), AETERM = c("A", "B")))
+  expect_identical(plan_is_empty(none), NA)
+  plan_apply(none)
+  plan_apply(some)
+  expect_identical(plan_is_empty(none), TRUE)
+  expect_identical(plan_is_empty(some), FALSE)
+  # not a plan
+  expect_error(plan_is_empty(ae), "plan_is_empty(): expected a table_plan.", fixed = TRUE)
+})
+
 test_that("plan_empty() says a table its filter emptied, with no overall row in the ARD (#750)", {
   ae <- data.frame(ARM = c("Placebo", "Active"), .label = "Headache",
                    .kind = "categorical", stat_name = "n", stat = c(1, 2))
