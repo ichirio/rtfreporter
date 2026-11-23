@@ -848,7 +848,7 @@ test_that("FT-IX3033 [FR-IX380 FR-IX382]: assemble_rtf(toc = ) takes the table's
 
 test_that("FT-IX3034 [FR-IX386]: rtf_figures(width_twips) sets the page size, whatever render_width", {
   skip_on_cran()
-  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  skip_if_not(isTRUE(unname(capabilities("png"))), "needs a PNG graphics device (capabilities png); runs wherever R has PNG support, as on every CI job")
   old <- options(rtfreporter.png_device = "png")
   on.exit(options(old), add = TRUE)
   draw <- function() plot(1:10)

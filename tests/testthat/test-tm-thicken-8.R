@@ -347,7 +347,7 @@ test_that("FT-LS5814 [FR-LS185]: the emitted wrap source begins with a header na
   expect_identical(listing_wrap_code("other_rule")[3L], "#   listing_spec(cols, wrap = other_rule)")
   # the shipped rule's comments are kept: one comment line for each the template carries after its own header
   tpl <- system.file("templates", "listing_wrap.R", package = "rtfreporter")
-  skip_if(!nzchar(tpl), "the template is not installed")
+  skip_if(!nzchar(tpl), "needs the installed template listing_wrap.R; runs wherever the package is installed with it")
   tsrc <- readLines(tpl, warn = FALSE)
   tsrc <- tsrc[cumsum(!grepl("^#", tsrc) & nzchar(tsrc)) > 0L]
   expect_identical(sum(grepl("^[[:space:]]*#", src[-seq_len(12L)])), sum(grepl("^[[:space:]]*#", tsrc)))
@@ -806,7 +806,7 @@ test_that("FT-AS5802 [FR-AS220 FR-AS221]: shell = is the shell as text or a UTF-
                fixed = TRUE)
   # another encoding (Shift-JIS)
   sjis <- iconv(enc2utf8(txt), "UTF-8", "CP932", toRaw = TRUE)[[1L]]
-  skip_if(is.null(sjis), "no CP932 converter")
+  skip_if(is.null(sjis), "needs iconv to convert to CP932 (Shift_JIS); runs wherever iconv supports it")
   writeBin(sjis, f)
   expect_error(rtfreporter_ai_manual(d, shell = f, overwrite = TRUE),
                "`rtfreporter_ai_manual(shell = )`: 'shell.md' is not UTF-8 (saved as Shift-JIS / ANSI?).\n  Open it in Notepad, File > Save As, Encoding: UTF-8, and pass that file (or the text itself).",
@@ -816,7 +816,7 @@ test_that("FT-AS5802 [FR-AS220 FR-AS221]: shell = is the shell as text or a UTF-
 test_that("FT-AS5803 [FR-AS253]: rtf_figures() hands render_format, render_width, render_height, render_dpi and png_device to each plot object as rtfplot() takes them, never to a file, and an rtfplot() keeps its format", {
   skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("devEMF")
-  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  skip_if_not(isTRUE(unname(capabilities("png"))), "needs a PNG graphics device (capabilities png); runs wherever R has PNG support, as on every CI job")
   d <- .t8_dir()
   fn <- function() plot(1)
   blk <- function(doc) lapply(doc$contents, function(b) b$content)

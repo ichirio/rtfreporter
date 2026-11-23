@@ -166,7 +166,7 @@ test_that("print.rtftable returns its argument invisibly", {
     grDevices::dev.off()
     TRUE
   }, error = function(e) FALSE)
-  if (!ok || !file.exists(p)) skip("no working PNG graphics device")
+  if (!ok || !file.exists(p)) skip("needs a PNG device that draws a file; runs wherever R has PNG support, as on every CI job")
   p
 }
 

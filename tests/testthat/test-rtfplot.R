@@ -291,7 +291,7 @@ test_that("rtfplot() rejects unrecognised extension via file_ext()", {
 # ──────── plot objects, drawn here rather than saved by hand (#394) ────────
 
 test_that("a plot object is drawn at render_width x render_height inches", {
-  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  skip_if_not(isTRUE(unname(capabilities("png"))), "needs a PNG graphics device (capabilities png); runs wherever R has PNG support, as on every CI job")
   fig <- rtfplot(function() plot(1:10), render_width = 4, render_height = 3,
                  render_dpi = 150)
   expect_s3_class(fig, "rtfplot")
@@ -307,7 +307,7 @@ test_that("a plot object is drawn at render_width x render_height inches", {
 })
 
 test_that("render_dpi changes the sharpness, not the size", {
-  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  skip_if_not(isTRUE(unname(capabilities("png"))), "needs a PNG graphics device (capabilities png); runs wherever R has PNG support, as on every CI job")
   lo <- rtfplot(function() plot(1:10), render_width = 4, render_height = 3,
                 render_dpi = 150)
   hi <- rtfplot(function() plot(1:10), render_width = 4, render_height = 3,
@@ -318,7 +318,7 @@ test_that("render_dpi changes the sharpness, not the size", {
 })
 
 test_that("the kinds of object that draw are all accepted", {
-  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  skip_if_not(isTRUE(unname(capabilities("png"))), "needs a PNG graphics device (capabilities png); runs wherever R has PNG support, as on every CI job")
   expect_s3_class(rtfplot(grid::circleGrob()), "rtfplot")          # grob
   expect_s3_class(rtfplot(function() plot(1:3)), "rtfplot")        # function
   skip_if_not_installed("ggplot2")
@@ -327,7 +327,7 @@ test_that("the kinds of object that draw are all accepted", {
 })
 
 test_that("a failed draw closes the device and leaves no file behind", {
-  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  skip_if_not(isTRUE(unname(capabilities("png"))), "needs a PNG graphics device (capabilities png); runs wherever R has PNG support, as on every CI job")
   before <- length(grDevices::dev.list())
   expect_error(rtfplot(function() stop("boom")), "boom")
   expect_identical(length(grDevices::dev.list()), before)
@@ -341,7 +341,7 @@ test_that("render_* are refused for a file, which has its own size", {
 })
 
 test_that("render_* are validated", {
-  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  skip_if_not(isTRUE(unname(capabilities("png"))), "needs a PNG graphics device (capabilities png); runs wherever R has PNG support, as on every CI job")
   expect_error(rtfplot(function() plot(1), render_width = -1), "positive")
   expect_error(rtfplot(function() plot(1), render_dpi = c(1, 2)), "positive")
 })
@@ -352,7 +352,7 @@ test_that("a figure is one path or one object", {
 })
 
 test_that("rtf_figures() takes plot objects and renders them", {
-  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  skip_if_not(isTRUE(unname(capabilities("png"))), "needs a PNG graphics device (capabilities png); runs wherever R has PNG support, as on every CI job")
   doc <- rtf_document() |>
     rtf_figures(list(function() plot(1:10), grid::circleGrob()),
                 titles = list(c("Figure 14.1"), c("Figure 14.2")))
@@ -395,7 +395,7 @@ test_that("png_device is refused for a file", {
 
 test_that("a ragg figure takes the same inches as a png() one", {
   skip_if_not_installed("ragg")
-  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  skip_if_not(isTRUE(unname(capabilities("png"))), "needs a PNG graphics device (capabilities png); runs wherever R has PNG support, as on every CI job")
   draw <- function() plot(1:10)
   rg <- rtfplot(draw, render_width = 4, render_height = 3, render_dpi = 150,
                 png_device = "ragg")
@@ -439,7 +439,7 @@ test_that("the option draws a plot object with ragg", {
 .png_bytes <- function(fig) readBin(fig$path, "raw", file.size(fig$path))
 
 test_that("rtf_figures() without the drawing arguments writes what it wrote before", {
-  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  skip_if_not(isTRUE(unname(capabilities("png"))), "needs a PNG graphics device (capabilities png); runs wherever R has PNG support, as on every CI job")
   old <- options(rtfreporter.png_device = "png"); on.exit(options(old))
   draw <- function() plot(1:10)
   # before: rtf_figures() handed a plot object to rtfplot() with only
@@ -461,7 +461,7 @@ test_that("rtf_figures() without the drawing arguments writes what it wrote befo
 })
 
 test_that("rtf_figures() draws plot objects at render_width x render_height x render_dpi", {
-  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  skip_if_not(isTRUE(unname(capabilities("png"))), "needs a PNG graphics device (capabilities png); runs wherever R has PNG support, as on every CI job")
   old <- options(rtfreporter.png_device = "png"); on.exit(options(old))
   doc <- rtf_document() |>
     rtf_figures(list(function() plot(1:10), grid::circleGrob()),
@@ -486,7 +486,7 @@ test_that("rtf_figures() draws plot objects at render_width x render_height x re
 
 test_that("rtf_figures(png_device =) chooses the device", {
   skip_if_not_installed("ragg")
-  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  skip_if_not(isTRUE(unname(capabilities("png"))), "needs a PNG graphics device (capabilities png); runs wherever R has PNG support, as on every CI job")
   draw <- function() plot(1:10)
   fig <- function(dev) {
     doc <- rtf_figures(rtf_document(), draw, render_width = 3,
@@ -506,7 +506,7 @@ test_that("rtf_figures(png_device =) chooses the device", {
 })
 
 test_that("rtf_figures(render_*) leave an rtfplot() and a file path as they are", {
-  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  skip_if_not(isTRUE(unname(capabilities("png"))), "needs a PNG graphics device (capabilities png); runs wherever R has PNG support, as on every CI job")
   old <- options(rtfreporter.png_device = "png"); on.exit(options(old))
   rp <- rtfplot(function() plot(1:3), render_width = 4, render_height = 2,
                 render_dpi = 100)
@@ -617,7 +617,7 @@ test_that("FT-AS150 [FR-AS252]: render_format: an unknown format and no devEMF a
                "`render_format = \"emf\"` needs the devEMF package: install.packages(\"devEMF\"), or draw as \"png\".",
                fixed = TRUE)
   # "png" never asks for devEMF
-  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  skip_if_not(isTRUE(unname(capabilities("png"))), "needs a PNG graphics device (capabilities png); runs wherever R has PNG support, as on every CI job")
   expect_identical(rtfplot(draw, render_format = "png")$img_type, "png")
 })
 

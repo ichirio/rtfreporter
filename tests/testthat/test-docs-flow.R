@@ -6,7 +6,7 @@ test_that("the flow figure is the same in the README and the two articles", {
   root <- test_path("..", "..")
   files <- file.path(root, c("README.md", "vignettes/rtfreporter.Rmd",
                              "vignettes/articles/tables-from-ard.Rmd"))
-  skip_if_not(all(file.exists(files)), "not the source tree")
+  skip_if_not(all(file.exists(files)), "needs the source checkout (it reads repository files); runs where the tests run from the checkout")
   flow <- function(f) {
     x <- readLines(f, encoding = "UTF-8")
     s <- grep("^<!-- flow:", x)

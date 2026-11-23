@@ -6,7 +6,7 @@
 
 test_that("every level-1 line of NEWS.md is a version", {
   news <- system.file("NEWS.md", package = "rtfreporter")
-  skip_if(!nzchar(news), "NEWS.md is not installed")
+  skip_if(!nzchar(news), "needs the installed NEWS.md; runs wherever the package is installed with it")
   txt <- readLines(news, encoding = "UTF-8", warn = FALSE)
   h1 <- grep("^# ", txt, value = TRUE)
   ok <- grepl("^# rtfreporter ([0-9.]+|[(]development version[)])$", h1)
@@ -18,6 +18,6 @@ test_that("R reads a version from every section of NEWS.md", {
   skip_if_not_installed("commonmark")
   skip_if_not_installed("xml2")
   news <- system.file("NEWS.md", package = "rtfreporter")
-  skip_if(!nzchar(news), "NEWS.md is not installed")
+  skip_if(!nzchar(news), "needs the installed NEWS.md; runs wherever the package is installed with it")
   expect_no_warning(tools:::.build_news_db_from_package_NEWS_md(news))
 })
