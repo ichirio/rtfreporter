@@ -32,11 +32,14 @@ pipeline; \code{"widen"} writes the immediate form, \code{\link[=normalize_ard]{
 then \verb{\%>\%}.}
 }
 \value{
-The generated code, as a character vector, invisibly.
+The generated code, a character vector of class
+\code{"rtfreporter_plan_code"}, one element per line.  Its print method
+shows the code, so typing the call prints it and assigning the result
+prints nothing.
 }
 \description{
 The counterpart of \code{plan_template(form = "widen")} for the deferred form: reads an ARD
-and prints a runnable \code{\link[=table_plan]{table_plan()}} pipeline, filled in with the keys,
+and writes a runnable \code{\link[=table_plan]{table_plan()}} pipeline, filled in with the keys,
 hierarchy, contexts and statistics it actually found.
 }
 \details{
@@ -53,7 +56,8 @@ if (requireNamespace("cards", quietly = TRUE)) {
     cards::ADSL, .by = ARM,
     cards::ard_summary(variables = AGE),
     cards::ard_tabulate(variables = SEX))
-  plan_template(ard, cols = "ARM")
+  plan_template(ard, cols = "ARM")          # prints the code
+  code <- plan_template(ard, cols = "ARM")  # prints nothing
 }
 }
 \seealso{

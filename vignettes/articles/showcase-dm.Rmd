@@ -52,9 +52,7 @@ and validation story. What they all have in common is the *last* step: a
 
 That last step is exactly what `rtfreporter` does, for **all of them**. This
 article builds the **same demographics report from the same data** with several
-frameworks and renders each to RTF through `rtfreporter`. The point is not that
-one framework is best -- it is that **whatever you already use, rtfreporter is
-the RTF back end**. A companion article,
+frameworks and renders each to RTF through `rtfreporter`. **Whatever you already use, rtfreporter is the RTF back end**. A companion article,
 [Adverse events](showcase-ae.html), does the same for a longer, *paginated*
 adverse-events table.
 
@@ -307,17 +305,19 @@ count/percent cell is exactly where formatters differ. (Both render chunks
 reuse `long` from the block just above, and each writes out its own `tfrmt`
 spec in full -- the only line that changes is the count/percent `frmt`.)
 
-A small but important detail first: write the percent as **`x.x`**, not `xx.x`.
-`frmt("xx.x")` right-pads the integer part, so a one-digit percent prints with a
-leading space *inside* the parentheses -- `( 3.5%)`. `frmt("x.x")` gives a clean
-`(3.5%)`.
+The two ways differ in the percent's width. If tfrmt aligns the cell itself,
+the percent needs `frmt("xx.x")`: it right-pads the integer part, so a one-digit
+percent prints with a leading space inside the parentheses -- `( 8.3%)` under
+`(16.3%)` -- and the digits line up. If `rtfreporter` aligns, tfrmt should give
+clean strings (`frmt("x.x")`, `(8.3%)`) and let `align_count_pct` do the padding.
+Zero counts keep tfrmt's own `0 ( 0.0%)`.
 
-**Way 1 -- tfrmt formats and aligns.** The percent uses `x.x`; the count is
-padded to `xx`. `rtfreporter` reads the strings and renders them *as-is*
+**Way 1 -- tfrmt formats and aligns.** The count is padded to `xx` and the
+percent to `xx.x`. `rtfreporter` reads the strings and renders them *as-is*
 (`align_count_pct` left off):
 
 ```{r tfrmt-self}
-# tfrmt formats AND aligns: the count is padded to "xx", the percent is "x.x".
+# tfrmt formats AND aligns: the count is padded to "xx", the percent to "xx.x".
 spec <- tfrmt(
   group = group, label = label, column = column, param = param, value = value,
   body_plan = body_plan(
@@ -330,7 +330,7 @@ spec <- tfrmt(
                    frmt_combine("{Min}, {Max}",
                                 Min = frmt("xx"), Max = frmt("xx"))),
     frmt_structure(c("Age category", "Sex", "Race"), ".default",
-                   frmt_combine("{n} ({pct}%)", n = frmt("xx"), pct = frmt("x.x")))))
+                   frmt_combine("{n} ({pct}%)", n = frmt("xx"), pct = frmt("xx.x")))))
 g1 <- print_to_gt(spec, long)
 
 # tfrmt already aligned the strings; rtfreporter renders them as-is (no
@@ -384,10 +384,8 @@ generate_rtfreport(doc, "dm_tfrmt_rtfreporter.rtf", overwrite = TRUE)  # rtfrepo
 .snapshot("dm_tfrmt_rtfreporter.png", "DM summary via cards + tfrmt, formatted by rtfreporter")
 ```
 
-The two are deliberately *not* byte-identical. tfrmt anchors the `(` right after
-the count, so the percentages stay left-aligned within the parentheses.
-`rtfreporter`'s `align_count_pct` instead right-aligns the whole parenthetical so
-the **decimal points line up**, and drops the redundant decimal at 100%
+The two are deliberately *not* byte-identical. In the second, `align_count_pct`
+right-aligns the whole parenthetical so the **decimal points line up**, and drops the redundant decimal at 100%
 (`100%`, not `100.0%`). Use whichever convention your SAP calls for -- the point
 is that you can hand `rtfreporter` already-formatted strings *or* let it own the
 count/percent alignment, from the very same tfrmt table.
@@ -479,7 +477,7 @@ you**:
 
 Either way the regulatory furniture (`dm_col_header` / `dm_col_spec` /
 `dm_widths`, plus the shared header and footer) lives **once in rtfreporter**,
-and both routes produce the **same RTF**.
+and both routes produce the **same layout**.
 
 <!-- where-next -->
 

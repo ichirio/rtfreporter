@@ -9,7 +9,7 @@
 #    environments.rds / environments.txt   every environment: CI's
 #                  (validation/env-out/*/) and the maintainers' local runs
 #                  (validation/env-local/*/), one row each; the text holds
-#                  each one's sessionInfo and tests' log
+#                  each one's sessionInfo, package versions and tests' log
 #    coverage.rds  line coverage by file (covr): an aid, not evidence
 #    the Traceability Matrix (FR -> FT), the tests' log and
 #                  quality-report.md (validation/trace.R)
@@ -32,11 +32,26 @@ envs <- if (length(dirs)) do.call(rbind, lapply(dirs, function(d) {
   utils::read.csv(file.path(d, "env.csv"), colClasses = "character", stringsAsFactors = FALSE)
 })) else NULL
 saveRDS(envs, file.path(out, "environments.rds"))
+# the skips said for a reader (validation/skip-reasons.csv)
+source(file.path(root, "validation", "skip_reasons.R"), local = TRUE)
+skip_tab <- skip_table(root)
 bundle <- unlist(lapply(dirs, function(d) {
   e <- utils::read.csv(file.path(d, "env.csv"), colClasses = "character")
-  c(strrep("=", 78), sprintf("%s (%s)", e$environment, e$source), strrep("=", 78), "",
+  # sessionInfo() is taken before any package is loaded: the versions of the
+  # packages DESCRIPTION names are packages.csv
+  p <- file.path(d, "packages.csv")
+  pk <- if (file.exists(p)) utils::read.csv(p, colClasses = "character", na.strings = "NA") else NULL
+  log <- readLines(file.path(d, "test-log.txt"), warn = FALSE)
+  c(strrep("=", 78), sprintf("%s (%s)", e$environment, e$source),
+    sprintf("commit %s, recorded %s", if (is.null(e$commit)) "--" else e$commit,
+            if (is.null(e$date)) "--" else e$date),
+    strrep("=", 78), "",
     "-- sessionInfo() --", readLines(file.path(d, "session.txt"), warn = FALSE), "",
-    "-- the tests' log --", readLines(file.path(d, "test-log.txt"), warn = FALSE), "")
+    "-- the packages DESCRIPTION names (Imports and Suggests), as installed --",
+    if (is.null(pk)) "(no packages.csv in this record)" else
+      sprintf("%-14s %s", pk$package, ifelse(is.na(pk$version), "not installed", pk$version)), "",
+    "-- the tests' log --", log, "",
+    "-- the skipped tests: why, and where they run --", skip_log_lines(log, skip_tab), "")
 }))
 writeLines(bundle, file.path(out, "environments.txt"), useBytes = TRUE)
 
@@ -62,8 +77,8 @@ sys.source(file.path(root, "validation", "trace.R"), envir = new.env())
 # ---- the PDF ----------------------------------------------------------------------------
 step("report")
 fmt <- if (identical(Sys.getenv("RTFREPORTER_VAL_FORMAT"), "html")) {
-  rmarkdown::html_document(toc = TRUE)
-} else rmarkdown::pdf_document(toc = TRUE)
+  rmarkdown::html_document(toc = TRUE, toc_depth = 3)
+} else rmarkdown::pdf_document(toc = TRUE, toc_depth = 3)
 rmarkdown::render(file.path(root, "validation", "report.Rmd"), output_format = fmt,
                   output_dir = out, output_file = "quality-report",
                   params = list(out = out), envir = new.env(), quiet = TRUE)

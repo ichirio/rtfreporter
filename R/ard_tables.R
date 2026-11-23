@@ -1131,7 +1131,7 @@
 
 #' What is actually inside an ARD
 #'
-#' Prints, and returns invisibly, the structural facts you need in order to
+#' Returns the structural facts you need in order to
 #' call [normalize_ard()] and [widen_ard()]: the grouping-variable names
 #' that appear in the `group1..groupN` columns, the analysis variables, the
 #' `context` values and the statistics each context carries.  All of it is read from the tibble's
@@ -1139,9 +1139,12 @@
 #'
 #' @param x A cards/cardx ARD (any data frame with the ARD columns).
 #'
-#' @return Invisibly, a list with elements `keys`, `variables`, `contexts`,
-#'   `kinds` (the structural kinds, as printed) and `stats` (a data frame of
-#'   context / stat_name / stat_label).
+#' @return A list of class `"rtfreporter_ard_keys"` with elements `keys`,
+#'   `variables`, `contexts`, `kinds` (the structural kinds, a data frame of
+#'   variable / kind / context, or `NULL` when the ARD cannot be normalised)
+#'   and `stats` (a data frame of context / stat_name / stat_label).  Its
+#'   print method shows them, so typing the call prints them and assigning
+#'   the result prints nothing.
 #'
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
@@ -1149,7 +1152,8 @@
 #'     cards::ADSL, .by = ARM,
 #'     cards::ard_summary(variables = AGE),
 #'     cards::ard_tabulate(variables = SEX))
-#'   keys <- list_ard_keys(ard)    # prints the keys, variables and statistics
+#'   list_ard_keys(ard)            # prints the keys, variables and statistics
+#'   keys <- list_ard_keys(ard)    # prints nothing
 #'   keys$keys
 #' }
 #'
@@ -1184,19 +1188,25 @@ list_ard_keys <- function(x) {
     rownames(kinds) <- NULL
   }
 
-  cat("ARD keys (group1..groupN values) :", paste(keys, collapse = ", "), "\n")
-  cat("Analysis variables               :", paste(vars, collapse = ", "), "\n")
-  cat("Contexts (cards-version specific):", paste(ctx, collapse = ", "), "\n")
-  if (!is.null(kinds)) {
+  structure(list(keys = keys, variables = vars, contexts = ctx,
+                 kinds = kinds, stats = stats),
+            class = "rtfreporter_ard_keys")
+}
+
+#' @export
+print.rtfreporter_ard_keys <- function(x, ...) {
+  cat("ARD keys (group1..groupN values) :", paste(x$keys, collapse = ", "), "\n")
+  cat("Analysis variables               :", paste(x$variables, collapse = ", "), "\n")
+  cat("Contexts (cards-version specific):", paste(x$contexts, collapse = ", "), "\n")
+  if (!is.null(x$kinds)) {
     cat("Structural kinds (stable)        :",
-        paste(.ard_first_seen(kinds$kind), collapse = ", "), "\n")
+        paste(.ard_first_seen(x$kinds$kind), collapse = ", "), "\n")
     cat("\nPer variable -- key `cells` on `kind` unless you need the context:\n")
-    print(kinds, row.names = FALSE)
+    print(x$kinds, row.names = FALSE)
   }
   cat("\nStatistics per context:\n")
-  print(stats, row.names = FALSE)
-  invisible(list(keys = keys, variables = vars, contexts = ctx,
-                 kinds = kinds, stats = stats))
+  print(x$stats, row.names = FALSE)
+  invisible(x)
 }
 
 
@@ -1582,6 +1592,25 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #'   under it, `F` under that --- while a single layer, whose outer key is
 #'   `NA`, keeps its two levels with no empty heading.  `FALSE` (default):
 #'   the joined form, `65-80 / F`.
+#' @param combine Variables the data keeps apart, read as one table
+#'   dimension: a named list, each name a new name and each element the two
+#'   or more variables read under it.  The use is a lab shift table by
+#'   direction: ADaM keeps the grade toward low and toward high in
+#'   `ATOXGRL` / `ATOXGRH` (and `BTOXGRL` / `BTOXGRH` at baseline), the ARD
+#'   is tabulated per direction under those names with a direction column of
+#'   its own (`tox_dir`), and `combine = list(worst_gr = c("ATOXGRL",
+#'   "ATOXGRH"), base_gr = c("BTOXGRL", "BTOXGRH"))` makes one column dimension
+#'   (`base_gr`) and one row variable (`worst_gr`) of them.  It renames only:
+#'   an old name in `variable` becomes the new one, and old key columns fold
+#'   into one key under the new name, at the first one's place, its levels
+#'   the union of theirs in the order written (a factor where any was one).
+#'   It knows nothing about directions.  Stops on a row that has values of
+#'   two variables of one element, a variable in two elements or in
+#'   `hierarchy`, a variable the ARD does not have, and a new name that is
+#'   already a column, a variable or a `stack` name.  Done before `stack`,
+#'   so a stacked key may name a combined one.  `NULL` (default): nothing is combined.
+#'   The whole table is in the article *Tables from an ARD, step by step*,
+#'   *Lab shift table by direction*.
 #'
 #' @section Working on the result before [widen_ard()]:
 #' The result is a plain data frame; reshaping it in between is the point of
@@ -1646,13 +1675,32 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #'   head(flat[, c("ARM", "variable", ".label", "stat_name", "stat", ".kind")])
 #' }
 #'
+#' # combine: ADaM's Low and High grades as one dimension of a shift table
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   gr <- function(x) factor(x, levels = c("0", "1", "2"))
+#'   adlb <- data.frame(USUBJID = c("01", "02", "03"),
+#'                      BTOXGRL = gr(c("0", "1", NA)), ATOXGRL = gr(c("1", "1", NA)),
+#'                      BTOXGRH = gr(c(NA, "0", "0")), ATOXGRH = gr(c(NA, "2", "0")))
+#'   lo <- adlb[!is.na(adlb$BTOXGRL), ]
+#'   lo$tox_dir <- "Low"
+#'   hi <- adlb[!is.na(adlb$BTOXGRH), ]
+#'   hi$tox_dir <- "High"
+#'   ard <- cards::bind_ard(
+#'     cards::ard_tabulate(lo, variables = ATOXGRL, by = c(tox_dir, BTOXGRL)),
+#'     cards::ard_tabulate(hi, variables = ATOXGRH, by = c(tox_dir, BTOXGRH)))
+#'   shift <- normalize_ard(ard, combine = list(worst_gr = c("ATOXGRL", "ATOXGRH"),
+#'                                              base_gr  = c("BTOXGRL", "BTOXGRH")))
+#'   shift[shift$stat_name == "n", c("tox_dir", "base_gr", "variable", ".label", "stat")]
+#' }
+#'
 #' @seealso [widen_ard()], [list_ard_keys()]
 #' @export
 normalize_ard <- function(x, keys = NULL, hierarchy = character(),
                           overall = NULL,
                           drop_contexts = c("attributes", "total_n"),
                           drop_key_variables = FALSE, stack = NULL,
-                          stack_sep = " / ", stack_nest = FALSE) {
+                          stack_sep = " / ", stack_nest = FALSE,
+                          combine = NULL) {
   ard <- x
   d <- as.data.frame(ard, stringsAsFactors = FALSE)
   if (!"context" %in% names(d) || !"stat_name" %in% names(d)) {
@@ -1874,6 +1922,18 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
     d[[k]] <- .ard_as_factor(d[[k]], unique(c(front, lv)))
   }
 
+  # Variables the data keeps apart (ADaM's ATOXGRL / ATOXGRH, one per
+  # direction) read as one table dimension under a name of the user's
+  # (#1081); before `stack`, so a stacked key may name a combined one.
+  if (length(combine)) {
+    cb <- .ard_combine_keys(d, combine, keys, hierarchy, fct_levels, ignored,
+                            stack_names = names(stack))
+    d <- cb$d
+    keys <- cb$keys
+    fct_levels <- cb$fct_levels
+    ignored <- cb$ignored
+  }
+
   # Parallel subgroups (SEX; AGEGR1), each its own key column above, as one
   # pair of keys: the variable's name and its level, whatever group slot
   # each came in (#619).
@@ -2071,6 +2131,123 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
     }
   }
   d
+}
+
+# normalize_ard(combine = ): each name a new name, each element the
+# variables the data keeps apart that the table reads as one (ADaM's
+# ATOXGRL and ATOXGRH, the grade in each direction).  Renaming only: an
+# old name in `variable` becomes the new one, and the old key columns
+# fold into one under the new name, at the first one's place, with the
+# union of their levels.  A row can hold one of them, never two.  Returns
+# the frame and what normalize_ard() keeps beside it, renamed alike.
+.ard_combine_keys <- function(d, combine, keys, hierarchy, fct_levels,
+                              ignored, stack_names = NULL) {
+  el_ok <- function(v) is.character(v) && length(v) >= 2L && !anyNA(v) &&
+    all(nzchar(v)) && !anyDuplicated(v)
+  nms <- names(combine)
+  if (!is.list(combine) || !length(combine) || is.null(nms) || anyNA(nms) ||
+      !all(nzchar(nms)) || !all(vapply(combine, el_ok, NA))) {
+    .ard_stop(paste0(
+      "`combine` is a named list: a new name and the two or more variables ",
+      "read under it:\n  `combine = list(worst_gr = c(\"ATOXGRL\", ",
+      "\"ATOXGRH\"), base_gr = c(\"BTOXGRL\", \"BTOXGRH\"))`."))
+  }
+  twice <- unique(nms[duplicated(nms)])
+  if (length(twice)) {
+    .ard_stop(sprintf("`combine`: the new name %s is given twice.",
+                      paste(sQuote(twice), collapse = ", ")))
+  }
+  olds <- unlist(combine, use.names = FALSE)
+  twice <- unique(olds[duplicated(olds)])
+  if (length(twice)) {
+    .ard_stop(sprintf(paste0(
+      "`combine`: %s is in two elements; a variable is read under one ",
+      "name."), paste(sQuote(twice), collapse = ", ")))
+  }
+  bad <- intersect(olds, hierarchy)
+  if (length(bad)) {
+    .ard_stop(sprintf(paste0(
+      "`combine`: %s is in `hierarchy`.  A hierarchy's levels nest; only ",
+      "variables kept apart side by side combine."),
+      paste(sQuote(bad), collapse = ", ")))
+  }
+  vars <- .ard_first_seen(d$variable)
+  gone <- setdiff(olds, c(keys, vars))
+  if (length(gone)) {
+    .ard_stop(sprintf(paste0(
+      "`combine`: no variable %s in this ARD.\n  Variables and keys: %s"),
+      paste(sQuote(gone), collapse = ", "),
+      paste(unique(c(vars, keys)), collapse = ", ")))
+  }
+  # (a stacked key's columns too: `stack` comes after and adds them)
+  stacked <- if (length(stack_names)) {
+    c(outer(stack_names, c("", "_level", "_outer"), paste0))
+  }
+  taken <- intersect(nms, c(names(d), vars, stacked))
+  if (length(taken)) {
+    .ard_stop(sprintf(paste0(
+      "`combine`: %s is a column, a variable or a stacked key already; ",
+      "name the combined variable something else."),
+      paste(sQuote(taken), collapse = ", ")))
+  }
+  for (nm in nms) {
+    old <- combine[[nm]]
+    # (a key's own tabulation has its column set too: one value, not two)
+    has <- vapply(old, function(v) {
+      own <- !is.na(d$variable) & d$variable == v
+      if (v %in% keys) own | !is.na(d[[v]]) else own
+    }, logical(nrow(d)))
+    has <- matrix(has, nrow = nrow(d))
+    two <- which(rowSums(has) > 1L)
+    if (length(two)) {
+      both <- old[has[two[1L], ]]
+      .ard_stop(sprintf(paste0(
+        "`combine = list(%s = %s)`: %d rows have values of %s together, ",
+        "and a row is read under one name.\n  Combine variables the data ",
+        "keeps apart (one direction's grade or the other's), or drop those ",
+        "rows."), nm, .ard_vec_text(old), length(two),
+        paste(sQuote(both), collapse = " and ")))
+    }
+    # the variable column: an old name read as the new one
+    d$variable[!is.na(d$variable) & d$variable %in% old] <- nm
+    # its levels' declared order, the union in the order written
+    lv <- unique(unlist(fct_levels[intersect(old, names(fct_levels))],
+                        use.names = FALSE))
+    fct_levels <- fct_levels[setdiff(names(fct_levels), old)]
+    if (length(lv)) fct_levels[[nm]] <- lv
+    # the key columns: folded into one, at the first one's place
+    ks <- intersect(old, keys)
+    if (length(ks)) {
+      val <- rep(NA_character_, nrow(d))
+      for (k in ks) {
+        put <- !is.na(d[[k]])
+        val[put] <- as.character(d[[k]][put])
+      }
+      fac <- vapply(ks, function(k) is.factor(d[[k]]), NA)
+      col <- if (any(fac)) {
+        lev <- unique(unlist(lapply(ks, function(k)
+          if (is.factor(d[[k]])) levels(d[[k]]) else .ard_first_seen(d[[k]]))))
+        .ard_as_factor(val, lev)
+      } else val
+      at <- match(ks[1L], names(d))
+      d[[ks[1L]]] <- col
+      names(d)[at] <- nm
+      d <- d[, setdiff(names(d), ks[-1L]), drop = FALSE]
+      keys[keys == ks[1L]] <- nm
+      keys <- setdiff(keys, ks[-1L])
+    }
+    # the discards report, by the new name
+    if (!is.null(ignored) && any(ignored$variable %in% old)) {
+      ignored$variable[ignored$variable %in% old] <- nm
+      k <- paste(ignored$variable, ignored$context, ignored$stat_name,
+                 ignored$reason, sep = "\r")
+      n <- tapply(ignored$rows, factor(k, unique(k)), sum)
+      ignored <- ignored[!duplicated(k), , drop = FALSE]
+      ignored$rows <- as.integer(n[k[!duplicated(k)]])
+      ignored <- .ard_ignored_bind(ignored)
+    }
+  }
+  list(d = d, keys = keys, fct_levels = fct_levels, ignored = ignored)
 }
 
 
@@ -3826,7 +4003,7 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #   `rtfreporter::` / `rtfreporter::`-qualified.
 # @param file Optional path to write the code to.
 #
-# @return The generated code, as a character vector, invisibly.
+# @return The generated code, as an "rtfreporter_plan_code" character vector.
 #
 .ard_template <- function(ard, cols = NULL, hierarchy = character(),
                          file = NULL, pipe = NULL) {
@@ -3989,9 +4166,8 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
     ")")
 
   code <- L[!vapply(L, is.null, logical(1))]
-  cat(paste(code, collapse = "\n"), "\n")
   if (!is.null(file)) writeLines(code, file)
-  invisible(code)
+  structure(code, class = "rtfreporter_plan_code")
 }
 
 

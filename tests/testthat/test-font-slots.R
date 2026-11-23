@@ -331,6 +331,9 @@ test_that("LibreOffice renders the east_asian slot in its family", {
   pdf <- file.path(d, "ja.pdf")
   skip_if(!file.exists(pdf), "LibreOffice did not convert")
   used <- system2(pdffonts, shQuote(pdf), stdout = TRUE)
-  expect_true(any(grepl(gsub("[^A-Za-z0-9]", "", ja_font),
-                        gsub("[^A-Za-z0-9]", "", used), fixed = TRUE)))
+  # the PDF names a font by its PostScript name, whose case can differ from
+  # the family name ("Noto Serif CJK JP" is NotoSerifCJKjp-Regular)
+  key <- function(x) tolower(gsub("[^A-Za-z0-9]", "", x))
+  expect_true(any(grepl(key(ja_font), key(used), fixed = TRUE)),
+              info = paste(c(paste("family:", ja_font), used), collapse = "\n"))
 })

@@ -77,7 +77,8 @@ doc <- rtf_document() |>
 ## Rendering -- `generate_rtfreport()`
 
 `generate_rtfreport()` writes the document to a file you can open in Word or
-LibreOffice. Use `overwrite = TRUE` to replace an existing file.
+LibreOffice. It replaces an existing file (`overwrite = TRUE`, the default); use
+`overwrite = FALSE` to stop instead.
 
 ```{r render, fold = "open"}
 out <- tempfile(fileext = ".rtf")

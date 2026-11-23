@@ -57,25 +57,26 @@ library(rtfreporter)
 
 Clinical tables live and die by their rules: a top and bottom line around the
 column header, a group underline beneath a spanning label, an occasional rule
-under the last data row. rtfreporter gives you three levels of control, from a
-one-word preset down to a single cell. This article walks through all three,
+under the last data row. rtfreporter gives you five levels of control, from a
+one-word preset down to a single cell and the restyling of a finished table.
+This article walks through all five,
 with runnable code.
 
 The border objects are plain S3 records (no reference semantics), so a border
 you build can be reused across tables safely. The vocabulary is small:
 
 ```r
-rtf_border(all, top, bottom, left, right, inside_h, inside_v,
-           style, width, color, from)
+rtf_border(all, top, bottom, left, right, inside_h, inside_v)
 ```
 
 `top`/`bottom`/`left`/`right` are the selection's outer edges and `all` is the
 four of them at once; `inside_h` and `inside_v` are the rules *between* its rows
 and *between* its cells. Each takes `TRUE` for a rule, `FALSE` or `"none"` for
-none, or a style name such as `"double"`. `style`/`width`/`colour` describe the
-line those sides draw, and `from` layers a border onto an existing one.
+none, a style name such as `"double"`, or an `rtf_border_line(style, width,
+color)` for a line of its own weight or colour. The `style_*()` verbs layer a
+border onto an existing one, side by side.
 
-That is the whole vocabulary -- **one function**. There is no separate
+That is the whole vocabulary -- **one function** (and `rtf_border_line()` for a line's look). There is no separate
 table-border type and no per-edge constructor: what a border applies to is
 decided by where you attach it, the same way Word's border dialog acts on
 whatever is selected.
@@ -97,7 +98,7 @@ other arguments are present.
 
 ## Level 1 -- a preset
 
-The `border` argument of `rtftable()` (and `rtf_tables()`, `as_rtftables()`)
+The `border` argument of `rtftable()` (and `as_rtftables()`)
 accepts a shorthand string:
 
 ```{r preset}
@@ -176,8 +177,7 @@ tbl <- rtftable(df, border = "none") |>
 .shot("bd_zones.png")
 ```
 
-`style`, `width` and `color` describe the line that the sides named in the same
-call draw:
+`rtf_border_line(style, width, color)` gives a side its own line:
 
 ```{r side}
 rtf_border(top = rtf_border_line("double", 30L, "#003366"))
@@ -216,13 +216,12 @@ tbl <- rtftable(
 .shot("bd_grid.png")
 ```
 
-Before 0.5.0 an edge on a zone was uniform -- `left`/`right` were drawn on every
-cell and `body`'s `top`/`bottom` on every row -- so `rtf_border(all = TRUE)` alone
-produced this grid. See *Before and after 0.5.0* at the end of this article for
-each case written both ways.
+An edge on a zone is the zone's outer edge, so `rtf_border(all = TRUE)` alone
+does not draw this grid; the rules inside are named with `inside_h` /
+`inside_v`. See *Common cases* at the end of this article.
 
 
-## Level 3 -- single columns and single cells
+## Level 4 -- single columns and single cells
 
 The header is where fine control matters most. Two mechanisms reach inside it.
 
@@ -317,7 +316,7 @@ from step 3. That single rule -- *last writer wins, per side* -- is all you need
 to reason about any combination.
 
 
-## Level 4 -- restyling an existing table: the styling verbs
+## Level 5 -- restyling an existing table: the styling verbs
 
 Everything above configures a table you are *building*. When the table already
 exists -- typically because `as_rtftables(x, read_meta = TRUE)` extracted the
@@ -376,6 +375,37 @@ The merge semantics are the ones this article already taught: last writer
 wins, per side. See `?style_header` for the full family, including how a
 character label row is promoted to cells when it needs a per-cell border.
 
+## Common cases
+
+`s` is `TRUE` throughout. An edge always means the **outer** edge of the
+selection, so the rules *inside* it are asked for by name -- `inside_h` between
+the rows, `inside_v` between the cells. A border is aimed with
+`rtftable(border = )` for the whole table, or `style_zone()` for one kind of
+row.
+
+| What you want | Write |
+|---|---|
+| Rules above and below the column header | `style_zone(header = rtf_border(top = s, bottom = s))` |
+| A rule under the last data row | `style_zone(last_row = rtf_border(bottom = s))` |
+| A rule under **every** data row | `style_zone(body = rtf_border(inside_h = s))` |
+| A vertical rule at every column boundary | `style_zone(body = rtf_border(left = s, right = s, inside_v = s))` |
+| A grid around every data cell | `style_zone(body = rtf_border(top = s, bottom = s, left = s, right = s, inside_h = s, inside_v = s))` |
+| An outer frame only | `rtftable(border = rtf_border(top = s, bottom = s, left = s, right = s))` |
+| Frame plus a rule under every row | `rtftable(border = rtf_border(top = s, bottom = s, left = s, right = s, inside_h = s))` |
+| The clinical TFL preset | `border = "tfl"` |
+| A border on one cell | `col_cell(border = rtf_border(bottom = s))` -- a cell has no inside |
+
+```{r cases, eval = FALSE}
+s <- TRUE
+
+tbl <- rtftable(df, border = "none") |>
+  style_zone(body = rtf_border(inside_h = s))
+
+tbl <- rtftable(df, border = "none") |>
+  style_zone(body = rtf_border(top = s, bottom = s, left = s, right = s,
+                               inside_h = s, inside_v = s))
+```
+
 <!-- where-next -->
 
 ## Where next
@@ -383,62 +413,3 @@ character label row is promoted to cells when it needs a per-cell border.
 - [Output options](output.html) --- what the rendered file contains
 
 The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.
-
-
-## Before and after 0.5.0
-
-Two things changed at 0.5.0, and they compound, so here is every common case
-written both ways. `s` is an `TRUE` throughout.
-
-First, `rtf_table_border()` was deprecated (and removed in 0.9.0): a border is aimed with
-`rtftable(border = )` for the whole table, or `style_zone()` for one kind of
-row. Second, an edge now always means the **outer** edge of the selection, so
-the rules *inside* it are asked for by name -- `inside_h` between the rows,
-`inside_v` between the cells.
-
-| What you want | Before (≤ 0.4.x) | Now (0.5.0) |
-|---|---|---|
-| Rules above and below the column header | `rtf_table_border(header = rtf_border(top = s, bottom = s))` | `style_zone(header = rtf_border(top = s, bottom = s))` |
-| A rule under the last data row | `rtf_table_border(last_row = rtf_border(bottom = s))` | `style_zone(last_row = rtf_border(bottom = s))` |
-| A rule under **every** data row | `rtf_table_border(body = rtf_border(bottom = s))` | `style_zone(body = rtf_border(inside_h = s))` |
-| A vertical rule at every column boundary | `rtf_table_border(body = rtf_border(left = s, right = s))` | `style_zone(body = rtf_border(left = s, right = s, inside_v = s))` |
-| A grid around every data cell | `rtf_table_border(body = rtf_border_box())` | `style_zone(body = rtf_border(top = s, bottom = s, left = s, right = s, inside_h = s, inside_v = s))` |
-| An outer frame only | *(four `style_header()` / `style_body()` calls on the edge columns)* | `rtftable(border = rtf_border(top = s, bottom = s, left = s, right = s))` |
-| Frame plus a rule under every row | *(same four calls, plus `body`)* | `rtftable(border = rtf_border(top = s, bottom = s, left = s, right = s, inside_h = s))` |
-| The clinical TFL preset | `border = "tfl"` | `border = "tfl"` -- unchanged |
-| A border on one cell | `col_cell(border = rtf_border(bottom = s))` | unchanged -- a cell has no inside |
-
-And the constructors that folded into `rtf_border()` itself:
-
-| Before (≤ 0.5.x) | Now |
-|---|---|
-| `rtf_border_none()` | `rtf_border()` |
-| `rtf_border_top()` | `rtf_border(top = TRUE)` |
-| `rtf_border_bottom()` | `rtf_border(bottom = TRUE)` |
-| `rtf_border_box()` | `rtf_border(all = TRUE)` |
-| `rtf_border_with(b, bottom = x)` | layer at the attach point, e.g. a second `style_zone()` |
-| `rtf_border_tfl()` | `border = "tfl"`, or `rtf_table_style_tfl()` |
-
-All of these were removed in 0.9.0.
-
-The first two rows change spelling but not meaning. Rows three to five change
-meaning as well: those are the ones where an edge used to be uniform.
-
-```{r migration, eval = FALSE}
-s <- TRUE
-
-# was: rtf_table_border(body = rtf_border(bottom = s))
-tbl <- rtftable(df, border = "none") |>
-  style_zone(body = rtf_border(inside_h = s))
-
-# was: rtf_table_border(body = rtf_border_box())
-tbl <- rtftable(df, border = "none") |>
-  style_zone(body = rtf_border(top = s, bottom = s, left = s, right = s,
-                               inside_h = s, inside_v = s))
-```
-
-Because the two readings are spelled identically, rtfreporter cannot rewrite
-your code for you -- but it can tell you where to look. It warns **once per
-session** when it meets a border that would have rendered differently before,
-and naming `inside_h` / `inside_v` says which reading you mean and silences it.
-Use `"none"` when the answer is "no rule there".

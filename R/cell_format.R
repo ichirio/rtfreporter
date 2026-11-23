@@ -161,8 +161,13 @@ fmt_right_align <- function(x, nbsp = "\u00a0", na = "") {
   miss <- is.na(x)                  # before as.character(): NaN is missing
   x <- as.character(x)
   x[miss] <- na
+  # Parse a copy in which the non-breaking space (U+00A0) and the zero-width
+  # space (U+200B) count as spaces: gt / tfrmt output can carry them around a
+  # count ("0 " for a zero cell), and a cell left unparsed would fall out
+  # of the column.  Cells not reformatted are still returned from `x`.
+  xp <- gsub("[\u00a0\u200b]", " ", x)
   rx <- "^[[:space:]]*([0-9]+)[[:space:]]*(\\((.*)\\))?[[:space:]]*$"
-  m  <- regmatches(x, regexec(rx, x))
+  m  <- regmatches(xp, regexec(rx, xp))
   count  <- rep(NA_character_, length(x))
   inner  <- rep("", length(x))
   haspar <- rep(FALSE, length(x))
@@ -175,7 +180,7 @@ fmt_right_align <- function(x, nbsp = "\u00a0", na = "") {
   }
   # Cells holding the missing-value token.  With na = "" (the default) `nat` is
   # all FALSE and everything below behaves exactly as it did before.
-  nat <- nzchar(na) & is.na(count) & !is.na(x) & trimws(x) == na
+  nat <- nzchar(na) & is.na(count) & !is.na(x) & trimws(xp) == na
   do  <- (!is.na(count) & (haspar | bare)) | nat  # cells we actually reformat
   if (!any(do)) return(x)
   isc  <- do & !nat                                             # the real counts
@@ -241,7 +246,7 @@ fmt_right_align <- function(x, nbsp = "\u00a0", na = "") {
 #' @param bare `FALSE` (default) leaves a cell with no parentheses as it is;
 #'   `TRUE` also pads a **bare integer count** (a lone `"0"`, a raw event
 #'   total) into the count field, so it lines up under the parenthetical
-#'   cells.  (It was `fmt_count_paren_bare()`, removed in 0.9.0.)
+#'   cells.
 #'
 #' @seealso [fmt_value_paren()] (any text before the parenthesis),
 #'   [fmt_right_align()], and the `cell_format` argument of [as_rtftables()].

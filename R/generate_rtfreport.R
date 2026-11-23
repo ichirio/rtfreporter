@@ -13,19 +13,10 @@
       return(cache)
     }
 
-    resource_candidates <- c(
-      file.path(getwd(), "inst", "resources", "rtf_commands.R"),
-      file.path(getwd(), "r", "rtfreporter", "inst", "resources", "rtf_commands.R")
-    )
-    pkg_resource_dir <- system.file("resources", package = "rtfreporter")
-    if (nzchar(pkg_resource_dir)) {
-      # Append installed-package path AFTER local paths so that source-tree runs
-      # always pick up the local (possibly newer) resource file first.
-      resource_candidates <- c(resource_candidates, file.path(pkg_resource_dir, "rtf_commands.R"))
-    }
-
-    resource_path <- resource_candidates[file.exists(resource_candidates)][1]
-    if (is.na(resource_path)) {
+    # the package's own file only, never one in the working folder (under
+    # pkgload::load_all(), system.file() finds the source tree's inst/)
+    resource_path <- system.file("resources", "rtf_commands.R", package = "rtfreporter")
+    if (!nzchar(resource_path)) {
       stop("RTF command resource file not found.", call. = FALSE)
     }
 
@@ -46,17 +37,9 @@
       return(cache)
     }
 
-    resource_candidates <- c(
-      file.path(getwd(), "inst", "resources", "rtfreporter_defaults.R"),
-      file.path(getwd(), "r", "rtfreporter", "inst", "resources", "rtfreporter_defaults.R")
-    )
-    pkg_resource_dir <- system.file("resources", package = "rtfreporter")
-    if (nzchar(pkg_resource_dir)) {
-      resource_candidates <- c(file.path(pkg_resource_dir, "rtfreporter_defaults.R"), resource_candidates)
-    }
-
-    resource_path <- resource_candidates[file.exists(resource_candidates)][1]
-    if (is.na(resource_path)) {
+    # the package's own file only, never one in the working folder
+    resource_path <- system.file("resources", "rtfreporter_defaults.R", package = "rtfreporter")
+    if (!nzchar(resource_path)) {
       # Built-in fallback: hard-coded approximation of the resource file.
       cache <<- list(
         default_row_height_twips_by_font_half_points = list("18" = 230L),
@@ -147,11 +130,25 @@
 
 # -- Text processing ------------------------------------------------------------
 
+# Text as UTF-8, marked so: a string marked with its encoding is converted; an
+# unmarked one that is already valid UTF-8 keeps its bytes (a value read from
+# a UTF-8 file without `encoding = "UTF-8"` in a C or other non-UTF-8 locale,
+# whose code points utf8ToInt() would otherwise give as NA); any other is
+# native and converted.
+.as_utf8 <- function(x) {
+  x <- as.character(x)
+  keep <- !is.na(x) & Encoding(x) == "unknown" & validUTF8(x)
+  x[!keep] <- enc2utf8(x[!keep])
+  Encoding(x[keep]) <- "UTF-8"
+  x
+}
+
 # Character-level RTF escape + Unicode conversion.
 # Handles: \, {, }, newline -> \line , non-ASCII -> \uN?
 # Does NOT handle markup tokens (^{}, _{}); those are handled by .format_cell_text().
 .rtf_escape_unicode_raw <- function(x) {
   if (!nzchar(x)) return(x)
+  x <- .as_utf8(x)
   chars <- strsplit(x, "", fixed = TRUE)[[1]]
   out <- vapply(chars, function(ch) {
     cp <- utf8ToInt(ch)

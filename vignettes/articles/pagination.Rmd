@@ -189,12 +189,8 @@ names(pages)
 
 ### Reusing a strategy
 
-Earlier versions also exported a `page_split_*()` factory per strategy, so a
-configured splitter could be built once and passed around. They were retired
-before the first release: a factory carried its own `group_col`, which meant
-the group column could be declared in two places at once, and the two did not
-always agree. Every setting now has exactly one place to live -- alongside
-`split` -- so reuse is a list of arguments rather than an object:
+Every setting lives alongside `split`, so to reuse a strategy, keep its
+arguments in a list:
 
 ```{r reuse}
 args  <- list(split = "group_safe", max_rows = 6)
@@ -216,7 +212,7 @@ These arguments shape pagination regardless of the strategy:
 
 ### Selecting a column {#selecting-a-column}
 
-Five arguments operate on **one column of the rendered body**, and they all name
+Four arguments operate on **one column of the rendered body**, and they all name
 that column the same way -- by a column **name** or a 1-based **integer index**,
 in the body's coordinate space:
 
@@ -332,7 +328,7 @@ group-label and child rows are already interleaved should be sorted at the
 scramble that hierarchy. To mix name and index keys, pass a `list()`.
 
 A sort key is often a column you do **not** want printed -- a numeric ordering
-key, a raw priority. Combine `sort_by` with [`drop_cols`](#hiding-a-grouping-carrier-column----drop_cols)
+key, a raw priority. Combine `sort_by` with [`drop_cols`](#drop-cols)
 to order on it and then hide it:
 
 ```{r sort-carrier}
@@ -388,7 +384,7 @@ res$Pt   # row 3 keeps "Failure"; row 5 blanks the repeated "Angina" under Vascu
 ```
 
 
-### Hiding a grouping / carrier column -- `drop_cols`
+### Hiding a grouping / carrier column -- `drop_cols` {#drop-cols}
 
 `group_col` chooses which column drives the split, but that column is normally
 *printed* too. Often you want to break or group on a key that should **not**
@@ -681,8 +677,8 @@ tbl <- rtftable(page)          # read_attributes = TRUE consumes the attribute
 
 You do not need pagination to use them: `rtftable(blank_rows = )` accepts integer
 positions (here `-1` also means "after the last row"), or the spec constructors
-[blank_rows_by_change()] (blank when a column value changes) and
-[blank_rows_by_rule()] (blank before/after rows matching a regex), or a `list`
+`blank_rows_by_change()` (blank when a column value changes) and
+`blank_rows_by_rule()` (blank before/after rows matching a regex), or a `list`
 combining them:
 
 ```{r blank-single}
@@ -738,7 +734,7 @@ as_rtftables(df, split = "group_safe", max_rows = 20) |>
 ```
 
 `at` names the columns to cut **before** (so `c(4, 6)` gives blocks `1:3`,
-`4:5`, `6:ncol`), symmetric with `split_rows`; `cols = list(2:3, 4:5)` states
+`4:5`, `6:ncol`), symmetric with `split_rows`; `cut_by = list(2:3, 4:5)` states
 the blocks outright. Positions refer to the **final printed columns** -- after
 `drop_cols`, `stub` and any `col_header` you supplied -- the same
 convention `set_col_header()` follows.
@@ -913,7 +909,7 @@ page.
 
 `column_widths_twips` is absolute: a subset already carries the right widths
 and nothing is rescaled. **Relative** widths need a rule, because
-`.compute_cellx()` re-normalises whatever it is given across the page -- a bare
+the renderer re-normalises whatever it is given across the page -- a bare
 subset would stretch the kept columns to refill the sheet, making a ratio-1
 column a different size on every page.
 
@@ -955,12 +951,13 @@ remaining columns on both pages; pass `allow_span_break = FALSE` to reject such
 a cut instead and be told which cell it would break.
 
 Page names are carried through unchanged: each column page keeps the name of
-the row page it was cut from (see *Which axis is the outer level* above for
+the row page it was cut from (see *Which axis is the outer one* above for
 what `auto_section` then does with them).
 
 ### Worked example: a PK concentration summary
 
-`data-raw/gen_pk_conc.R` builds the case that needs all of this at once -- a
+A PK concentration table (built by `data-raw/gen_pk_conc.R` in the source
+repository) needs all of this at once -- a
 pharmacokinetic concentration table with the **visits across the columns**, so
 it is too wide *and* too tall for one page:
 
@@ -988,7 +985,7 @@ time stub, and every visit column the width it has in the full table.
 #### Size the table from its content, not from the page
 
 Note the `column_widths_twips` rather than `col_rel_width`. **Relative widths
-cannot produce a table that needs `paginate_cols()`**: `.compute_cellx()`
+cannot produce a table that needs `paginate_cols()`**: the renderer
 normalises them across the page, so whatever the ratios the full table comes
 out exactly as wide as the sheet, and the split would be decorative.
 `auto_col_widths()` reports what the content needs instead:
@@ -1047,8 +1044,7 @@ doc <- rtf_document() |>
 generate_rtfreport(doc, "demographics.rtf", overwrite = TRUE)
 ```
 
-See `?as_rtftables` for the full `split =` contract and `?page_split` for the
-factory functions.
+See `?as_rtftables` for the full `split =` contract.
 
 <!-- where-next -->
 

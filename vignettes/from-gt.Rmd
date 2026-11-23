@@ -71,7 +71,7 @@ cat("This vignette renders only when the `gt` package is installed.\n")
 > **The second path.** This article is about bringing a table you already
 > have.  When the statistics are in a cards / cardx ARD, the recommended route
 > is a table plan -- see [Get started](rtfreporter.html) and
-> [Tables from an ARD](tables-from-ard.html).
+> [Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html).
 
 The [gt](https://gt.rstudio.com) package by Posit gives users a
 friendly grammar for *display tables* -- `cols_label()`,
@@ -86,10 +86,10 @@ RTF document -- not be re-stated in a different vocabulary.
 
 ## The recommended workflow: `as_rtftables()`
 
-[as_rtftables()] is the single entry point.  It takes a table object
+`as_rtftables()` is the single entry point.  It takes a table object
 (`gt_tbl`, a **gtsummary** table, a `data.frame`/tibble, or a list of
 these), reads all of the table's metadata, paginates the body, and
-returns a list of ready-to-render [rtftable()] objects -- one per page:
+returns a list of ready-to-render `rtftable()` objects -- one per page:
 
 ```
   gt / gtsummary / tfrmt          as_rtftables()             rtf_tables()
@@ -112,7 +112,7 @@ g <- gt(head(mtcars, 3)) |>
   ) |>
   tab_source_note("Source: built-in mtcars dataset.")
 
-pages <- as_rtftables(g)          # read = TRUE by default
+pages <- as_rtftables(g)          # read_meta = TRUE by default
 length(pages)                      # one page here
 class(pages[[1]])
 ```
@@ -122,10 +122,9 @@ class(pages[[1]])
 .shot("gt_basic.png")
 ```
 
-Hand the pages straight to [rtf_tables()].  The page-level title and
+Hand the pages straight to `rtf_tables()`.  The page-level title and
 source notes travel with each page (as `rtf_titles` / `rtf_footnotes`
-attributes) and are picked up automatically -- no `read_gt` flag
-needed:
+attributes) and are picked up automatically:
 
 ```{r}
 doc <- rtf_document() |>
@@ -136,7 +135,7 @@ doc$contents[[1]]$title       # title + subtitle, read from the gt object
 doc$contents[[1]]$footnote    # source note
 ```
 
-For a single page you can use the convenience wrapper [as_rtftable()],
+For a single page you can use the convenience wrapper `as_rtftable()`,
 which returns one `rtftable` instead of a list:
 
 ```{r}
@@ -173,11 +172,10 @@ file.exists(out)
 .shot("gt_summary.png")
 ```
 
-gtsummary applies row indentation and bold group-header rows through
-HTML/CSS styling that RTF cannot reproduce; those visual details are
-dropped (see *Limitations* below).  Everything structural -- column
-labels, spanning headers, the stub / group rows, footnote texts and
-marks -- comes through.
+Everything structural -- column labels, spanning headers, the stub / group
+rows with their indentation, footnote texts and marks -- comes through.
+Visual details such as bold group-header rows are dropped (see *Limitations*
+below).
 
 ## Splitting a long table across pages
 
@@ -201,52 +199,34 @@ automatically.
 
 ## What gets read
 
-`read = TRUE` (the default) is shorthand for a set of independent
-tokens, grouped into phases.  Pass `read = c("col_header", "titles")`
-to opt in selectively.
+`read_meta = TRUE` (the default) reads every token below.  Pass
+`read_meta = c("col_header", "titles")` to read only some of them, or
+`read_meta = FALSE` to read none.
 
-* **Phase A (shape-preserving, "safe")**
-    * `"col_header"`   -- `cols_label()` -> the rtftable's column header
-    * `"alignment"`    -- `cols_align()` -> per-column `col_spec[[j]]$align`
-    * `"titles"`       -- `tab_header(title, subtitle)` -> the page
-                          `titles[[i]]` block
-    * `"source_notes"` -- `tab_source_note()` -> the page
-                          `footnotes[[i]]` block
+* `"col_header"`     -- `cols_label()` -> the column header
+* `"alignment"`      -- `cols_align()` -> each column's alignment
+* `"spanning"`       -- `tab_spanner()` -> spanning header rows
+* `"widths"`         -- `cols_width()` -> column widths (`"NNpx"` or `"NN%"`)
+* `"titles"`         -- `tab_caption()` and `tab_header(title, subtitle)` ->
+                        the page titles
+* `"footnotes"`      -- `tab_footnote()` texts, then `tab_source_note()` ->
+                        the page footnotes
+* `"footnote_marks"` -- the footnote marks gt prints on column labels,
+                        spanning headers, the title and row-group labels ->
+                        `^{N}` superscripts, in gt's order, so the marks
+                        match the notes (in-cell marks are always written
+                        as `^{N}`)
+* `"styles"`         -- explicit `tab_style()` declarations -> bold, italic,
+                        underline, alignment and borders, plus body text
+                        colour
 
-* **Phase B (structural, modifies the column space)**
-    * `"spanning"` -- `tab_spanner()` -> multi-row col_header with
-                      spanning cells
-    * `"widths"`   -- `cols_width()` -> `column_widths_twips`
-                      (`"NNpx"`) or `col_rel_width` (`"NN%"`)
-    * `"hidden"`   -- `cols_hide()` -> drop the column before
-                      rendering
+Some things are always done, with no token: hidden columns are dropped,
+the stub and row-group rows are placed in the body (group rows indented under
+their heading), and stray HTML in cells is removed (`<br>` becomes a line
+break).
 
-* **Phase C (structural, modifies the row space + extra notes)**
-    * `"footnotes"` -- `tab_footnote()` (any anchor) -> appended to
-                       the page `footnotes[[i]]` block
-    * `"stub"`      -- `groupname_col = ...`, `rowname_col = ...`,
-                       `tab_stubhead()` -> group-transition rows and
-                       a stubhead-labelled stub column
-
-* **Phase D (per-cell formatting)**
-    * `"styles"`         -- `tab_style(cell_text(...))` -> per-cell
-                            bold / italic / underline / indent, carried
-                            on the rtftable's `cell_styles` field
-    * `"footnote_marks"` -- the footnote marks gt prints on the column
-                            labels, spanning headers, title, subtitle
-                            and row-group labels -> rtfreporter `^{N}`
-                            superscript markup after the text,
-                            and each line read by `"footnotes"` starting
-                            with its mark (`^{N}` then the note), in
-                            gt's order, so the marks match the notes
-                            (the in-cell marks gt renders as
-                            `<sup>N</sup>` in the body are always
-                            written as `^{N}`)
-    * `"strip_html"`     -- remove stray HTML left in cell values
-                            (`<br>` -> line break; other tags dropped)
-
-Anything listed in `read = c(...)` is read; anything left out falls
-back to the rtfreporter default (e.g. column names from `names(data)`).
+A token you leave out falls back to the rtfreporter default (e.g. column
+names from `names(data)`).  A token that no table source knows is an error.
 
 ## End-to-end example: a TFL-style adverse-events table
 
@@ -338,7 +318,7 @@ specify `col_header = c("A", "B", ...)` explicitly, gt's
 ```{r}
 g <- gt(head(mtcars, 1)[, "mpg", drop = FALSE]) |>
   cols_label(mpg = "MPG")
-tbl <- as_rtftable(g, read = TRUE, col_header = "Override")
+tbl <- as_rtftable(g, read_meta = TRUE, col_header = "Override")
 tbl$col_header[[1L]]
 ```
 
@@ -363,31 +343,16 @@ alignment, the other columns keep gt's values.
 The following gt / gtsummary features depend on HTML/CSS rendering that
 RTF cannot reproduce, so they are intentionally **not** carried through:
 
-* **Row indentation.**  gtsummary nests variable levels by indenting
-  them with CSS `padding-left`; the rows render flat in RTF.
 * **Bold group-header rows.**  Applied by gtsummary through
   `tab_style()` in a way that the style reader does not currently map
   to a whole-row attribute.  (Cell-level `tab_style(cell_text(...))`
   *is* read -- see the `"styles"` token.)
-* **Cell background colour / fill.**  Still gt-only.
+* **Cell background colour / fill.**  Not read.
 * **Markdown inside titles / labels.**  `md("**bold**")` is flattened
-  to the raw string `"**bold**"`; rtfreporter has no markdown
-  subsystem yet.
+  to plain text: the `**` markers are removed.
 * **`column_width` strings other than `"NNpx"` or `"NN%"`.**  Mixed-unit
   widths bail out to `NULL` and the renderer falls back to its default
   proportional split.
-
-What *is* now supported (and was not in earlier releases): per-cell
-bold / italic / underline / indent via `tab_style(cell_text(...))`, and
-in-cell footnote marks rendered as `^{N}` superscripts.
-
-## Removed: `rtf_tables(read_gt = ...)`
-
-Before `as_rtftables()` existed, a raw `gt_tbl` could be handed
-directly to `rtf_tables()` with `read_gt = TRUE` to read its metadata.
-0.9.0 removed that argument: a gt table given to `rtf_tables()` goes
-through `as_rtftables()`, the one path that both paginates *and* reads
-metadata.
 
 ## See also
 
@@ -401,7 +366,7 @@ metadata.
 ## Where next
 
 - [From rtables and tern](from-rtables.html) --- the same for an rtables or tern table
-- [Importing tables](importing-tables.html) --- every source `as_rtftables()` reads, flextable and huxtable included
-- [The pharmaverse catalog](tlg-catalog.html) --- the same tables built five different ways
+- [Importing tables](https://ichirio.github.io/rtfreporter/articles/importing-tables.html) --- every source `as_rtftables()` reads, flextable and huxtable included
+- [The pharmaverse catalog](https://ichirio.github.io/rtfreporter/articles/tlg-catalog.html) --- the same tables built five different ways
 
 The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.

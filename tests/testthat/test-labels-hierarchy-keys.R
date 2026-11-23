@@ -3,8 +3,18 @@
 # aimed at the wrong key says which key holds the value (it was an NA stopping
 # `if` when a key had rows with no value, as a SOC row has no PT)
 
+# the plan and its table are built once per file (the ARD is the slow part)
+mgl_cache <- new.env()
 mgl_plan <- function() {
-  ae <- cards::ADAE
+  if (is.null(mgl_cache$plan)) mgl_cache$plan <- mgl_plan_build()
+  mgl_cache$plan
+}
+mgl_base <- function() {
+  if (is.null(mgl_cache$base)) mgl_cache$base <- mgl_tab(mgl_plan())
+  mgl_cache$base
+}
+mgl_plan_build <- function() {
+  ae <- .cran_adae()  # on CRAN five SOCs (helper-rtfreporter.R)
   ae$AESEV <- factor(ae$AESEV, levels = c("MILD", "MODERATE", "SEVERE"))
   top <- function(...) dplyr::slice_max(ae, as.integer(AESEV), by = c(USUBJID, ...), n = 1,
                                         with_ties = FALSE)
@@ -34,7 +44,7 @@ test_that("a SOC, the overall row, a grade and a PT each relabel by their variab
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
   p <- mgl_plan()
-  b <- mgl_tab(p)
+  b <- mgl_base()
   soc <- unique(b$soc[!is.na(b$soc) & !b$soc %in% "Any TEAE"])[1L]
   pt <- unique(b$pt[!is.na(b$pt)])[1L]
 
@@ -80,7 +90,7 @@ test_that("an entry that matches no value of any key changes nothing and does no
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
   p <- mgl_plan()
-  b <- mgl_tab(p)
+  b <- mgl_base()
   expect_identical(mgl_tab(plan_labels(p, AEDECOD = c("No such PT" = "X"))), b)
   expect_identical(mgl_tab(plan_labels(p, AEBODSYS = c("No such SOC" = "X"))), b)
 })
@@ -89,7 +99,7 @@ test_that("an entry aimed at the wrong key names the key that holds the value", 
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
   p <- mgl_plan()
-  b <- mgl_tab(p)
+  b <- mgl_base()
   soc <- unique(b$soc[!is.na(b$soc) & !b$soc %in% "Any TEAE"])[1L]
   # a SOC under the PT variable
   expect_error(mgl_tab(plan_labels(p, AEDECOD = stats::setNames("X", soc))),

@@ -34,7 +34,8 @@
 #              its header's "Table N" line, else the file's name (the label
 #              assemble_folder() gives, #1030); a character vector: level-1
 #              entries in that order; a table: its rows (order column, when
-#              given), level 1 / 2 / 3 indented 0 / 600 / 1200 twips, a bold
+#              given), level 1 / 2 / 3 all flush left (no \li; indented only
+#              with toc_style indent, #1068), a bold
 #              heading line whenever the heading changes; the path of such a
 #              table (.csv) the same.  Each entry links to a bookmark at its
 #              file's first section; the body is in the entries' order.
@@ -184,6 +185,7 @@
 }
 
 test_that("FT-AS138 [FR-AS148 FR-AS149 FR-AS150 FR-AS151 FR-AS152 FR-AS153 FR-AS157 FR-AS158 FR-AS242 FR-AS243]: pairwise -- assemble_folder(): number source x listing x sections x names x cover x output x toc_title", {
+  skip_on_cran()
   cand <- expand.grid(src = c("header", "titles", "both"), listing = c("no", "yes"),
                       sections = c("1", "2"), names = c("agree", "reversed"),
                       cover = c("no", "yes"),
@@ -198,6 +200,7 @@ test_that("FT-AS138 [FR-AS148 FR-AS149 FR-AS150 FR-AS151 FR-AS152 FR-AS153 FR-AS
   on.exit(unlink(root, recursive = TRUE), add = TRUE)
   set <- ap$rows
   for (i in seq_len(nrow(set))) {
+    .cran_cut(i)
     cs <- c(as.list(set[i, ]), i = i)
     expect_identical(.va_check_folder(cs, root), character(0),
                      label = paste(unlist(cs), collapse = " / "))
@@ -205,6 +208,7 @@ test_that("FT-AS138 [FR-AS148 FR-AS149 FR-AS150 FR-AS151 FR-AS152 FR-AS153 FR-AS
 })
 
 test_that("FT-AS139 [FR-AS101 FR-AS109 FR-AS111 FR-AS112 FR-AS113 FR-AS115 FR-AS116 FR-AS117 FR-AS125 FR-AS128 FR-AS135]: decision table -- assemble_rtf(): the contents' shape and levels x cover x leader", {
+  skip_on_cran()
   d <- tempfile("va-rtf-")
   dir.create(d)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -230,13 +234,14 @@ test_that("FT-AS139 [FR-AS101 FR-AS109 FR-AS111 FR-AS112 FR-AS113 FR-AS115 FR-AS
     null   = list(toc = NULL, files = TRUE, labels = character(0), li = integer(0), heads = character(0), body = c("P", "Q", "R")),
     auto   = list(toc = "auto", files = TRUE, labels = c("Table 14.1.1  Demographics", "Table 14.2.1  Adverse Events", "t3"), li = c(0L, 0L, 0L), heads = character(0), body = c("P", "Q", "R")),
     labels = list(toc = c("L1", "L2", "L3"), files = TRUE, labels = c("L1", "L2", "L3"), li = c(0L, 0L, 0L), heads = character(0), body = c("P", "Q", "R")),
-    table  = list(toc = tbl, files = FALSE, labels = c("L1", "L2", "L3"), li = c(0L, 600L, 1200L), heads = c("H1", "H2"), body = c("P", "Q", "R")),
-    csv    = list(toc = csv, files = FALSE, labels = c("L1", "L2", "L3"), li = c(0L, 600L, 1200L), heads = c("H1", "H2"), body = c("P", "Q", "R")),
-    order  = list(toc = reord, files = FALSE, labels = c("L2", "L3", "L1"), li = c(600L, 1200L, 0L), heads = c("H1", "H2", "H1"), body = c("Q", "R", "P")))
+    table  = list(toc = tbl, files = FALSE, labels = c("L1", "L2", "L3"), li = c(0L, 0L, 0L), heads = c("H1", "H2"), body = c("P", "Q", "R")),
+    csv    = list(toc = csv, files = FALSE, labels = c("L1", "L2", "L3"), li = c(0L, 0L, 0L), heads = c("H1", "H2"), body = c("P", "Q", "R")),
+    order  = list(toc = reord, files = FALSE, labels = c("L2", "L3", "L1"), li = c(0L, 0L, 0L), heads = c("H1", "H2", "H1"), body = c("Q", "R", "P")))
   dt <- expand.grid(kind = names(kinds), cover = c(FALSE, TRUE), leader = c("dot", "none"),
                     stringsAsFactors = FALSE)
   expect_identical(nrow(dt), 24L)
   for (i in seq_len(nrow(dt))) {
+    .cran_cut(i)
     k <- kinds[[dt$kind[i]]]
     lab <- paste(dt$kind[i], dt$cover[i], dt$leader[i], sep = " / ")
     out <- file.path(d, sprintf("book-%02d.rtf", i))

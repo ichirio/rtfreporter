@@ -59,6 +59,16 @@ table is sorted.  Nothing is computed; the numbers are the ARD's.
 A later \code{plan_compare()} replaces the earlier one as a whole: the last call
 says every comparison column.
 }
+\section{Package versions}{
+
+The difference of event rates between two arms of a hierarchical ARD
+(the \code{"estimate"} records a table shows here, or sorts on with
+\code{plan_sort("-estimate@soc")}) comes from
+\code{cards::diff_ard_hierarchical()}, which cards has from 0.9.0.  The
+minimum cards in DESCRIPTION, 0.7.0, does not have it; with that cards,
+make those records yourself or install cards 0.9.0 or later.
+}
+
 \examples{
 # Invented statistics: AGE by arm, and a t-test of the two arms (the
 # record with no ARM)

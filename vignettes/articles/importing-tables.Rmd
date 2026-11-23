@@ -197,10 +197,6 @@ pages |> set_col_header(c(`Drug A (N=60)` = "Drug A"))
 as_rtftables(g, drop_cols = "2024 total")
 ```
 
-(Before v0.7.54 these were passed through `make.names()` and arrived as
-`Drug.A..N.60.` / `X2024.total`, which is what this section always said they
-did not do; see #458.)
-
 ### Two practical rules
 
 1. **Use the *id*, not the visible header.** A gtsummary `stat_1` column may
@@ -254,8 +250,9 @@ then. Cell text is read as typed (leading spaces kept); `left_padding()` is not
 read, so there is no indent.
 
 **Not carried** (RTF cannot reproduce them, so they are intentionally ignored):
-per-cell bold / italic / underline, cell background fills, font/size styling, and
-Markdown inside labels or titles. A plain `data.frame` / tibble carries two
+cell background fills, font/size styling, and Markdown inside labels or titles.
+(For gt / gtsummary, explicit `tab_style()` bold / italic / underline, alignment
+and borders *are* read: the `"styles"` token.) A plain `data.frame` / tibble carries two
 pieces of metadata: column **`label` attributes** become header labels (see
 *Finishing a plain data.frame* below), and **delimited column names** are
 reconstructed into a spanning header (see `header_sep`); everything else
@@ -268,14 +265,15 @@ reconstructed into a spanning header (see `header_sep`); everything else
 - a **character vector of tokens** -- selective opt-in, e.g.
   `c("col_header", "alignment")`. Tokens for gt/gtsummary: `"col_header"`,
   `"alignment"`, `"spanning"`, `"widths"`, `"titles"`, `"footnotes"`,
-  `"footnote_marks"`. For rtables/tern: `"col_header"`, `"alignment"`, `"spanning"`, `"titles"`,
-  `"footnotes"`, `"indent"`, `"footnote_marks"`. For flextable:
+  `"footnote_marks"`, `"styles"`. For rtables/tern: `"col_header"`, `"alignment"`, `"spanning"`, `"titles"`,
+  `"footnotes"`, `"footnote_marks"`. For flextable:
   `"col_header"`, `"alignment"`, `"spanning"`, `"titles"`, `"footnotes"`. For
   huxtable: `"col_header"`, `"alignment"`, `"spanning"`, `"titles"`,
   `"footnotes"`. For a
   plain data.frame / tibble: `"labels"` (column `label` attributes as header
-  labels); unknown tokens are *ignored* for data.frames, so a `list()` mixing
-  table objects and data.frames can share one `read_meta`.
+  labels). A token that only another source reads is skipped, so a `list()`
+  mixing table objects and data.frames can share one `read_meta`; a token no
+  source reads is an error.
 
 ```{r gt-meta, eval = .has_gt}
 library(gt)
@@ -431,7 +429,7 @@ alone) or a list of them taken positionally. rtfreporter ships a few:
   without its parentheses;
 - `fmt_right_align()` -- the minimal "right-justify a column" formatter and a
   template for writing your own;
-- `align_count_pct = TRUE` -- the long-standing shorthand for the built-in
+- `align_count_pct = TRUE` -- a shorthand for the built-in
   `"n (xx.x)"` realigner.
 
 A formatter is either the **function** or its **name as a string**, with the
@@ -536,7 +534,9 @@ to fix its extra arguments -- exactly as shown above.
 
 ## Column widths -- `auto_width`
 
-By default columns share the width evenly. With `auto_width = TRUE` each column
+By default the row-heading column is sized to its labels (within a share of
+the table) and the data columns share the rest (see `default_col_widths()`).
+With `auto_width = TRUE` each column
 is sized to its widest content (header label or data cell) so long labels do not
 wrap; the widths are computed once and applied to every page:
 
@@ -552,8 +552,8 @@ within, the writable page width). An explicit `column_widths_twips` /
 
 ## Pass-through to `rtftable()`
 
-Any further argument is forwarded to [rtftable()] for **every** page, so you can
-set the table''s appearance in the same call -- and your explicit values always
+Any further argument is forwarded to `rtftable()` for **every** page, so you can
+set the table's appearance in the same call -- and your explicit values always
 win over the metadata extracted from the source:
 
 ```{r passthrough}
@@ -735,30 +735,29 @@ The labels feed the `header_sep` reconstruction too, so a label containing
 `stub_cols()` preserves the `label` attributes of the columns it keeps, and
 uses the labels of the columns it merges for its default stub header.
 
-### Coming from `reporter::create_table()`
+### Finishing options at a glance
 
-If you know the reporter package's table spec, the finishing features map to
-existing arguments -- there is no spec object to build:
+The finishing features are arguments -- there is no spec object to build:
 
-| reporter | rtfreporter |
-|----------|-------------|
-| `stub(vars)` + `define(label_row=)` / `define(indent=)` | `stub_cols(vars=)` before converting |
-| `use_attributes = "label"` | `read_meta` `"labels"` token (default on) |
-| `define(visible = FALSE)` | `drop_cols` |
-| `define(dedupe = TRUE)` | `collapse_repeats` |
-| `define(blank_after = TRUE)` | `blank_rows = blank_rows_by_change(...)` |
-| `define(page_break = TRUE)` | `split = "by_value", group_col =` |
-| `define(align =, width =, label =)` | `col_spec` / `auto_width` / `col_header` |
-| `spanning_header()` | `header_sep` delimited names, or `col_header` |
-| `create_table(first_row_blank =)` | `blank_row_first` |
-| `create_table(show_cols =)` | subset the data.frame, or `drop_cols` |
-| sorting | `sort_by` / `sort_desc` |
+| To ... | Use |
+|--------|-----|
+| merge stub columns into one indented column | `stub_cols(vars=)` before converting |
+| take header labels from `label` attributes | `read_meta` `"labels"` token (default on) |
+| hide a column | `drop_cols` |
+| print a repeated value once | `collapse_repeats` |
+| add a blank row after a group | `blank_rows = blank_rows_by_change(...)` |
+| start a new page per value | `split = "by_value", group_col =` |
+| set alignment, width and label | `col_spec` / `auto_width` / `col_header` |
+| add a spanning header | `header_sep` delimited names, or `col_header` |
+| add a blank first row | `blank_row_first` |
+| show only some columns | subset the data.frame, or `drop_cols` |
+| sort | `sort_by` / `sort_desc` |
 
 
 ## Pagination
 
 Everything above is independent of how the table is split into pages. When the
-body is longer than one page, control the split with `as_rtftables()`s
+body is longer than one page, control the split with `as_rtftables()`'s
 `split` / `max_rows` / `group_col` arguments (or a custom function), order the
 rows first with `sort_by` / `sort_desc`, and hide a grouping / sort-key column
 from the output with `drop_cols` -- all of that is covered in

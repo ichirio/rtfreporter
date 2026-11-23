@@ -68,8 +68,9 @@ Two rules hold for every verb:
    changes it by adding a line. It wins argument by argument. An argument that
    is a named list or vector, such as `plan_columns(widths = c(AGE = 1200, SEX
    = 900))`, is replaced as a whole: a later `widths = c(AGE = 1500)` leaves
-   `AGE` only. `plan_levels()`, `plan_labels()` and `plan_nest()` are the
-   exception.
+   `AGE` only. The exceptions: `plan_levels()`, `plan_labels()` and
+   `plan_nest()` merge one key at a time, and `plan_hide()` adds to the
+   earlier calls.
 
 A table made with these verbs: the vital signs example under *Pages*.
 
@@ -127,20 +128,21 @@ study and rarely changed for one table:
 | The row headings | `plan_stub(vars, name, indent, group_summary, before)` |
 | Blank rows | `plan_blanks(where, first, last, counted)` |
 | How many rows on a page, BY pages | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading)` |
-| The columns: widths, decimal alignment | `plan_columns(widths, decimal, row_title, auto_width, sep)` |
+| The columns: widths, decimal alignment | `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)` |
 | The whole table's look | `plan_style(border, align_count_pct, font, ..., border_header, ...)` |
 
 ### Sometimes: what some tables add
 
 | Job | Verb |
 |---|---|
-| A Total column | `plan_total(label, position)` |
+| A Total column | `plan_total(label, position, direction)` |
 | A test or a difference as a column | `plan_compare(..., by, position)` |
 | The row order (adverse events by frequency) | `plan_sort(..., stat, keep)` |
 | Which rows stay (common terms only) | `plan_filter(..., any, parents, by)` |
 | A column from a group of statistics | `plan_stat_groups(..., .variables, .others)` |
 | A page per value (a lab parameter) | `plan_paginate_group(col, keep, heading)` |
 | Titles and footnotes, when the plan carries them | `plan_titles()`, `plan_footnotes()` |
+| A table with no events | `plan_empty(text, when, position, footnote)` |
 | A listing | `plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap)` |
 
 ### Rarely: there when a table needs it
@@ -148,6 +150,8 @@ study and rarely changed for one table:
 | Job | Verb |
 |---|---|
 | Columns not printed | `plan_hide(...)` |
+| One variable's rows under a level of another | `plan_nest(...)` |
+| A listing and its summary in one table | `plan_append(part, name, absent)` ([article](plan-append.html)) |
 | Groups down the body | `plan_row_group(mode, collapse)` |
 | Some cells' look | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border)` |
 | A table too wide for the page | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
@@ -307,7 +311,8 @@ Two more forms say **whose** count and **which column**:
 * `-n[Total]` (or `-n[Placebo]`) is the count in one column only, not the
   sum across the columns. `-n@SOC[Total]` is both.
 
-`keep = FALSE` also hides the columns used only for sorting.
+`keep = FALSE` also hides every sort key that is a column. Use it for a column
+added only to sort by.
 
 #### Row orders by table: a cheat sheet
 
@@ -333,7 +338,8 @@ statistic, or one of the forms above; write them most important first.
 
 The difference between two arms: make it at the ARD step, show it with
 `plan_compare()`, and order the rows by its statistic (`"-estimate"`, the
-largest difference first; without the minus, the smallest):
+largest difference first; without the minus, the smallest).
+`cards::diff_ard_hierarchical()` needs cards 0.9.0 or later:
 
 ```r
 ard  <- cards::ard_stack_hierarchical(adae, variables = c(AESOC, AEDECOD), by = TRTA,

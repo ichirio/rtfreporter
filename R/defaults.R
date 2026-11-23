@@ -21,10 +21,12 @@
 #  restores the factory baseline at any time.
 # ----------------------------------------------------------------------------
 
-# The factory baseline. The ONLY place package default values are defined.
-# Header/footer band distances are deliberately absent: when unset they are
-# derived as the full top / bottom margin (see the renderer). A site may still
-# set `rtfreporter.page.header_dist_in` / `.footer_dist_in` to pin them.
+# The factory baseline. The ONLY place package default values are defined,
+# and it names every `rtfreporter.*` option the package reads (a test checks
+# the package code against it).  The header/footer band distances are NULL:
+# unset, they are derived as the full top / bottom margin (see the renderer).
+# A site may set `rtfreporter.page.header_dist_in` / `.footer_dist_in` to pin
+# them.
 #
 # The margins are based on the FDA eCTD "Portable Document Format (PDF)
 # Specifications" minimums (left/binding >= 0.75", other sides >= 0.375",
@@ -48,6 +50,9 @@
     rtfreporter.page.margin_bottom_in = 0.75,
     rtfreporter.page.margin_left_in   = 0.75,
     rtfreporter.page.margin_right_in  = 0.75,
+    # The header / footer band distances; NULL = the full top / bottom margin.
+    rtfreporter.page.header_dist_in   = NULL,
+    rtfreporter.page.footer_dist_in   = NULL,
     rtfreporter.font                  = "Courier New",
     rtfreporter.font_size_half_points = 18L,
     # Language per font slot, e.g. c(east_asian = "ja"); NULL writes nothing.
@@ -86,7 +91,18 @@
     # The sizes / bold of the table of contents text assemble_rtf() writes: a
     # list of title / heading / entry / gap, each list(size = , bold = ).
     # NULL = the built-in sizes (14 / 11 / 10 pt, a 9 pt blank line).
-    rtfreporter.toc_style                = NULL
+    rtfreporter.toc_style                = NULL,
+    # The run tokens (generate_rtfreport()): the program for {PROGRAM} and the
+    # rest (NULL = the one found from how R runs), the format of {DATETIME},
+    # the time it shows (NULL = the time the file is written), and tokens of
+    # one's own, a named list (NULL = none).
+    rtfreporter.program                  = NULL,
+    rtfreporter.datetime_format          = "%d%b%Y  %H:%M",
+    rtfreporter.render_time              = NULL,
+    rtfreporter.tokens                   = NULL,
+    # print() of an rtftable draws its rules in ASCII when TRUE; FALSE = box
+    # characters where the locale is UTF-8.
+    rtfreporter.print_ascii              = FALSE
   )
 }
 
@@ -126,7 +142,8 @@
 #'
 #' One is about the table of contents of [assemble_rtf()]:
 #' \describe{
-#'   \item{`rtfreporter.toc_style`}{The size and boldness of its text, the
+#'   \item{`rtfreporter.toc_style`}{The size and boldness of its text and the
+#'     indent of its levels, the
 #'     default of `assemble_rtf(toc_style = )`: a list with the keys `title`,
 #'     `heading` and `entry` (each `list(size = <points>, bold = TRUE/FALSE)`)
 #'     and `gap` (`list(size = )`, the blank line below the title), merged over
@@ -134,8 +151,29 @@
 #'     heading 11 pt bold, entry 10 pt, gap 9 pt).  `entry` also takes
 #'     `hanging` (`FALSE`, `TRUE` for the title's wrapped lines lined up after
 #'     its number, or a positive whole number of twips): a hanging indent for
-#'     an entry's wrapped lines.}
+#'     an entry's wrapped lines.  The key `indent` is the indent of the
+#'     levels in twips per level: `0` (factory) starts every heading and
+#'     entry at the same left position, whatever its level; a whole number
+#'     above 0 indents each level that much more than the one above it
+#'     (`list(indent = 600)`: 0, 600 and 1200 twips for levels 1 to 3).}
 #' }
+#'
+#' The list has every `rtfreporter.*` option the package reads.  The others
+#' are the page (`rtfreporter.page.paper_size`, `.orientation`,
+#' `.margin_top_in`, `.margin_bottom_in`, `.margin_left_in`,
+#' `.margin_right_in`, and `.header_dist_in` / `.footer_dist_in`, factory
+#' `NULL`: the full top / bottom margin; see [rtf_page()]), the text and
+#' table style (`rtfreporter.font_size_half_points`, `rtfreporter.font_lang`,
+#' `rtfreporter.row_height_twips`, `rtfreporter.cell_padding_*_twips`,
+#' `rtfreporter.markup`, `rtfreporter.title_format`,
+#' `rtfreporter.footnote_format`, `rtfreporter.title_width`,
+#' `rtfreporter.footnote_width`), `rtfreporter.rounding` ([round_num()]),
+#' `rtfreporter.ard_pipe` ([plan_template()]), the run tokens of
+#' [generate_rtfreport()] (`rtfreporter.program`,
+#' `rtfreporter.datetime_format`, factory `"\%d\%b\%Y  \%H:\%M"`,
+#' `rtfreporter.render_time` and `rtfreporter.tokens`) and
+#' `rtfreporter.print_ascii` (factory `FALSE`: `TRUE` prints an [rtftable()]
+#' with ASCII rules).
 #'
 #' @return A named list of resolved default values.
 #'
@@ -163,10 +201,12 @@ rtfreporter_options <- function() {
 #' @seealso [rtfreporter_options()] to inspect the active values.
 #'
 #' @examples
-#' old <- options(rtfreporter.font = "Arial")
+#' # every rtfreporter.* option as it is now, to put back afterwards
+#' saved <- options()[startsWith(names(options()), "rtfreporter.")]
+#' options(rtfreporter.font = "Arial")
 #' rtfreporter_reset_defaults()       # back to "Courier New"
 #' getOption("rtfreporter.font")
-#' options(old)
+#' options(saved)
 #'
 #' @export
 rtfreporter_reset_defaults <- function() {

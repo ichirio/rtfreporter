@@ -136,16 +136,14 @@
 #'
 #' `as_rtftables()` is the single entry point for turning a *table object*
 #' into a list of [rtftable()] objects -- one per RTF page -- ready to hand
-#' straight to [rtf_tables()].  It unifies two jobs that used to be split
-#' across `paginate()` (page splitting) and `rtf_tables(read_gt = )` (metadata
-#' extraction), both removed in 0.9.0:
+#' straight to [rtf_tables()].  It does two jobs:
 #'
 #' 1. **Read the table's metadata** (only the parts the RTF renderer can use;
 #'    see *What is carried* below).
 #' 2. **Paginate.**  The rendered body is split into per-page chunks using
-#'    the same strategies the old `paginate()` offered (`split`, `max_rows`,
-#'    `group_col`, blank-row controls, ...).  The shared header / width /
-#'    spanning metadata is replicated onto every page.
+#'    the strategies `split`, `max_rows`, `group_col`, blank-row controls and
+#'    so on.  The shared header /
+#'    width / spanning metadata is replicated onto every page.
 #'
 #' The page-level title / source-note blocks travel with each returned
 #' rtftable as the attributes `rtf_titles` / `rtf_footnotes`, which
@@ -260,6 +258,14 @@
 #' (`col_spec`, widths, ...) you set yourself.  See also [stub_cols()] for
 #' finishing a tidy hierarchy-column data.frame into the indented stub
 #' layout beforehand.
+#'
+#' @section Package versions:
+#' The minimum gt in DESCRIPTION, 1.1.0, does all of the above except two
+#' things that need gt 1.4.0 or later:
+#' * a cell style on a member of `gt::gt_split(row_every_n = )`: gt before
+#'   1.4.0 stops on it;
+#' * rows hidden with `gt::rows_hide()`, which gt has from 1.4.0: they are
+#'   left out of the pages, on every member of a `gt_split()` as well.
 #'
 #' @param x A `gt_tbl`, a `gt_group`, a gtsummary table (or `tbl_split`
 #'   container), an rtables/tern `VTableTree`, an rlistings `listing_df`, a
@@ -862,6 +868,13 @@
 #'
 #' Prefer the verbs for complex headers; the arguments are kept for
 #' convenience and backward compatibility.
+#'
+#' @section A table_plan:
+#' `as_rtftables(plan)` runs a [table_plan()] to its pages, as
+#' `plan_apply(plan, "pages")` does.  It takes no other argument: one given
+#' (`as_rtftables(plan, max_rows = 20)`) is an error that names it.  A plan's
+#' table settings go in [plan_style()] and the other `plan_*()` verbs
+#' ([plan_paginate_rows()] for `max_rows` and `split`).
 #'
 #' @section Supplying a source from another package:
 #' `as_rtftables()` is an S3 generic.  Everything listed above is handled by

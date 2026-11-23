@@ -13,6 +13,7 @@
 }
 
 test_that("FT-LS146 [FR-LS111]: build_listing() refuses an rlistings listing_df and points to as_rtftables()", {
+  skip_on_cran()
   x <- structure(.ls_ae(), class = c("listing_df", "data.frame"))
   expect_error(build_listing(x, .ls_spec()),
                paste0("`data` is an rlistings listing (`listing_df`), which rlistings has ",
@@ -23,6 +24,7 @@ test_that("FT-LS146 [FR-LS111]: build_listing() refuses an rlistings listing_df 
 })
 
 test_that("FT-LS147 [FR-LS231 FR-LS232]: fit_listing_widths() stops on a page with no writable width and on a character width it cannot measure", {
+  skip_on_cran()
   d <- .ls_ae()
   msg <- "The page's margins leave no writable width."
   # 6 + 6 inches of margin: more than the sheet is wide
@@ -43,6 +45,7 @@ test_that("FT-LS147 [FR-LS231 FR-LS232]: fit_listing_widths() stops on a page wi
 })
 
 test_that("FT-LS148 [FR-LS126]: listing_spec(blank_row_first = ) is passed on as as_rtftables(blank_row_first = ): a blank row on every page by default, none with FALSE", {
+  skip_on_cran()
   d <- .ls_ae()
   blanks <- function(spec) {
     pages <- as_rtftables(d, listing = spec, max_rows = 3)
@@ -60,6 +63,7 @@ test_that("FT-LS148 [FR-LS126]: listing_spec(blank_row_first = ) is passed on as
 })
 
 test_that("FT-LS149 [FR-LS194]: listing_code(indent = ) is the number of spaces before each listing_col() call; 2 by default", {
+  skip_on_cran()
   spec <- .ls_spec()
   cols <- function(code) grep("listing_col(", code, value = TRUE, fixed = TRUE)
   expect_identical(cols(listing_code(spec)),
@@ -75,6 +79,7 @@ test_that("FT-LS149 [FR-LS194]: listing_code(indent = ) is the number of spaces 
 })
 
 test_that("FT-LS150 [FR-LS213]: fit_listing_widths(font = ) turns the page into characters of that font; NULL is getOption(\"rtfreporter.font\")", {
+  skip_on_cran()
   d <- .ls_ae()
   tw <- function(...) attr(fit_listing_widths(d, .ls_spec(), ...), "rtf_listing_fit")$total_width
   courier <- tw(font = "Courier New")
@@ -99,6 +104,7 @@ test_that("FT-LS150 [FR-LS213]: fit_listing_widths(font = ) turns the page into 
 }
 
 test_that("FT-LS164 [FR-LS256 FR-LS155 FR-LS148]: a column of one variable keeps a value that fits on one line, and a value or label too wide still breaks after its separator", {
+  skip_on_cran()
   x <- data.frame(AGESEX = c("64/M", "41/F"), stringsAsFactors = FALSE)
 
   # #910's repro, through the default type
@@ -152,6 +158,7 @@ Sex")
 })
 
 test_that("FT-LS165 [FR-LS257 FR-LS155 FR-LS150]: a column of two or more variables starts each variable on a line, and a separator inside a value is not a join", {
+  skip_on_cran()
   d <- data.frame(A = c("A/B", "A/B", NA, "", "COMPLETED/UPPER/HYPERGLYCAEMIA"),
                   B = c("C", NA, "C/D", "C", "X"),
                   stringsAsFactors = FALSE)
@@ -181,6 +188,7 @@ test_that("FT-LS165 [FR-LS257 FR-LS155 FR-LS150]: a column of two or more variab
 })
 
 test_that("FT-LS166 [FR-LS129 FR-LS171 FR-LS257]: listing_spec(wrap = listing_wrap) changes nothing, and a custom wrap is called one variable's value at a time, the separator kept on all but the last", {
+  skip_on_cran()
   d <- data.frame(A = c("A/B", "64/M", NA), B = c("C", "HEADACHE", "D/E"),
                   stringsAsFactors = FALSE)
   cols <- list(listing_col(c("A", "B"), width = 12, name = "AB"),

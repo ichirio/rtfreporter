@@ -182,7 +182,7 @@ body), that constant level would collapse into a *single* heading row spanning
 both tests, which could not then be divided into per-test sections. Splitting
 first gives each section its own copy of the heading. (For every other split the
 table stays one logical table paginated across pages, so the stub is built once,
-up front -- see `vignette("pagination")`.)
+up front -- see [Pagination](pagination.html).)
 
 Consequently, under `split = "by_value"` the `group_col` names a **pre-stub**
 column (here `"rowname"` = LBTESTCD) and is **not** one of the `stub` columns: the
@@ -190,13 +190,12 @@ outer level splits, the inner levels merge.
 
 ## See also
 
-- `vignette("section-splitting")` -- getting section names where
+- [Section splitting](section-splitting.html) -- getting section names where
   `auto_section` can see them, for every table object.
-- `vignette("importing-tables")` -- what `as_rtftables()` reads from a `gt`
+- [Importing tables](importing-tables.html) -- what `as_rtftables()` reads from a `gt`
   (and why a multi-stub table is read from slots).
-- [`stub_cols()`] -- the same stub merge on a plain `data.frame`, and the
-  `stub` argument of [`as_rtftables()`] that folds it into the pipeline.
-```
+- `stub_cols()` -- the same stub merge on a plain `data.frame`, and the
+  `stub` argument of `as_rtftables()` that folds it into the pipeline.
 
 <!-- where-next -->
 

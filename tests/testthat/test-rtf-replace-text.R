@@ -83,6 +83,41 @@ test_that("case_insensitive matches regardless of case, escaping metachars", {
   expect_identical(.read_txt(p2), "Z axb")
 })
 
+test_that("FT-DC6803 [FR-DC387]: a backup that cannot be written stops before the file is overwritten", {
+  p <- .tmp_rtf("aaa")
+  bak <- paste0(p, ".bak")
+  on.exit(unlink(c(p, bak), recursive = TRUE), add = TRUE)
+  # the backup path is a folder
+  dir.create(bak)
+  expect_error(rtf_replace_text(p, "aaa", "bbb"),
+               paste0("rtf_replace_text(): the backup path is a folder: ", bak,
+                      "; the file is left as it was."), fixed = TRUE)
+  expect_identical(.read_txt(p), "aaa")
+  # backup = FALSE needs no backup
+  rtf_replace_text(p, "aaa", "bbb", backup = FALSE)
+  expect_identical(.read_txt(p), "bbb")
+  unlink(bak, recursive = TRUE)
+  # the copy fails
+  local_mocked_bindings(.copy_backup = function(from, to) FALSE)
+  expect_error(rtf_replace_text(p, "bbb", "ccc"),
+               paste0("rtf_replace_text(): could not write the backup ", bak,
+                      "; the file is left as it was."), fixed = TRUE)
+  expect_identical(.read_txt(p), "bbb")
+})
+
+test_that("FT-DC6805 [FR-DC389]: rtf_replace_text(case_insensitive = TRUE) keeps a fixed replacement's backslashes; a regex replacement keeps its back-references", {
+  p <- .tmp_rtf("DRAFT here")
+  on.exit(unlink(c(p, paste0(p, ".bak"))), add = TRUE)
+  rtf_replace_text(p, "draft", "FINAL\\line \\1 $1", case_insensitive = TRUE)
+  expect_identical(.read_txt(p), "FINAL\\line \\1 $1 here")
+
+  p2 <- .tmp_rtf("DRAFT here")
+  on.exit(unlink(c(p2, paste0(p2, ".bak"))), add = TRUE)
+  rtf_replace_text(p2, "(dr)aft", "\\1X", use_regex = TRUE,
+                   case_insensitive = TRUE)
+  expect_identical(.read_txt(p2), "DRX here")
+})
+
 test_that("argument validation errors are informative", {
   p <- .tmp_rtf("x")
   on.exit(unlink(p), add = TRUE)

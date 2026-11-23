@@ -39,16 +39,38 @@ families (see \emph{Font names that are not ASCII} in \code{\link[=rtf_document]
 
 One is about the table of contents of \code{\link[=assemble_rtf]{assemble_rtf()}}:
 \describe{
-\item{\code{rtfreporter.toc_style}}{The size and boldness of its text, the
+\item{\code{rtfreporter.toc_style}}{The size and boldness of its text and the
+indent of its levels, the
 default of \code{assemble_rtf(toc_style = )}: a list with the keys \code{title},
-\code{heading} and \code{entry} (each \code{list(size = <points>, bold = TRUE/FALSE)})
+\code{heading} and \code{entry} (each \verb{list(size = <points>, bold = TRUE/FALSE)})
 and \code{gap} (\code{list(size = )}, the blank line below the title), merged over
 the built-in values key by key (factory \code{NULL}: title 14 pt bold,
 heading 11 pt bold, entry 10 pt, gap 9 pt).  \code{entry} also takes
 \code{hanging} (\code{FALSE}, \code{TRUE} for the title's wrapped lines lined up after
 its number, or a positive whole number of twips): a hanging indent for
-an entry's wrapped lines.}
+an entry's wrapped lines.  The key \code{indent} is the indent of the
+levels in twips per level: \code{0} (factory) starts every heading and
+entry at the same left position, whatever its level; a whole number
+above 0 indents each level that much more than the one above it
+(\code{list(indent = 600)}: 0, 600 and 1200 twips for levels 1 to 3).}
 }
+
+The list has every \verb{rtfreporter.*} option the package reads.  The others
+are the page (\code{rtfreporter.page.paper_size}, \code{.orientation},
+\code{.margin_top_in}, \code{.margin_bottom_in}, \code{.margin_left_in},
+\code{.margin_right_in}, and \code{.header_dist_in} / \code{.footer_dist_in}, factory
+\code{NULL}: the full top / bottom margin; see \code{\link[=rtf_page]{rtf_page()}}), the text and
+table style (\code{rtfreporter.font_size_half_points}, \code{rtfreporter.font_lang},
+\code{rtfreporter.row_height_twips}, \verb{rtfreporter.cell_padding_*_twips},
+\code{rtfreporter.markup}, \code{rtfreporter.title_format},
+\code{rtfreporter.footnote_format}, \code{rtfreporter.title_width},
+\code{rtfreporter.footnote_width}), \code{rtfreporter.rounding} (\code{\link[=round_num]{round_num()}}),
+\code{rtfreporter.ard_pipe} (\code{\link[=plan_template]{plan_template()}}), the run tokens of
+\code{\link[=generate_rtfreport]{generate_rtfreport()}} (\code{rtfreporter.program},
+\code{rtfreporter.datetime_format}, factory \code{"\\\%d\\\%b\\\%Y  \\\%H:\\\%M"},
+\code{rtfreporter.render_time} and \code{rtfreporter.tokens}) and
+\code{rtfreporter.print_ascii} (factory \code{FALSE}: \code{TRUE} prints an \code{\link[=rtftable]{rtftable()}}
+with ASCII rules).
 }
 \examples{
 rtfreporter_options()

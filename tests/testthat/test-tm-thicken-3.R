@@ -16,6 +16,7 @@
 }
 
 test_that("FT-TB5201 [FR-TB136]: sort_by and sort_desc misuse stops with each message", {
+  skip_on_cran()
   d <- data.frame(grp = c("a", "a", "b", "b"), ord = 1:4, v = c("1", "2", "3", "4"),
                   stringsAsFactors = FALSE)
   expect_error(as_rtftables(d, sort_by = "zz"),
@@ -33,6 +34,7 @@ test_that("FT-TB5201 [FR-TB136]: sort_by and sort_desc misuse stops with each me
 })
 
 test_that("FT-TB5202 [FR-TB154]: drop_cols naming everything, or an unknown column, stops", {
+  skip_on_cran()
   d <- data.frame(grp = c("a", "b"), ord = 1:2, v = c("1", "2"), stringsAsFactors = FALSE)
   expect_error(as_rtftables(d, drop_cols = 1:3),
                "`drop_cols` must leave at least one column to display.", fixed = TRUE)
@@ -45,6 +47,7 @@ test_that("FT-TB5202 [FR-TB154]: drop_cols naming everything, or an unknown colu
 })
 
 test_that("FT-TB5203 [FR-TB157]: listing on a source or value it cannot take stops with each message", {
+  skip_on_cran()
   d <- data.frame(USUBJID = c("01", "02"), AETERM = c("Headache", "Nausea"),
                   stringsAsFactors = FALSE)
   ls <- listing_spec(list(listing_col("USUBJID", label = "Subject")))
@@ -71,6 +74,7 @@ test_that("FT-TB5203 [FR-TB157]: listing on a source or value it cannot take sto
 })
 
 test_that("FT-TB5204 [FR-TB204]: stub_cols() stops on a bad label, indent, label_span or group_summary", {
+  skip_on_cran()
   h <- .t3_h()
   v <- c("SOC", "PT")
   expect_error(stub_cols(h, vars = v, label = 1),
@@ -94,6 +98,7 @@ test_that("FT-TB5204 [FR-TB204]: stub_cols() stops on a bad label, indent, label
 })
 
 test_that("FT-TB5205 [FR-TB205]: layout = columns refuses label_span = TRUE and a label; an unknown layout stops", {
+  skip_on_cran()
   h <- .t3_h()
   v <- c("SOC", "PT")
   expect_error(stub_cols(h, vars = v, layout = "columns", label_span = TRUE),
@@ -129,6 +134,7 @@ test_that("FT-TB5205 [FR-TB205]: layout = columns refuses label_span = TRUE and 
 }
 
 test_that("FT-TB5206 [FR-TB226]: set_col_header(values = ) that does not match the pages stops", {
+  skip_on_cran()
   # four pages: Per 1 p1, Per 1 p2, Per 2 p1, Per 2 p2.  Only the Per 1 row is given, so the
   # first page without a row is page 3
   e1 <- tryCatch(set_col_header(.t3_pages(), .t3_hdr(), values = .t3_vals()[1L, , drop = FALSE]),
@@ -150,6 +156,7 @@ test_that("FT-TB5206 [FR-TB226]: set_col_header(values = ) that does not match t
 })
 
 test_that("FT-TB5207 [FR-TB424]: style_cols() on a bad page list stops, an unknown argument warns", {
+  skip_on_cran()
   t1 <- rtftable(data.frame(a = "x", b = "y", stringsAsFactors = FALSE))
   expect_error(style_cols(list(t1, data.frame(a = 1)), cols = 1, bold = TRUE),
                paste0("`style_cols()` on a list expects every element to be an rtftable (as ",
@@ -161,6 +168,7 @@ test_that("FT-TB5207 [FR-TB424]: style_cols() on a bad page list stops, an unkno
 })
 
 test_that("FT-TB5208 [FR-TB524]: a column-name pos that is empty, unknown or ambiguous stops", {
+  skip_on_cran()
   expect_error(col_cell(""), "`pos` column names must be non-empty strings.", fixed = TRUE)
   expect_error(col_cell(c("a", "")), "`pos` column names must be non-empty strings.", fixed = TRUE)
   d <- data.frame(a = "x", b = "y", stringsAsFactors = FALSE)
@@ -174,6 +182,7 @@ test_that("FT-TB5208 [FR-TB524]: a column-name pos that is empty, unknown or amb
 })
 
 test_that("FT-TB5209 [FR-TB603]: as_rtftables(first_rows = ) that is not one whole number >= 1 stops", {
+  skip_on_cran()
   d <- data.frame(Item = c("a", "b"), V = c("1", "2"), stringsAsFactors = FALSE)
   msg <- "as_rtftables(): `first_rows` is a whole number of rows, 1 or more."
   for (bad in list(0, -1, 1.5, NA, Inf, "2", TRUE, c(1, 2), numeric(0))) {
@@ -187,6 +196,7 @@ test_that("FT-TB5209 [FR-TB603]: as_rtftables(first_rows = ) that is not one who
 })
 
 test_that("FT-TB5210 [FR-TB605]: indent and group_summary of a folding stub stop in every entry point", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   h <- .t3_h()
   v <- c("SOC", "PT")
   ie <- "`indent` must be a single non-negative integer."
@@ -219,6 +229,7 @@ test_that("FT-TB5210 [FR-TB605]: indent and group_summary of a folding stub stop
 })
 
 test_that("FT-TB5211 [FR-TB606]: a column position that is TRUE, a fraction or a factor stops; NA is out of range", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   h <- .t3_h()
   wide <- data.frame(P = "ALT", D1 = "1", D8 = "2", D15 = "3", stringsAsFactors = FALSE)
   num <- data.frame(g = c("a", "b"), v = c(1.234, 2.5), stringsAsFactors = FALSE)
@@ -275,6 +286,7 @@ test_that("FT-TB5211 [FR-TB606]: a column position that is TRUE, a fraction or a
 })
 
 test_that("FT-TB5212 [FR-TB108]: as_rtftable(...) passes arguments on to rtftable() and as_rtftables()", {
+  skip_on_cran()
   d <- data.frame(g = c("b", "a", "c"), v = c("1", "2", "3"), stringsAsFactors = FALSE)
   # on to as_rtftables(): the rows are sorted by g, and a missing value is printed as "-"
   t1 <- as_rtftable(d, sort_by = "g")
@@ -294,6 +306,7 @@ test_that("FT-TB5212 [FR-TB108]: as_rtftable(...) passes arguments on to rtftabl
 })
 
 test_that("FT-TB5213 [FR-TB134]: sort_by orders the rows by the keys in the input body's columns, stably, NA last", {
+  skip_on_cran()
   d <- data.frame(g = c("b", "a", NA, "a", "b"), n = c(2, 1, 9, 3, 1), s = c("x", "y", "z", "w", "v"),
                   stringsAsFactors = FALSE)
   body <- function(...) as_rtftables(d, ...)[[1L]]$data
@@ -318,6 +331,7 @@ test_that("FT-TB5213 [FR-TB134]: sort_by orders the rows by the keys in the inpu
 })
 
 test_that("FT-TB5214 [FR-TB135]: sort_desc is ascending by default, one TRUE reverses all keys, a vector one per key", {
+  skip_on_cran()
   d <- data.frame(g = c("b", "a", NA, "a", "b"), n = c(2, 1, 9, 3, 1), s = c("x", "y", "z", "w", "v"),
                   stringsAsFactors = FALSE)
   body <- function(...) as_rtftables(d, ...)[[1L]]$data
@@ -339,6 +353,7 @@ test_that("FT-TB5214 [FR-TB135]: sort_desc is ascending by default, one TRUE rev
 })
 
 test_that("FT-TB5215 [FR-TB139]: blank_rows takes positions, between_groups, a spec object or a list of them", {
+  skip_on_cran()
   d <- data.frame(g = c("a", "a", "b", "b", "c"), v = as.character(1:5), stringsAsFactors = FALSE)
   br <- function(...) as_rtftables(d, ...)[[1L]]$blank_rows
   expect_null(br())
@@ -374,6 +389,7 @@ test_that("FT-TB5215 [FR-TB139]: blank_rows takes positions, between_groups, a s
 })
 
 test_that("FT-TB5216 [FR-TB143]: align_count_pct is off by default, TRUE is the count_pct format, a name or function acts as cell_format", {
+  skip_on_cran()
   cn <- data.frame(l = c("a", "b"), v = c("5 (10.0)", "12 (50.0)"), stringsAsFactors = FALSE)
   v <- function(...) as_rtftables(cn, ...)[[1L]]$data$v
   expect_identical(v(), c("5 (10.0)", "12 (50.0)"))
@@ -394,6 +410,7 @@ test_that("FT-TB5216 [FR-TB143]: align_count_pct is off by default, TRUE is the 
 })
 
 test_that("FT-TB5217 [FR-TB145]: cell_format re-formats the data columns, or each column of a list, before pagination", {
+  skip_on_cran()
   c2 <- data.frame(l = c("a", "bb"), x = c("5", "10"), y = c("1 (2)", "33 (4)"),
                    stringsAsFactors = FALSE)
   nb <- " "
@@ -428,6 +445,7 @@ test_that("FT-TB5217 [FR-TB145]: cell_format re-formats the data columns, or eac
 })
 
 test_that("FT-TB5218 [FR-TB147]: na is the text printed for a missing value in every column; empty leaves the cell empty", {
+  skip_on_cran()
   n <- data.frame(l = c("a", NA), v = c("1 (2.0)", NA), w = c(NA, "22 (3.0)"), stringsAsFactors = FALSE)
   nb <- " "
   # a missing cell stays NA when na is not given
@@ -458,6 +476,7 @@ test_that("FT-TB5218 [FR-TB147]: na is the text printed for a missing value in e
 })
 
 test_that("FT-TB5219 [FR-TB152]: collapse_repeats blanks consecutive repeats per page, later columns on the combination", {
+  skip_on_cran()
   d <- data.frame(g = c("a", "a", "a", "b", "b"), h = c("x", "x", "y", "y", "y"), v = as.character(1:5),
                   stringsAsFactors = FALSE)
   cr <- function(...) as_rtftables(d, ...)[[1L]]$data

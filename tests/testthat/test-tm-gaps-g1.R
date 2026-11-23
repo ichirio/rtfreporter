@@ -45,6 +45,7 @@
 # ------------------------------------------------------------ normalize_ard
 
 test_that("FT-AR3000 [FR-AR101]: normalize_ard() class, one row per statistic, column order", {
+  skip_on_cran()
   ard <- .g1_base()
   d <- normalize_ard(ard)
   expect_identical(class(d), c("ard_long", "data.frame"))
@@ -61,6 +62,7 @@ test_that("FT-AR3000 [FR-AR101]: normalize_ard() class, one row per statistic, c
 })
 
 test_that("FT-AR3001 [FR-AR102]: a grouping variable in any group slot is one column", {
+  skip_on_cran()
   d <- data.frame(
     group1 = c("TRT", "TRT", "SEX", "SEX", "SEX"),
     group1_level = c("A", "B", "F", "F", "M"),
@@ -76,6 +78,7 @@ test_that("FT-AR3001 [FR-AR102]: a grouping variable in any group slot is one co
 })
 
 test_that("FT-AR3002 [FR-AR103]: list columns are flattened, NULL / long / function to NA", {
+  skip_on_cran()
   d <- .g1_base()[1:4, ]
   d$variable_level <- list(NULL, c(1, 2), mean,
                            factor("Severe", levels = c("Mild", "Severe")))
@@ -87,6 +90,7 @@ test_that("FT-AR3002 [FR-AR103]: list columns are flattened, NULL / long / funct
 })
 
 test_that("FT-AR3003 [FR-AR105]: stat_fmt from cards' formatter, fmt_fun, a given column, or NA", {
+  skip_on_cran()
   # cards' own formatter, no stat_fmt column in the ARD
   skip_if_not_installed("cards")
   dat <- data.frame(AGE = c(10, 20, 33), TRT = c("A", "B", "A"))
@@ -116,6 +120,7 @@ test_that("FT-AR3003 [FR-AR105]: stat_fmt from cards' formatter, fmt_fun, a give
 })
 
 test_that("FT-AR3004 [FR-AR110]: ard_ignored reports the removed rows with a reason", {
+  skip_on_cran()
   d <- .g1_base()
   extra <- d[1:2, ]
   extra$group1 <- NA_character_
@@ -136,6 +141,7 @@ test_that("FT-AR3004 [FR-AR110]: ard_ignored reports the removed rows with a rea
 })
 
 test_that("FT-AR3005 [FR-AR111]: manipulation between the stages leaves the table unchanged", {
+  skip_on_cran()
   skip_if_not_installed("dplyr")
   d <- normalize_ard(.g1_base())
   cells <- list(continuous = c("Mean" = "{mean:.1f}"), categorical = "{n:.0f}")
@@ -157,6 +163,7 @@ test_that("FT-AR3005 [FR-AR111]: manipulation between the stages leaves the tabl
 })
 
 test_that("FT-AR3006 [FR-AR113]: keys = NULL, a character vector, and a structural name", {
+  skip_on_cran()
   base <- .g1_base()
   # the default: a column for every grouping-variable name in the group columns
   two <- rbind(base, transform(base[5:6, ], group1 = "SEX", group1_level = "F"))
@@ -178,6 +185,7 @@ test_that("FT-AR3006 [FR-AR113]: keys = NULL, a character vector, and a structur
 })
 
 test_that("FT-AR3007 [FR-AR115]: no hierarchy: .depth NA and .label is variable_level", {
+  skip_on_cran()
   d <- normalize_ard(.g1_base())
   expect_true(all(is.na(d$.depth)))
   expect_identical(d$.label, d$variable_level)
@@ -185,6 +193,7 @@ test_that("FT-AR3007 [FR-AR115]: no hierarchy: .depth NA and .label is variable_
 })
 
 test_that("FT-AR3008 [FR-AR116]: a bare overall string labels the sentinel rows, depth 1", {
+  skip_on_cran()
   d <- normalize_ard(.g1_hier(), hierarchy = .g1_hier_cols, overall = "Any TEAE")
   sentinel <- d$variable == "..ard_hierarchical_overall.."
   expect_identical(sum(sentinel), 2L)
@@ -197,6 +206,7 @@ test_that("FT-AR3008 [FR-AR116]: a bare overall string labels the sentinel rows,
 })
 
 test_that("FT-AR3009 [FR-AR117]: overall_row(from = ) takes that variable's rows as overall", {
+  skip_on_cran()
   base <- .g1_hier()
   base <- base[base$variable != "..ard_hierarchical_overall..", ]
   # the arm is the analysed variable of a separately built block
@@ -218,6 +228,7 @@ test_that("FT-AR3009 [FR-AR117]: overall_row(from = ) takes that variable's rows
 })
 
 test_that("FT-AR3010 [FR-AR118]: overall = NULL drops the sentinel rows and reports them", {
+  skip_on_cran()
   d <- normalize_ard(.g1_hier(), hierarchy = .g1_hier_cols)
   expect_false(any(d$variable == "..ard_hierarchical_overall.."))
   expect_identical(nrow(d), 4L)
@@ -229,6 +240,7 @@ test_that("FT-AR3010 [FR-AR118]: overall = NULL drops the sentinel rows and repo
 })
 
 test_that("FT-AR3011 [FR-AR119]: attributes / total_n rows are removed and reported", {
+  skip_on_cran()
   d <- .g1_base()
   extra <- d[1:2, ]
   extra$group1 <- NA_character_
@@ -249,6 +261,7 @@ test_that("FT-AR3011 [FR-AR119]: attributes / total_n rows are removed and repor
 })
 
 test_that("FT-AR3012 [FR-AR123]: drop_key_variables removes the key rows and reports them", {
+  skip_on_cran()
   d <- .g1_base()
   own <- data.frame(
     group1 = NA_character_, group1_level = NA_character_,
@@ -275,6 +288,7 @@ test_that("FT-AR3012 [FR-AR123]: drop_key_variables removes the key rows and rep
 })
 
 test_that("FT-AR3013 [FR-AR124]: stack adds NAME / NAME_level, NA on a row of no layer", {
+  skip_on_cran()
   mk <- function(g1, l1, g2, l2, stat) {
     data.frame(group1 = g1, group1_level = l1, group2 = g2, group2_level = l2,
                variable = "AGE", variable_level = NA_character_,
@@ -311,6 +325,7 @@ test_that("FT-AR3013 [FR-AR124]: stack adds NAME / NAME_level, NA on a row of no
 })
 
 test_that("FT-AR3014 [FR-AR128]: a cards ARD built with a by variable is one row per statistic", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   dat <- data.frame(AGE = c(10, 20, 33, 41), TRT = c("A", "B", "A", "B"))
   ard <- cards::ard_summary(
@@ -332,6 +347,7 @@ test_that("FT-AR3014 [FR-AR128]: a cards ARD built with a by variable is one row
 })
 
 test_that("FT-AR3015 [FR-AR129]: an ARD with no grouping variable makes no key, keeps the total", {
+  skip_on_cran()
   d <- data.frame(
     variable = c("..ard_total_n..", "AGE", "AGE"),
     variable_level = NA_character_,
@@ -351,6 +367,7 @@ test_that("FT-AR3015 [FR-AR129]: an ARD with no grouping variable makes no key, 
 })
 
 test_that("FT-AR3016 [FR-AR130]: a plain data frame is read like the cards ARD, cards or not", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   dat <- data.frame(AGE = c(10, 20, 33, 41), TRT = c("A", "B", "A", "B"))
   ard <- cards::ard_summary(
@@ -374,6 +391,9 @@ test_that("FT-AR3016 [FR-AR130]: a plain data frame is read like the cards ARD, 
 
 test_that("FT-AR7001 [FR-AR130]: a plain data frame is read in an R where cards cannot be loaded", {
   skip_on_cran()
+  # Not under covr: its rtfreporter is instrumented and loads covr, which the
+  # child's library does not hold.  The test still runs in R CMD check.
+  skip_on_covr()
   rscript <- file.path(R.home("bin"),
                        if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
   if (!file.exists(rscript)) skip("no Rscript to start a child R")
@@ -434,6 +454,7 @@ test_that("FT-AR7001 [FR-AR130]: a plain data frame is read in an R where cards 
 })
 
 test_that("FT-AR3017 [FR-AR131]: hierarchical ARD with a separate overall block: arm key filled", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("cards")
   adsl <- data.frame(USUBJID = paste0("S", 1:6),
                      TRT = c("A", "A", "A", "B", "B", "B"))
@@ -462,6 +483,7 @@ test_that("FT-AR3017 [FR-AR131]: hierarchical ARD with a separate overall block:
 })
 
 test_that("FT-AR3018 [FR-AR136]: a stack that is not a named list of character layers stops", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   d <- .g1_base()
   msg <- "`stack` is a named list: a new key's name and its layers, a variable each"
   expect_error(normalize_ard(d, stack = list(g = character())), msg, fixed = TRUE)
@@ -503,6 +525,7 @@ test_that("FT-AR3018 [FR-AR136]: a stack that is not a named list of character l
 }
 
 test_that("FT-AR3019 [FR-AR143]: widen_ard() gives a plain data.frame of character columns", {
+  skip_on_cran()
   d <- normalize_ard(.g1_cat())
   tbl <- widen_ard(d, cols = "TRT", rows = c(grp = "variable"), cells = "{n:.0f}",
                    notes = FALSE)
@@ -533,6 +556,7 @@ test_that("FT-AR3019 [FR-AR143]: widen_ard() gives a plain data.frame of charact
 })
 
 test_that("FT-AR3020 [FR-AR146]: rows left out are reported in the notes", {
+  skip_on_cran()
   d <- normalize_ard(.g1_cat())
   one <- d[d$stat_name == "n" & d$TRT == "A" & d$variable_level == "F", ]
   # a statistic no template names, a record with no value for the cols key,
@@ -559,6 +583,7 @@ test_that("FT-AR3020 [FR-AR146]: rows left out are reported in the notes", {
 })
 
 test_that("FT-AR3021 [FR-AR150]: column order: first seen, `levels` or factor; a name is ignored", {
+  skip_on_cran()
   d <- normalize_ard(.g1_cat(first = c("B", "A")))
   tbl <- widen_ard(d, cols = "TRT", cells = "{n:.0f}", notes = FALSE)
   expect_identical(names(tbl), c("label", "B", "A"))
@@ -578,6 +603,7 @@ test_that("FT-AR3021 [FR-AR150]: column order: first seen, `levels` or factor; a
 })
 
 test_that("FT-AR3022 [FR-AR153]: rows keys are named by name, column, a leading dot dropped", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   d <- normalize_ard(.g1_hier(), hierarchy = .g1_hier_cols, overall = "Any TEAE")
   tbl <- widen_ard(d, cols = "TRT", rows = c("AESOC", a = "AETERM", ".depth"),
                    cells = "{n:.0f}", notes = FALSE)
@@ -605,6 +631,7 @@ test_that("FT-AR3022 [FR-AR153]: rows keys are named by name, column, a leading 
 })
 
 test_that("FT-AR3023 [FR-AR154]: rows = NULL: `group` for several variables, none with hierarchy", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   flat <- widen_ard(normalize_ard(.g1_base()), cols = "TRT", cells = .g1_cells(),
                     notes = FALSE)
   expect_identical(names(flat), c("group", "label", "A", "B"))
@@ -622,6 +649,7 @@ test_that("FT-AR3023 [FR-AR154]: rows = NULL: `group` for several variables, non
 })
 
 test_that("FT-AR3024 [FR-AR156]: the default label is the .label column, named by the element", {
+  skip_on_cran()
   d <- normalize_ard(.g1_hier(), hierarchy = .g1_hier_cols, overall = "Any TEAE")
   tbl <- widen_ard(d, cols = "TRT", cells = "{n:.0f}", notes = FALSE)
   expect_identical(tbl$label, c("Any TEAE", "Cardiac", "Palpitations"))
@@ -638,6 +666,7 @@ test_that("FT-AR3024 [FR-AR156]: the default label is the .label column, named b
 })
 
 test_that("FT-AR3025 [FR-AR159]: a label chain interpolates columns; a string names the source", {
+  skip_on_cran()
   x <- .g1_cat()
   x$SITE <- c("S1", "S2", "S3")[match(x$variable_level, c("F", "M", "U"))]
   d <- normalize_ard(x)
@@ -666,6 +695,7 @@ test_that("FT-AR3025 [FR-AR159]: a label chain interpolates columns; a string na
 })
 
 test_that("FT-AR3026 [FR-AR160]: default cells is {n} ({p}); a chain tries the templates in turn", {
+  skip_on_cran()
   d <- normalize_ard(.g1_cat())
   tbl <- widen_ard(d, cols = "TRT", notes = FALSE)
   expect_identical(tbl$label, c("F", "M", "U"))
@@ -681,6 +711,7 @@ test_that("FT-AR3026 [FR-AR160]: default cells is {n} ({p}); a chain tries the t
 })
 
 test_that("FT-AR3027 [FR-AR161]: guards are judged over the record's statistics and keys", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   d <- normalize_ard(.g1_cat())
   tbl <- widen_ard(d, cols = "TRT", cells = c(n == 0 ~ "0", "{n} ({p})"),
                    notes = FALSE)
@@ -711,6 +742,7 @@ test_that("FT-AR3027 [FR-AR161]: guards are judged over the record's statistics 
 })
 
 test_that("FT-AR3028 [FR-AR163]: a cells map is looked up by variable, context, kind, default", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   mk <- function(var, ctx, vl = NA_character_, sn = "mean", st = c(12.34, 15.67)) {
     data.frame(group1 = "TRT", group1_level = c("A", "B"), variable = var,
                variable_level = vl, context = ctx, stat_name = sn,
@@ -758,6 +790,7 @@ test_that("FT-AR3028 [FR-AR163]: a cells map is looked up by variable, context, 
 })
 
 test_that("FT-AR3029 [FR-AR164]: cell_rows() puts each named line on the row of its label", {
+  skip_on_cran()
   d <- normalize_ard(.g1_base())
   sex <- d[d$variable == "SEX", ]
   tbl <- widen_ard(sex, cols = "TRT", notes = FALSE,
@@ -804,6 +837,7 @@ test_that("FT-AR3029 [FR-AR164]: cell_rows() puts each named line on the row of 
 }
 
 test_that("FT-AR3030 [FR-AR165]: the token forms give their exact values", {
+  skip_on_cran()
   d <- .g1_tokens()
   one <- function(cells) widen_ard(d, cols = "TRT", cells = cells, notes = FALSE)$A
   expect_identical(one("{x}"), "12.3")           # stat_fmt when there is one
@@ -821,6 +855,7 @@ test_that("FT-AR3030 [FR-AR165]: the token forms give their exact values", {
 })
 
 test_that("FT-AR3031 [FR-AR166]: stats = 'rows' ignores cells and labels by stat_label", {
+  skip_on_cran()
   d <- normalize_ard(.g1_base())
   age <- d[d$variable == "AGE", ]
   rows <- widen_ard(age, cols = "TRT", stats = "rows", notes = FALSE)
@@ -843,6 +878,7 @@ test_that("FT-AR3031 [FR-AR166]: stats = 'rows' ignores cells and labels by stat
 })
 
 test_that("FT-AR3032 [FR-AR168]: levels order a row key by output name, label rows, variables", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   x <- data.frame(
     group1 = "TRT", group1_level = rep(c("A", "B"), each = 2L),
     group2 = "SEX", group2_level = rep(c("F", "M"), 2L),
@@ -884,6 +920,7 @@ test_that("FT-AR3032 [FR-AR168]: levels order a row key by output name, label ro
 })
 
 test_that("FT-AR3033 [FR-AR169]: a level the ARD does not have is said, whatever notes says", {
+  skip_on_cran()
   d <- normalize_ard(.g1_cat())
   msg <- "widen_ard(): `levels` names values the ARD does not have; they make no row or column:"
   got <- capture_messages(
@@ -921,6 +958,7 @@ test_that("FT-AR3033 [FR-AR169]: a level the ARD does not have is said, whatever
 })
 
 test_that("FT-AR3034 [FR-AR171]: labels scope: output name, then source name; .default the rest", {
+  skip_on_cran()
   x <- data.frame(
     TRT = rep(c("P", "Q"), 4L), GRADE = rep(c("0", "1"), each = 4L),
     VISIT = rep(rep(c("0", "1"), each = 2L), 2L),
@@ -948,6 +986,7 @@ test_that("FT-AR3034 [FR-AR171]: labels scope: output name, then source name; .d
 })
 
 test_that("FT-AR3035 [FR-AR173]: sort = FALSE keeps first-seen order; a factor key moves", {
+  skip_on_cran()
   x <- data.frame(
     group1 = "TRT", group1_level = rep(c("A", "B"), each = 2L),
     group2 = "SEX", group2_level = rep(c("M", "F"), 2L),
@@ -990,6 +1029,7 @@ test_that("FT-AR3035 [FR-AR173]: sort = FALSE keeps first-seen order; a factor k
 })
 
 test_that("FT-AR3036 [FR-AR176]: sort = levels(soc) puts the values plan_levels() names first", {
+  skip_on_cran()
   d <- .g1_keyed()
   tbl <- widen_ard(d, cols = "TRT", rows = c(soc = "SOC"), cells = "{n:.0f}",
                    levels = list(soc = c("Z", "A")), sort = "levels(soc)", notes = FALSE)
@@ -1007,6 +1047,7 @@ test_that("FT-AR3036 [FR-AR176]: sort = levels(soc) puts the values plan_levels(
 })
 
 test_that("FT-AR3037 [FR-AR178]: rounding = NULL reads the option; {x} does not round", {
+  skip_on_cran()
   d <- data.frame(group1 = "TRT", group1_level = "A", variable = "V",
                   variable_level = NA_character_, context = "continuous",
                   stat_name = "mean", stat_label = "Mean", stat = 0.5,
@@ -1035,6 +1076,7 @@ test_that("FT-AR3037 [FR-AR178]: rounding = NULL reads the option; {x} does not 
 })
 
 test_that("FT-AR3038 [FR-AR183]: stat_groups key the records; a statistic in none is unread", {
+  skip_on_cran()
   d <- normalize_ard(.g1_base())
   d <- d[d$variable == "SEX", ]
   # SEX has n and p; one group holds n, p is in no group
@@ -1061,6 +1103,7 @@ test_that("FT-AR3038 [FR-AR183]: stat_groups key the records; a statistic in non
 })
 
 test_that("FT-AR3039 [FR-AR184]: filter drops rows whose records fail, keeps columns and overall", {
+  skip_on_cran()
   x <- data.frame(
     TRT = rep(c("A", "B", "C"), 3L), TERM = rep(c("Any", "X", "Y"), each = 3L),
     variable = "AE", variable_level = NA_character_, context = "categorical",
@@ -1090,6 +1133,7 @@ test_that("FT-AR3039 [FR-AR184]: filter drops rows whose records fail, keeps col
 })
 
 test_that("FT-AR3040 [FR-AR192]: a text statistic prints as text; guards compare numbers", {
+  skip_on_cran()
   d <- data.frame(
     group1 = "TRT", group1_level = c("A", "B"), variable = "V",
     variable_level = NA_character_, context = "continuous", stat_name = "N",
@@ -1112,6 +1156,7 @@ test_that("FT-AR3040 [FR-AR192]: a text statistic prints as text; guards compare
 })
 
 test_that("FT-AR3041 [FR-AR196]: cols missing or naming no key stops, rtfreporter_missing_role", {
+  skip_on_cran()
   d <- normalize_ard(.g1_base())
   expect_error(
     widen_ard(d, cells = .g1_cells()),
@@ -1134,6 +1179,7 @@ test_that("FT-AR3041 [FR-AR196]: cols missing or naming no key stops, rtfreporte
 })
 
 test_that("FT-AR3042 [FR-AR197]: a cols / rows / label that is no column stops", {
+  skip_on_cran()
   d <- normalize_ard(.g1_cat())
   expect_error(
     widen_ard(d, cols = "TRT", rows = "NOPE", cells = "{n}"),
@@ -1151,6 +1197,7 @@ test_that("FT-AR3042 [FR-AR197]: a cols / rows / label that is no column stops",
 })
 
 test_that("FT-AR3043 [FR-AR208]: rounding, stats and value outside their values stop", {
+  skip_on_cran()
   d <- normalize_ard(.g1_cat())
   expect_error(
     widen_ard(d, cols = "TRT", rounding = "x"),
@@ -1164,6 +1211,7 @@ test_that("FT-AR3043 [FR-AR208]: rounding, stats and value outside their values 
 })
 
 test_that("FT-AR3044 [FR-AR211]: comparison records with no variable or stat_name stop", {
+  skip_on_cran()
   d <- normalize_ard(.g1_cat())
   d$PARAM <- "ALT"
   odd <- d[1:2, ]
@@ -1199,6 +1247,7 @@ test_that("FT-AR3044 [FR-AR211]: comparison records with no variable or stat_nam
 }
 
 test_that("FT-AR3045 [FR-AR215]: pull_ard() answers when variables agree, refuses if they differ", {
+  skip_on_cran()
   expect_identical(pull_ard(.g1_pull(), cols = "TRT"), c(A = 10, B = 12))
   err <- expect_error(pull_ard(.g1_pull(wt_a = 9), cols = "TRT"),
                       "This ARD offers more than one .N. for these columns")
@@ -1213,6 +1262,7 @@ test_that("FT-AR3045 [FR-AR215]: pull_ard() answers when variables agree, refuse
 })
 
 test_that("FT-AR3046 [FR-AR216]: pull_ard() names keys by grouping variable, or an analysed key", {
+  skip_on_cran()
   # TRT in group2: named by its own name, not its position
   g2 <- data.frame(
     group1 = "SEX", group1_level = "F", group2 = "TRT",
@@ -1239,6 +1289,7 @@ test_that("FT-AR3046 [FR-AR216]: pull_ard() names keys by grouping variable, or 
 })
 
 test_that("FT-AR3047 [FR-AR220]: pull_ard(levels = ) orders by levels, factor, first seen", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("cards")
   dat <- data.frame(AGE = c(10, 20, 33, 41, 5, 6),
                     TRT = factor(c("A", "B", "A", "B", "B", "A"), levels = c("B", "A")))
@@ -1286,6 +1337,7 @@ test_that("FT-AR3047 [FR-AR220]: pull_ard(levels = ) orders by levels, factor, f
 })
 
 test_that("FT-AR3048 [FR-AR225]: pull_ard(stat = nonesuch) stops, naming what the ARD offers", {
+  skip_on_cran()
   err <- expect_error(pull_ard(.g1_pull(), cols = "TRT", stat = "nonesuch"),
                       "No .nonesuch. found for these columns\\.")
   msg <- conditionMessage(err)
@@ -1301,6 +1353,7 @@ test_that("FT-AR3048 [FR-AR225]: pull_ard(stat = nonesuch) stops, naming what th
 # ------------------------------------------------------ overall_row, list_ard_keys
 
 test_that("FT-AR3049 [FR-AR227]: overall_row() is a classed list of the label and from variables", {
+  skip_on_cran()
   x <- overall_row("Any TEAE", from = "TRT")
   expect_s3_class(x, "overall_row")
   expect_identical(class(x), "overall_row")
@@ -1337,6 +1390,7 @@ test_that("FT-AR3049 [FR-AR227]: overall_row() is a classed list of the label an
 }
 
 test_that("FT-AR3050 [FR-AR233]: list_ard_keys() prints keys, variables, contexts and statistics", {
+  skip_on_cran()
   out <- capture.output(list_ard_keys(.g1_keys_ard()))
   expect_identical(out[1L], "ARD keys (group1..groupN values) : TRT, SEX ")
   expect_identical(out[2L], "Analysis variables               : AGE, WT ")
@@ -1352,9 +1406,12 @@ test_that("FT-AR3050 [FR-AR233]: list_ard_keys() prints keys, variables, context
 })
 
 test_that("FT-AR3051 [FR-AR234]: list_ard_keys() returns lists invisibly, stats sorted", {
-  invisible(capture.output(vis <- withVisible(list_ard_keys(.g1_keys_ard()))))
-  expect_false(vis$visible)
+  skip_on_cran()
+  vis <- withVisible(list_ard_keys(.g1_keys_ard()))
+  expect_true(vis$visible)
   x <- vis$value
+  expect_s3_class(x, "rtfreporter_ard_keys")
+  expect_identical(utils::capture.output(y <- list_ard_keys(.g1_keys_ard())), character(0))
   expect_identical(names(x), c("keys", "variables", "contexts", "kinds", "stats"))
   expect_identical(x$keys, c("TRT", "SEX"))
   expect_identical(x$variables, c("AGE", "WT"))
@@ -1372,6 +1429,7 @@ test_that("FT-AR3051 [FR-AR234]: list_ard_keys() returns lists invisibly, stats 
 # ----------------------------------------- cells reached by different values
 
 test_that("FT-AR3052 [FR-AR253]: stats = 'rows' stops on cells of different values", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   x <- data.frame(
     group1 = "TRT", group1_level = rep(c("A", "B"), 2L),
     variable = "SEX", variable_level = "F", context = "categorical",
@@ -1474,6 +1532,7 @@ test_that("FT-AR3052 [FR-AR253]: stats = 'rows' stops on cells of different valu
                      "value (e.g. \"-\" or \"NA\").  \"\" (the default) leaves the cell empty.")
 
 test_that("FT-FM3000 [FR-FM105]: round_num() takes integer or double and keeps the length", {
+  skip_on_cran()
   expect_equal(round_num(1L:3L, 1), c(1, 2, 3))
   expect_length(round_num(1L:3L, 1), 3L)
   expect_equal(round_num(c(1.5, NA, Inf), 1), c(1.5, NA, Inf))
@@ -1485,6 +1544,7 @@ test_that("FT-FM3000 [FR-FM105]: round_num() takes integer or double and keeps t
 })
 
 test_that("FT-FM3001 [FR-FM111]: round_num(digits = ) not a single non-negative integer stops", {
+  skip_on_cran()
   msg <- "`round_num(digits = )` must be a single non-negative integer."
   expect_error(round_num(1, digits = NA), msg, fixed = TRUE)
   expect_error(round_num(1, digits = c(1, 2)), msg, fixed = TRUE)
@@ -1496,6 +1556,7 @@ test_that("FT-FM3001 [FR-FM111]: round_num(digits = ) not a single non-negative 
 })
 
 test_that("FT-FM3002 [FR-FM112]: round_num(x = ) that is not numeric stops, naming the classes", {
+  skip_on_cran()
   expect_error(round_num("1"), "`round_num()` rounds numeric input; got character.",
                fixed = TRUE)
   expect_error(round_num(TRUE), "`round_num()` rounds numeric input; got logical.",
@@ -1508,6 +1569,7 @@ test_that("FT-FM3002 [FR-FM112]: round_num(x = ) that is not numeric stops, nami
 })
 
 test_that("FT-FM3003 [FR-FM180]: a length-1 count is recycled against pct", {
+  skip_on_cran()
   out <- fmt_count_pct(2L, c(0.10, 0.50, 0.95))
   expect_length(out, 3L)
   expect_identical(.g1_unbsp(out), c("  2 (10.0)", "  2 (50.0)", "  2 (95.0)"))
@@ -1517,6 +1579,7 @@ test_that("FT-FM3003 [FR-FM180]: a length-1 count is recycled against pct", {
 })
 
 test_that("FT-FM3004 [FR-FM181]: pct is a fraction in [0, 1]; a length-1 pct is recycled", {
+  skip_on_cran()
   expect_identical(.g1_unbsp(fmt_count_pct(c(1L, 2L, 3L), 0.5)),
                    c("  1 (50.0)", "  2 (50.0)", "  3 (50.0)"))
   expect_identical(.g1_unbsp(fmt_count_pct(c(5L, 14L), c(0.053, 0.5))),
@@ -1526,12 +1589,14 @@ test_that("FT-FM3004 [FR-FM181]: pct is a fraction in [0, 1]; a length-1 pct is 
 })
 
 test_that("FT-FM3005 [FR-FM182]: the default pct_unit = fraction multiplies by 100", {
+  skip_on_cran()
   expect_identical(.g1_unbsp(fmt_count_pct(1L, 0.5)), "  1 (50.0)")
   expect_identical(.g1_unbsp(fmt_count_pct(1L, 0.5, pct_unit = "fraction")), "  1 (50.0)")
   expect_identical(.g1_unbsp(fmt_count_pct(1L, 50, pct_unit = "percent")), "  1 (50.0)")
 })
 
 test_that("FT-FM3006 [FR-FM185]: nbsp replaces the padding spaces; the default is U+00A0", {
+  skip_on_cran()
   expect_identical(fmt_count_pct(5L, 0.5),
                    "  5 (50.0)")
   expect_false(grepl(" ", fmt_count_pct(5L, 0.5), fixed = TRUE))
@@ -1540,6 +1605,7 @@ test_that("FT-FM3006 [FR-FM185]: nbsp replaces the padding spaces; the default i
 })
 
 test_that("FT-FM3007 [FR-FM189]: an Inf or -Inf count prints as such, not as the na text", {
+  skip_on_cran()
   expect_identical(.g1_unbsp(fmt_count_pct(-Inf, 0.5, na = "-")), "-Inf      ")
   expect_identical(.g1_unbsp(fmt_count_pct(Inf, 0.5, na = "-")), "Inf       ")
   expect_identical(.g1_unbsp(fmt_count_pct(c(-Inf, NA), 0.5, na = "-")),
@@ -1547,6 +1613,7 @@ test_that("FT-FM3007 [FR-FM189]: an Inf or -Inf count prints as such, not as the
 })
 
 test_that("FT-FM3008 [FR-FM200]: the count_pct alignment gives every n (xx.x) cell one width", {
+  skip_on_cran()
   df <- data.frame(lab = c("a", "b", "c"),
                    a = c("5 (5.0)", "14 (50.0)", "30 (100.0)"),
                    stringsAsFactors = FALSE)
@@ -1558,6 +1625,7 @@ test_that("FT-FM3008 [FR-FM200]: the count_pct alignment gives every n (xx.x) ce
 })
 
 test_that("FT-FM3009 [FR-FM202]: cell forms follow fmt_count_pct; surrounding whitespace ignored", {
+  skip_on_cran()
   df <- data.frame(lab = c("a", "b", "c", "d"),
                    a = c(" 12 (100.0) ", "12 (100.0)", "0 (0.0)", "  7 ( 5.5)  "),
                    stringsAsFactors = FALSE)
@@ -1569,6 +1637,7 @@ test_that("FT-FM3009 [FR-FM202]: cell forms follow fmt_count_pct; surrounding wh
 })
 
 test_that("FT-FM3010 [FR-FM205]: the count_pct alignment pads with U+00A0 by default", {
+  skip_on_cran()
   df <- data.frame(lab = c("a", "b"), a = c("5 (5.0)", "14 (50.0)"),
                    stringsAsFactors = FALSE)
   out <- as_rtftables(df, align_count_pct = TRUE)[[1L]]$data$a
@@ -1578,6 +1647,7 @@ test_that("FT-FM3010 [FR-FM205]: the count_pct alignment pads with U+00A0 by def
 })
 
 test_that("FT-FM3011 [FR-FM207]: the count_pct alignment right-justifies the na token", {
+  skip_on_cran()
   x <- c("5 (33.3)", "-", "12 (100.0)", NA)
   out <- .g1_unbsp(rtfreporter:::.realign_count_pct(x, na = "-"))
   expect_identical(out, c("  5 (33.3)", "  -       ", " 12  (100)", "  -       "))
@@ -1587,6 +1657,7 @@ test_that("FT-FM3011 [FR-FM207]: the count_pct alignment right-justifies the na 
 })
 
 test_that("FT-FM3012 [FR-FM218]: fmt_count_paren(nbsp = ) replaces the padding spaces", {
+  skip_on_cran()
   x <- c("1 (1.2%)", "11 (3.6%)")
   plain <- fmt_count_paren(x, nbsp = " ")
   expect_identical(plain, c(" 1 (1.2%)", "11 (3.6%)"))
@@ -1598,6 +1669,7 @@ test_that("FT-FM3012 [FR-FM218]: fmt_count_paren(nbsp = ) replaces the padding s
 })
 
 test_that("FT-FM3013 [FR-FM241]: an empty or whitespace-only cell is left as it is", {
+  skip_on_cran()
   out <- fmt_right_align(c("5", "      ", "12"), nbsp = " ")
   expect_identical(out, c(" 5", "      ", "12"))
   # with the default padding the cell is the same to the eye (spaces are nbsp)
@@ -1608,12 +1680,14 @@ test_that("FT-FM3013 [FR-FM241]: an empty or whitespace-only cell is left as it 
 })
 
 test_that("FT-FM3014 [FR-FM244]: fmt_right_align(nbsp = ) is the padding, U+00A0 by default", {
+  skip_on_cran()
   expect_identical(fmt_right_align(c("5", "120")), c("  5", "120"))
   expect_identical(fmt_right_align(c("5", "120"), nbsp = " "), c("  5", "120"))
   expect_identical(fmt_right_align(c("5", "120"), nbsp = "_"), c("__5", "120"))
 })
 
 test_that("FT-FM3015 [FR-FM247]: fmt_right_align(na = ) that is not a single non-NA string stops", {
+  skip_on_cran()
   msg <- paste0("`na` must be a single string -- the text printed for a missing value ",
                 "(e.g. \"-\" or \"NA\").  \"\" (the default) leaves the cell empty.")
   expect_error(fmt_right_align("5", na = NA), msg, fixed = TRUE)
@@ -1626,6 +1700,7 @@ test_that("FT-FM3015 [FR-FM247]: fmt_right_align(na = ) that is not a single non
 })
 
 test_that("FT-FM3016 [FR-FM251]: rounding = sas absorbs only the representation error", {
+  skip_on_cran()
   # round_num()
   expect_identical(round_num(2.675, 2, rounding = "sas"), 2.68)
   expect_identical(round_num(1.00499999, 2, rounding = "sas"), 1)
@@ -1664,6 +1739,7 @@ test_that("FT-FM3016 [FR-FM251]: rounding = sas absorbs only the representation 
 })
 
 test_that("FT-FM3017 [FR-FM252]: a string or logical digits / signif stops, in each function", {
+  skip_on_cran()
   dg <- "`round_num(digits = )` must be a single non-negative integer."
   expect_error(round_num(1, digits = "2"), dg, fixed = TRUE)
   expect_error(round_num(1, digits = TRUE), dg, fixed = TRUE)
@@ -1693,6 +1769,7 @@ test_that("FT-FM3017 [FR-FM252]: a string or logical digits / signif stops, in e
 })
 
 test_that("FT-FM3018 [FR-FM253]: na of fmt_round / fmt_signif / fmt_numeric: one non-NA string", {
+  skip_on_cran()
   x <- c(1, NA)
   for (bad in list(NA, NA_character_, 1, c("a", "b"), character(0))) {
     expect_error(fmt_round(x, 1, na = bad), .g1_na_msg, fixed = TRUE)

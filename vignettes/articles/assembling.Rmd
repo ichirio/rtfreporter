@@ -175,9 +175,84 @@ pdftools::pdf_toc(sub("[.]rtf$", ".pdf", pkg2))   # one bookmark a file
 
 The page numbers in the table of contents are fields that already hold the
 page rtfreporter computed for each file; Word and LibreOffice update them
-when they refresh fields. The links and the bookmarks above were checked in
-the PDF that LibreOffice writes. In Word itself a link follows on Ctrl+click,
-its default setting.
+when they refresh fields. In Word itself a link follows on Ctrl+click, its
+default setting.
+
+## Converting to PDF
+
+rtfreporter writes RTF; it does not write PDF. Convert the assembled file to
+PDF with Adobe Acrobat or a similar tool -- Word, or LibreOffice -- and keep
+the options that create bookmarks from headings.
+
+**A sample.** [xyz-001-tables-sample.pdf](../xyz-001-tables-sample.pdf)
+(28 pages, 124 KB) is the assembled file above -- the Gallery's outputs, made
+from the CDISC pilot data -- converted with **LibreOffice**, not Acrobat.
+It opens with the bookmarks panel beside the first page; each bookmark, and
+each entry of the table of contents, opens its output's first page:
+
+```{r shot-asm-bookmarks, echo = FALSE, fig.alt = "A PDF viewer drawn from the sample PDF: the Bookmarks panel lists the four outputs (Table 14.1.1, Table 14.3.1.1, Table 14.3.5.1, Listing 16.2.7.2); the adverse events bookmark is selected and page 4 of 28, the first page of that table, is shown beside it."}
+.shot("bookmarks.png")
+```
+
+The picture is drawn from the sample's own outline and page (by
+`data-raw/gen_assemble_pdf.py`); it is not a screenshot of Acrobat.
+
+**With LibreOffice**, the PDF export options that matter are: export
+bookmarks, PDF version 1.7 (or PDF/A), initial view "Bookmarks Panel and
+Page", default page layout and magnification, lossless images. From the
+command line they go in the filter options of `--convert-to`;
+`data-raw/gen_assemble_pdf.py` in the package's repository has the full set.
+
+**With Microsoft Word**, as tested with the same kind of file:
+
+- open the RTF, select all (Ctrl+A) and update fields (F9), so the table of
+  contents' page numbers and the page fields are current;
+- save as PDF with the option that creates bookmarks from headings turned
+  on; the PDF/A option is there too, when PDF/A is wanted;
+- in Japanese Word, the last empty paragraph can take the East Asian default
+  font (for example Yu Mincho), which then appears in the PDF's font list
+  (tracked as rtfreporter#1110).
+
+### Optional finishing steps
+
+Two FDA settings can be added after the conversion. Both are optional, and
+both use tools outside rtfreporter:
+
+- **Open with the bookmarks panel** (the PDF's `/PageMode /UseOutlines`).
+  LibreOffice's "Bookmarks Panel and Page" initial view and Word's export
+  already set it; otherwise set the initial view in Acrobat's document
+  properties.
+- **Fast Web View** (a linearized PDF). LibreOffice and Word's plain export
+  do not linearize; Acrobat can, and so can the free command-line tool
+  [qpdf](https://qpdf.readthedocs.io/):
+
+```sh
+qpdf --linearize xyz-001-tables.pdf xyz-001-tables-fwv.pdf
+qpdf --check-linearization xyz-001-tables-fwv.pdf
+```
+
+The sample had both steps, and its document title and author were set to
+neutral values (no person's name).
+
+### The sample against the FDA PDF specifications
+
+Checked against the FDA's *Portable Document Format (PDF) Specifications*,
+version 4.1, with qpdf, pypdf and PyMuPDF:
+
+| Item | FDA v4.1 | The sample | Result |
+|---|---|---|---|
+| PDF version | 1.4 to 1.7, PDF/A-1, PDF/A-2 | 1.7 | Pass |
+| Fonts | non-standard fonts fully embedded | Courier New (a standard font), embedded | Pass |
+| Security | no security or password | not encrypted | Pass |
+| Bookmarks | one for each TOC item | 4 bookmarks, one per output | Pass |
+| TOC links | linked TOC; "Inherit Zoom" | 8 links (label and page number), each to its page, zoom inherited | Pass |
+| Initial view | Bookmarks Panel and Page; layout and magnification default | `/UseOutlines`, no layout or zoom set | Pass |
+| Fast Web View | optimized for fast web view | linearized (qpdf) | Pass |
+| Page size | 8.5 x 11 in, orientation kept | letter; landscape tables, one portrait | Pass |
+| Margins | left 3/4 in; 3/8 in elsewhere; landscape top 3/4 in | every page 0.75 in left and right; top 0.75 in on the table pages, 0.9 in on the cover and TOC | Pass |
+| Images | resolution, lossless compression | no images: text only, searchable | Pass |
+| JavaScript, external links, attachments | none | none | Pass |
+| Metadata | -- | title set, neutral author | Pass |
 
 See `?assemble_rtf` and `?assemble_folder` for every argument.
 

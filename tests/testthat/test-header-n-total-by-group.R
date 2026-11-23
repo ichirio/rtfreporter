@@ -40,6 +40,7 @@ test_that("a stack alone keeps its own denominator in the header", {
 
 test_that("a total stated by group wins over the stack's denominator", {
   skip_if_not_installed("cards")
+  skip_if_not_installed("dplyr")
   x <- .tn_data()
   base <- .tn_header(.tn_ae(x))
   h <- .tn_header(dplyr::bind_rows(.tn_ae(x), .tn_by_arm(x)))
@@ -51,6 +52,7 @@ test_that("a total stated by group wins over the stack's denominator", {
 
 test_that("the overall total_n gives the Total column, the by-group one each arm", {
   skip_if_not_installed("cards")
+  skip_if_not_installed("dplyr")
   x <- .tn_data()
   h <- .tn_header(dplyr::bind_rows(.tn_ae(x, overall = TRUE), .tn_by_arm(x),
                                    cards::ard_total_n(x$adsl)), total = TRUE)

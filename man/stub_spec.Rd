@@ -31,10 +31,8 @@ per setting.  The arguments are \code{stub_cols()}'s own, so the two never drift
 apart.
 }
 \details{
-It replaces the \code{stub_vars} / \code{stub_label} / \code{stub_indent} /
-\code{stub_group_summary} arguments of \code{\link[=as_rtftables]{as_rtftables()}}, which were removed in
-0.9.0: passing one of them is now an error.  New stub settings are only
-added here.
+All stub settings are given here, not as separate arguments of
+\code{\link[=as_rtftables]{as_rtftables()}}.
 }
 \examples{
 # The clinical indented stub.

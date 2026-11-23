@@ -45,9 +45,9 @@
 #  toc            | length 0 / wrong length | character(0) / "x" | error, same                    | FR-AS114
 #  toc            | an NA label           | c("x", NA)         | error "`toc` labels must not be NA" | FR-AS246
 #  toc            | a number / TRUE       | 1 / TRUE           | error "`toc` must be NULL, \"auto\"" | FR-AS124
-#  toc (table)    | level 1 (min) / 3 (max) | 1 / 3            | written; level 3 indented 1200   | FR-AS116 FR-AS238
+#  toc (table)    | level 1 (min) / 3 (max) | 1 / 3            | written; level 3 indented 1200 with toc_style indent 600 | FR-AS116 FR-AS238
 #  toc (table)    | level 0 / 4 / 2.5 / -1 / Inf |             | error "`level` must be a whole number from 1 to 3" | FR-AS238
-#  toc (table)    | level NA              | NA                 | the default, 2 (indent 600)      | FR-AS115
+#  toc (table)    | level NA              | NA                 | the default, 2 (600 with indent 600) | FR-AS115
 #  toc (table)    | an NA label           | c(NA, "y")         | the file's title as its label    | FR-AS258
 #  toc (table)    | no label column       |                    | the titles as labels             | FR-AS258
 #  toc (table)    | no file column / 0 rows / a missing file |  | error (FR-AS118 / FR-AS102 / FR-AS119) | FR-AS102 FR-AS118 FR-AS119
@@ -342,6 +342,7 @@
 }
 .eb3_run <- function(cases, run) {
   for (cs in cases) {
+    if (is.null(cs)) next   # (a case left out where it cannot work)
     args <- c(setNames(list(cs$val), cs$arg), cs$more)
     lab  <- sprintf("%s = <%s>", cs$arg, cs$cls)
     kind <- sub(":.*", "", cs$expect)
@@ -387,6 +388,7 @@
 .eb3_read <- function(f) paste(readLines(f, warn = FALSE), collapse = "\n")
 
 test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS110 FR-AS112 FR-AS114 FR-AS115 FR-AS116 FR-AS118 FR-AS119 FR-AS124 FR-AS127 FR-AS128 FR-AS129 FR-AS133 FR-AS134 FR-AS139 FR-AS238 FR-AS244 FR-AS245 FR-AS246 FR-AS258 FR-AS271]: assemble_rtf(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   C <- .eb3_case
   E <- .eb3_err
   f <- .eb3_files()
@@ -398,6 +400,10 @@ test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS
   nf  <- "^Input file not found"
   two <- "^`input_files` must be a character vector with at least 2 elements"
   of  <- "^`output_file` must be a single non-empty file path"
+  # (a non-ASCII name is written in a UTF-8 locale; where the native encoding
+  # cannot hold it, R cannot open it: the error says so)
+  nat <- "^`output_file` has a character the session's native encoding"
+  out_kanji <- file.path(tempdir(), "出力.rtf")
   ow  <- "^`overwrite` must be TRUE or FALSE"
   cv  <- "^`cover` must be NULL or a list with the fields title"
   len <- "^`toc` must be a character vector the same length as `input_files`"
@@ -415,7 +421,8 @@ test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS
     E("input_files", "a missing file", c(a, file.path(dirname(a), "nope.rtf")), nf),
     C("input_files", "the same file twice", c(a, a), "ok", more = list(toc = "auto"),
       chk = function(x) grepl("bkmkstart tfl_t14_1_1_1", x) && grepl("bkmkstart tfl_t14_1_1_2", x)),
-    C("output_file", "non-ASCII name", file.path(tempdir(), "出力.rtf"), "ok:Table 14.2.1"),
+    if (native_can_hold(out_kanji)) C("output_file", "non-ASCII name", out_kanji, "ok:Table 14.2.1")
+    else E("output_file", "non-ASCII name, the native encoding cannot hold it", out_kanji, nat),
     E("output_file", "NA", NA_character_, of),
     E("output_file", "empty string", "", of),
     E("output_file", "length 2", c(tempfile(), tempfile()), of),
@@ -454,9 +461,11 @@ test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS
     E("toc", "an NA label", c("x", NA), "^`toc` labels must not be NA"),
     E("toc", "a number", 1, "^`toc` must be NULL, \"auto\""),
     E("toc", "TRUE", TRUE, "^`toc` must be NULL, \"auto\""),
-    C("toc", "table, level 1 (min)", tab(level = 1), "no:\\\\li600"),
-    C("toc", "table, level 3 (max)", tab(level = 3), "ok:\\\\li1200"),
-    C("toc", "table, level NA (default 2)", tab(level = NA), "ok:\\\\li600"),
+    C("toc", "table, level 1 (min)", tab(level = 1), "no:\\\\li[1-9]"),
+    C("toc", "table, level 3 (max)", tab(level = 3), "ok:\\\\li1200",
+      more = list(toc_style = list(indent = 600))),
+    C("toc", "table, level NA (default 2)", tab(level = NA), "ok:\\\\li600",
+      more = list(toc_style = list(indent = 600))),
     E("toc", "table, level 0", tab(level = 0), lvl),
     E("toc", "table, level 4", tab(level = 4), lvl),
     E("toc", "table, level 2.5", tab(level = 2.5), lvl),
@@ -515,6 +524,7 @@ test_that("FT-AS140 [FR-AS102 FR-AS103 FR-AS104 FR-AS107 FR-AS108 FR-AS109 FR-AS
 })
 
 test_that("FT-AS141 [FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS156 FR-AS157 FR-AS158 FR-AS238 FR-AS271]: assemble_folder(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   C <- .eb3_case
   E <- .eb3_err
   O <- .eb3_obj
@@ -529,8 +539,11 @@ test_that("FT-AS141 [FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS156 FR-AS
   empty <- tempfile("eb3empty")
   dir.create(empty)
   kanji <- file.path(tempfile("eb3k"), "試験")
-  dir.create(kanji, recursive = TRUE)
-  file.copy(f, kanji)
+  if (native_can_hold(kanji)) {
+    dir.create(kanji, recursive = TRUE)
+    file.copy(f, kanji)
+  }
+  nat <- "^`dir` has a character the session's native encoding"
   out_exists <- tempfile(fileext = ".rtf")
   writeLines("{\\rtf1 x}", out_exists)
   sf  <- "^`spec_file` must end in .xlsx or .csv."
@@ -539,7 +552,8 @@ test_that("FT-AS141 [FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS156 FR-AS
   nrows <- function(n) function(x) is.data.frame(x) && nrow(x) == n
   cases <- list(
     O("dir", "valid", d, nrows(2)),
-    O("dir", "non-ASCII", kanji, nrows(2)),
+    if (native_can_hold(kanji)) O("dir", "non-ASCII", kanji, nrows(2))
+    else E("dir", "non-ASCII, the native encoding cannot hold it", kanji, nat),
     E("dir", "not there", file.path(d, "nope"), "^Directory not found"),
     E("dir", "no .rtf file", empty, "^No RTF files found."),
     O("output_file", "NULL", NULL, nrows(2)),
@@ -586,6 +600,7 @@ test_that("FT-AS141 [FR-AS148 FR-AS152 FR-AS153 FR-AS154 FR-AS155 FR-AS156 FR-AS
                       stringsAsFactors = FALSE)
 
 test_that("FT-LS154 [FR-LS115 FR-LS143 FR-LS144 FR-LS145 FR-LS146 FR-LS151 FR-LS152 FR-LS153 FR-LS154 FR-LS158 FR-LS159 FR-LS160 FR-LS161 FR-LS162 FR-LS163 FR-LS164 FR-LS165 FR-LS251]: listing_col(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   C <- .eb3_case
   E <- .eb3_err
   O <- .eb3_obj
@@ -677,6 +692,7 @@ test_that("FT-LS154 [FR-LS115 FR-LS143 FR-LS144 FR-LS145 FR-LS146 FR-LS151 FR-LS
 })
 
 test_that("FT-LS155 [FR-LS119 FR-LS120 FR-LS121 FR-LS122 FR-LS123 FR-LS124 FR-LS125 FR-LS126 FR-LS127 FR-LS128 FR-LS129 FR-LS131 FR-LS133 FR-LS134 FR-LS135 FR-LS136 FR-LS137 FR-LS138 FR-LS139 FR-LS140 FR-LS141 FR-LS171 FR-LS251]: listing_spec(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   E <- .eb3_err
   O <- .eb3_obj
   ty <- "^`type` must be a single listing-template name"
@@ -757,6 +773,7 @@ test_that("FT-LS155 [FR-LS119 FR-LS120 FR-LS121 FR-LS122 FR-LS123 FR-LS124 FR-LS
 })
 
 test_that("FT-LS156 [FR-LS101 FR-LS102 FR-LS109 FR-LS112 FR-LS113 FR-LS114]: build_listing(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   spec <- listing_spec(list(listing_col(c("USUBJID", "AGE")), listing_col("AETERM", width = 8)))
@@ -788,6 +805,7 @@ test_that("FT-LS156 [FR-LS101 FR-LS102 FR-LS109 FR-LS112 FR-LS113 FR-LS114]: bui
 })
 
 test_that("FT-LS157 [FR-LS205 FR-LS206 FR-LS212 FR-LS214 FR-LS216 FR-LS217 FR-LS219 FR-LS224 FR-LS225 FR-LS226 FR-LS227 FR-LS228 FR-LS229 FR-LS230 FR-LS232 FR-LS252]: fit_listing_widths(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   E <- .eb3_err
   O <- .eb3_obj
   spec <- listing_spec(list(listing_col(c("USUBJID", "AGE")), listing_col("AETERM")))
@@ -880,6 +898,7 @@ test_that("FT-LS157 [FR-LS205 FR-LS206 FR-LS212 FR-LS214 FR-LS216 FR-LS217 FR-LS
 })
 
 test_that("FT-LS158 [FR-LS170 FR-LS172 FR-LS174 FR-LS175 FR-LS176 FR-LS177 FR-LS178 FR-LS179 FR-LS180 FR-LS181]: listing_wrap(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   wd <- "^`width` must be a single positive number, or NULL"
@@ -920,6 +939,7 @@ test_that("FT-LS158 [FR-LS170 FR-LS172 FR-LS174 FR-LS175 FR-LS176 FR-LS177 FR-LS
 })
 
 test_that("FT-LS159 [FR-LS233 FR-LS235 FR-LS236 FR-LS238 FR-LS239]: collapse_repeats(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   tb <- rtftable(data.frame(A = c("x", "x", "y"), B = c("1", "1", "2")))
@@ -972,6 +992,7 @@ test_that("FT-LS159 [FR-LS233 FR-LS235 FR-LS236 FR-LS238 FR-LS239]: collapse_rep
   .eb3_r(NA, NA, "..ard_total_n..", NA, "total_n", "N", 9))
 
 test_that("FT-AR107 [FR-AR119 FR-AR121 FR-AR126]: normalize_ard(): equivalence classes and boundaries of drop_contexts and stack_sep", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   O <- .eb3_obj
   kept <- function(n, tot) function(x) nrow(x) == n && identical(attr(x, "ard_total_n"), tot)
   # A crossed layer: SEX in group2, AGEGR in group3.
@@ -1010,6 +1031,7 @@ test_that("FT-AR107 [FR-AR119 FR-AR121 FR-AR126]: normalize_ard(): equivalence c
 })
 
 test_that("FT-AR108 [FR-AR156 FR-AR157 FR-AR158 FR-AR180 FR-AR197 FR-AR209 FR-AR247 FR-AR250 FR-AR253]: widen_ard(): equivalence classes and boundaries of na, label and stat_groups", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   d <- normalize_ard(.eb3_ard)
@@ -1061,6 +1083,7 @@ test_that("FT-AR108 [FR-AR156 FR-AR157 FR-AR158 FR-AR180 FR-AR197 FR-AR209 FR-AR
 })
 
 test_that("FT-AR109 [FR-AR213 FR-AR216 FR-AR218 FR-AR219 FR-AR220 FR-AR221 FR-AR224 FR-AR225 FR-AR239 FR-AR251]: pull_ard(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   is <- function(v) function(x) identical(x, v)
@@ -1111,6 +1134,7 @@ test_that("FT-AR109 [FR-AR213 FR-AR216 FR-AR218 FR-AR219 FR-AR220 FR-AR221 FR-AR
 .eb3_x <- c(0.5, 1.5, 2.5, -0.5, -1.5, -2.5, 0, -0)
 
 test_that("FT-FM102 [FR-FM114 FR-FM115 FR-FM116 FR-FM117 FR-FM118 FR-FM121 FR-FM122 FR-FM124 FR-FM125 FR-FM126 FR-FM127 FR-FM128 FR-FM251 FR-FM252 FR-FM253]: fmt_round(): equivalence classes and boundaries of its arguments, the rounding boundaries", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   E <- .eb3_err
   O <- .eb3_obj
   is <- function(v) function(x) identical(x, v)
@@ -1179,6 +1203,7 @@ test_that("FT-FM102 [FR-FM114 FR-FM115 FR-FM116 FR-FM117 FR-FM118 FR-FM121 FR-FM
 })
 
 test_that("FT-FM103 [FR-FM129 FR-FM131 FR-FM135 FR-FM136 FR-FM137 FR-FM138 FR-FM139 FR-FM141 FR-FM142 FR-FM145 FR-FM146 FR-FM147 FR-FM251 FR-FM252 FR-FM253]: fmt_signif(): equivalence classes and boundaries of its arguments, the rounding boundaries", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   is <- function(v) function(x) identical(x, v)
@@ -1222,6 +1247,7 @@ test_that("FT-FM103 [FR-FM129 FR-FM131 FR-FM135 FR-FM136 FR-FM137 FR-FM138 FR-FM
 })
 
 test_that("FT-FM104 [FR-FM149 FR-FM151 FR-FM152 FR-FM153 FR-FM154 FR-FM155 FR-FM162 FR-FM164 FR-FM165 FR-FM167 FR-FM172 FR-FM173 FR-FM252 FR-FM253]: fmt_numeric(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   df <- data.frame(g = c("Mean", "SD", "x"), v = c(1.25, 2.35, NA), s = c("a", "b", "c"))
@@ -1269,6 +1295,7 @@ test_that("FT-FM104 [FR-FM149 FR-FM151 FR-FM152 FR-FM153 FR-FM154 FR-FM155 FR-FM
 })
 
 test_that("FT-FM105 [FR-FM175 FR-FM176 FR-FM177 FR-FM178 FR-FM183 FR-FM184 FR-FM185 FR-FM186 FR-FM187 FR-FM189 FR-FM190 FR-FM191 FR-FM192 FR-FM193 FR-FM194 FR-FM195 FR-FM196 FR-FM249 FR-FM254 FR-FM255]: fmt_count_pct(): equivalence classes and boundaries of its arguments, the rounding boundaries", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   C <- .eb3_case
@@ -1324,6 +1351,7 @@ test_that("FT-FM105 [FR-FM175 FR-FM176 FR-FM177 FR-FM178 FR-FM183 FR-FM184 FR-FM
 })
 
 test_that("FT-FM106 [FR-FM228 FR-FM233 FR-FM235 FR-FM237 FR-FM238 FR-FM239 FR-FM248 FR-FM254]: fmt_value_paren(): equivalence classes and boundaries of its arguments", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   is <- function(v) function(x) identical(x, v)
@@ -1375,6 +1403,7 @@ test_that("FT-FM106 [FR-FM228 FR-FM233 FR-FM235 FR-FM237 FR-FM238 FR-FM239 FR-FM
 .eb3_names <- function(v) function(p) identical(names(p[[1L]]$data), v)
 
 test_that("FT-PL973 [FR-PL265 FR-PL275 FR-PL276]: plan_total(): equivalence classes and boundaries of label, position and direction", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   E <- .eb3_err
   O <- .eb3_obj
   lb <- "^plan_total\\(label = \\) is one text, the column's heading"
@@ -1404,6 +1433,7 @@ test_that("FT-PL973 [FR-PL265 FR-PL275 FR-PL276]: plan_total(): equivalence clas
 })
 
 test_that("FT-PL974 [FR-PL310 FR-PL311 FR-PL960]: plan_sort(): equivalence classes and boundaries of stat and keep", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   kp <- "^plan_sort\\(keep = \\) is TRUE"
@@ -1430,6 +1460,7 @@ test_that("FT-PL974 [FR-PL310 FR-PL311 FR-PL960]: plan_sort(): equivalence class
 })
 
 test_that("FT-PL975 [FR-PL142 FR-PL143 FR-PL150 FR-PL151 FR-PL152 FR-PL960]: plan_filter(): equivalence classes and boundaries of any, parents and by", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   E <- .eb3_err
   O <- .eb3_obj
   an <- "^plan_filter\\(any = \\) is TRUE"
@@ -1457,6 +1488,7 @@ test_that("FT-PL975 [FR-PL142 FR-PL143 FR-PL150 FR-PL151 FR-PL152 FR-PL960]: pla
 })
 
 test_that("FT-PL976 [FR-PL157 FR-PL158 FR-PL159 FR-PL160 FR-PL176 FR-PL179]: plan_columns(): equivalence classes and boundaries of widths, auto_width and sep", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   E <- .eb3_err
   O <- .eb3_obj
   aw <- "^`auto_width` must be TRUE or FALSE"
@@ -1467,7 +1499,8 @@ test_that("FT-PL976 [FR-PL157 FR-PL158 FR-PL159 FR-PL160 FR-PL176 FR-PL179]: pla
     O("widths", "n, in order", c(3, 1, 1, 1), rw(c(3, 1, 1, 1))),
     O("widths", "shorter (the last repeats)", c(3, 1), rw(c(3, 1, 1, 1))),
     O("widths", "by name", c(group = 2, label = 3, .values = 1), rw(c(2, 3, 1, 1))),
-    E("widths", "a name not there", c(nope = 1), "^plan_columns\\(widths = \\) names 'nope'"),
+    .eb3_case("widths", "a name not there (skipped)", c(group = 2, label = 3, nope = 1, .values = 1),
+              "warning:^plan_columns\\(widths = \\) names 'nope', not a column of the table: skipped"),
     E("widths", "a printed column left out", c(group = 3, .values = 1), "^The `columns` sheet gives widths, but not for: 'label'"),
     O("auto_width", "TRUE", TRUE, ok),
     O("auto_width", "FALSE", FALSE, ok),
@@ -1485,6 +1518,7 @@ test_that("FT-PL976 [FR-PL157 FR-PL158 FR-PL159 FR-PL160 FR-PL176 FR-PL179]: pla
 })
 
 test_that("FT-PL977 [FR-PL945]: plan_append(): equivalence classes and boundaries of name and absent", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   E <- .eb3_err
   O <- .eb3_obj
   nm <- "^plan_append\\(name = \\) is one non-empty string"
@@ -1508,6 +1542,7 @@ test_that("FT-PL977 [FR-PL945]: plan_append(): equivalence classes and boundarie
 })
 
 test_that("FT-PL978 [FR-PL392]: plan_col_header(): equivalence classes and boundaries of span, header_sep and col_header_align", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   E <- .eb3_err
   O <- .eb3_obj
   ln <- list(lines = list(c(group = "", label = "", .values = "Treatment")))
@@ -1539,6 +1574,7 @@ test_that("FT-PL978 [FR-PL392]: plan_col_header(): equivalence classes and bound
 })
 
 test_that("FT-PL979 [FR-PL262]: plan_levels(): equivalence classes and boundaries of .drop_empty", {
+  skip_on_cran()
   E <- .eb3_err
   O <- .eb3_obj
   de <- "^plan_levels\\(.drop_empty = \\) takes variable names"

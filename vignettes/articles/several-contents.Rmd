@@ -359,7 +359,7 @@ rtfreporter's own tokens (`{PAGE}`, `{PROGRAM}`, ...) and those given to
 
 ## Where next
 
-- [Titles, footnotes and several tables](adding-content.html) --- the title
+- [Adding tables and figures](adding-content.html) --- the title
   and footnote blocks, and styling them
 - [Headers, footers and tokens](headers-footers.html) --- the page's own
   bands and the tokens they take

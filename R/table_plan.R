@@ -890,17 +890,18 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
 }
 
 .plan_col_widths <- function(pages, widths, spread, hidden = character()) {
+  skipped <- character()
+  shown <- character()
   one <- function(tb) {
     nm <- names(tb$data)
-    # a name that is no column of the table: a typo, or a column renamed
-    # (a hidden column's width is harmless: it is not printed)
+    # a name that is no column of the table is skipped with a warning: one
+    # set of widths serves tables whose columns differ (a one-arm and a
+    # two-arm study), and a typo is still named.  A hidden column's width
+    # is harmless: it is not printed.
     bad <- setdiff(names(widths), c(nm, ".values", hidden))
     if (length(bad)) {
-      .ard_stop(paste0(
-        "plan_columns(widths = ) names ", paste(sQuote(bad, FALSE), collapse = ", "),
-        ", not a column of the table.\n",
-        "  Its printed columns: ", paste(sQuote(nm, FALSE), collapse = ", "),
-        " (`.values` covers the value columns)."))
+      skipped <<- union(skipped, bad)
+      shown <<- union(shown, nm)
     }
     w <- rep(NA_real_, length(nm))
     if (".values" %in% names(widths)) w[nm %in% spread] <- widths[[".values"]]
@@ -917,8 +918,17 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
     tb$col_rel_width <- w
     tb
   }
-  if (inherits(pages, "rtftable")) return(one(pages))
-  pages[] <- lapply(pages, one)
+  pages <- if (inherits(pages, "rtftable")) one(pages) else {
+    pages[] <- lapply(pages, one)
+    pages
+  }
+  if (length(skipped)) {
+    warning(paste0(
+      "plan_columns(widths = ) names ", paste(sQuote(skipped, FALSE), collapse = ", "),
+      ", not a column of the table: skipped.\n",
+      "  Its printed columns: ", paste(sQuote(shown, FALSE), collapse = ", "),
+      " (`.values` covers the value columns)."), call. = FALSE)
+  }
   pages
 }
 
@@ -2626,14 +2636,18 @@ plan_nest <- function(.plan, ...) {
 #'   earlier `plan_total()` said):
 #'   \describe{
 #'     \item{`"cols"`}{the Total **column**, from the records
-#'       with no value of the column key.  With two column keys the
-#'       innermost is folded: `cols = c(TRTA, AESEV)` gives each arm a
+#'       with no value of a column key.  With two or more column keys the
+#'       key folded is the first one, from the innermost out, that has
+#'       overall rows (records with no value of it and a value of every
+#'       other column key): `cols = c(TRTA, AESEV)` gives each arm a
 #'       total column from its records with no `AESEV` (an AE at any
-#'       grade), placed among that arm's grades.}
+#'       grade), placed among that arm's grades; with no such records,
+#'       the records with no `TRTA` and a grade fold `TRTA` instead, one
+#'       Total column per grade.}
 #'     \item{`"rows"`}{the Total **row**, a shift table's margin: read
 #'       from the column key tabulated by the row keys, without the body's
-#'       variable (`ard_tabulate(adlb, variables = BTOXGR, by = PARAM)`
-#'       beside the body's `variables = ATOXGR, by = c(PARAM, BTOXGR)`),
+#'       variable (`ard_tabulate(x, variables = base_gr, by = PARAM)`
+#'       beside the body's `variables = worst_gr, by = c(PARAM, base_gr)`),
 #'       labelled `label` and placed by `position`.}
 #'     \item{`"both"`}{both, with the corner (a row key's own tabulation)
 #'       as the Total row's Total column.}
@@ -2663,6 +2677,21 @@ plan_nest <- function(.plan, ...) {
 #' # The study's wording, and the total before the arms
 #' p |>
 #'   plan_total(label = "All subjects", position = "first") |>
+#'   plan_apply("table")
+#'
+#' # Two column keys, arm by visit, and no overall rows for the visit:
+#' # the arm is folded, a Total column for each visit
+#' st2 <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active", NA), each = 2),
+#'   AVISIT    = rep(c("Week 1", "Week 2"), 3),
+#'   variable  = "AVAL",
+#'   .label    = NA_character_,
+#'   .kind     = "continuous",
+#'   stat_name = "mean",
+#'   stat      = c(1.5, 2.5, 1.8, 2.9, 1.6, 2.7))
+#' table_plan(st2, cols = c("ARM", "AVISIT"), rows = c(group = "variable")) |>
+#'   plan_cells(continuous = c(Mean = "{mean:.1f}")) |>
+#'   plan_total() |>
 #'   plan_apply("table")
 #' @export
 plan_total <- function(.plan, label = NULL, position = NULL, direction = NULL) {
@@ -2763,6 +2792,14 @@ plan_filter <- function(.plan, ..., any = TRUE, parents = c("keep", "drop"), by 
 #' table is sorted.  Nothing is computed; the numbers are the ARD's.
 #' A later `plan_compare()` replaces the earlier one as a whole: the last call
 #' says every comparison column.
+#'
+#' @section Package versions:
+#' The difference of event rates between two arms of a hierarchical ARD
+#' (the `"estimate"` records a table shows here, or sorts on with
+#' `plan_sort("-estimate@soc")`) comes from
+#' `cards::diff_ard_hierarchical()`, which cards has from 0.9.0.  The
+#' minimum cards in DESCRIPTION, 0.7.0, does not have it; with that cards,
+#' make those records yourself or install cards 0.9.0 or later.
 #'
 #' @param .plan A [table_plan()].  The dot keeps `p = `, the commonest
 #'   column here, from being taken for it.
@@ -3756,7 +3793,9 @@ plan_col_header <- function(.plan, header = NULL, values = NULL,
 #'   **Named by column** (`c(row_label = 5, .values = 2)`, `.values` for
 #'   every value column) a reordered table keeps them; unnamed, they are one
 #'   a column in order, as `col_rel_width` itself.  A name that is not a
-#'   column of the table stops with the names the table has.  Each width is
+#'   column of the table is skipped, with a warning that names it and the
+#'   columns the table has (one set of widths can serve a one-arm and a
+#'   two-arm table).  Each width is
 #'   a positive finite number: `0`, a negative, `NA`, `Inf` or a string
 #'   stops at `plan_columns()`.  A later `plan_columns(widths = )` replaces
 #'   the earlier one as a whole: `c(AGE = 1200, SEX = 900)` followed by
@@ -3766,7 +3805,7 @@ plan_col_header <- function(.plan, header = NULL, values = NULL,
 #'   (`.values` for every value column), [set_decimal_split()]'s `cols`, by
 #'   name.  A value that is not column names (`NA`, `""`, a number) stops at
 #'   `plan_columns()`; a name that is not a column of the table stops when
-#'   the plan is applied, as a `widths` name does (a hidden column's name is
+#'   the plan is applied (a hidden column's name is
 #'   allowed and changes nothing).
 #' @param row_title The row-heading columns, `rtftable(row_title = )`, by
 #'   name as `widths` are: a row key's name as `table_plan(rows = )` gives
@@ -4137,7 +4176,7 @@ plan_footnotes <- function(.plan, ..., pages = NULL, border = NULL) {
 #' * `set_col_header()` / `rtf_col_header()` is declared as `plan_col_header()`
 #' * `as_rtftables(align_count_pct = TRUE)` is declared as `plan_style(align_count_pct = TRUE)`
 #' * `fmt_numeric()` is declared as `plan_digits(<column> = 2)`, `plan_digits(.rows = c(Mean = 1))`
-#' * `paginate()` is declared as `plan_paginate_rows()`
+#' * `as_rtftables(x, max_rows = )` is declared as `plan_paginate_rows()`
 #' * `style_header(x, ...)` is declared as `plan_cell_style(header = TRUE, ...)`
 #' * `style_cols(x, ...)` is declared as `plan_cell_style(cols = , ...)`
 #' * bold / colour / alignment of body cells, by condition is declared as `plan_cell_style(where = ~ ..., ...)`
@@ -4262,6 +4301,10 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     d <- .plan$data
     .plan_remember(.plan, "table", d)
     if (stage %in% c("table", "input")) return(d)
+    # a listing of no records: plan_empty()'s sentence as one row, as on a
+    # table (#1100)
+    emp <- .plan_resolve(.plan, "empty")
+    if (length(emp)) d <- .plan_empty_listing(.plan, d, emp)
     return(.plan_to_pages(.plan, d))
   }
   # A table somebody already built -- with widen_ard(), with dplyr, with
@@ -4523,6 +4566,23 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
          rbind(tbl, row))
 }
 
+# plan_empty() on a listing: a listing with no record (and `when` not
+# "overall_zero", which is an ARD's) gets its sentence as one row, in its
+# first column; the other cells blank.  Remembered for the footnote.
+.plan_empty_listing <- function(plan, d, e) {
+  empty <- nrow(d) == 0L && !identical(e$when, "overall_zero")
+  plan$cache$empty <- isTRUE(empty)
+  if (!empty || isTRUE(e$.no_text) || is.null(e$text)) return(d)
+  row <- as.data.frame(lapply(d, function(v) {
+    if (is.character(v)) "" else v[NA_integer_]
+  }), stringsAsFactors = FALSE, check.names = FALSE)
+  cols <- .plan_merge(.plan_of(plan, "listing"))$cols
+  first <- vapply(cols, function(cl) as.character(cl$name)[1L], "")
+  first <- c(first[first %in% names(d)], names(d))[1L]
+  row[[first]] <- e$text
+  row
+}
+
 # The rows of each nested variable moved under their level: found by the
 # rows key that carries the variable (its value is the variable's label,
 # as plan_labels() gave it, or its name), indented one stub step deeper.
@@ -4643,24 +4703,15 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   if (identical(dir, "rows")) return(d)
   # the innermost column key is the one folded: with cols = c(TRTA, AESEV),
   # each arm's records with no AESEV make that arm's total column; records
-  # with no TRTA either are no column of this table
-  outer <- cols[-length(cols)]
-  cols <- cols[length(cols)]
-  if (!cols %in% names(d)) return(d)
+  # with no TRTA either are no column of this table.  When there are none,
+  # an outer key whose records carry the inner keys is folded instead
+  # (#1109): cols = c(TRTA, variable) with AVAL / CHG records without TRTA
+  # make one Total column group, value and change kept under it
+  if (!cols[length(cols)] %in% names(d)) return(d)
+  i <- .plan_total_fold(d, cols, dir)
+  at <- .plan_total_at(d, cols, i)
+  cols <- cols[i]
   k <- d[[cols]]
-  in_outer <- if (length(outer)) {
-    Reduce(`&`, lapply(outer, function(o) if (o %in% names(d)) !is.na(d[[o]]) else FALSE))
-  } else rep(TRUE, nrow(d))
-  v <- if ("variable" %in% names(d)) as.character(d$variable) else
-    rep(NA_character_, nrow(d))
-  own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else
-    rep(FALSE, nrow(d))
-  # only the body's analyses: a test or a difference (plan_compare()) has
-  # no column key either, and is no Total
-  ctx <- if ("context" %in% names(d)) as.character(d$context) else
-    rep(NA_character_, nrow(d))
-  body_ctx <- unique(ctx[!is.na(k)])
-  at <- is.na(k) & in_outer & !own & !(v %in% "..ard_total_n..") & ctx %in% body_ctx
   if (!any(at)) {
     .ard_stop(sprintf(paste0(
       "plan_total(): the ARD has no overall rows, rows without %s.
@@ -4682,13 +4733,48 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   d
 }
 
+# plan_total(): the index of the column key folded into the Total column --
+# the innermost; when it has no overall rows, the next one out whose
+# records carry the other keys (#1109).  A margin (direction = "both") is
+# read for the innermost only, so there it is always the innermost.
+.plan_total_fold <- function(d, cols, dir = "cols") {
+  n <- length(cols)
+  if (n < 2L || !identical(dir, "cols") || !is.data.frame(d)) return(n)
+  for (i in rev(seq_len(n))) {
+    if (cols[i] %in% names(d) && any(.plan_total_at(d, cols, i))) return(i)
+  }
+  n
+}
+
+# The overall rows for the column key cols[i]: a statistic with no value of
+# it and a value of every other column key, not a key's own tabulation nor
+# the study total, of an analysis the body has
+.plan_total_at <- function(d, cols, i) {
+  k <- d[[cols[i]]]
+  others <- cols[-i]
+  in_others <- if (length(others)) {
+    Reduce(`&`, lapply(others, function(o) if (o %in% names(d)) !is.na(d[[o]]) else FALSE))
+  } else rep(TRUE, nrow(d))
+  v <- if ("variable" %in% names(d)) as.character(d$variable) else
+    rep(NA_character_, nrow(d))
+  own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else
+    rep(FALSE, nrow(d))
+  # only the body's analyses: a test or a difference (plan_compare()) has
+  # no column key either, and is no Total
+  ctx <- if ("context" %in% names(d)) as.character(d$context) else
+    rep(NA_character_, nrow(d))
+  body_ctx <- unique(ctx[!is.na(k)])
+  is.na(k) & in_others & !own & !(v %in% "..ard_total_n..") & ctx %in% body_ctx
+}
+
 # plan_total(direction = "rows" / "both"): the margins of a shift table --
-# a tabulation of a key of the table (BTOXGR by PARAM; ATOXDIR by PARAM),
-# the body's analysis variable (ATOXGR) left out -- become the body's Total
+# a tabulation of a key of the table (base_gr by PARAM and tox_dir;
+# tox_dir by PARAM), the body's analysis variable (worst_gr) left out --
+# become the body's Total
 # row, last (or first) in each block.  normalize_ard() marks them as the
 # key's own tabulation; their shape says what they are: a key-own record
 # whose variable is a key of this table.  A record with no value of the
-# column key as well (ATOXDIR by PARAM) is then the Total row's Total
+# column key as well (tox_dir by PARAM) is then the Total row's Total
 # column, folded as any overall record.
 .plan_total_margins <- function(plan, d, tt, cols) {
   own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else rep(FALSE, nrow(d))
@@ -4836,8 +4922,36 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
       out$levels <- out$levels %||% list()
       out$levels[[cols]] <- .plan_total_levels(lv, tt)
     }
+  } else if (!is.null(tt) && length(cols) > 1L &&
+             !identical(tt$direction %||% "cols", "rows")) {
+    # two column keys (#1103, #1109): the folded key's order, its Total at
+    # `position` -- the data's own order (the overall rows bound first)
+    # would otherwise place it
+    key <- cols[.plan_total_fold(plan$data, cols, tt$direction %||% "cols")]
+    lv <- out$levels[[key]]
+    if (is.null(lv) && is.data.frame(plan$data) && key %in% names(plan$data)) {
+      k <- plan$data[[key]]
+      ok <- Reduce(`&`, lapply(cols, function(o)
+        if (o %in% names(plan$data)) !is.na(plan$data[[o]]) else FALSE))
+      lv <- if (is.factor(k)) levels(k) else .ard_first_seen(as.character(k[ok]))
+    }
+    if (length(lv)) {
+      out$levels <- out$levels %||% list()
+      out$levels[[key]] <- .plan_total_levels(lv, tt)
+    }
   }
   out
+}
+
+# plan_paginate_rows(split = ) is a split's name or the caller's own
+# function (as_rtftables(split = f)).  Only a name is one of the named
+# splits, and a function is written in a message as what it is.
+.plan_split_named <- function(split, names) {
+  is.character(split) && length(split) == 1L && split %in% names
+}
+
+.plan_split_label <- function(split) {
+  if (is.function(split)) "<a function>" else sQuote(split)
 }
 
 # The display half, in the order a report is built.  Each step calls the
@@ -4961,7 +5075,7 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
       .ard_stop(paste0(
         "plan_paginate_group() splits the pages by the group value, ",
         "and\n  plan_paginate_rows(split = ",
-        sQuote(out$split), ") splits them another way.  Use one.
+        .plan_split_label(out$split), ") splits them another way.  Use one.
 ",
         "  A page per value with a row budget inside is ",
         "plan_paginate_rows(page_by = , max_rows = , split = ),
@@ -4983,10 +5097,10 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   # one: a value split makes a page per value, "rows" cuts at the
   # positions given, "none" makes one page.  Declaring a budget that
   # is then dropped is how someone spends an afternoon raising it and
-  # watching nothing change.
+  # watching nothing change.  A split function of the caller's is given
+  # the budget (as_rtftables() passes it max_rows =), so it has one.
   if (!is.null(out$max_rows) &&
-      !is.null(out$split) &&
-      out$split %in% c("by_value", "rows", "none")) {
+      .plan_split_named(out$split, c("by_value", "rows", "none"))) {
     .ard_stop(paste0(
       "plan_paginate_rows(max_rows = ", out$max_rows, ") has no ",
       "effect with split = ", sQuote(out$split), ".\n",
@@ -5454,6 +5568,17 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
   unique(c(keys[!hit], unname(of[keys[hit]])))
 }
 
+# A column key's values relabelled as widen_ard() relabels them (its
+# `labels`, the entries for that key or the flat ones)
+.plan_n_relabel <- function(v, labels, ref) {
+  v <- as.character(v)
+  lab <- if (length(labels)) .ard_labels_for(labels, ref)
+  if (is.null(lab)) return(v)
+  hit <- !is.na(v) & v %in% names(lab)
+  v[hit] <- unname(lab[v[hit]])
+  v
+}
+
 .plan_n_read <- function(plan, sp, d = plan$data) {
   cols <- as.character(unlist(sp$cols, use.names = FALSE))
   sep <- sp$sep %||% "____"
@@ -5547,8 +5672,11 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
       at <- at & Reduce(`&`, lapply(has[-seq_len(k)], `!`))
     }
     if (!any(at)) next
+    # (a column key's values as the columns show them: relabelled by
+    # plan_labels() / plan_levels() as widen_ard() does, so the N found is
+    # named as the column it belongs to)
     key <- do.call(paste, c(lapply(cols[seq_len(k)], function(cc)
-      as.character(d[[cc]])), list(sep = sep)))
+      .plan_n_relabel(d[[cc]], sp$labels, cc)), list(sep = sep)))
     got <- numeric(0)
     add <- function(x) {
       x <- x[!names(x) %in% names(got)]
@@ -5604,9 +5732,11 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
   }
   # plan_total(): the Total column's population is the study total the
   # ARD states (the key's own tabulation's N, ..ard_total_n..) -- the one
-  # column it is
+  # column it is; with two column keys, when the outer key is the one
+  # folded (#1109), the Total group over the inner key's columns
   tt <- .plan_total_spec(plan)
-  if (!is.null(tt) && length(cols) == 1L) {
+  if (!is.null(tt) && (length(cols) == 1L ||
+                       .plan_total_fold(d, cols, tt$direction %||% "cols") == 1L)) {
     if (!is.null(total)) {
       out[[tt$label]] <- total
     } else {
@@ -6316,14 +6446,33 @@ plan_n_candidates <- function(.plan) {
     a <- list(vars = stub$vars, label = stub$name, indent = stub$indent,
               group_summary = stub$group_summary)
     a <- a[!vapply(a, is.null, logical(1L))]
-    # a change of the page_by key writes the heading rows again (stub_cols())
-    pb <- intersect(.plan_merge(.plan_of(plan, "pages"))$page_by, names(tbl))
+    # a change of a page key -- page_by or plan_paginate_group()'s --
+    # writes the heading rows again (stub_cols()), so a page opens with its
+    # own headings
+    pb <- intersect(.plan_page_keys(plan), names(tbl))
     if (length(pb) && nrow(tbl)) {
       attr(tbl, "rtf_stub_break") <- do.call(paste, c(lapply(pb, function(k) {
         .fill_page_by_gaps(as.character(tbl[[k]]))
       }), list(sep = "\r")))
     }
     tbl <- do.call(stub_cols, c(list(data = tbl), a))
+    # The page keys, carried on every row: a heading row the fold added has
+    # none, and a page key with gaps reads as a group value only on its
+    # first row -- a page per data row (#1108).  A heading row takes the
+    # keys of the row it introduces (at the foot, of the row it follows),
+    # as plan_append()'s fold and the page_by split do.
+    pk <- intersect(pb, names(tbl))
+    src <- attr(tbl, "rtf_stub_src", exact = TRUE)
+    if (length(pk) && length(src) == nrow(tbl) && anyNA(src) &&
+        !all(is.na(src))) {
+      s <- .carry_back(src)
+      s[is.na(s)] <- .carry_forward(src)[is.na(s)]
+      for (k in pk) {
+        lb <- attr(pre[[k]], "label", exact = TRUE)
+        tbl[[k]] <- pre[[k]][s]
+        if (!is.null(lb)) attr(tbl[[k]], "label") <- lb
+      }
+    }
     # (stub_cols() puts the folded column first)
     if (!is.null(stub$heading)) attr(tbl[[1L]], "rtf_heading") <- stub$heading
   }
@@ -6486,7 +6635,7 @@ plan_n_candidates <- function(.plan) {
 
   if (length(colset$decimal)) {
     first_d <- if (inherits(out, "rtftable")) out$data else out[[1L]]$data
-    # a name that is no column of the table stops, as a `widths` name does
+    # a name that is no column of the table stops
     # (#864); a hidden column is not printed, so it is left alone
     bad <- setdiff(colset$decimal,
                    c(names(first_d), ".values", rtf$drop_cols %||% character()))
@@ -7204,7 +7353,7 @@ plan_layers <- function(.plan) {
 #' Write the plan for you
 #'
 #' The counterpart of `plan_template(form = "widen")` for the deferred form: reads an ARD
-#' and prints a runnable [table_plan()] pipeline, filled in with the keys,
+#' and writes a runnable [table_plan()] pipeline, filled in with the keys,
 #' hierarchy, contexts and statistics it actually found.
 #'
 #' It writes **both halves** --- the ARD to the table, and the table to the
@@ -7225,7 +7374,10 @@ plan_layers <- function(.plan) {
 #' @param pipe `"|>"` or `"%>%"`; `NULL` follows
 #'   `getOption("rtfreporter.ard_pipe")`, then RStudio's own preference,
 #'   then `%>%`.
-#' @return The generated code, as a character vector, invisibly.
+#' @return The generated code, a character vector of class
+#'   `"rtfreporter_plan_code"`, one element per line.  Its print method
+#'   shows the code, so typing the call prints it and assigning the result
+#'   prints nothing.
 #'
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
@@ -7233,7 +7385,8 @@ plan_layers <- function(.plan) {
 #'     cards::ADSL, .by = ARM,
 #'     cards::ard_summary(variables = AGE),
 #'     cards::ard_tabulate(variables = SEX))
-#'   plan_template(ard, cols = "ARM")
+#'   plan_template(ard, cols = "ARM")          # prints the code
+#'   code <- plan_template(ard, cols = "ARM")  # prints nothing
 #' }
 #' @seealso [table_plan()], [plan_apply()]
 #' @export
@@ -7359,9 +7512,14 @@ plan_template <- function(x, cols = NULL, hierarchy = character(),
          "#   plan_apply(p)   the object itself")
 
   code <- L[!vapply(L, is.null, logical(1))]
-  cat(paste(code, collapse = "\n"), "\n")
   if (!is.null(file)) writeLines(code, file)
-  invisible(code)
+  structure(code, class = "rtfreporter_plan_code")
+}
+
+#' @export
+print.rtfreporter_plan_code <- function(x, ...) {
+  cat(paste(unclass(x), collapse = "\n"), "\n")
+  invisible(x)
 }
 
 # The `cells` entries, one per kind, with the digits the ARD already knows.
@@ -7563,6 +7721,18 @@ plan_template <- function(x, cols = NULL, hierarchy = character(),
 
 
 # A plan is a table source: rtf_tables(doc, plan) and
-# as_rtftables(plan) both work through the generic.
+# as_rtftables(plan) both work through the generic.  The plan holds all of
+# its table's settings, so an argument given here would be lost: it stops.
 #' @export
-as_rtftables.table_plan <- function(x, ...) plan_apply(x, "pages")
+as_rtftables.table_plan <- function(x, ...) {
+  dots <- match.call(expand.dots = FALSE)$...
+  if (length(dots)) {
+    nm <- names(dots) %||% character(length(dots))
+    shown <- ifelse(nzchar(nm), paste0("`", nm, "`"), "an unnamed argument")
+    stop("as_rtftables(): a table_plan takes no other argument; got ",
+         paste(shown, collapse = ", "), ".\n  A plan's table settings go in ",
+         "plan_style() and the other plan_*() verbs (plan_paginate_rows() for ",
+         "max_rows and split).", call. = FALSE)
+  }
+  plan_apply(x, "pages")
+}

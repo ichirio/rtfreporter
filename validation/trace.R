@@ -57,6 +57,36 @@ out  <- file.path(root, "validation", "out")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 kinds <- c("behaviour", "argument", "data", "guard", "interaction")
 
+# ---- the environments of the Quality Plan (section 5), by tier --------------------------
+# The one place that says which environment is which.  A record's name (the
+# `environment` of its env.csv: the CI job's name, or the name given to
+# validation/env.R by hand) is matched against `name`, a regular expression.
+#   required    the verdict (criterion 3) rests on these: each must have a
+#               record, its tests passing, of this version and of this code
+#   additional  for reference: run and reported in a table of their own, a
+#               failure named, never judged
+# `role` is the row of the plan's environment strategy it stands for.  A
+# record that matches no row is shown with the additional ones, as "not
+# named in the Quality Plan".
+env_plan <- data.frame(
+  tier   = c("required", "required", "required", "required", "required",
+             "additional", "additional", "additional"),
+  source = c("ci", "ci", "ci", "ci", "local", "ci", "ci", "local"),
+  role   = c("minimum", "recommended", "recommended", "recommended", "recommended",
+             "oldrel", "devel", "older"),
+  name   = c("^ubuntu-[0-9.]+ [(]R [0-9.]+, minimum environment[)]$", # the minimum versions
+             "^ubuntu-latest [(]R release[)]$",                       # the recommended versions,
+             "^windows-latest [(]R release[)]$",                      #   on the three systems
+             "^macos-latest [(]R release[)]$",
+             "^Windows 11, R 4[.]6[.]1$",                             #   and on the maintainers' PC
+             "^ubuntu-latest [(]R oldrel-1[)]$",                      # the previous release of R
+             "^ubuntu-latest [(]R devel[)]$",                         # the next R
+             "^Windows 11, R 4[.]4[.]2$"),                            # an older R on the PC
+  label  = c("ubuntu (R minimum, minimum environment)", "ubuntu-latest (R release)",
+             "windows-latest (R release)", "macos-latest (R release)", "Windows 11, R 4.6.1",
+             "ubuntu-latest (R oldrel-1)", "ubuntu-latest (R devel)", "Windows 11, R 4.4.2"),
+  stringsAsFactors = FALSE)
+
 fr <- utils::read.csv(file.path(vdir, "requirements.csv"), colClasses = "character",
                       na.strings = "", stringsAsFactors = FALSE)
 all_ids <- fr$id
@@ -244,10 +274,12 @@ skip_rows <- lapply(lst$get_results(), function(x) {
   if (!length(sk)) return(NULL)
   data.frame(file = x$file, test = x$test,
              reason = vapply(sk, function(e) trimws(sub("^Reason:\\s*", "", strsplit(conditionMessage(e), "\n")[[1L]][1L])), ""),
+             # the skip call's line, as a log names it ('file:line:col')
+             at = vapply(sk, function(e) if (inherits(e$srcref, "srcref")) as.integer(e$srcref[[1L]]) else NA_integer_, 0L),
              stringsAsFactors = FALSE)
 })
 skips <- do.call(rbind, skip_rows)
-if (is.null(skips)) skips <- data.frame(file = character(), test = character(), reason = character())
+if (is.null(skips)) skips <- data.frame(file = character(), test = character(), reason = character(), at = integer())
 skips$where <- tb$line[match(paste(skips$file, skips$test), paste(tb$file, tb$test))]
 skips$where <- sprintf("%s:%s", skips$file, skips$where)
 result <- res$result[match(paste(map$file, map$test), paste(res$file, res$test))]
@@ -276,36 +308,136 @@ failing <- tl$fr[tl$n_ft > 0L & !fr_ok]
 unassessed <- union(unassessed, intersect(untested, unlist(dev_ids[is.na(dev$risk) | !nzchar(dev$risk)])))
 
 # ---- the environments (gathered by validation/report.R) ---------------------------------
-# every CI job's record and the maintainers' local runs; the Quality Plan
-# (section 5) names them: 6 in CI, 2 local
-expected_env <- c(ci = 6L, local = 2L)
+# every CI job's record and the maintainers' local runs, each given its tier
+# by env_plan (at the top): the required ones the Quality Plan's section 5
+# names, 4 in CI and 1 local, and the additional ones, for reference
 envs <- if (file.exists(file.path(out, "environments.rds"))) readRDS(file.path(out, "environments.rds"))
 if (!is.null(envs) && !nrow(envs)) envs <- NULL
-n_env <- if (is.null(envs)) c(ci = 0L, local = 0L) else
-  c(ci = sum(envs$source == "ci"), local = sum(envs$source != "ci"))
-# the tests pass everywhere; R CMD check succeeds on every CI job (a local
-# run does not run it)
-env_pass <- function(e) {
-  grepl("[ FAIL 0 |", e$tests, fixed = TRUE) &
-    ifelse(e$source == "ci", e$check %in% "success",
-           is.na(e$check) | !nzchar(e$check) | e$check %in% "success")
+if (!is.null(envs)) {
+  envs$plan_row <- vapply(envs$environment, function(n) {
+    k <- which(vapply(env_plan$name, grepl, NA, x = n, USE.NAMES = FALSE))
+    if (length(k)) k[1L] else NA_integer_
+  }, 1L, USE.NAMES = FALSE)
+  envs$tier <- ifelse(is.na(envs$plan_row), "additional", env_plan$tier[envs$plan_row])
+  envs$role <- ifelse(is.na(envs$plan_row), "", env_plan$role[envs$plan_row])
 }
-env_failing <- if (is.null(envs)) character() else envs$environment[!env_pass(envs)]
+env_req <- env_plan$tier == "required"
+expected_env <- c(ci = sum(env_req & env_plan$source == "ci"),
+                  local = sum(env_req & env_plan$source == "local"))
+# the required environments with a record, and those without
+env_have <- if (is.null(envs)) rep(FALSE, nrow(env_plan)) else seq_len(nrow(env_plan)) %in% envs$plan_row
+n_env <- c(ci = sum(env_req & env_have & env_plan$source == "ci"),
+           local = sum(env_req & env_have & env_plan$source == "local"))
+env_missing <- env_plan$label[env_req & !env_have]
+env_complete <- !length(env_missing)
+# the tests pass (testthat's summary line); R CMD check is shown, and is a
+# condition of the release procedure, not of the verdict (a local run does
+# not run it)
+env_tests_ok <- function(e) grepl("[ FAIL 0 |", e$tests, fixed = TRUE)
+env_check_ok <- function(e) {
+  ifelse(e$source == "ci", e$check %in% "success",
+         is.na(e$check) | !nzchar(e$check) | e$check %in% "success")
+}
+is_req <- if (is.null(envs)) logical() else envs$tier == "required"
+env_failing <- if (is.null(envs)) character() else envs$environment[is_req & !env_tests_ok(envs)]
+env_add_failing <- if (is.null(envs)) character() else {
+  k <- !is_req & !env_tests_ok(envs)
+  sprintf("%s (%s)", envs$environment[k],
+          ifelse(is.na(envs$tests[k]), "no tests' summary line",
+                 gsub("|", "/", envs$tests[k], fixed = TRUE)))
+}
 # a record made for another version (a local run not repeated) does not count
 this_version <- as.character(utils::packageVersion("rtfreporter"))
-env_stale <- if (is.null(envs)) character() else
+env_stale_all <- if (is.null(envs)) character() else
   envs$environment[!envs$rtfreporter %in% this_version]
-env_complete <- all(n_env >= expected_env)
-env_ok <- env_complete && !length(env_failing) && !length(env_stale)
+env_stale <- if (is.null(envs)) character() else envs$environment[is_req & !envs$rtfreporter %in% this_version]
+# the commit and date each record was made at: a local record is made by hand
+# before the release and may be of an earlier commit of the same version
+this_commit <- tryCatch(system2("git", c("rev-parse", "--short", "HEAD"), stdout = TRUE),
+                        error = function(e) "unknown")
+short_sha <- function(x) ifelse(is.na(x) | !nzchar(x), "--", substr(x, 1L, 7L))
+# Whether each path is left out of the package by .Rbuildignore, as R CMD
+# build reads it: a pattern (Perl, case ignored) that matches the path or
+# one of its folders
+build_ignored <- function(paths) {
+  f <- file.path(root, ".Rbuildignore")
+  pats <- if (file.exists(f)) trimws(readLines(f, warn = FALSE)) else character()
+  pats <- pats[nzchar(pats) & !startsWith(pats, "#")]
+  vapply(paths, function(p) {
+    parts <- strsplit(p, "/", fixed = TRUE)[[1L]]
+    sub_paths <- vapply(seq_along(parts), function(i) paste(parts[seq_len(i)], collapse = "/"), "")
+    any(vapply(pats, function(x) any(grepl(x, sub_paths, perl = TRUE, ignore.case = TRUE)), NA))
+  }, NA, USE.NAMES = FALSE)
+}
+# A record is of this code when it was made at this commit, or when nothing
+# the tests run changed between its commit and this one: only validation/
+# (the records themselves, committed by their own PR, and the report's
+# scripts), .github/ (CI), or a file .Rbuildignore leaves out of the package
+# (cran-comments.md, README.Rmd, data-raw/: the tests never see it).
+# Unknown when git cannot tell (no history): then it counts as another commit.
+same_code <- function(sha) {
+  if (is.na(sha) || !nzchar(sha)) return(FALSE)
+  if (identical(substr(sha, 1L, 7L), substr(this_commit, 1L, 7L))) return(TRUE)
+  changed <- suppressWarnings(tryCatch(
+    system2("git", c("diff", "--name-only", sha, "HEAD"), stdout = TRUE, stderr = FALSE),
+    error = function(e) NULL))
+  if (is.null(changed) || !is.null(attr(changed, "status"))) return(FALSE)
+  all(startsWith(changed, "validation/") | startsWith(changed, ".github/") | build_ignored(changed))
+}
+env_code_ok <- if (is.null(envs)) logical() else if (is.null(envs$commit)) rep(FALSE, nrow(envs)) else
+  vapply(envs$commit, same_code, logical(1L), USE.NAMES = FALSE)
+env_other_commit <- if (is.null(envs)) character() else envs$environment[!env_code_ok]
+env_other_req <- if (is.null(envs)) character() else envs$environment[is_req & !env_code_ok]
+env_ok <- env_complete && !length(env_failing) && !length(env_stale) && !length(env_other_req)
+# R CMD check, a condition of the release procedure: every CI job of the plan
+# has a record, and every CI record's check succeeded
+env_ci <- if (is.null(envs)) logical() else envs$source == "ci"
+check_missing <- env_plan$label[env_plan$source == "ci" & !env_have]
+check_failing <- if (is.null(envs)) character() else
+  sprintf("%s (%s)", envs$environment[env_ci & !env_check_ok(envs)],
+          ifelse(is.na(envs$check[env_ci & !env_check_ok(envs)]), "no result",
+                 envs$check[env_ci & !env_check_ok(envs)]))
+check_ok <- !is.null(envs) && !length(check_missing) && !length(check_failing)
+env_table <- function(k, note) {
+  if (!length(k)) return("No record of these was gathered in this run.")
+  e <- envs[k, , drop = FALSE]
+  c("| Environment | CI / local | OS | R | rtfreporter (commit, date of the record) | Main dependencies | R CMD check | Tests |",
+    "|---|---|---|---|---|---|---|---|",
+    sprintf("| %s%s | %s | %s | %s | %s (%s, %s) | %s | %s | %s |", e$environment,
+            if (note) ifelse(is.na(e$plan_row), " *(not named in the Quality Plan)*", "") else "",
+            e$source, e$os, sub("^R version ", "", e$r), e$rtfreporter,
+            short_sha(e$commit), ifelse(is.na(e$date), "--", substr(e$date, 1L, 10L)),
+            e$main_deps,
+            ifelse(is.na(e$check) | !nzchar(e$check), "--", e$check),
+            ifelse(is.na(e$tests), "no log", gsub("|", "/", e$tests, fixed = TRUE))))
+}
+add_expected <- c(ci = sum(!env_req & env_plan$source == "ci"),
+                  local = sum(!env_req & env_plan$source == "local"))
 env_lines <- if (is.null(envs)) {
   "No environment's record was gathered in this run (the CI run of the release gathers them)."
 } else c(
-  "| Environment | CI / local | OS | R | rtfreporter | Main dependencies | R CMD check | Tests |",
-  "|---|---|---|---|---|---|---|---|",
-  sprintf("| %s | %s | %s | %s | %s | %s | %s | %s |", envs$environment, envs$source, envs$os,
-          sub("^R version ", "", envs$r), envs$rtfreporter, envs$main_deps,
-          ifelse(is.na(envs$check) | !nzchar(envs$check), "--", envs$check),
-          ifelse(is.na(envs$tests), "no log", gsub("|", "/", envs$tests, fixed = TRUE))))
+  "### Required environments",
+  "",
+  sprintf("The verdict (criterion 3) rests on these: the Quality Plan names %d in CI and %d local; gathered here: %d in CI, %d local%s.",
+          expected_env[["ci"]], expected_env[["local"]], n_env[["ci"]], n_env[["local"]],
+          if (length(env_missing)) sprintf(" (**missing: %s**)", paste(env_missing, collapse = "; ")) else ""),
+  "",
+  env_table(which(is_req), FALSE),
+  "",
+  "### Additional environments (for reference; not judged)",
+  "",
+  sprintf("Run and reported, not judged: a failure here is named with its tests' summary line, and does not enter the verdict. The Quality Plan names %d in CI and %d local; gathered here: %d in CI, %d local, and %d not named in the Quality Plan.",
+          add_expected[["ci"]], add_expected[["local"]],
+          sum(!env_req & env_have & env_plan$source == "ci"),
+          sum(!env_req & env_have & env_plan$source == "local"), sum(is.na(envs$plan_row))),
+  "",
+  env_table(which(!is_req), TRUE),
+  if (length(env_add_failing)) c("", sprintf("Failing here (reported, not judged): %s.",
+                                             paste(env_add_failing, collapse = "; "))),
+  if (length(env_other_commit)) c("", sprintf(
+    "Recorded at another commit than this report's (%s): %s. Such a record is of this version but not of this code; its test count can differ from this commit's. (A change only to validation/, .github/ or a file .Rbuildignore leaves out of the package keeps a record of this code.)%s",
+    substr(this_commit, 1L, 7L), paste(env_other_commit, collapse = "; "),
+    if (length(env_other_req)) " A required one does not count for criterion 3 until it is made again." else "")))
 
 # ---- the Quality Report -----------------------------------------------------
 # one decimal, floored: 416 of 418 is 99.5%, and 100% only when all
@@ -333,13 +465,15 @@ blockers <- c(
   if (length(unassessed)) sprintf("%d requirement(s) with no test are not yet assessed",
                                   length(unassessed)),
   if (nrow(not_accepted)) sprintf("%d high-risk deviation(s) have no reason", nrow(not_accepted)),
-  if (!env_complete) sprintf("not every environment was gathered (%d of %d in CI, %d of %d local)",
+  if (!env_complete) sprintf("not every required environment was gathered (%d of %d in CI, %d of %d local; missing: %s)",
                              n_env[["ci"]], expected_env[["ci"]], n_env[["local"]],
-                             expected_env[["local"]]),
-  if (length(env_failing)) sprintf("not every environment passes (%s)",
+                             expected_env[["local"]], paste(env_missing, collapse = "; ")),
+  if (length(env_failing)) sprintf("the tests do not pass on every required environment (%s)",
                                    paste(env_failing, collapse = "; ")),
-  if (length(env_stale)) sprintf("the record of %s is of another rtfreporter version than %s",
-                                 paste(env_stale, collapse = "; "), this_version))
+  if (length(env_stale)) sprintf("the record of %s (required) is of another rtfreporter version than %s",
+                                 paste(env_stale, collapse = "; "), this_version),
+  if (length(env_other_req)) sprintf("the record of %s (required) is not of this code (%s)",
+                                     paste(env_other_req, collapse = "; "), substr(this_commit, 1L, 7L)))
 ready <- !length(blockers)
 dev_lines <- if (!nrow(dev) && !length(unassessed)) "None: every leaf requirement has a test." else c(
   "| FR | Content | Risk | Why accepted | Action |", "|---|---|---|---|---|",
@@ -372,15 +506,115 @@ area_lines <- c(
   gsub("^[|] (.*?) [|]", "| **\\1** |", area_row(tl, "Total"), perl = TRUE))
 
 # ---- the skips, with the reason (the mapped tests' run) ---------------------------------
-skip_lines <- if (!nrow(skips)) "No test of the mapped tests' run was skipped." else {
-  rs <- table(skips$reason)
-  rs <- names(rs)[order(-as.integer(rs), names(rs))]
-  c("| Reason | Skips | Where (test file:line) |", "|---|---|---|",
-    vapply(rs, function(r) {
-      w <- skips$where[skips$reason == r]
-      sprintf("| %s | %d | %s |", cell(r), length(w), cell(paste(unique(w), collapse = ", ")))
-    }, ""))
+# Each reason said for a reader: what the test checks, why it was skipped here
+# and where it runs (validation/skip-reasons.csv, validation/skip_reasons.R);
+# and why skipping it here hides no defect -- (a) the same tests ran and passed
+# on another required environment of this code (found here from the records:
+# a test a log does not list as skipped, in a run of FAIL 0, ran and passed),
+# else the table's (b) outside this environment, (c) checked by another test,
+# (d) run after the release tag.  A skip with none of them is an unverified
+# range, named before the conclusion.  The test's own message is beside it.
+source(file.path(root, "validation", "skip_reasons.R"), local = TRUE)
+skip_tab <- skip_table(root)
+skips$why <- skip_why(skips$reason, skips$file, skip_tab)
+skips$ok <- skip_why(skips$reason, skips$file, skip_tab, col = "ok")
+skip_env_dirs <- c(list.dirs(file.path(root, "validation", "env-out"), recursive = FALSE),
+                   list.dirs(file.path(root, "validation", "env-local"), recursive = FALSE))
+skip_env_dirs <- skip_env_dirs[file.exists(file.path(skip_env_dirs, "test-log.txt")) &
+                               file.exists(file.path(skip_env_dirs, "env.csv"))]
+skip_env_name <- vapply(skip_env_dirs, function(d)
+  utils::read.csv(file.path(d, "env.csv"), colClasses = "character")$environment[1L], "")
+skip_env_logs <- lapply(skip_env_dirs, function(d) skip_log(readLines(file.path(d, "test-log.txt"), warn = FALSE)))
+# the required environments of this code whose tests passed: where a skip here may have run
+skip_req <- if (is.null(envs)) character() else
+  envs$environment[is_req & env_tests_ok(envs) & env_code_ok]
+# Whether a required environment ran the skip at file:line: its log names the
+# skips' places (this code: the same lines), or -- a log that names none -- their reasons
+skip_ran_on <- function(file, at, reason) {
+  ran <- vapply(seq_along(skip_env_dirs), function(k) {
+    if (!skip_env_name[[k]] %in% skip_req) return(FALSE)
+    s <- skip_env_logs[[k]]
+    if (!nrow(s)) return(TRUE)
+    places <- unlist(strsplit(s$at[nzchar(s$at)], ", ", fixed = TRUE))
+    if (length(places)) return(!paste0(file, ":", at) %in% places)
+    !reason %in% s$reason
+  }, NA)
+  unique(skip_env_name[ran])
 }
+skips$ran_on <- vapply(seq_len(nrow(skips)), function(i)
+  paste(skip_ran_on(skips$file[i], skips$at[i], skips$reason[i]), collapse = "\r"), "")
+key <- paste(skips$reason, skips$why, skips$file, sep = "\r")
+skip_groups <- lapply(unique(key), function(k) which(key == k))
+skip_groups <- skip_groups[order(-lengths(skip_groups))]
+# a group's (a): each required environment and how many of the group's tests ran there
+skip_a <- vapply(skip_groups, function(i) {
+  on <- unlist(strsplit(skips$ran_on[i], "\r", fixed = TRUE))
+  if (!length(on)) return("")
+  n <- table(on)
+  paste0("a: ran and passed on ", paste(sprintf("%s (%d of %d)", names(n), as.integer(n), length(i)),
+                                        collapse = "; "))
+}, "")
+skip_ok_txt <- vapply(seq_along(skip_groups), function(g) {
+  own <- skips$ok[skip_groups[[g]][1L]]
+  own <- if (is.na(own)) "" else own
+  paste(c(skip_a[[g]], own)[nzchar(c(skip_a[[g]], own))], collapse = ". ")
+}, "")
+skip_kind <- vapply(seq_along(skip_groups), function(g) {
+  if (nzchar(skip_a[[g]])) "a" else if (nzchar(skip_ok_txt[[g]])) substr(skip_ok_txt[[g]], 1L, 1L) else "none"
+}, "")
+skip_n <- vapply(skip_groups, length, 0L)
+skip_unverified <- which(skip_kind == "none")
+skip_lines <- if (!nrow(skips)) "No test of the mapped tests' run was skipped." else {
+  by_kind <- function(k) sum(skip_n[skip_kind == k])
+  c(sprintf(paste0(
+    "%d tests were skipped in the mapped tests' run, for %d reasons.  None of them is a test that ",
+    "failed: each was not run here because of what this run's machine has or lacks.  %s"),
+    nrow(skips), length(unique(skips$reason)),
+    if (!length(skip_unverified)) paste0(
+      "None hides a defect of the package: ",
+      paste(c(if (by_kind("a")) sprintf("ran and passed on another required environment, %d", by_kind("a")),
+              if (by_kind("b")) sprintf("check behaviour this environment has not (Windows only), %d", by_kind("b")),
+              if (by_kind("c")) sprintf("covered by another test that ran here, %d", by_kind("c")),
+              if (by_kind("d")) sprintf("run after the release tag, in the release's own run, %d", by_kind("d"))),
+            collapse = "; "), ".  The column \"Why this hides no defect\" says how, for each.") else
+      sprintf("%d of them are verified nowhere: see \"Not verified\" below.", sum(skip_n[skip_unverified]))),
+    "",
+    "| Why it was skipped, and where it runs | Skips | Why this hides no defect | Where (test file:line) | The test's message |",
+    "|---|---|---|---|---|",
+    vapply(seq_along(skip_groups), function(g) {
+      i <- skip_groups[[g]]
+      why <- skips$why[i[1L]]
+      sprintf("| %s | %d | %s | %s | %s |", cell(if (is.na(why)) skips$reason[i[1L]] else why), length(i),
+              cell(if (nzchar(skip_ok_txt[[g]])) skip_ok_txt[[g]] else "**not verified**"),
+              cell(paste(unique(skips$where[i]), collapse = ", ")), cell(skips$reason[i[1L]]))
+    }, ""),
+    "",
+    "(a) is found from the records: a required environment of this code whose tests passed (FAIL 0) and whose log does not list the test as skipped ran it and it passed.  (b), (c) and (d) are validation/skip-reasons.csv's.")
+}
+# the reasons the table has not, in this run or in an environment's log: named in
+# the report, so the table is kept up to date
+skip_env_all <- do.call(rbind, c(list(data.frame(reason = character(), files = character())),
+                                 lapply(skip_env_logs, function(s) s[c("reason", "files")])))
+skip_unexplained <- sort(unique(c(
+  skips$reason[is.na(skips$why)],
+  skip_env_all$reason[is.na(skip_why(skip_env_all$reason, sub(",.*$", "", skip_env_all$files), skip_tab))])))
+if (length(skip_unexplained)) {
+  message("Skip reasons not in validation/skip-reasons.csv: ", paste(skip_unexplained, collapse = "; "))
+  skip_lines <- c(skip_lines, "", sprintf(
+    "Shown as the test's own message, not yet explained in validation/skip-reasons.csv: %s.",
+    paste(sprintf("\"%s\"", cell(skip_unexplained)), collapse = "; ")))
+}
+# the skips verified nowhere: the report says so before its conclusion
+skip_unverified_lines <- if (length(skip_unverified)) c(
+  "## Not verified",
+  "",
+  "These skipped tests ran on no required environment, and no other check stands for them: the range they test is not verified in this report.",
+  "",
+  vapply(skip_unverified, function(g) {
+    i <- skip_groups[[g]]
+    sprintf("- %s (%d: %s)", cell(skips$reason[i[1L]]), length(i), paste(unique(skips$where[i]), collapse = ", "))
+  }, ""),
+  "")
 
 # ---- the supported environments, and which tested one stands for each range ------------
 # The mapping (supported -> stands for it -> why) and the risks accepted are the
@@ -402,8 +636,10 @@ i0 <- grep("^### The environment strategy", plan)
 i1 <- grep("^##", plan)
 i1 <- if (length(i0)) min(c(i1[i1 > i0], length(plan) + 1L)) - 1L else 0L
 strategy <- if (length(i0)) plan[i0:i1] else character()
+# one row: the tier (required or additional), the supported range, what
+# stands for it, why that is enough
 rows <- strsplit(sub("^[|] *", "", sub(" *[|]$", "", grep("^[|]", strategy, value = TRUE))), " *[|] *")
-rows <- Filter(function(x) length(x) == 3L && !grepl("^-+$", x[1L]) && x[1L] != "Supported", rows)
+rows <- Filter(function(x) length(x) == 4L && !grepl("^-+$", x[1L]) && x[1L] != "Tier", rows)
 # the risks accepted: the list that follows "What is not tested"
 j0 <- grep("^What is not tested", strategy)
 risk_items <- character()
@@ -426,56 +662,61 @@ pk <- do.call(rbind, lapply(env_dirs, function(d) {
   x$environment <- utils::read.csv(file.path(d, "env.csv"), colClasses = "character")$environment
   x
 }))
-# which environment of this run stands for a row of the plan's table
+# which environment of this run stands for a row of the plan's table: by the
+# role env_plan (at the top) gives each record
 env_for <- function(supported) {
   if (is.null(envs)) return(list(list(label = NULL, idx = integer())))
   devel <- grepl("Under development|devel", envs$r)
   rv <- suppressWarnings(numeric_version(ifelse(grepl("^R version [0-9]", envs$r),
                                          sub("^R version ([0-9]+[.][0-9]+).*$", "\\1", envs$r), NA)))
+  # the minimum environment runs R at DESCRIPTION's minimum
   is_min <- !devel & !is.na(rv) & rv == numeric_version(r_min[1L])[1L, 1:2]
-  # the minimum environment: the CI job "ubuntu-24.04 (R <min>, minimum
-  # environment)", R at DESCRIPTION's minimum and each dependency at its own;
-  # the recommended environment: the CI jobs of the latest R, "(R release)"
-  min_env <- grepl("minimum environment", envs$environment, fixed = TRUE)
-  rec_env <- envs$source == "ci" & grepl("(R release)", envs$environment, fixed = TRUE)
-  os_is <- function(re) which(grepl(re, envs$os))
-  if (grepl("^The minimum environment", supported)) {
-    list(list(label = NULL, idx = which(min_env & is_min)))
-  } else if (grepl("^The recommended environment", supported)) {
-    list(list(label = NULL, idx = which(rec_env)))
-  } else if (grepl("in use now", supported)) {
-    list(list(label = NULL, idx = which(!devel & !min_env)))
-  } else if (grepl("^The next R", supported)) {
-    list(list(label = NULL, idx = which(devel)))
+  role_is <- function(r) envs$role == r
+  # (the plan asks for a CI release job on each system; a local run does not count for it)
+  os_is <- function(re) which(grepl(re, envs$os) & envs$source == "ci" & role_is("recommended"))
+  if (grepl("^The minimum versions", supported)) {
+    list(list(label = NULL, idx = which(role_is("minimum") & is_min)))
+  } else if (grepl("^The recommended versions", supported)) {
+    list(list(label = NULL, idx = which(role_is("recommended"))))
   } else if (grepl("^Windows, macOS and Linux", supported)) {
     list(list(label = "Windows", idx = os_is("^Windows")), list(label = "macOS", idx = os_is("^macOS")),
          list(label = "Linux", idx = os_is("Ubuntu|Debian|Linux|Fedora")))
+  } else if (grepl("^The previous release of R", supported)) {
+    list(list(label = NULL, idx = which(role_is("oldrel"))))
+  } else if (grepl("^The next R", supported)) {
+    list(list(label = NULL, idx = which(role_is("devel"))))
+  } else if (grepl("^An older R", supported)) {
+    list(list(label = NULL, idx = which(role_is("older"))))
   } else list(list(label = NULL, idx = NA_integer_))
 }
+# a gap is a required row with no passing record of this version; an
+# additional row's result is shown, not judged
 sup_gaps <- character()
 sup_rows <- if (!is.null(envs)) unlist(lapply(rows, function(x) {
-  lapply(env_for(x[1L]), function(m) {
-    what <- if (is.null(m$label)) x[1L] else sprintf("%s: %s", x[1L], m$label)
+  required <- identical(tolower(x[1L]), "required")
+  lapply(env_for(x[2L]), function(m) {
+    what <- if (is.null(m$label)) x[2L] else sprintf("%s: %s", x[2L], m$label)
     if (anyNA(m$idx)) {
-      sup_gaps <<- c(sup_gaps, what)
-      return(sprintf("| %s | %s | (no rule in validation/trace.R for this row of the plan) | **not checked** | %s |",
-                     cell(what), cell(x[2L]), cell(x[3L])))
+      if (required) sup_gaps <<- c(sup_gaps, what)
+      return(sprintf("| %s | %s | %s | (no rule in validation/trace.R for this row of the plan) | **not checked** | %s |",
+                     x[1L], cell(what), cell(x[3L]), cell(x[4L])))
     }
-    bad <- m$idx[m$idx %in% which(!env_pass(envs) | envs$environment %in% env_stale)]
+    bad <- m$idx[m$idx %in% which(!env_tests_ok(envs) | envs$environment %in% env_stale_all)]
     verdict <- if (!length(m$idx)) {
-      sup_gaps <<- c(sup_gaps, what)
-      "**no environment gathered**"
+      if (required) sup_gaps <<- c(sup_gaps, what)
+      if (required) "**no environment gathered**" else "no environment gathered (not judged)"
     } else if (length(bad)) {
-      sup_gaps <<- c(sup_gaps, what)
-      sprintf("**failing: %s**", paste(envs$environment[bad], collapse = "; "))
+      if (required) sup_gaps <<- c(sup_gaps, what)
+      sprintf(if (required) "**failing: %s**" else "failing: %s (not judged)",
+              paste(envs$environment[bad], collapse = "; "))
     } else sprintf("pass (%d)", length(m$idx))
-    sprintf("| %s | %s | %s | %s | %s |", cell(what), cell(x[2L]),
+    sprintf("| %s | %s | %s | %s | %s | %s |", x[1L], cell(what), cell(x[3L]),
             if (length(m$idx)) cell(paste(envs$environment[m$idx], collapse = "; ")) else "--",
-            verdict, cell(x[3L]))
+            verdict, cell(x[4L]))
   })
 }), use.names = FALSE)
-sup_head <- c("| Supported | Stands for it (Quality Plan) | In this run | Result | Why that is enough (Quality Plan) |",
-              "|---|---|---|---|---|")
+sup_head <- c("| Tier | Supported | Stands for it (Quality Plan) | In this run | Result | Why that is enough (Quality Plan) |",
+              "|---|---|---|---|---|---|")
 min_run <- function(p) {
   x <- pk[pk$package == p & !is.na(pk$version), , drop = FALSE]
   if (!nrow(x)) return(c(low = "--", high = "--"))
@@ -498,10 +739,33 @@ sug_lines <- if (is.null(pk)) "No environment's list of package versions was gat
     sprintf("| %s | %s | %s | %s | %s |", sug_pkg[k], if (nzchar(sug_min[k])) sug_min[k] else "--",
             m[["low"]], m[["high"]], if (length(gone)) cell(paste(gone, collapse = "; ")) else "")
   }, ""))
+# run at exactly its minimum in some environment; and the environments that ran a
+# version older than the minimum (a record made before the minimum was raised)
 at_min <- if (is.null(pk)) NA_integer_ else sum(vapply(seq_along(sug_pkg), function(k) {
-  m <- min_run(sug_pkg[k])
-  nzchar(sug_min[k]) && m[["low"]] != "--" && numeric_version(m[["low"]]) <= numeric_version(sug_min[k])
+  v <- pk$version[pk$package == sug_pkg[k] & !is.na(pk$version)]
+  nzchar(sug_min[k]) && length(v) &&
+    any(numeric_version(v) == numeric_version(sug_min[k]))
 }, NA))
+below_min <- if (is.null(pk)) character() else unlist(lapply(which(nzchar(sug_min)), function(k) {
+  x <- pk[pk$package == sug_pkg[k] & !is.na(pk$version), , drop = FALSE]
+  x <- x[numeric_version(x$version) < numeric_version(sug_min[k]), , drop = FALSE]
+  if (nrow(x)) sprintf("%s %s (minimum %s) in %s", sug_pkg[k], x$version, sug_min[k], x$environment)
+}))
+# the tier of the record each is in: an additional record's counts against nothing
+below_tier <- if (!length(below_min)) character() else {
+  e <- sub("^.* in ", "", below_min)
+  t <- if (is.null(envs)) rep(NA_character_, length(e)) else envs$tier[match(e, envs$environment)]
+  ifelse(is.na(t), "additional", t)
+}
+# a required record below a minimum stops the verdict (criterion 3): that
+# environment was not made as the Quality Plan says
+below_req <- below_min[below_tier == "required"]
+if (length(below_req)) {
+  env_ok <- FALSE
+  ready <- FALSE
+  blockers <- c(blockers, sprintf("a required environment ran a version older than DESCRIPTION's minimum (%s)",
+                                  paste(below_req, collapse = "; ")))
+}
 sup_lines <- c(
   sprintf("What the package says it supports, read from DESCRIPTION: R (>= %s); %s; %d suggested packages, %d with a minimum version.",
           r_min[1L],
@@ -514,16 +778,20 @@ sup_lines <- c(
   "For each supported range, the environment of this run that stands for it, as the Quality Plan's *environment strategy* says, and its result:",
   "",
   if (is.null(envs)) "No environment's record was gathered in this run." else c(sup_head, unlist(sup_rows)),
-  if (length(sup_gaps)) c("", sprintf("**Not every supported range has a passing environment standing for it: %s.**",
+  if (length(sup_gaps)) c("", sprintf("**Not every required supported range has a passing environment standing for it: %s.**",
                                        paste(sup_gaps, collapse = "; "))) else
-    if (!is.null(envs)) c("", "Every supported range has at least one passing environment standing for it."),
+    if (!is.null(envs)) c("", "Every required supported range has at least one passing environment standing for it; the additional rows are shown for reference, not judged."),
   "",
   "The suggested packages, as the environments ran them (those with a minimum version, and those not installed in some environment):",
   "",
   sug_lines,
   if (!is.na(at_min)) c("", sprintf("%d of the %d suggested packages with a minimum version were run at that minimum in at least one environment%s.",
                                     at_min, sum(nzchar(sug_min)),
-                                    if (at_min < sum(nzchar(sug_min))) "; the others ran only with a newer version" else "")),
+                                    if (at_min < sum(nzchar(sug_min))) "; the others ran only with another version" else "")),
+  if (any(below_tier == "required")) c("", sprintf("**Run with a version older than DESCRIPTION's minimum in a required environment** (criterion 3 does not hold until that environment is made again): %s.",
+                                                   paste(below_min[below_tier == "required"], collapse = "; "))),
+  if (any(below_tier == "additional")) c("", sprintf("Run with a version older than DESCRIPTION's minimum in an additional environment (named only; it counts against nothing): %s.",
+                                                     paste(below_min[below_tier == "additional"], collapse = "; "))),
   "",
   "What is not tested, and the risk accepted (the Quality Plan, the *environment strategy*):",
   "",
@@ -532,12 +800,12 @@ sm <- c(
   sprintf("# rtfreporter %s: Quality Report", utils::packageVersion("rtfreporter")),
   "",
   if (!is.null(draft)) c(sprintf("**%s**", draft), ""),
-  "Against the Quality Plan (inst/validation/quality-plan.md).",
+  sprintf("Against the Quality Plan: inst/validation/quality-plan.md as in commit %s.", this_commit),
   "",
-  sprintf("Version: %s. Date: %s. Commit: %s. Scope: %s.", utils::packageVersion("rtfreporter"),
-          format(Sys.Date()),
-          tryCatch(system2("git", c("rev-parse", "--short", "HEAD"), stdout = TRUE),
-                   error = function(e) "unknown"), paste(scope, collapse = ", ")),
+  sprintf("Version: %s. Tag: %s. Date: %s. Commit: %s. Scope: %s.", utils::packageVersion("rtfreporter"),
+          if (is.null(draft) && nzchar(Sys.getenv("GITHUB_REF_NAME"))) Sys.getenv("GITHUB_REF_NAME") else
+            "none (a DRAFT)",
+          format(Sys.Date()), this_commit, paste(scope, collapse = ", ")),
   "",
   "## Results",
   "",
@@ -568,14 +836,14 @@ sm <- c(
   "",
   "## Skipped tests, with the reason",
   "",
-  sprintf("The mapped tests' run (test-log.txt): %d skipped, by the reason the test gives. The skip count of each other environment is in its table row; its reasons are in environments.txt.", nrow(skips)),
+  "The mapped tests' run (test-log.txt), by the reason: what the test checks, why it was skipped here and where it runs, and why skipping it hides no defect. The skip count of each other environment is in its table row; its skips, explained the same way, are in environments.txt.",
   "",
   skip_lines,
   "",
   "## Environments",
   "",
-  sprintf("The same tests, on every environment of the Quality Plan (section 5: %d in CI, %d local), each record of rtfreporter %s; gathered here: %d in CI, %d local.",
-          expected_env[["ci"]], expected_env[["local"]], this_version, n_env[["ci"]], n_env[["local"]]),
+  sprintf("The same tests, on the environments of the Quality Plan (section 5), each record of rtfreporter %s: the required ones (%d in CI, %d local), on which the verdict rests, and the additional ones, for reference.",
+          this_version, expected_env[["ci"]], expected_env[["local"]]),
   "",
   env_lines,
   "",
@@ -590,24 +858,38 @@ sm <- c(
   dev_lines,
   if (length(failing)) c("", sprintf("Failing: %s.", paste(failing, collapse = ", "))),
   "",
+  skip_unverified_lines,
   "## Conclusion",
   "",
-  "What assures the quality, in order:",
+  "What assures the quality, in order, against the acceptance criteria of the Quality Plan (section 4):",
   "",
-  sprintf("1. **Environments.** %s",
+  sprintf("1. **Environments** (criterion 3). %s%s",
           if (env_ok) {
-            sprintf("The same tests pass on every environment of the Quality Plan (%d: %d in CI, where R CMD check succeeds too, and %d local); environments.txt holds each one's sessionInfo and tests' log.",
-                    nrow(envs), n_env[["ci"]], n_env[["local"]])
+            sprintf("The same tests pass on every required environment of the Quality Plan (%d: %d in CI and %d local), each record of this version and of this code; environments.txt holds each one's sessionInfo and tests' log. The additional environments (%d gathered) are reported, not judged%s.",
+                    sum(n_env), n_env[["ci"]], n_env[["local"]], sum(!is_req),
+                    if (length(env_add_failing)) paste0("; failing there: ", paste(env_add_failing, collapse = "; ")) else "")
           } else if (is.null(envs)) {
-            sprintf("No environment was gathered in this run; the CI run of the release gathers every one (%d in CI, %d local).",
+            sprintf("No environment was gathered in this run; the CI run of the release gathers every one (required: %d in CI, %d local).",
                     expected_env[["ci"]], expected_env[["local"]])
           } else {
-            sprintf("**Not every environment is gathered, of this version and passing** (gathered: %d of %d in CI, %d of %d local%s%s): see Environments.",
+            sprintf("**Not every required environment is gathered, passing, of this version and of this code, at or above every minimum** (gathered: %d of %d in CI, %d of %d local%s%s%s%s%s): see Environments.",
                     n_env[["ci"]], expected_env[["ci"]], n_env[["local"]], expected_env[["local"]],
+                    if (length(env_missing)) paste0("; missing: ", paste(env_missing, collapse = "; ")) else "",
                     if (length(env_failing)) paste0("; failing: ", paste(env_failing, collapse = "; ")) else "",
-                    if (length(env_stale)) paste0("; of another version: ", paste(env_stale, collapse = "; ")) else "")
-          }),
-  sprintf("2. **Tests.** %s",
+                    if (length(env_stale)) paste0("; of another version: ", paste(env_stale, collapse = "; ")) else "",
+                    if (length(env_other_req)) paste0("; of other code: ", paste(env_other_req, collapse = "; ")) else "",
+                    if (length(below_req)) paste0("; below a minimum: ", paste(below_req, collapse = "; ")) else "")
+          },
+          if (is.null(envs)) "" else
+            sprintf(" That R CMD check succeeds on every CI job is a condition of the release procedure (the Quality Plan, section 7), not of this verdict: %s.",
+                    if (check_ok) {
+                      sprintf("it holds (success on all %d CI jobs)", sum(env_ci))
+                    } else {
+                      sprintf("**it does not hold**%s%s",
+                              if (length(check_failing)) paste0(" (not a success: ", paste(check_failing, collapse = "; "), ")") else "",
+                              if (length(check_missing)) paste0(" (no record: ", paste(check_missing, collapse = "; "), ")") else "")
+                    })),
+  sprintf("2. **Tests** (criteria 1 and 2). %s",
           if (length(failing)) {
             sprintf("**The tests of %d requirement(s) fail**: %s.", length(failing),
                     paste(failing, collapse = ", "))
@@ -624,8 +906,8 @@ sm <- c(
                       sprintf("Of the %d with no test, not every one is assessed and accepted (Deviations).", n_dev)
                     })
           }),
-  "3. **Process.** Responsibilities are as the Quality Plan says (section 7): the development team evaluates each issue; the developer making a change adds its tests and requirements and runs the tests; the maintainer reviews and approves a contributor's pull request, and merges a change into the release branch only after all tests, of the change and for regression, have passed in all CI environments. GitHub keeps that record (the issues, the pull requests, the CI runs); it is referred to, not copied.",
-  "4. **Other measures.** Line coverage (Attachments, at the end of this report) and the arguments the tests give (functions.csv) are secondary: aids that show where to look, not evidence of a requirement met.",
+  "3. **Process** (criterion 4). Responsibilities are as the Quality Plan says (section 7): the development team evaluates each issue; the developer making a change adds its tests and requirements and runs the tests; the maintainer reviews and approves a contributor's pull request, and merges a change into the release branch only after all tests, of the change and for regression, have passed in all CI environments. GitHub keeps that record (the issues, the pull requests, the CI runs); it is referred to, not copied.",
+  "4. **Other measures** (not criteria). Line coverage (Attachments, at the end of this report) and the arguments the tests give (functions.csv) are secondary: aids that show where to look, not evidence of a requirement met.",
   "",
   if (is.null(draft) && ready) {
     "Taken together, the package is **validation-ready**: it can be audited against these records. (No third-party audit has been made.)"
@@ -646,7 +928,7 @@ sm <- c(
   "- **ft.csv**: one row a functional test: its FT ID, file, name and the requirements it checks. Read it by test.",
   "- **functions.csv**: one row a function in scope: its leaf requirements by type, how many have a test, its arguments, those a requirement names, those a test gives and those no requirement names. Read it for a function's depth (an aid).",
   "- **candidates.csv**: the tests that call a function in scope but are not mapped: what to read next. Never counted.",
-  "- **environments.txt**: one part an environment of the table above: its full sessionInfo() (every package's version) and testthat's log. Read it for what, exactly, the tests ran with.",
+  "- **environments.txt**: one part an environment of the two tables above (required, and additional): its sessionInfo() (R, the OS, the locale), the version of every package DESCRIPTION names (Imports and Suggests; NA where one is not installed) and testthat's log. Read it for what, exactly, the tests ran with.",
   "- **Line coverage** (Attachments, at the end of this report): the share of the package's lines the tests run, by file, floored to one decimal. An aid, not evidence of a requirement met.")
 writeLines(enc2utf8(sm), file.path(out, "quality-report.md"), useBytes = TRUE)
 cat(sprintf("FR %d, FT %d, ready %s%s, written to %s\n", nrow(tl), nrow(map), ready,

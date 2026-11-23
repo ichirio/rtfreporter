@@ -58,7 +58,7 @@ test_that("FT-PL270 [FR-PL353 FR-PL356]: plan_template() guesses cols with a NOT
   adsl$SEX <- as.character(adsl$SEX)
   ard <- cards::ard_stack(adsl, .by = c(TRT, SEX),
                           cards::ard_summary(variables = AGE))
-  code <- utils::capture.output(invisible(plan_template(ard, pipe = "|>")))
+  code <- utils::capture.output(print(plan_template(ard, pipe = "|>")))
   expect_true(any(grepl("NOTE: `cols` was not given; the first key is used.", code,
                         fixed = TRUE)))
   expect_true(any(grepl("NOTE: keys outside `cols` became row keys: SEX", code,
@@ -70,11 +70,11 @@ test_that("FT-PL270 [FR-PL353 FR-PL356]: plan_template() guesses cols with a NOT
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
   f <- file.path(dir, "plan.R")
-  out <- utils::capture.output(code2 <- plan_template(ard, cols = "TRT", pipe = "|>",
-                                                      file = f))
+  code2 <- plan_template(ard, cols = "TRT", pipe = "|>", file = f)
+  out <- utils::capture.output(print(code2))
   expect_true(file.exists(f))
-  expect_identical(readLines(f), code2)
-  expect_identical(out[nzchar(out)][1:3], code2[1:3])
+  expect_identical(readLines(f), as.character(code2))
+  expect_identical(out[nzchar(out)][1:3], as.character(code2)[1:3])
 })
 
 test_that("FT-PL271 [FR-PL354]: plan_template(hierarchy = ) writes the hierarchy, the overall label and the label role", {
@@ -86,7 +86,7 @@ test_that("FT-PL271 [FR-PL354]: plan_template(hierarchy = ) writes the hierarchy
   ard <- cards::ard_stack_hierarchical(
     adae, variables = c(AESOC, AEDECOD), by = TRT, denominator = adsl,
     id = USUBJID, over_variables = TRUE)
-  code <- utils::capture.output(invisible(
+  code <- utils::capture.output(print(
     plan_template(ard, cols = "TRT", hierarchy = c("AESOC", "AEDECOD"), pipe = "|>")))
   expect_true(any(grepl('hierarchy = c("AESOC", "AEDECOD")', code, fixed = TRUE)))
   expect_true(any(grepl('overall   = "Any event"', code, fixed = TRUE)))
@@ -257,7 +257,7 @@ test_that("FT-PL278 [FR-PL390]: plan_col_header() makes pages, and a later heade
 })
 
 test_that("FT-PL279 [FR-PL392]: plan_col_header(lines = ) is a list and span = a string", {
-  p <- table_plan(vp_wide())
+  p <- table_plan(vp_wide()) |> plan_style()
   expect_error(plan_col_header(p, lines = c(a = "x")),
                "plan_col_header(lines = ) is a list, one element a header row", fixed = TRUE)
   expect_error(plan_col_header(p, lines = list(c(a = "x")), span = 1),
@@ -678,4 +678,63 @@ test_that("FT-PL1001 [FR-PL977]: a two-level stub (visit, variable) under a hidd
   pg <- lapply(vp_pages(p), function(z) z$data$row_label)
   expect_length(pg, 2L)
   for (x in pg) expect_identical(x[1:2], c("WEEK 12", paste0(strrep(" ", 4L), "AVAL")))
+})
+
+test_that("FT-PL6807 [FR-PL996]: plan_stub(before = TRUE) with plan_paginate_group(): a page per value, each opening with its heading rows (#1108)", {
+  mk <- function(visits) {
+    st <- expand.grid(AVISIT = visits, PARAM = c("ALT", "HGB"), ARM = c("Placebo", "Active"),
+                      variable = c("AVAL", "CHG"), stringsAsFactors = FALSE)
+    st$stat_name <- "mean"; st$stat <- seq_len(nrow(st)) * 1.5
+    st$.label <- NA_character_; st$.kind <- "continuous"
+    p <- table_plan(st, cols = "ARM", rows = list(param = "PARAM", group2 = "AVISIT", group3 = "variable")) |>
+      plan_cells(continuous = c(Mean = "{mean:.1f}")) |>
+      plan_stub(name = "row_label", before = TRUE) |>
+      plan_sort(keys = c("param", "group2", "group3")) |>
+      plan_paginate_group(col = "param", keep = FALSE, heading = "Parameter: {value}",
+                          heading_at = "title")
+    vp_pages(p)
+  }
+  # the stub indents with no-break spaces
+  lbl <- function(pg) gsub("\u00a0", " ", pg$data$row_label)
+  ind <- paste0(strrep(" ", 4L), c("AVAL", "", "CHG", ""), c("", "    Mean"))
+  # one visit: the visit heading is one value over the table, and still
+  # opens the second page; before #1108 a page per data row and a "group_0"
+  one <- mk("WEEK 12")
+  expect_identical(names(one), c("Parameter: ALT", "Parameter: HGB"))
+  for (pg in one) {
+    expect_identical(lbl(pg), c("WEEK 12", ind))
+    expect_false("param" %in% names(pg$data))
+  }
+  two <- mk(c("WEEK 4", "WEEK 12"))
+  expect_identical(names(two), c("Parameter: ALT", "Parameter: HGB"))
+  # (the visits sort as text: "WEEK 12" before "WEEK 4")
+  for (pg in two) expect_identical(lbl(pg), c("WEEK 12", ind, "WEEK 4", ind))
+})
+
+test_that("FT-PL6808 [FR-PL997]: as_rtftables(<a table_plan>) runs the plan and stops on any other argument, naming it", {
+  p <- table_plan(vp_wide()) |> plan_style()
+  # the plan alone: its pages, as plan_apply(plan, "pages") gives them
+  expect_equal(suppressMessages(as_rtftables(p)), vp_pages(p))
+  hint <- paste0("\n  A plan's table settings go in plan_style() and the other plan_*() ",
+                 "verbs (plan_paginate_rows() for max_rows and split).")
+  expect_error(as_rtftables(p, max_rows = 2),
+               paste0("as_rtftables(): a table_plan takes no other argument; got `max_rows`.",
+                      hint), fixed = TRUE)
+  expect_error(as_rtftables(p, max_rows = 2, border = "none"),
+               "got `max_rows`, `border`.", fixed = TRUE)
+  expect_error(as_rtftables(p, "group_safe"), "got an unnamed argument.", fixed = TRUE)
+  # an argument is named, not evaluated
+  expect_error(as_rtftables(p, split = stop("not reached")), "got `split`.", fixed = TRUE)
+})
+
+test_that("FT-PL6809 [FR-PL998]: plan_paginate_rows(max_rows = , split = <a function>) gives the function the budget, as as_rtftables() does", {
+  got <- integer()
+  two <- function(df, max_rows, ...) {
+    got <<- c(got, max_rows)
+    split(df, ceiling(seq_len(nrow(df)) / max_rows))
+  }
+  pg <- vp_pages(table_plan(vp_wide()) |> plan_paginate_rows(max_rows = 4, split = two))
+  expect_equal(got, 4)
+  expect_equal(pg, vp_direct(max_rows = 4, split = two))
+  expect_identical(unname(vapply(pg, function(p) nrow(p$data), 1L)), c(4L, 2L))
 })

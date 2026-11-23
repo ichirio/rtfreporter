@@ -21,14 +21,18 @@ or \code{"first"}.  Left out (\code{NULL}): \code{"last"}, or what an earlier
 earlier \code{plan_total()} said):
 \describe{
 \item{\code{"cols"}}{the Total \strong{column}, from the records
-with no value of the column key.  With two column keys the
-innermost is folded: \code{cols = c(TRTA, AESEV)} gives each arm a
+with no value of a column key.  With two or more column keys the
+key folded is the first one, from the innermost out, that has
+overall rows (records with no value of it and a value of every
+other column key): \code{cols = c(TRTA, AESEV)} gives each arm a
 total column from its records with no \code{AESEV} (an AE at any
-grade), placed among that arm's grades.}
+grade), placed among that arm's grades; with no such records,
+the records with no \code{TRTA} and a grade fold \code{TRTA} instead, one
+Total column per grade.}
 \item{\code{"rows"}}{the Total \strong{row}, a shift table's margin: read
 from the column key tabulated by the row keys, without the body's
-variable (\code{ard_tabulate(adlb, variables = BTOXGR, by = PARAM)}
-beside the body's \verb{variables = ATOXGR, by = c(PARAM, BTOXGR)}),
+variable (\code{ard_tabulate(x, variables = base_gr, by = PARAM)}
+beside the body's \verb{variables = worst_gr, by = c(PARAM, base_gr)}),
 labelled \code{label} and placed by \code{position}.}
 \item{\code{"both"}}{both, with the corner (a row key's own tabulation)
 as the Total row's Total column.}
@@ -67,6 +71,21 @@ p |> plan_total() |> plan_apply("table")
 # The study's wording, and the total before the arms
 p |>
   plan_total(label = "All subjects", position = "first") |>
+  plan_apply("table")
+
+# Two column keys, arm by visit, and no overall rows for the visit:
+# the arm is folded, a Total column for each visit
+st2 <- data.frame(
+  ARM       = rep(c("Placebo", "Active", NA), each = 2),
+  AVISIT    = rep(c("Week 1", "Week 2"), 3),
+  variable  = "AVAL",
+  .label    = NA_character_,
+  .kind     = "continuous",
+  stat_name = "mean",
+  stat      = c(1.5, 2.5, 1.8, 2.9, 1.6, 2.7))
+table_plan(st2, cols = c("ARM", "AVISIT"), rows = c(group = "variable")) |>
+  plan_cells(continuous = c(Mean = "{mean:.1f}")) |>
+  plan_total() |>
   plan_apply("table")
 }
 \seealso{

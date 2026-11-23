@@ -373,6 +373,7 @@
   if (!is.character(dir) || length(dir) != 1L || is.na(dir) || !nzchar(dir)) {
     stop("`dir` must be a single folder path.", call. = FALSE)
   }
+  .check_native_path(dir, "dir")
   if (!is.logical(recursive) || length(recursive) != 1L || is.na(recursive)) {
     stop("`recursive` must be TRUE or FALSE.", call. = FALSE)
   }
@@ -380,6 +381,11 @@
   if (length(spec_file) != 1L) {
     stop("`spec_file` must be NULL or a single path ending in .xlsx or .csv.",
          call. = FALSE)
+  }
+  # (the path checked first: tools::file_ext() calls basename(), which stops
+  # on a name the native encoding cannot hold)
+  if (is.character(spec_file) && !is.na(spec_file)) {
+    .check_native_path(spec_file, "spec_file")
   }
   if (!is.character(spec_file) || is.na(spec_file) ||
       !tolower(tools::file_ext(spec_file)) %in% c("xlsx", "csv")) {
@@ -481,8 +487,10 @@
 #' winning over the centred lines below it, and a file with neither, its file
 #' name without `.rtf`; one row a file, so a file whose titles change from
 #' page to page with `page_by` (`"Summary of {PARAM}"`) is labelled by its
-#' first page's title), `level` (the entry's indent, a whole
-#' number from 1 to 3, default 2) and `pages` (informational).
+#' first page's title), `level` (the entry's level, a whole
+#' number from 1 to 3, default 2; the levels start at the same left position
+#' unless `toc_style = list(indent = )`, in `...`, indents them) and `pages`
+#' (informational).
 #'
 #' @param dir Directory of `.rtf` files to assemble: one folder path.  A
 #'   value that is not one non-empty string is an error, as is a folder that
@@ -515,7 +523,7 @@
 #'
 #' @examples
 #' # two TFL files in a folder, as a study's output
-#' dir <- file.path(tempdir(), "tfl")
+#' dir <- tempfile("tfl")
 #' dir.create(dir, showWarnings = FALSE)
 #' for (t in c("14.1.1", "14.2.1")) {
 #'   doc <- rtf_document() |>
@@ -532,6 +540,7 @@
 #' spec <- assemble_folder(dir)
 #' spec$heading <- "Demographics and safety"
 #' assemble_rtf(toc = spec, output_file = tempfile(fileext = ".rtf"))
+#' unlink(dir, recursive = TRUE)
 #' @export
 assemble_folder <- function(dir, output_file = NULL, spec_file = NULL,
                             recursive = FALSE,

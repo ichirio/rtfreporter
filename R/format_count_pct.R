@@ -40,9 +40,6 @@
 #' and a missing count (`na`) -- match the convention in the rtfreporter
 #' Issue #2 reference helper.
 #'
-#' `fmt_count_pct()` was called `format_count_pct()`, the one cell formatter
-#' not named `fmt_`; the old name was removed in 0.9.0.
-#'
 #' @param count Integer / numeric vector of whole counts (a fraction is an
 #'   error).  A `0` count produces the
 #'   count-only branch (no parentheses); a **missing** count produces the `na`

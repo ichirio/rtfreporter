@@ -126,6 +126,7 @@
 # ---- assemble_folder(), assemble_rtf() ------------------------------------------
 
 test_that("FT-AS131 [FR-AS236]: assemble_folder() keeps the files of one table number in file-name order", {
+  skip_on_cran()
   d <- .a7_dir()
   .a7_tbl(d, "t_b.rtf", "14.2.1", "Vital signs, second part")
   .a7_tbl(d, "t_a.rtf", "14.2.1", "Vital signs, first part")
@@ -138,6 +139,7 @@ test_that("FT-AS131 [FR-AS236]: assemble_folder() keeps the files of one table n
 })
 
 test_that("FT-AS132 [FR-AS237]: assemble_folder(spec_file = ) is written, never read back", {
+  skip_on_cran()
   d <- .a7_dir()
   .a7_tbl(d, "t1.rtf", "14.1.1", "Demographics")
   .a7_tbl(d, "t2.rtf", "14.2.1", "Adverse events")
@@ -163,16 +165,22 @@ test_that("FT-AS132 [FR-AS237]: assemble_folder(spec_file = ) is written, never 
 })
 
 test_that("FT-AS133 [FR-AS238]: the level of a table of contents row is a whole number from 1 to 3", {
+  skip_on_cran()
   d <- .a7_dir()
   .a7_tbl(d, "t1.rtf", "14.1.1", "Demographics")
   .a7_tbl(d, "t2.rtf", "14.2.1", "Adverse events")
   toc <- assemble_folder(d)
   out <- tempfile("a7out", fileext = ".rtf")
   toc$level <- c(1, 3)
-  assemble_rtf(toc = toc, output_file = out)
+  # (the levels are indented 600 twips each with toc_style indent = 600)
+  assemble_rtf(toc = toc, output_file = out, toc_style = list(indent = 600))
   txt <- readLines(out, warn = FALSE)
   expect_true(any(grepl("{\\pard\\ri720\\keep\\fs20\\tqr", txt, fixed = TRUE)))        # level 1: no indent
   expect_true(any(grepl("{\\pard\\li1200\\ri720\\keep\\fs20\\tqr", txt, fixed = TRUE))) # level 3
+  # by default both levels start flush left: no \li on either entry
+  assemble_rtf(toc = toc, output_file = out, overwrite = TRUE)
+  txt <- readLines(out, warn = FALSE)
+  expect_identical(sum(grepl("{\\pard\\ri720\\keep\\fs20\\tqr", txt, fixed = TRUE)), 2L)
   for (bad in list(4, 0, 2.5)) {
     toc$level <- c(2, bad)
     expect_error(assemble_rtf(toc = toc, output_file = out, overwrite = TRUE),
@@ -183,6 +191,7 @@ test_that("FT-AS133 [FR-AS238]: the level of a table of contents row is a whole 
 # ---- rtf_figures(), rtfplot() ----------------------------------------------------
 
 test_that("FT-AS134 [FR-AS239]: rtf_figures() takes an EMF path as rtfplot() does", {
+  skip_on_cran()
   emf <- test_path("fixtures", "figure.emf")
   doc <- rtf_figures(rtf_document(), list(emf, emf), align = "left")
   expect_length(doc$contents, 2L)
@@ -194,6 +203,7 @@ test_that("FT-AS134 [FR-AS239]: rtf_figures() takes an EMF path as rtfplot() doe
 })
 
 test_that("FT-AS135 [FR-AS240]: rtfplot(width_twips = , height_twips = ) are NULL or one positive number", {
+  skip_on_cran()
   png <- .a7_png()
   for (bad in list(0, -10, NA_real_, "100", c(100, 200))) {
     expect_error(rtfplot(png, width_twips = bad),
@@ -205,6 +215,7 @@ test_that("FT-AS135 [FR-AS240]: rtfplot(width_twips = , height_twips = ) are NUL
 })
 
 test_that("FT-AS136 [FR-AS241]: print() of an rtfplot shows the type, sizes, dpi and alignment", {
+  skip_on_cran()
   # no resolution in the file: the default dpi is assumed and said
   png <- .a7_png()
   fig <- rtfplot(png, align = "right")
@@ -222,6 +233,7 @@ test_that("FT-AS136 [FR-AS241]: print() of an rtfplot shows the type, sizes, dpi
 })
 
 test_that("FT-AS137 [FR-AS242]: assemble_folder() reads the rtf_titles() title block when the header has no \"Table N\" line", {
+  skip_on_cran()
   d <- .a7_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   titled <- function(file, titles, header = NULL) {

@@ -130,73 +130,45 @@ One distinction worth keeping straight: \code{rtf_border(all = FALSE)} says
 inherit, while \code{rtf_border()} says nothing at all and inherits.
 }
 
-\section{Writing borders before and after 0.5.0}{
+\section{Where a border goes}{
 
 
-Two things changed at 0.5.0.  \code{rtf_table_border()} was deprecated (and
-removed in 0.9.0), so a
-border is aimed with \code{rtftable(border = )} or \code{\link[=style_zone]{style_zone()}} instead; and an
-edge now always means the \strong{outer} edge of the selection, so the rules
-\emph{inside} it have to be asked for by name.  Each case below, \code{s} being an
-a border side:
+A border is aimed with \code{rtftable(border = )} for the whole table or with
+\code{\link[=style_zone]{style_zone()}} for one kind of row.  An edge always means the \strong{outer} edge
+of the selection, so the rules \emph{inside} it are asked for by name with
+\code{inside_h} / \code{inside_v}.  With \code{s} a border side:
 
 \preformatted{
-  ## rules above and below the column header  (unchanged in meaning)
-  was:  rtftable(df, border = rtf_table_border(
-                   header = rtf_border(top = s, bottom = s)))
-  now:  rtftable(df, border = "none") |>
-          style_zone(header = rtf_border(top = s, bottom = s))
+  ## rules above and below the column header
+  rtftable(df, border = "none") |>
+    style_zone(header = rtf_border(top = s, bottom = s))
 
-  ## a rule under the last data row                      (unchanged)
-  was:  rtf_table_border(last_row = rtf_border(bottom = s))
-  now:  style_zone(last_row = rtf_border(bottom = s))
+  ## a rule under the last data row
+  style_zone(last_row = rtf_border(bottom = s))
 
-  ## a rule under EVERY data row              (bottom -> inside_h)
-  was:  rtf_table_border(body = rtf_border(bottom = s))
-  now:  style_zone(body = rtf_border(inside_h = s))
+  ## a rule under EVERY data row
+  style_zone(body = rtf_border(inside_h = s))
 
-  ## a vertical rule at every column boundary  (left/right -> inside_v)
-  was:  rtf_table_border(body = rtf_border(left = s, right = s))
-  now:  style_zone(body = rtf_border(left = s, right = s, inside_v = s))
+  ## a vertical rule at every column boundary
+  style_zone(body = rtf_border(left = s, right = s, inside_v = s))
 
   ## a grid around every data cell
-  was:  rtf_table_border(body = rtf_border(all = TRUE))
-  now:  style_zone(body = rtf_border(top = s, bottom = s, left = s,
-                                     right = s, inside_h = s, inside_v = s))
+  style_zone(body = rtf_border(top = s, bottom = s, left = s,
+                               right = s, inside_h = s, inside_v = s))
 
-  ## an outer frame only, no rules inside      (was not expressible)
-  now:  rtftable(df, border = rtf_border(top = s, bottom = s,
-                                         left = s, right = s))
+  ## an outer frame only, no rules inside
+  rtftable(df, border = rtf_border(top = s, bottom = s,
+                                   left = s, right = s))
 
   ## frame plus a rule under every row -- the listing look
-  was:  four style_header() / style_body() calls on the edge columns
-  now:  rtftable(df, border = rtf_border(top = TRUE, bottom = TRUE,
-                                         left = TRUE, right = TRUE,
-                                         inside_h = TRUE))
+  rtftable(df, border = rtf_border(top = TRUE, bottom = TRUE,
+                                   left = TRUE, right = TRUE,
+                                   inside_h = TRUE))
 }
 
-At 0.6.0 the remaining constructors folded in here too, so a side is written
-as a value rather than built:
-
-\preformatted{
-  rtf_border_none()                 ->  rtf_border()
-  rtf_border_top()                  ->  rtf_border(top = TRUE)
-  rtf_border_bottom()               ->  rtf_border(bottom = TRUE)
-  rtf_border_box()                  ->  rtf_border(all = TRUE)
-  rtf_border_with(b, bottom = x)    ->  layer at the attach point
-  rtf_border_tfl()                  ->  border = "tfl", rtf_table_style_tfl()
-}
-
-All of them were removed in 0.9.0.
-
-\code{border = "tfl"} is unaffected, as is any border on
-a single cell (\code{\link[=col_cell]{col_cell()}}, \code{cell_styles}): a cell has no inside, so its
-four edges never meant anything else.
-
-The old and new readings are spelled identically, so rtfreporter warns once
-per session when it meets a border that would have rendered differently
-before.  Naming \code{inside_h} / \code{inside_v} says which you mean and silences it
--- use \code{"none"} for "no rule there".
+\code{border = "tfl"} sets the standard table look.  A border on a single cell
+(\code{\link[=col_cell]{col_cell()}}, \code{cell_styles}) has no inside, so its four edges are just that
+cell's edges.
 }
 
 \examples{

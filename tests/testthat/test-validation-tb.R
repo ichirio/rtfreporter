@@ -2,6 +2,7 @@
 # the first validation version): each test names its FT id and its FRs.
 
 test_that("FT-TB678 [FR-TB303 FR-TB314 FR-TB309]: set_blank_rows() refuses what is not a data frame and a group_col that is not there; a plain list of forms is unioned", {
+  skip_on_cran()
   d <- data.frame(a = c("x", "y", "z"), b = 1:3)
   expect_error(set_blank_rows(list(a = 1)), "`data` must be a data.frame (or tibble).", fixed = TRUE)
   expect_error(set_blank_rows(d, blank_rows = "between_groups", group_col = "nope"),
@@ -14,6 +15,7 @@ test_that("FT-TB678 [FR-TB303 FR-TB314 FR-TB309]: set_blank_rows() refuses what 
 })
 
 test_that("FT-TB679 [FR-TB322 FR-TB323]: blank_rows_by_change(group_by = \"filled\") starts a group at a non-empty cell; \"auto\" picks the detection from the content", {
+  skip_on_cran()
   e <- data.frame(l = c("G1", NA, "", "G2", ""), v = 1:5, stringsAsFactors = FALSE)
   filled <- set_blank_rows(e, blank_rows = blank_rows_by_change("l", group_by = "filled"))
   # NA and "" are members of the group above: one blank, before G2
@@ -29,6 +31,7 @@ test_that("FT-TB679 [FR-TB322 FR-TB323]: blank_rows_by_change(group_by = \"fille
 })
 
 test_that("FT-TB680 [FR-TB336 FR-TB337 FR-TB340]: blank_rows_by_rule(where = \"after\") puts the blank after the match; where is matched; a rule never falls on the first or last row", {
+  skip_on_cran()
   f <- data.frame(l = c("Total", "a", "Total", "b"), v = 1:4, stringsAsFactors = FALSE)
   after <- set_blank_rows(f, blank_rows = blank_rows_by_rule("l", "^Total", where = "after"))
   expect_identical(attr(after, "rtf_blank_rows"), c(1L, 3L))
@@ -44,6 +47,7 @@ test_that("FT-TB680 [FR-TB336 FR-TB337 FR-TB340]: blank_rows_by_rule(where = \"a
 })
 
 test_that("FT-TB681 [FR-TB368 FR-TB373]: auto_col_widths() refuses what is not a data frame; col_padding_twips is added to every measured width", {
+  skip_on_cran()
   expect_error(auto_col_widths(list(a = 1)), "`data` must be a data.frame.", fixed = TRUE)
   d <- data.frame(a = strrep("x", 40), b = strrep("y", 60), stringsAsFactors = FALSE)
   w0 <- auto_col_widths(d, col_padding_twips = 0L)
@@ -52,6 +56,7 @@ test_that("FT-TB681 [FR-TB368 FR-TB373]: auto_col_widths() refuses what is not a
 })
 
 test_that("FT-TB682 [FR-TB377 FR-TB379 FR-TB380 FR-TB382 FR-TB385 FR-TB386]: default_col_widths(): its guards, col_header, digits, cells read as text and a table with no data column", {
+  skip_on_cran()
   d <- data.frame(a = c("x", "y"), b = 1:2, c = c("p", "q"), stringsAsFactors = FALSE)
   expect_error(default_col_widths(list(a = 1)), "`data` must be a data.frame.", fixed = TRUE)
   expect_error(default_col_widths(d, row_title = "x"),
@@ -92,6 +97,7 @@ test_that("FT-TB682 [FR-TB377 FR-TB379 FR-TB380 FR-TB382 FR-TB385 FR-TB386]: def
 })
 
 test_that("FT-TB683 [FR-TB399 FR-TB400 FR-TB402 FR-TB404 FR-TB407 FR-TB409]: style_body(): every column by default, colour, and its guards", {
+  skip_on_cran()
   d <- data.frame(a = c("x", "y", "z"), b = 1:3, c = c("p", "q", "r"), stringsAsFactors = FALSE)
   t <- rtftable(d)
   s <- style_body(t, rows = 1, bold = TRUE)
@@ -117,6 +123,7 @@ test_that("FT-TB683 [FR-TB399 FR-TB400 FR-TB402 FR-TB404 FR-TB407 FR-TB409]: sty
 })
 
 test_that("FT-TB684 [FR-TB419]: style_cols() refuses a flag that is not TRUE or FALSE, naming the argument", {
+  skip_on_cran()
   t <- rtftable(data.frame(a = 1, b = 2))
   for (a in c("bold", "italic", "underline", "header_bold", "header_italic")) {
     args <- list(t, cols = 1L)
@@ -127,6 +134,7 @@ test_that("FT-TB684 [FR-TB419]: style_cols() refuses a flag that is not TRUE or 
 })
 
 test_that("FT-TB685 [FR-TB441 FR-TB468 FR-TB470]: style_zone() and .rtf_table_border() refuse a zone that is not a border", {
+  skip_on_cran()
   t <- rtftable(data.frame(a = 1, b = 2))
   expect_error(style_zone(t, header = "single"),
                "`style_zone(header = )` must be an rtf_border() object.", fixed = TRUE)
@@ -140,6 +148,7 @@ test_that("FT-TB685 [FR-TB441 FR-TB468 FR-TB470]: style_zone() and .rtf_table_bo
 })
 
 test_that("FT-TB686 [FR-TB505]: the border shorthand .rtf_border_tfl() stops with rtf_border_line()'s message on a bad style or width", {
+  skip_on_cran()
   f <- rtfreporter:::.rtf_border_tfl
   expect_error(f(style = "nope"), "should be one of")
   expect_error(f(width = 0), "`width` must be a positive integer (twips).",
@@ -147,6 +156,7 @@ test_that("FT-TB686 [FR-TB505]: the border shorthand .rtf_border_tfl() stops wit
 })
 
 test_that("FT-TB687 [FR-TB453]: rtf_table_style(row_height_twips = ) is the row height; NULL is the font-aware default", {
+  skip_on_cran()
   expect_identical(rtf_table_style(row_height_twips = 400)$row_height_twips, 400L)
   expect_null(rtf_table_style()$row_height_twips)
   d <- data.frame(a = 1, b = 2)
@@ -155,6 +165,7 @@ test_that("FT-TB687 [FR-TB453]: rtf_table_style(row_height_twips = ) is the row 
 })
 
 test_that("FT-TB688 [FR-TB165]: as_rtftables(border = , style = ) reach every page; the default border is the tfl preset", {
+  skip_on_cran()
   d <- data.frame(a = letters[1:6], b = 1:6, stringsAsFactors = FALSE)  # six groups of one row
   def <- as_rtftables(d, max_rows = 3, split = "group_force")
   expect_length(def, 2L)
@@ -169,6 +180,7 @@ test_that("FT-TB688 [FR-TB165]: as_rtftables(border = , style = ) reach every pa
 })
 
 test_that("FT-TB689 [FR-TB206]: stub_cols() reads the hierarchy values as character, an NA as empty", {
+  skip_on_cran()
   d <- data.frame(g = factor(c("A", "A", "B")), l = c(1, NA, 3), v = 1:3)
   out <- stub_cols(d, vars = c("g", "l"))
   expect_type(out[[1L]], "character")
@@ -181,6 +193,7 @@ test_that("FT-TB689 [FR-TB206]: stub_cols() reads the hierarchy values as charac
 })
 
 test_that("FT-TB690 [FR-TB236]: add_header_row() refuses an unnamed label row of the wrong length, and a .position that is not top or bottom", {
+  skip_on_cran()
   t <- rtftable(data.frame(a = 1, b = 2, c = 3))
   expect_error(add_header_row(t, c("A", "B")),
                "`col_header` row 1 has 2 labels but the table has 3 columns", fixed = TRUE)
@@ -188,6 +201,7 @@ test_that("FT-TB690 [FR-TB236]: add_header_row() refuses an unnamed label row of
 })
 
 test_that("FT-IX025 [FR-IX340]: rtf_border(all = , top = ): the side named explicitly wins over all, whichever order they are written in", {
+  skip_on_cran()
   a <- rtf_border(all = rtf_border_line("double"), top = rtf_border_line("dot"))
   b <- rtf_border(top = rtf_border_line("dot"), all = rtf_border_line("double"))
   expect_identical(a, b)
@@ -204,6 +218,7 @@ test_that("FT-IX025 [FR-IX340]: rtf_border(all = , top = ): the side named expli
 .vg_df <- function() data.frame(A = c("a1", "a2"), B = c("b1", "b2"), C = c("c1", "c2"))
 
 test_that("FT-TB696 [FR-TB547 FR-TB548 FR-TB549]: rtftable() row_title, table_width_pct_of_writable and table_align", {
+  skip_on_cran()
   # row headings are left-aligned, the other columns centred
   expect_true(grepl("\\ql\\li0\\ri0 a1\\cell\\qc\\li0\\ri0 b1\\cell\\qc",
                     .vg_body(rtftable(.vg_df()))[2L], fixed = TRUE))
@@ -224,6 +239,7 @@ test_that("FT-TB696 [FR-TB547 FR-TB548 FR-TB549]: rtftable() row_title, table_wi
 })
 
 test_that("FT-TB697 [FR-TB550 FR-TB551 FR-TB558]: rtftable() font size, font and markup are the table's own", {
+  skip_on_cran()
   r <- .vg_body(rtftable(.vg_df(), font_size_half_points = 24L))[2L]
   expect_true(grepl("\\trrh290", r, fixed = TRUE))
   expect_true(grepl("\\fs24 a1\\cell", r, fixed = TRUE))
@@ -243,6 +259,7 @@ test_that("FT-TB697 [FR-TB550 FR-TB551 FR-TB558]: rtftable() font size, font and
 })
 
 test_that("FT-TB698 [FR-TB552 FR-TB553 FR-TB554 FR-TB555]: rtftable() exact row heights, header and blank row heights, and cell_valign", {
+  skip_on_cran()
   expect_true(all(startsWith(.vg_body(rtftable(.vg_df(), row_height_exact = TRUE)), "\\trowd\\trrh-230")))
   expect_true(all(startsWith(.vg_body(rtftable(.vg_df())), "\\trowd\\trrh230")))
   r <- .vg_body(rtftable(.vg_df(), header_row_height_twips = 400L))
@@ -262,6 +279,7 @@ test_that("FT-TB698 [FR-TB552 FR-TB553 FR-TB554 FR-TB555]: rtftable() exact row 
 })
 
 test_that("FT-TB699 [FR-TB556 FR-TB557]: rtftable() cell_styles override single cells; blank_row_normalize detects and collapses blank rows", {
+  skip_on_cran()
   r <- .vg_body(rtftable(.vg_df(), cell_styles = list(list(bold = c(NA, TRUE, NA)), NULL)))
   expect_true(grepl("a1\\cell\\qc\\li0\\ri0 \\b b1\\b0 \\cell\\qc\\li0\\ri0 c1\\cell", r[2L], fixed = TRUE))
   expect_false(grepl("\\b ", r[3L], fixed = TRUE))
@@ -279,6 +297,7 @@ test_that("FT-TB699 [FR-TB556 FR-TB557]: rtftable() cell_styles override single 
 })
 
 test_that("FT-TB700 [FR-TB559]: options(rtfreporter.print_ascii = TRUE) prints an rtftable with ASCII rules", {
+  skip_on_cran()
   t <- rtftable(data.frame(A = c("a1", "a2"), B = c("b1", "b2")))
   old <- options(rtfreporter.print_ascii = TRUE)
   on.exit(options(old), add = TRUE)

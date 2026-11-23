@@ -52,6 +52,7 @@
 }
 
 test_that("FT-AR083 [FR-AR135 FR-AR137 FR-AR139]: normalize_ard() refuses an overall that is not one string or overall_row(), a stack_sep that is not one text, and a stack naming a hierarchy variable", {
+  skip_on_cran()
   a <- .ar_hier()
   msg <- "`overall` must be a single string or overall_row(); see ?overall_row."
   for (bad in list(1, c("Any AE", "Any TEAE"), TRUE, list("Any AE"))) {
@@ -78,6 +79,7 @@ test_that("FT-AR083 [FR-AR135 FR-AR137 FR-AR139]: normalize_ard() refuses an ove
 })
 
 test_that("FT-AR084 [FR-AR226]: pull_ard() whose answers disagree between variables or contexts stops with the candidates and picks none", {
+  skip_on_cran()
   a <- .ar_ard()
   err <- expect_error(pull_ard(a, cols = "TRT"),
                       "This ARD offers more than one 'N' for these columns, and they\ndisagree.  Say which with `variable =` and/or `context =`.",
@@ -94,6 +96,7 @@ test_that("FT-AR084 [FR-AR226]: pull_ard() whose answers disagree between variab
 })
 
 test_that("FT-AR085 [FR-AR209]: widen_ard(stat_groups = ) called directly refuses a malformed group map", {
+  skip_on_cran()
   x <- .ar_sex()
   w <- function(sg) widen_ard(x, cols = "TRT", cells = "{n}", notes = FALSE, stat_groups = sg)
   expect_error(w(list("n")),
@@ -116,6 +119,7 @@ test_that("FT-AR085 [FR-AR209]: widen_ard(stat_groups = ) called directly refuse
 })
 
 test_that("FT-AR086 [FR-AR210]: widen_ard(compare = ) called directly refuses a malformed comparison spec and two records in one cell", {
+  skip_on_cran()
   x <- .ar_with_tests()
   w <- function(cmp) widen_ard(x, cols = "TRT", cells = "{n}", notes = FALSE, compare = cmp)
   expect_error(w("{p.value}"),
@@ -142,6 +146,7 @@ test_that("FT-AR086 [FR-AR210]: widen_ard(compare = ) called directly refuses a 
 })
 
 test_that("FT-AR087 [FR-AR212]: widen_ard(filter = list(by = )) naming no row key stops with the row keys", {
+  skip_on_cran()
   x <- .ar_sex()
   expect_error(widen_ard(x, cols = "TRT", cells = "{n}", notes = FALSE,
                          filter = list(by = "nope")),
@@ -149,6 +154,7 @@ test_that("FT-AR087 [FR-AR212]: widen_ard(filter = list(by = )) naming no row ke
 })
 
 test_that("FT-AR088 [FR-AR121]: normalize_ard(drop_contexts = ) naming only the attributes keeps the total_n row and states no ard_total_n; character() drops nothing", {
+  skip_on_cran()
   a <- .ar_ard()
   a <- rbind(a,
              .ar_rows(NA, NA, "..ard_total_n..", NA, "total_n", "N", 11))
@@ -173,6 +179,7 @@ test_that("FT-AR088 [FR-AR121]: normalize_ard(drop_contexts = ) naming only the 
 })
 
 test_that("FT-AR089 [FR-AR180]: widen_ard(na = ) is what a cell no record fills holds; NA by default", {
+  skip_on_cran()
   x <- .ar_sex()
   w0 <- widen_ard(x, cols = "TRT", cells = "{n}", notes = FALSE)
   expect_identical(w0$Placebo, c("4", NA))
@@ -183,6 +190,7 @@ test_that("FT-AR089 [FR-AR180]: widen_ard(na = ) is what a cell no record fills 
 })
 
 test_that("FT-AR090 [FR-AR219]: pull_ard(variable = ) and (context = ) restrict the pull; variable = a key asks for its own tabulation", {
+  skip_on_cran()
   a <- .ar_ard()
   expect_identical(pull_ard(a, cols = "TRT", variable = "SEX"), c("Drug A" = 5, Placebo = 6))
   expect_identical(pull_ard(a, cols = "TRT", variable = "AGE"), c("Drug A" = 5, Placebo = 7))
@@ -199,6 +207,7 @@ test_that("FT-AR090 [FR-AR219]: pull_ard(variable = ) and (context = ) restrict 
 })
 
 test_that("FT-AR091 [FR-AR133]: normalize_ard() takes an ARD with no variable_level and gives it as NA", {
+  skip_on_cran()
   a <- .ar_ard()
   a <- a[a$variable == "AGE", setdiff(names(a), "variable_level"), drop = FALSE]
   d <- normalize_ard(a)
@@ -208,6 +217,7 @@ test_that("FT-AR091 [FR-AR133]: normalize_ard() takes an ARD with no variable_le
 })
 
 test_that("FT-AR092 [FR-AR193]: widen_ard() on a frame of no rows, or one whose rows all drop, says every row was dropped", {
+  skip_on_cran()
   x <- .ar_sex()
   msg <- "Every row was dropped before the cells were built"
   err <- expect_error(widen_ard(x[0, , drop = FALSE], cols = "TRT", cells = "{n}", notes = FALSE),
@@ -222,6 +232,7 @@ test_that("FT-AR092 [FR-AR193]: widen_ard() on a frame of no rows, or one whose 
 })
 
 test_that("FT-AR093 [FR-AR194]: widen_ard() keeps non-ASCII arms and levels unchanged in the column names and values", {
+  skip_on_cran()
   drug <- "実薬"          # the arm
   pbo  <- "プラセボ"
   f    <- "女性"          # the levels
@@ -240,6 +251,7 @@ test_that("FT-AR093 [FR-AR194]: widen_ard() keeps non-ASCII arms and levels unch
 })
 
 test_that("FT-AR094 [FR-AR236 FR-AR237]: list_ard_keys() lists a grouping variable once whatever its slot, and no grouping variable as no keys", {
+  skip_on_cran()
   # TRT in group1 in one block, in group2 (under SITE) in the other
   a <- .ar_ard()
   a <- a[a$variable == "SEX", , drop = FALSE]
@@ -249,14 +261,16 @@ test_that("FT-AR094 [FR-AR236 FR-AR237]: list_ard_keys() lists a grouping variab
   a$group2 <- NA_character_
   a$group2_level <- NA_character_
   out <- NULL
-  expect_output(out <- list_ard_keys(rbind(a, b)), "ARD keys (group1..groupN values) : TRT, SITE",
+  out <- list_ard_keys(rbind(a, b))
+  expect_output(print(out), "ARD keys (group1..groupN values) : TRT, SITE",
                 fixed = TRUE)
   expect_identical(out$keys, c("TRT", "SITE"))
   # no grouping variable at all
   one <- .ar_ard()
   one <- one[one$variable == "AGE", setdiff(names(one), c("group1", "group1_level")),
              drop = FALSE]
-  expect_output(out <- list_ard_keys(one), "ARD keys (group1..groupN values) :  \n",
+  out <- list_ard_keys(one)
+  expect_output(print(out), "ARD keys (group1..groupN values) :  \n",
                 fixed = TRUE)
   expect_null(out$keys)
 })

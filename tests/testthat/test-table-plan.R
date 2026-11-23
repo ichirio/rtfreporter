@@ -11,7 +11,13 @@ nz <- function(x) {
     suppressMessages(normalize_ard(x)) else x
 }
 
+# the ARD most tests start from, built once per file (cards is the slow part)
+plan_ard_cache <- new.env()
 plan_ard <- function() {
+  if (is.null(plan_ard_cache$ard)) plan_ard_cache$ard <- plan_ard_build()
+  plan_ard_cache$ard
+}
+plan_ard_build <- function() {
   adsl <- cards::ADSL
   adsl$SEX <- as.character(adsl$SEX)
   adsl$TRT <- as.character(adsl$ARM)
@@ -620,8 +626,7 @@ test_that("plan_cell_style() says where as well as how", {
 test_that("plan_template() writes a plan that runs to the pages", {
   skip_if_no_cards2()
   ard <- plan_ard()
-  gen <- utils::capture.output(code <- plan_template(ard, cols = "TRT",
-                                                     pipe = "|>"))
+  code <- plan_template(ard, cols = "TRT", pipe = "|>")
   expect_true(any(grepl("normalize_ard()", code, fixed = TRUE)))
   expect_true(any(grepl("table_plan(", code, fixed = TRUE)))
   expect_true(any(grepl("plan_cells(", code, fixed = TRUE)))
@@ -643,7 +648,7 @@ test_that("plan_template() writes a plan that runs to the pages", {
 test_that("plan_template() derives the stub and leaves the rest to be edited", {
   skip_if_no_cards2()
   code <- utils::capture.output(
-    invisible(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
+    print(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
   # the stub is not written at all: plan_stub() works it out from what
   # table_plan(rows = ) and plan_row_group() already declared
   expect_false(any(grepl("vars", code, fixed = TRUE)))
@@ -654,9 +659,9 @@ test_that("plan_template() derives the stub and leaves the rest to be edited", {
 test_that("plan_template() takes the pipe like plan_template(form = 'spread') does", {
   skip_if_no_cards2()
   base <- utils::capture.output(
-    invisible(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
+    print(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
   mag <- utils::capture.output(
-    invisible(plan_template(plan_ard(), cols = "TRT", pipe = "%>%")))
+    print(plan_template(plan_ard(), cols = "TRT", pipe = "%>%")))
   expect_false(any(grepl("%>%", base, fixed = TRUE)))
   expect_true(any(grepl("library(magrittr)", mag, fixed = TRUE)))
 })
@@ -669,7 +674,7 @@ test_that("the generated header writes a real newline escape", {
     cards::ard_summary(variables = AGE,
                           statistic = ~ list(N = function(x) length(x))))
   code <- utils::capture.output(
-    invisible(plan_template(ard, cols = "ARM", pipe = "|>")))
+    print(plan_template(ard, cols = "ARM", pipe = "|>")))
   expect_true(any(grepl("plan_col_header", code, fixed = TRUE)))
   # ONE backslash, not two: the generated file is R source
   one <- paste0('"', '\\', 'nN = "')
@@ -682,7 +687,7 @@ test_that("plan_template() invents no header when the N is ambiguous", {
   skip_if_no_cards2()
   # two continuous variables disagree about N, so nothing is guessed
   code <- utils::capture.output(
-    invisible(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
+    print(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
   expect_false(any(grepl("rtfreporter::plan_col_header(", code, fixed = TRUE)))
   # and the pipeline still parses: the trailing pipe must have been removed
   expect_silent(parse(text = paste(code, collapse = "\n")))
@@ -3094,7 +3099,8 @@ test_that("normalize_ard(stack = ): the arm in a later slot than the subgroup, c
 
 test_that("sort keys -n@<key> and -n[<col>]: a group's own count carried to its rows, one column's count (#619)", {
   skip_if_not_installed("cards")
-  adae <- cards::ADAE[cards::ADAE$AESOC %in% unique(cards::ADAE$AESOC)[1:4], ]
+  # four SOCs; on CRAN the five small ones of helper-rtfreporter.R
+  adae <- if (.on_cran()) .cran_adae() else cards::ADAE[cards::ADAE$AESOC %in% unique(cards::ADAE$AESOC)[1:4], ]
   ard <- cards::ard_stack_hierarchical(adae, variables = c(AESOC, AEDECOD), by = TRTA,
                                        denominator = cards::ADSL, id = USUBJID)
   d <- normalize_ard(ard, hierarchy = c("AESOC", "AEDECOD"))
@@ -3442,7 +3448,8 @@ test_that("plan_stat_groups(): a split record takes its group's cells, an .other
 
 test_that("plan_filter(): PTs with p >= 5% in any arm, a SOC with its PTs; the RTF a hand-filtered ARD gives (#620)", {
   skip_if_not_installed("cards")
-  ard <- cards::ard_stack_hierarchical(cards::ADAE, variables = c(AESOC, AEDECOD), by = TRTA,
+  # on CRAN five SOCs (helper-rtfreporter.R)
+  ard <- cards::ard_stack_hierarchical(.cran_adae(), variables = c(AESOC, AEDECOD), by = TRTA,
                                        denominator = cards::ADSL, id = USUBJID, over_variables = TRUE)
   d <- normalize_ard(ard, hierarchy = c("AESOC", "AEDECOD"), overall = "Any TEAE")
   plan <- function(x) table_plan(x, cols = "TRTA", rows = c(soc = "AESOC", pt = "AEDECOD"), label = NA) |>
@@ -4012,7 +4019,7 @@ test_that("plan_n_candidates(): nothing to read is no row, not an error", {
   expect_identical(names(nc), c("scope", "page", "column", "value"))
 })
 
-test_that("FT-PL046 [FR-PL160]: plan_columns(widths =) naming no column of the table stops, naming it", {
+test_that("FT-PL046 [FR-PL160]: plan_columns(widths =) naming no column of the table warns, naming it, and skips it", {
   d <- data.frame(Item = c("a", "b"), A = c("1", "2"), B = c("3", "4"), Hid = c("x", "y"),
                   stringsAsFactors = FALSE)
   pages <- function(p) suppressMessages(plan_apply(p, "pages"))
@@ -4021,10 +4028,20 @@ test_that("FT-PL046 [FR-PL160]: plan_columns(widths =) naming no column of the t
                 plan_columns(widths = c(Item = 3, A = 1, B = 1, Hid = 9)))
   ok <- if (inherits(ok, "rtftable")) ok else ok[[1L]]
   expect_equal(as.numeric(ok$col_rel_width), c(3, 1, 1))
-  # a name that is no column: stops, with the name and the printed columns
-  err <- expect_error(pages(table_plan(d) |> plan_columns(widths = c(Item = 3, nope = 1, .values = 1))),
-                      "plan_columns(widths = ) names 'nope', not a column of the table", fixed = TRUE)
-  expect_match(conditionMessage(err), "Its printed columns: 'Item', 'A', 'B', 'Hid'", fixed = TRUE)
+  # a name that is no column: one warning, with the name and the printed
+  # columns; the other widths are used
+  w <- expect_warning(sk <- pages(table_plan(d) |>
+                        plan_columns(widths = c(Item = 3, nope = 1, A = 1, B = 1, Hid = 2))),
+                      "plan_columns(widths = ) names 'nope', not a column of the table: skipped", fixed = TRUE)
+  expect_match(conditionMessage(w), "Its printed columns: 'Item', 'A', 'B', 'Hid'", fixed = TRUE)
+  sk <- if (inherits(sk, "rtftable")) sk else sk[[1L]]
+  expect_equal(as.numeric(sk$col_rel_width), c(3, 1, 1, 2))
+  # one set of widths for a one-arm and a two-arm table: B is absent here
+  d1 <- d[c("Item", "A")]
+  expect_warning(one <- pages(table_plan(d1) |> plan_columns(widths = c(Item = 3, A = 1, B = 1))),
+                 "names 'B', not a column of the table: skipped", fixed = TRUE)
+  one <- if (inherits(one, "rtftable")) one else one[[1L]]
+  expect_equal(as.numeric(one$col_rel_width), c(3, 1))
 })
 
 test_that("FT-PL047 [FR-PL172 FR-IX102]: plan_columns(widths =) with column_widths_twips stops: one of them", {

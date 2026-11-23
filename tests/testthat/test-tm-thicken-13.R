@@ -39,6 +39,7 @@
 }
 
 test_that("FT-IX6801 [FR-IX319]: column_widths_twips wins outright and its sum is the width; col_rel_width apportions the total; table_width_twips beats table_width_pct; no width gives the writable page; an explicit col_rel_width beats auto_width", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   writable <- 13680L
   # the same spellings through rtftable() and through as_rtftables()
   built <- list(
@@ -100,6 +101,7 @@ test_that("FT-IX6801 [FR-IX319]: column_widths_twips wins outright and its sum i
 }
 
 test_that("FT-IX6802 [FR-IX321]: page_by moves group_col to the first column outside it, and with split = \"by_value\" the group is the outer axis and page_by the inner one, a group's pages keeping its name alone", {
+  skip_on_cran()
   lab <- .t13_lab()
   meta <- function(p) attr(p$data, "rtf_paginate_meta", exact = TRUE)
   first <- function(pg) unname(vapply(pg, function(p) p$data[[1L]][1L], ""))
@@ -154,6 +156,7 @@ test_that("FT-IX6802 [FR-IX321]: page_by moves group_col to the first column out
 }
 
 test_that("FT-IX6803 [FR-IX324]: with count_blank_rows a separator blank never lands on a page's first or last row, survives where a page holds two groups, and an explicit position is honoured wherever it lands", {
+  skip_on_cran()
   d <- .t13_nine()
   pages <- function(blank, mr) {
     as_rtftables(d, split = "group_safe", max_rows = mr, group_col = "G",
@@ -214,6 +217,7 @@ test_that("FT-IX6803 [FR-IX324]: with count_blank_rows a separator blank never l
 }
 
 test_that("FT-IX6804 [FR-IX330]: set_decimal_split() on a column with style_cols() / style_body() settings: per-cell alignment, border, fill and font follow onto both halves, the halves stay right and left, no interior rule or padding", {
+  skip_on_cran()
   df <- data.frame(Statistic = c("n", "Mean", "Category"),
                    Value = c("12", "3.45", "n (%)"), stringsAsFactors = FALSE)
   vert <- rtf_border(left = rtf_border_line("single"), right = rtf_border_line("single"),
@@ -302,6 +306,7 @@ test_that("FT-IX6804 [FR-IX330]: set_decimal_split() on a column with style_cols
 }
 
 test_that("FT-IX6805 [FR-IX338]: one rtf_border() is the whole table at rtftable(border = ), one kind of row at style_zone(), one cell at col_cell(border = ): the edges are the selection's outer frame, inside_h and inside_v the rules between its rows and cells", {
+  skip_on_cran()
   df <- data.frame(a = c("r1", "r2"), b = c("x", "y"), c = c("p", "q"),
                    stringsAsFactors = FALSE)
   # top single, bottom double, left dot, right dash, a thick rule between the
@@ -357,6 +362,7 @@ test_that("FT-IX6805 [FR-IX338]: one rtf_border() is the whole table at rtftable
 }
 
 test_that("FT-TB6801 [FR-TB184]: rtf_tables(first_rows = ) is NULL by default; with page_break = FALSE it puts that many rows of the one table on the shared page and paginates the rest as the table says, each page with its title, header and footnote, for a table_plan, a data frame and an rtftable", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   expect_null(formals(rtf_tables)$first_rows)
   base <- rtf_tables(rtf_document(), list(.t13_items(3L)), titles = list("Table 1"))
   hdr <- paste0("Item", .t13_bs, "cell")
@@ -507,6 +513,7 @@ test_that("FT-TB6801 [FR-TB184]: rtf_tables(first_rows = ) is NULL by default; w
 }
 
 test_that("FT-DC6801 [FR-DC315]: the order is the module's own argument > the rtf_style() section > the shared level > the rtfreporter.* option > the baseline, for the five option keys in every module they reach, and the argument by rtftable(), rtf_table_style() and as_rtftables()", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   # the ladder: each rung sets one more source above the ones before it
   ladder <- list(none = character(0), option = "option",
                  shared = c("shared", "option"),
@@ -651,13 +658,14 @@ test_that("FT-DC6801 [FR-DC315]: the order is the module's own argument > the rt
                                     else 100 * stats::sd(x) / mean(x))
 
 test_that("FT-PL6801 [FR-PL901]: a listing above its summary, as two plans joined by plan_append(), gives byte for byte the RTF of the same table built by hand: the time points across in two column blocks, the PK parameters across, the analytes across; the table's verbs before or after plan_append() give the same bytes, and the later of two wins", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
   stub <- "Subject ID/Age (years)/Gender"
   by_sub <- ~ "{USUBJID}/{AGE}/{SEX}"
 
   # ---- the time points across, in two column blocks (a break after 4 hr)
-  adpc <- utils::read.csv(.t13_fx("adpc.csv"))
+  adpc <- utils::read.csv(.t13_fx("adpc.csv"), encoding = "UTF-8")
   adpc <- adpc[adpc$RENALGR %in% c("Normal", "Moderate"), ]
   times <- c("Pre-Dose", paste(c(0.25, 0.5, 1, 1.5, 2, 3, 4, 6, 8, 12, 24, 36, 48), "hr"))
   hand_in <- .t13_records(adpc)
@@ -714,7 +722,7 @@ test_that("FT-PL6801 [FR-PL901]: a listing above its summary, as two plans joine
   expect_false(identical(.t13_bytes(.t13_pl_doc(last_cut, titles, program)), want))
 
   # ---- the PK parameters across, a page an analyte and group
-  adpp <- utils::read.csv(.t13_fx("adpp.csv"))
+  adpp <- utils::read.csv(.t13_fx("adpp.csv"), encoding = "UTF-8")
   params <- c("C_{max} (ng/mL)", "T_{max} (hr)", "AUC_{last} (ng·hr/mL)",
               "AUC_{inf} (ng·hr/mL)", "t1/2 (hr)")
   hand_pp <- adpp
@@ -758,7 +766,7 @@ test_that("FT-PL6801 [FR-PL901]: a listing above its summary, as two plans joine
                                           titles2, program2)), want2)
 
   # ---- the analytes across, a page a group and time point
-  adpc2 <- utils::read.csv(.t13_fx("adpc.csv"))
+  adpc2 <- utils::read.csv(.t13_fx("adpc.csv"), encoding = "UTF-8")
   adpc2 <- adpc2[adpc2$ATPT %in% c("1 hr", "12 hr"), ]
   hand_an <- .t13_records(adpc2)
   hand_an$RENALGR <- factor(hand_an$RENALGR, levels = c("Normal", "Mild", "Moderate"))

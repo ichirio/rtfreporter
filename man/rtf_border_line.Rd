@@ -19,9 +19,7 @@ underline under one spanning column-header cell.}
 \code{style = "none"}.}
 
 \item{color}{Line colour.  \code{NULL} (default) = black.  Or a 6-digit hex
-string such as \code{"#003366"}.
-
-\code{rtf_border_side()} was its old name, removed in 0.9.0.}
+string such as \code{"#003366"}.}
 }
 \value{
 A list of class \code{"rtf_border_line"}.

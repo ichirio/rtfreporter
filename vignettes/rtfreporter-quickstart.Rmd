@@ -65,7 +65,7 @@ This is a tour of what `rtftable()` and the document verbs can do with a
 table you already have as a data frame -- the **bring your own table** path.
 When the statistics are in an analysis results dataset (cards / cardx), the
 recommended route is a table plan instead: start with
-[Get started](rtfreporter.html) and [Tables from an ARD](tables-from-ard.html).
+[Get started](rtfreporter.html) and [Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html).
 
 **Core workflow:**
 
@@ -236,9 +236,10 @@ generate_rtfreport(doc, tempfile(fileext = ".rtf"), overwrite = TRUE)
 
 ## 4  Figure and summary on consecutive pages
 
-Each page holds exactly one content item (one table **or** one figure).
-To present a figure together with a summary table, place them on adjacent
-pages — both can share the same section header.
+By default each table or figure starts a new page (`page_break = TRUE`).
+Here the figure and the summary table go on adjacent pages and share the same
+section header. (`page_break = FALSE` puts a content under the one before it;
+see [Several contents on one page](https://ichirio.github.io/rtfreporter/articles/several-contents.html).)
 
 ```{r fig-plus-table, eval = requireNamespace("ggplot2", quietly = TRUE)}
 tbl_summary <- rtftable(
@@ -348,7 +349,8 @@ sec_footer <- rtf_footer(rows = list(
 | Token | Behaviour |
 |---|---|
 | `{AUTO_PAGE}` | Dynamic page number (`\chpgn`) |
-| `{AUTO_TOTAL_PAGES}` | Dynamic NUMPAGES field — **recommended** |
+| `{AUTO_TOTAL_PAGES}` | Dynamic NUMPAGES field |
+| `{PAGE}` | Static page number of this file, written at render time |
 | `{TOTAL_PAGES}` | Static total computed at render time |
 | `{BOOK_PAGE}` | A slot left empty here, filled by `assemble_rtf(book_page =)` |
 
@@ -615,10 +617,9 @@ doc <- rtf_document() |>
 .shot("qs_titles.png")
 ```
 
-Titles render as centred bold paragraphs; footnotes render as
-left-aligned paragraphs with a top divider line on the first line.
-Both inherit the document font size (one font per document, 9 pt by
-default).
+Titles render as centred bold paragraphs; footnotes render as a
+left-aligned single-column table the width of the content, with a rule above
+its first row. Both use the document font size (9 pt by default).
 
 ---
 
@@ -642,7 +643,7 @@ heavy_tfl <- rtf_table_style_with(tfl,
 )
 ```
 
-The S3 architecture is documented in [`LEARNING.md`](https://github.com/ichirio/rtfreporter/blob/main/LEARNING.md) in the GitHub repository.
+How the S3 objects fit together: [Internal class design](https://ichirio.github.io/rtfreporter/articles/internal-design.html).
 
 ---
 
@@ -656,7 +657,7 @@ The S3 architecture is documented in [`LEARNING.md`](https://github.com/ichirio/
 | `col_header` | chr / list | Column header text; a list holds several rows, spanning rows first |
 | `col_header_align` | NULL / scalar / chr(ncol) | Column-header alignment override (default: inherit `align`) |
 | `col_spec` | list | Per-column align / bold / italic / indent / **border** (`rtf_border`) / header_* |
-| `border` | `"tfl"` / object | Outer-frame borders (now: top on first header row, bottom on last) |
+| `border` | `"tfl"` / `"none"` / `rtf_border()` / `rtf_table_style()` | Table borders; `"tfl"` (default) puts a rule above and below the column-header block |
 | `blank_rows` | int / spec / list | Integer positions, `blank_rows_by_change()`, `blank_rows_by_rule()`, or a list thereof |
 | `read_attributes` | logical | Read `attr(data, "rtf_blank_rows")` as fallback (default TRUE) |
 | `style` | rtf_table_style | Shared S3 theme record; provides defaults overridden by explicit args |
@@ -673,15 +674,14 @@ The S3 architecture is documented in [`LEARNING.md`](https://github.com/ichirio/
 |---|---|---|
 | `titles` | list of chr | One entry per page; each char vector = one paragraph per line (`""` = blank) |
 | `footnotes` | list of chr | Same shape as `titles`; first line carries the top divider |
-| All `rtftable()` formatting args | — | Applied to bare `data.frame` items in the list |
 
 
 ### rtfplot parameters
 
 | Parameter | Default | Purpose |
 |---|---|---|
-| `path` | - | PNG or JPEG file path |
-| `width_twips` | `NULL` (full width) | Display width |
+| `x` | - | A PNG, JPEG or EMF file, or a plot object (ggplot2, grob, recorded plot, function) |
+| `width_twips` | `NULL` (the image's native size) | Display width |
 | `height_twips` | `NULL` (aspect ratio) | Display height |
 | `align` | `"center"` | `"left"` / `"center"` / `"right"` |
 
@@ -701,8 +701,8 @@ The S3 architecture is documented in [`LEARNING.md`](https://github.com/ichirio/
 ## Where next
 
 - [Get started](rtfreporter.html) --- the recommended ARD + plan workflow
-- [Importing tables](importing-tables.html) --- gt, gtsummary, rtables, tfrmt, flextable and huxtable through `as_rtftables()`
-- [Page setup](page-setup.html) --- paper size, orientation, margins
-- [Output options](output.html) --- where the file goes and what it contains
+- [Importing tables](https://ichirio.github.io/rtfreporter/articles/importing-tables.html) --- gt, gtsummary, rtables, tfrmt, flextable and huxtable through `as_rtftables()`
+- [Page setup](https://ichirio.github.io/rtfreporter/articles/page-setup.html) --- paper size, orientation, margins
+- [Output options](https://ichirio.github.io/rtfreporter/articles/output.html) --- where the file goes and what it contains
 
 The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.

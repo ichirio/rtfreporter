@@ -197,7 +197,7 @@ Add `mypkg` to `Suggests:` in `DESCRIPTION`, as `mypkg (>= x.y)` when there is
 a minimum.  That entry is the only place the minimum is written:
 `.need_pkg()` reads it from rtfreporter's `DESCRIPTION` when it runs, so no
 version number appears in R code.  Never add the package to `Imports:`, which
-holds only packages that ship with R (grDevices, grid, methods, stats, utils).
+holds only packages that ship with R (graphics, grDevices, grid, methods, stats, tools, utils).
 The `.need_pkg()` call in Step 3 gives the error when `mypkg` is missing.
 
 ## Step 6 — tests and docs

@@ -68,7 +68,7 @@ library(rtfreporter)
 > **The second path.** This article is about bringing a table you already
 > have.  When the statistics are in a cards / cardx ARD, the recommended route
 > is a table plan -- see [Get started](rtfreporter.html) and
-> [Tables from an ARD](tables-from-ard.html).
+> [Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html).
 
 An [rtables](https://CRAN.R-project.org/package=rtables) table --
 including the tables [tern](https://CRAN.R-project.org/package=tern)'s
@@ -77,9 +77,7 @@ analysis functions build, which are rtables objects -- goes to RTF through
 
 ## From an rtables table to RTF
 
-`as_rtftables()` also accepts any **rtables** `VTableTree` -- including the
-tables produced by **tern** analysis functions, which are rtables objects.
-They are read through `formatters::matrix_form()`, so nested column splits
+`as_rtftables()` accepts any **rtables** `VTableTree`.  It is read through `formatters::matrix_form()`, so nested column splits
 become spanning headers, the row-label stub keeps its indentation, and the
 titles / footers / referential footnotes flow through.  In-cell footnote
 marks `{N}` are rewritten to `^{N}`.
@@ -116,19 +114,20 @@ file.exists(out)
 .shot("rt_basic.png")
 ```
 
-The rtables `read` tokens are `"col_header"`, `"alignment"`, `"spanning"`,
-`"titles"`, `"footnotes"`, `"indent"`, `"footnote_marks"`; `read = TRUE`
-(default) reads them all.
+The rtables `read_meta` tokens are `"col_header"`, `"alignment"`, `"spanning"`,
+`"titles"`, `"footnotes"`, `"footnote_marks"`; `read_meta = TRUE`
+(default) reads them all.  The row-label indentation is always written into the
+labels.
 
 ## Splitting a long table across pages
 
 `as_rtftables()` pages the table: `split` and `max_rows` say how, as for any
-source -- see [Paginating with as_rtftables()](pagination.html).
+source -- see [Paginating with as_rtftables()](https://ichirio.github.io/rtfreporter/articles/pagination.html).
 
 <!-- where-next -->
 
 ## Where next
 
 - [From gt and gtsummary](from-gt.html) --- the same for a gt or gtsummary table
-- [Importing tables](importing-tables.html) --- every source `as_rtftables()` reads
-- [The pharmaverse catalog](tlg-catalog.html) --- tern tables and others, to RTF
+- [Importing tables](https://ichirio.github.io/rtfreporter/articles/importing-tables.html) --- every source `as_rtftables()` reads
+- [The pharmaverse catalog](https://ichirio.github.io/rtfreporter/articles/tlg-catalog.html) --- tern tables and others, to RTF

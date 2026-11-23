@@ -143,6 +143,7 @@
 .at_line <- function(s, txt) grep(txt, .at_rows(s), fixed = TRUE, value = TRUE)
 
 test_that("FT-TB706 [FR-TB561]: rtftable(data = ) is a data frame, or a list of data frames of the same width", {
+  skip_on_cran()
   t1 <- rtftable(.at_df())
   expect_identical(t1$data, .at_df())
   expect_null(t1$data_list)
@@ -163,6 +164,7 @@ test_that("FT-TB706 [FR-TB561]: rtftable(data = ) is a data frame, or a list of 
 })
 
 test_that("FT-TB707 [FR-TB562]: col_header NULL is the names; a vector by position, or by name when named", {
+  skip_on_cran()
   expect_identical(.at_line(.at_one(rtftable(.at_df())), "g1")[1L] != "", TRUE)
   expect_identical(rtftable(.at_df(), col_header = c("A", "B", "C"))$col_header,
                    list(c("A", "B", "C")))
@@ -178,6 +180,7 @@ test_that("FT-TB707 [FR-TB562]: col_header NULL is the names; a vector by positi
 })
 
 test_that("FT-TB708 [FR-TB563]: col_header as a list of rows, spanning rows, col_cell() by name and per data frame", {
+  skip_on_cran()
   h <- list(list(col_cell(c("g2", "g3"), "Drug A")), c("G1", "G2", "G3"))
   t <- rtftable(.at_df(), col_header = h)
   expect_length(t$col_header, 2L)
@@ -197,6 +200,7 @@ test_that("FT-TB708 [FR-TB563]: col_header as a list of rows, spanning rows, col
 })
 
 test_that("FT-TB709 [FR-TB564]: col_header_align follows the data alignment, or one value, or one per column", {
+  skip_on_cran()
   t <- rtftable(.at_df(), col_spec = list(list(col = 2, align = "right")))
   expect_identical(vapply(t$col_spec, function(c) c$header_align %||% c$align, ""),
                    c("left", "right", "center"))
@@ -212,6 +216,7 @@ test_that("FT-TB709 [FR-TB564]: col_header_align follows the data alignment, or 
 })
 
 test_that("FT-TB710 [FR-TB565]: col_spec targets a column by index or name and styles it", {
+  skip_on_cran()
   t <- rtftable(.at_df(), col_spec = list(
     list(col = "g2", align = "right", bold = TRUE, italic = TRUE, underline = TRUE,
          indent_twips = 200, color = "#FF0000"),
@@ -237,6 +242,7 @@ test_that("FT-TB710 [FR-TB565]: col_spec targets a column by index or name and s
 })
 
 test_that("FT-TB711 [FR-TB566]: border \"tfl\" rules the column header only; \"none\" draws nothing", {
+  skip_on_cran()
   df <- data.frame(A = c("r1", "r2", "r3"))
   s <- .at_one(rtftable(df))
   hdr <- .at_line(s, " A\\cell")
@@ -250,6 +256,7 @@ test_that("FT-TB711 [FR-TB566]: border \"tfl\" rules the column header only; \"n
 })
 
 test_that("FT-TB712 [FR-TB567]: blank_rows takes positions, change and rule specs, and a list of them", {
+  skip_on_cran()
   df <- data.frame(g = c("a", "a", "b", "b"), v = 1:4)
   # 0 before the first row, k after row k, -1 after the last
   expect_identical(rtftable(df, blank_rows = c(0, 2, -1))$blank_rows, c(0L, 2L, 4L))
@@ -273,6 +280,7 @@ test_that("FT-TB712 [FR-TB567]: blank_rows takes positions, change and rule spec
 })
 
 test_that("FT-TB713 [FR-TB568]: col_rel_width, column_widths_twips, table_width_twips and table_width_pct size the columns", {
+  skip_on_cran()
   cellx <- function(s, txt) {
     as.integer(sub("\\\\cellx", "", regmatches(.at_line(s, txt)[1L],
                                                  gregexpr("\\\\cellx[0-9]+", .at_line(s, txt)[1L]))[[1L]]))
@@ -293,6 +301,7 @@ test_that("FT-TB713 [FR-TB568]: col_rel_width, column_widths_twips, table_width_
 })
 
 test_that("FT-TB991 [FR-TB568]: rtftable(): table_width_twips, table_width_pct and table_width_pct_of_writable given together", {
+  skip_on_cran()
   right <- function(...) {
     line <- .at_line(.at_one(rtftable(.at_df(), ...)), "x\\cell")[1L]
     max(as.integer(sub("\\\\cellx", "", regmatches(line, gregexpr("\\\\cellx[0-9]+", line))[[1L]])))
@@ -308,6 +317,7 @@ test_that("FT-TB991 [FR-TB568]: rtftable(): table_width_twips, table_width_pct a
 })
 
 test_that("FT-TB714 [FR-TB569]: row_height_twips left NULL inherits the style, the document, the option, else the font's height", {
+  skip_on_cran()
   h <- function(s) unique(regmatches(.at_line(s, "x\\cell"), regexpr("\\\\trrh-?[0-9]+", .at_line(s, "x\\cell"))))
   df <- .at_df()
   expect_identical(h(.at_one(rtftable(df))), "\\trrh230")
@@ -325,6 +335,7 @@ test_that("FT-TB714 [FR-TB569]: row_height_twips left NULL inherits the style, t
 })
 
 test_that("FT-TB715 [FR-TB570]: the left and right padding left NULL inherit the style, the document, the option, else 0", {
+  skip_on_cran()
   l <- function(s) .at_line(s, "x\\cell")
   df <- .at_df()
   expect_true(grepl("\\ql\\li0\\ri0 x", l(.at_one(rtftable(df, col_spec = list(list(col = 3, align = "left"))))),
@@ -341,6 +352,7 @@ test_that("FT-TB715 [FR-TB570]: the left and right padding left NULL inherit the
 })
 
 test_that("FT-TB716 [FR-TB571]: rtftable()'s twips arguments are single non-negative integers", {
+  skip_on_cran()
   # these used to be written into the file as NA, or failed later with an
   # unrelated message (fixed in this audit)
   for (a in c("row_height_twips", "header_row_height_twips", "blank_row_height_twips",
@@ -356,6 +368,7 @@ test_that("FT-TB716 [FR-TB571]: rtftable()'s twips arguments are single non-nega
 })
 
 test_that("FT-TB717 [FR-TB572]: table_width_pct_of_writable is a fraction in (0, 1], table_width_pct a percentage in (0, 100]", {
+  skip_on_cran()
   # these used to be kept as given (fixed in this audit)
   for (bad in list(0, 2, "x", c(0.2, 0.3), NA)) {
     expect_error(rtftable(.at_df(), table_width_pct_of_writable = bad),
@@ -369,6 +382,7 @@ test_that("FT-TB717 [FR-TB572]: table_width_pct_of_writable is a fraction in (0,
 })
 
 test_that("FT-TB718 [FR-TB573]: rtftable() returns an rtftable that rtf_tables() places; the examples render", {
+  skip_on_cran()
   df <- data.frame(Subject = c("001", "002"), Age = c(34L, 45L))
   tbl <- rtftable(df)
   expect_s3_class(tbl, "rtftable")
@@ -393,6 +407,7 @@ test_that("FT-TB718 [FR-TB573]: rtftable() returns an rtftable that rtf_tables()
 })
 
 test_that("FT-TB719 [FR-TB173]: footnote rows are strings or c(l =, r =), left-aligned, with no rule unless rtf_footnotes(border = )", {
+  skip_on_cran()
   doc <- rtf_document()
   t1 <- list(rtftable(data.frame(A = 1)))
   s <- .at_rs(rtf_tables(doc, t1, footnotes = list(list("FNX", c(l = "FNL", r = "FNR")))))
@@ -417,6 +432,7 @@ test_that("FT-TB719 [FR-TB173]: footnote rows are strings or c(l =, r =), left-a
 })
 
 test_that("FT-TB720 [FR-TB574]: auto_title writes the name the same under either title_format, and composes with auto_section", {
+  skip_on_cran()
   tl <- list(Alpha = rtftable(data.frame(x = 1)), Beta = rtftable(data.frame(x = 2)))
   titles_of <- function(fmt) {
     s <- .at_rs(rtf_tables(rtf_document(style = rtf_style(title_format = fmt)), tl,
@@ -437,6 +453,7 @@ test_that("FT-TB720 [FR-TB574]: auto_title writes the name the same under either
 })
 
 test_that("FT-TB721 [FR-TB124]: max_rows is optional for split = \"by_value\": a value's longer page is cut, the pages keeping its name", {
+  skip_on_cran()
   bv <- data.frame(g = rep(c("A", "B"), c(5, 2)), v = 1:7)
   p <- as_rtftables(bv, split = "by_value", group_col = "g", max_rows = 2)
   expect_identical(names(p), c("A...1", "A...2", "A...3", "A...4", "B"))
@@ -458,12 +475,14 @@ test_that("FT-TB721 [FR-TB124]: max_rows is optional for split = \"by_value\": a
 })
 
 test_that("FT-TB722 [FR-TB151]: as_rtftables(first_rows = ) with split = \"by_value\" stops", {
+  skip_on_cran()
   bv <- data.frame(g = rep(c("A", "B"), c(5, 2)), v = 1:7)
   expect_error(as_rtftables(bv, split = "by_value", group_col = "g", first_rows = 2),
                "`first_rows` paginates by rows or groups: not split = \"by_value\".", fixed = TRUE)
 })
 
 test_that("FT-TB723 [FR-TB116]: a list input names its pages, several pages of one input with the \"...n\" tail", {
+  skip_on_cran()
   df <- data.frame(x = 1:6)
   p <- as_rtftables(list(X = df, Y = df[1:2, , drop = FALSE]), split = "group_force",
                     max_rows = 3, min_group_rows = 0)
@@ -475,6 +494,7 @@ test_that("FT-TB723 [FR-TB116]: a list input names its pages, several pages of o
 })
 
 test_that("FT-TB724 [FR-TB121 FR-TB126 FR-TB139]: the examples of as_rtftables() give the pages they say", {
+  skip_on_cran()
   df <- data.frame(Parameter = c("Age", "  Mean", "  SD", "Sex", "  F", "  M"),
                    Value = c("", "75.1", "8.2", "", "53%", "47%"))
   rows <- function(p) unname(vapply(p, function(x) nrow(x$data), 1L))
@@ -487,6 +507,7 @@ test_that("FT-TB724 [FR-TB121 FR-TB126 FR-TB139]: the examples of as_rtftables()
 })
 
 test_that("FT-TB725 [FR-TB575]: group_force cuts every max_rows rows where group_safe keeps the groups whole", {
+  skip_on_cran()
   g <- data.frame(lab = unlist(lapply(1:10, function(i) c(paste("G", i), "  a", "  b", "  c"))),
                   v = "1")
   printed <- function(split) {
@@ -503,6 +524,7 @@ test_that("FT-TB725 [FR-TB575]: group_force cuts every max_rows rows where group
 })
 
 test_that("FT-TB726 [FR-TB576]: a dropped group_col still names by_value pages, and hides the group_force marker", {
+  skip_on_cran()
   gd <- data.frame(grp = c("G1", "G1", "G1", "G2"), lab = c("a", "b", "c", "d"))
   p <- as_rtftables(gd, split = "by_value", group_col = "grp", drop_cols = "grp")
   expect_identical(names(p), c("G1", "G2"))
@@ -518,6 +540,7 @@ test_that("FT-TB726 [FR-TB576]: a dropped group_col still names by_value pages, 
 })
 
 test_that("FT-TB754 [FR-TB139]: as_rtftables(blank_rows = -1) puts a blank after the body's last row, on the last page", {
+  skip_on_cran()
   # -1 used to be dropped as a negative position (fixed in this audit); it is
   # the whole body's last row, not each page's (#1028)
   df <- data.frame(x = sprintf("r%d", 1:5))
@@ -530,6 +553,7 @@ test_that("FT-TB754 [FR-TB139]: as_rtftables(blank_rows = -1) puts a blank after
 })
 
 test_that("FT-TB772 [FR-TB162]: as_rtftables(header_sep = ) splits on each separator as literal text, a \"\\E\" too", {
+  skip_on_cran()
   hdr <- function(nm, sep) {
     df <- stats::setNames(data.frame("a", "1", "2"), nm)
     as_rtftables(df, header_sep = sep)[[1L]]$col_header
@@ -547,6 +571,7 @@ test_that("FT-TB772 [FR-TB162]: as_rtftables(header_sep = ) splits on each separ
 })
 
 test_that("FT-TB980 [FR-TB618]: a flextable caption set with as_paragraph() is read as its text", {
+  skip_on_cran()
   skip_if_not_installed("flextable")
   d <- data.frame(a = c("x", "y"), b = c("1", "2"))
   ft <- flextable::set_caption(flextable::flextable(d),
@@ -561,6 +586,7 @@ test_that("FT-TB980 [FR-TB618]: a flextable caption set with as_paragraph() is r
 })
 
 test_that("FT-TB981 [FR-TB619]: a flextable line break is read as one and written as \\line", {
+  skip_on_cran()
   skip_if_not_installed("flextable")
   d <- data.frame(a = c("x", "y"), b = c("1", "2"))
   ft <- flextable::compose(flextable::flextable(d), i = 1L, j = 1L,
@@ -573,6 +599,7 @@ test_that("FT-TB981 [FR-TB619]: a flextable line break is read as one and writte
 })
 
 test_that("FT-TB982 [FR-TB620]: a flextable or huxtable with no header rows gives a blank header, not V1 V2", {
+  skip_on_cran()
   skip_if_not_installed("flextable")
   skip_if_not_installed("huxtable")
   d <- data.frame(a = c("x", "y"), b = c("1", "2"))
@@ -589,6 +616,7 @@ test_that("FT-TB982 [FR-TB620]: a flextable or huxtable with no header rows give
 })
 
 test_that("FT-TB983 [FR-TB621]: a merged flextable area is read once, in its first cell", {
+  skip_on_cran()
   skip_if_not_installed("flextable")
   d <- data.frame(g = c("A", "A", "B"), h = c("p", "p", "q"), n = c("1", "2", "3"))
   ft <- flextable::flextable(d)
@@ -608,6 +636,7 @@ test_that("FT-TB983 [FR-TB621]: a merged flextable area is read once, in its fir
 })
 
 test_that("FT-TB984 [FR-TB622]: a merged huxtable area is read once, an add_footnote() row prints its text once", {
+  skip_on_cran()
   skip_if_not_installed("huxtable")
   d <- data.frame(g = c("A", "A", "B"), n = c("1", "2", "3"), m = c("4", "5", "6"))
   hx <- huxtable::as_hux(d)
@@ -636,6 +665,7 @@ test_that("FT-TB984 [FR-TB622]: a merged huxtable area is read once, an add_foot
 })
 
 test_that("FT-TB985 [FR-TB623]: a flextable footer row of several values is one line, joined by a space", {
+  skip_on_cran()
   skip_if_not_installed("flextable")
   d <- data.frame(a = c("x", "y"), b = c("1", "2"))
   ft <- flextable::add_footer_row(flextable::flextable(d), values = c("L", "R"),
@@ -649,6 +679,7 @@ test_that("FT-TB985 [FR-TB623]: a flextable footer row of several values is one 
 })
 
 test_that("FT-TB986 [FR-TB624]: huxtable header cells are read without their padding, the body keeps its own", {
+  skip_on_cran()
   skip_if_not_installed("huxtable")
   d <- data.frame(a = c("1.5", "22.25"), b = c("x", "y"))
   hx <- huxtable::as_hux(d)
@@ -668,6 +699,7 @@ test_that("FT-TB986 [FR-TB624]: huxtable header cells are read without their pad
 })
 
 test_that("FT-TB987 [FR-TB625]: a huxtable markdown cell is read without its trailing newline", {
+  skip_on_cran()
   skip_if_not_installed("huxtable")
   d <- data.frame(a = c("**bold**", "plain"), b = c("1", "2"))
   hx <- huxtable::set_markdown(huxtable::as_hux(d), 2L, 1L)

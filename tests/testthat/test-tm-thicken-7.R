@@ -9,6 +9,7 @@
 # ----------------------------------------------------------------------- FM
 
 test_that("FT-FM5701 [FR-FM178]: a count of 0, or a missing or infinite percent, prints the count alone, padded to the cell width", {
+  skip_on_cran()
   # "%3d" + 7 spaces: 3 + 7 = 10 characters, the width of every branch
   alone <- "  5       "
   expect_identical(fmt_count_pct(5L, NA_real_, na = "-", nbsp = " "), alone)  # the FR's example
@@ -26,6 +27,7 @@ test_that("FT-FM5701 [FR-FM178]: a count of 0, or a missing or infinite percent,
 })
 
 test_that("FT-FM5702 [FR-FM184]: pct_sign = TRUE puts a % before the parenthesis and widens every branch to 11; FALSE is the default", {
+  skip_on_cran()
   # branches (pct_unit = "fraction"): below 10, 10 to 99, 100 or more, count alone
   # "%3d  (%3.1f%%)" = 3+2+1+3+1+1 = 11; "%3d (%4.1f%%)" = 3+1+1+4+1+1 = 11;
   # "%3d  (%3d%%)" = 3+2+1+3+1+1 = 11; "%3d" + 8 spaces = 11
@@ -47,6 +49,7 @@ test_that("FT-FM5702 [FR-FM184]: pct_sign = TRUE puts a % before the parenthesis
 })
 
 test_that("FT-FM5703 [FR-FM200]: the count_pct alignment gives matching cells one width and keeps a percent's own digits", {
+  skip_on_cran()
   count_pct <- function(x, ...) {
     df <- data.frame(lab = seq_along(x), a = x, stringsAsFactors = FALSE)
     .t7_plain(as_rtftables(df, align_count_pct = TRUE, ...)[[1L]]$data$a)
@@ -68,6 +71,7 @@ test_that("FT-FM5703 [FR-FM200]: the count_pct alignment gives matching cells on
 })
 
 test_that("FT-FM5704 [FR-FM205]: the count_pct alignment pads with the non-breaking space, as fmt_count_pct() does", {
+  skip_on_cran()
   x <- c("5 (5.0)", "14 (50.0)")
   def <- rtfreporter:::.realign_count_pct(x)
   expect_identical(def, c("\u00a0\u00a05\u00a0\u00a0(5.0)", "\u00a014\u00a0(50.0)"))
@@ -82,6 +86,7 @@ test_that("FT-FM5704 [FR-FM205]: the count_pct alignment pads with the non-break
 })
 
 test_that("FT-FM5705 [FR-FM222]: a cell already holding the na token is aligned like a missing cell; other text stays unchanged", {
+  skip_on_cran()
   x <- c("1 (1.2%)", "-", NA, "NE", "n/a", "75.2 (8.6)")
   out <- fmt_count_paren(x, na = "-", nbsp = " ")
   # the count field is 1 wide; "1 (1.2%)" is 8 wide: the token + 7 spaces
@@ -96,6 +101,7 @@ test_that("FT-FM5705 [FR-FM222]: a cell already holding the na token is aligned 
 })
 
 test_that("FT-FM5706 [FR-FM254]: a nbsp that is not one string stops, and so does a pct_sign that is not TRUE or FALSE", {
+  skip_on_cran()
   nb <- "`nbsp` must be a single string -- the padding character, \"\\u00a0\" by default."
   for (bad in list(NA, NA_character_, c(" ", "."), 1, character(0))) {
     expect_error(fmt_count_pct(1L, 0.5, nbsp = bad), nb, fixed = TRUE)
@@ -112,6 +118,7 @@ test_that("FT-FM5706 [FR-FM254]: a nbsp that is not one string stops, and so doe
 })
 
 test_that("FT-FM5707 [FR-FM150]: fmt_numeric() text renders as written, without scientific notation, and is what set_decimal_split() splits on", {
+  skip_on_cran()
   op <- options(scipen = -9)
   on.exit(options(op), add = TRUE)
   d <- data.frame(lab = c("a", "b", "c"), v = c(123456, 1e10, 1 / 3))
@@ -168,6 +175,7 @@ test_that("FT-FM5707 [FR-FM150]: fmt_numeric() text renders as written, without 
 }
 
 test_that("FT-IX5701 [FR-IX123]: a header and a footer in their own font both start in the document's font", {
+  skip_on_cran()
   doc <- rtf_document() |>
     rtf_section(page = 1, secinfo = list(
       header = rtf_header(c(l = "HEADX"), font = "Arial"),
@@ -186,6 +194,7 @@ test_that("FT-IX5701 [FR-IX123]: a header and a footer in their own font both st
 })
 
 test_that("FT-IX5702 [FR-IX201]: plan_cells(value = ) changes a cell only with stats = \"rows\"; with templates {x} reads stat_fmt, else stat", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   tab <- function(ard, ...) plan_apply(table_plan(ard, cols = "TRT") |> plan_cells(..., notes = FALSE), "table")
   # stats = "rows": value picks the column the cells hold
   by_stat <- tab(.t7_ard(), stats = "rows")                    # value = "stat" (the default)
@@ -204,6 +213,7 @@ test_that("FT-IX5702 [FR-IX201]: plan_cells(value = ) changes a cell only with s
 })
 
 test_that("FT-IX5703 [FR-IX303]: font_table, page and font_lang default from the rtfreporter.* option; an explicit argument beats it", {
+  skip_on_cran()
   old <- options(rtfreporter.font = "Arial", rtfreporter.page.paper_size = "A4",
                  rtfreporter.font_lang = c(east_asian = "ja"))
   on.exit(options(old), add = TRUE)
@@ -227,6 +237,7 @@ test_that("FT-IX5703 [FR-IX303]: font_table, page and font_lang default from the
 })
 
 test_that("FT-IX5704 [FR-IX305]: rtf_config() merges page and style per key, and replaces font_table, color_table, watermark and font_lang whole", {
+  skip_on_cran()
   d <- rtf_document(
     page = rtf_page(paper_size = "A4", orientation = "portrait"),
     style = rtf_style(font_size_half_points = 20L, row_height_twips = 300L),
@@ -256,6 +267,7 @@ test_that("FT-IX5704 [FR-IX305]: rtf_config() merges page and style per key, and
 })
 
 test_that("FT-IX5705 [FR-IX322]: drop_cols: col_header is written against the printed columns, col_spec against the input columns", {
+  skip_on_cran()
   df <- data.frame(A = c("a1", "a2"), B = c("b1", "b2"), C = c("c1", "c2"),
                    D = c("d1", "d2"), E = c("e1", "e2"), stringsAsFactors = FALSE)
   # B is dropped: four printed columns A C D E, so a header row of four labels fits ...
@@ -280,6 +292,7 @@ test_that("FT-IX5705 [FR-IX322]: drop_cols: col_header is written against the pr
 })
 
 test_that("FT-IX5706 [FR-IX323]: sort_by is applied first: cell_styles follow their rows, and a sort key may be a column that is dropped", {
+  skip_on_cran()
   df <- data.frame(grp = c("B", "A", "B", "A"), ord = c(2, 1, 1, 2),
                    Label = c("b2", "a1", "b1", "a2"), stringsAsFactors = FALSE)
   cs <- list(
@@ -304,6 +317,7 @@ test_that("FT-IX5706 [FR-IX323]: sort_by is applied first: cell_styles follow th
 })
 
 test_that("FT-IX5707 [FR-IX342]: paginate_cols() refuses to cut inside a selector span, and cuts at its boundary", {
+  skip_on_cran()
   x <- data.frame(lab = c("r1", "r2"), `Placebo____D1` = 1:2, `Placebo____D2` = 3:4,
                   `Drug____D1` = 5:6, `Drug____D2` = 7:8, check.names = FALSE)
   tb <- rtftable(x, col_header = rtf_col_header(list(
@@ -320,6 +334,7 @@ test_that("FT-IX5707 [FR-IX342]: paginate_cols() refuses to cut inside a selecto
 })
 
 test_that("FT-IX5708 [FR-IX344]: layout = \"flow\" with a width makes the separator a break opportunity; with no width both layouts return the text as it stands", {
+  skip_on_cran()
   d <- data.frame(AEDECOD = "40/F/SCREENING/COMPLETED", stringsAsFactors = FALSE)
   one <- function(layout, width = NULL) {
     build_listing(d, listing_spec(list(
@@ -333,6 +348,7 @@ test_that("FT-IX5708 [FR-IX344]: layout = \"flow\" with a width makes the separa
 })
 
 test_that("FT-IX5709 [FR-IX348]: listing_spec(type = \"multiline\") supplies defaults and an explicit argument overrides each of them", {
+  skip_on_cran()
   base <- listing_spec(list(listing_col("A")))
   expect_identical(base$type, "multiline")
   expect_identical(base$sep, "/")
@@ -365,6 +381,7 @@ test_that("FT-IX5709 [FR-IX348]: listing_spec(type = \"multiline\") supplies def
 })
 
 test_that("FT-IX5710 [FR-IX350]: listing_col(rel_width = ) wins over width; without it the width, then the longest line of the label", {
+  skip_on_cran()
   d <- data.frame(A = "a", B = "b", C = "c", D = "d", E = "e", stringsAsFactors = FALSE)
   spec <- listing_spec(list(
     listing_col("A", width = 11, rel_width = 20),         # rel_width
@@ -377,6 +394,7 @@ test_that("FT-IX5710 [FR-IX350]: listing_col(rel_width = ) wins over width; with
 })
 
 test_that("FT-IX5711 [FR-IX356]: the gutters of listing_spec(spacer, spacer_rel_width) come out of the character budget before any column is fitted", {
+  skip_on_cran()
   d <- data.frame(USUBJID = sprintf("PILOT-20%d-10%02d", rep(4:6, each = 4), 1:12),
                   AEDECOD = rep(c("HYPERGLYCAEMIA", "UPPER RESPIRATORY TRACT INFECTION"), 6),
                   AETOXGR = rep(c("3", "4", "3", "2"), 3), stringsAsFactors = FALSE)
@@ -393,6 +411,7 @@ test_that("FT-IX5711 [FR-IX356]: the gutters of listing_spec(spacer, spacer_rel_
 })
 
 test_that("FT-IX5712 [FR-IX357]: collapse_repeats = TRUE with blank rows prints the value once across records, and still does without them", {
+  skip_on_cran()
   d <- data.frame(USUBJID = c("S1", "S1", "S2", "S2"),
                   AEDECOD = c("Cough", "Headache", "Nausea", "Rash"), stringsAsFactors = FALSE)
   printed <- function(...) {
@@ -414,6 +433,7 @@ test_that("FT-IX5712 [FR-IX357]: collapse_repeats = TRUE with blank rows prints 
 })
 
 test_that("FT-IX5713 [FR-IX318]: as_rtftables(listing = ) supplies defaults only: a collapse_repeats the caller passes beats the one the listing marks", {
+  skip_on_cran()
   d <- data.frame(USUBJID = c("S1", "S1", "S2", "S2"),
                   AEDECOD = c("Cough", "Headache", "Nausea", "Rash"), stringsAsFactors = FALSE)
   spec <- listing_spec(list(listing_col("USUBJID", label = "Subject", collapse_repeats = TRUE),
@@ -432,6 +452,7 @@ test_that("FT-IX5713 [FR-IX318]: as_rtftables(listing = ) supplies defaults only
 })
 
 test_that("FT-IX5714 [FR-IX368]: widen_ard(value = ) changes a cell only with stats = \"rows\"; with stats = \"cells\" each token says which value it takes", {
+  skip_on_cran()
   ard <- .t7_ard()
   rows <- function(...) widen_ard(ard, cols = "TRT", stats = "rows", notes = FALSE, ...)
   # rows: value is the column the cells hold
@@ -451,6 +472,7 @@ test_that("FT-IX5714 [FR-IX368]: widen_ard(value = ) changes a cell only with st
 })
 
 test_that("FT-IX5715 [FR-IX373]: widen_ard(sort = FALSE) still sorts on a factor key and on a label column that levels ordered; only a plain key stays", {
+  skip_on_cran()
   # a factor key (levels A, B) over data written B first
   d <- data.frame(PARAM = factor(c("B", "B", "A", "A"), levels = c("A", "B")),
                   TRT = c("x", "y", "x", "y"), variable = "V",
@@ -477,6 +499,7 @@ test_that("FT-IX5715 [FR-IX373]: widen_ard(sort = FALSE) still sorts on a factor
 })
 
 test_that("FT-IX5716 [FR-IX378]: normalize_ard(drop_contexts = ) decides whether the study total survives", {
+  skip_on_cran()
   ard <- rbind(
     data.frame(group1 = NA_character_, group1_level = NA_character_,
                variable = "..ard_total_n..", variable_level = NA_character_,
@@ -499,6 +522,7 @@ test_that("FT-IX5716 [FR-IX378]: normalize_ard(drop_contexts = ) decides whether
 })
 
 test_that("FT-IX5717 [FR-IX380]: assemble_rtf(toc = ) as a table or the path of one, with input_files left out, takes the table's file column in the table's order", {
+  skip_on_cran()
   mk <- function(dir, file, no, title, mark) {
     doc <- rtf_document() |>
       rtf_section(page = 1, secinfo = list(
@@ -538,6 +562,7 @@ test_that("FT-IX5717 [FR-IX380]: assemble_rtf(toc = ) as a table or the path of 
 })
 
 test_that("FT-IX5718 [FR-IX386]: rtf_figures(width_twips, height_twips) set the size on the page; render_width / render_height only the inches drawn", {
+  skip_on_cran()
   skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
   old <- options(rtfreporter.png_device = "png")
   on.exit(options(old), add = TRUE)
@@ -562,6 +587,7 @@ test_that("FT-IX5718 [FR-IX386]: rtf_figures(width_twips, height_twips) set the 
 })
 
 test_that("FT-IX5719 [FR-IX359]: an explicit rounding = on a call wins over options(rtfreporter.rounding), in either direction", {
+  skip_on_cran()
   old <- options(rtfreporter.rounding = "sas")
   on.exit(options(old), add = TRUE)
   df <- data.frame(v = 2.5)
@@ -584,6 +610,7 @@ test_that("FT-IX5719 [FR-IX359]: an explicit rounding = on a call wins over opti
 })
 
 test_that("FT-IX5720 [FR-IX362]: small decides what digits means below 1: signif counts from the first significant digit, fixed counts the integer part", {
+  skip_on_cran()
   # 0.0004567 at 4 digits: signif keeps 4 significant digits, fixed keeps 3 decimals
   expect_identical(fmt_signif(0.0004567, 4), "0.0004567")
   expect_identical(fmt_signif(0.0004567, 4, small = "fixed"), "0.000")
@@ -595,6 +622,7 @@ test_that("FT-IX5720 [FR-IX362]: small decides what digits means below 1: signif
 })
 
 test_that("FT-IX5721 [FR-IX367]: the na token follows the other cells of the column: its percent sign, and no padding when nothing matches", {
+  skip_on_cran()
   cp <- function(x, ...) {
     df <- data.frame(lab = seq_along(x), a = x, stringsAsFactors = FALSE)
     .t7_plain(as_rtftables(df, align_count_pct = TRUE, ...)[[1L]]$data$a)
@@ -612,6 +640,7 @@ test_that("FT-IX5721 [FR-IX367]: the na token follows the other cells of the col
 })
 
 test_that("FT-FM5708 [FR-FM146]: fmt_signif(digits = ) that is not a single positive integer stops with the function's message", {
+  skip_on_cran()
   msg <- "`fmt_signif(digits = )` must be a single positive integer."
   for (bad in list(0, 0L, -1, 1.5, NA, Inf, c(1, 2), "2", TRUE)) {
     expect_error(fmt_signif(1.234, digits = bad), msg, fixed = TRUE)

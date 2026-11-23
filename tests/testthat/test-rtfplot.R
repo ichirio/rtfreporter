@@ -380,6 +380,7 @@ test_that("png_device chooses the device, and is checked", {
 })
 
 test_that("png_device = \"ragg\" without ragg says so", {
+  skip_on_cran()
   testthat::local_mocked_bindings(requireNamespace = function(...) FALSE,
                                   .package = "base")
   expect_error(rtfreporter:::.rtfplot_png_device("ragg"),

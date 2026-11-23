@@ -39,7 +39,7 @@ has_cards <- requireNamespace("cards", quietly = TRUE)
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE, eval = has_cards)
 knitr::opts_knit$set(root.dir = Sys.getenv("RTFREPORTER_ARTICLE_OUT", tempdir()))
-options(width = 100)
+old_options <- options(width = 100)
 ```
 
 rtfreporter writes clinical **tables, listings and figures** (TFLs) as RTF
@@ -77,7 +77,7 @@ as it is.
 
 This page is the shortest way through the three steps. Each of them in
 detail -- the roles, the cells, the header, and more tables -- is in
-[Tables from an ARD](tables-from-ard.html).
+[Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html).
 
 The table this page writes:
 
@@ -169,7 +169,7 @@ p <- ard |>
 ```
 
 What each verb says, and the names a plan can use: step 1 of
-[Tables from an ARD](tables-from-ard.html#step-1-from-the-ard-straight-to-a-table).
+[Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html#step-1-from-the-ard-straight-to-a-table).
 
 ## 2. The report: `rtf_document()` to `rtf_tables()`
 
@@ -213,28 +213,28 @@ generate_rtfreport(doc, "t_dm.rtf", overwrite = TRUE)
 ## More tables from the same steps
 
 Each of these is one ARD and one table's code in
-[Tables from an ARD](tables-from-ard.html); the verbs named are the lines
+[Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html); the verbs named are the lines
 that differ from the table above. They use
 [pharmaverseadam](https://pharmaverse.github.io/pharmaverseadam/)'s safety
 population, so the arms' N differ from those of cards' `ADSL`.
 
-* [**Adverse events by SOC and PT**](tables-from-ard.html#adverse-events-a-hierarchy-sorted-by-frequency):
+* [**Adverse events by SOC and PT**](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html#adverse-events-a-hierarchy-sorted-by-frequency):
   `ard_stack_hierarchical()`, `normalize_ard(hierarchy = )`, `plan_sort()` by
   frequency within each SOC, pages broken between SOCs.
 
   ![The first page of an adverse-events table: the running header with the study and the page number, the title block, "Any TEAE", then Cardiac disorders and its preferred terms, most frequent first, each as n (%) by arm with (N=xx) in the column header.](../man/figures/get-started-ae.png){width=100%}
 
-* [**Only the common terms, SOCs by frequency**](tables-from-ard.html#only-the-common-terms-socs-by-frequency):
+* [**Only the common terms, SOCs by frequency**](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html#only-the-common-terms-socs-by-frequency):
   `plan_filter(p >= 0.05)` and `plan_sort("-n@SOC", ...)`.
 
   ![Adverse events in 5% or more of subjects: Any TEAE, then General disorders, Skin and subcutaneous tissue disorders and the other SOCs, most frequent first.](../man/figures/get-started-ae5.png){width=100%}
 
-* [**A Total column and a p-value**](tables-from-ard.html#a-total-column-and-a-p-value-plan_total-and-plan_compare):
+* [**A Total column and a p-value**](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html#a-total-column-and-a-p-value-plan_total-and-plan_compare):
   `plan_total()` and `plan_compare()`.
 
   ![Demographics with Placebo, the two Xanomeline arms, a Total column and a p-value column; the p-value sits on the first row of each characteristic.](../man/figures/get-started-dm-p.png){width=100%}
 
-* [**Subgroups, a section per arm**](tables-from-ard.html#subgroups-a-section-per-arm-stack-and-plan_stat_groups):
+* [**Subgroups, a section per arm**](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html#subgroups-a-section-per-arm-stack-and-plan_stat_groups):
   `normalize_ard(stack = )`, `plan_stat_groups()` and
   `plan_paginate_rows(page_by = , heading = )`.
 
@@ -242,11 +242,11 @@ population, so the arms' N differ from those of cards' `ADSL`.
 
 ## Where next on this path
 
-* [Tables from an ARD](tables-from-ard.html) -- the same steps in
+* [Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html) -- the same steps in
   more depth: quartiles, an adverse-events table sorted by frequency within
   a SOC / PT hierarchy and filtered, a Total and a p-value column, and
   subgroups with a section per arm.
-* [The plan verbs](plan-verbs.html) -- every `plan_*()` verb,
+* [The plan verbs](https://ichirio.github.io/rtfreporter/articles/plan-verbs.html) -- every `plan_*()` verb,
   grouped by job, and the rule that a later layer wins.
 * `widen_ard()` -- the ARD half of a plan in one call, giving a data frame
   now instead of a plan to run later.
@@ -254,11 +254,11 @@ population, so the arms' N differ from those of cards' `ADSL`.
 * `rtfreporter_ai_manual(dir, ard = )` -- a folder to give an AI assistant:
   the manual, three complete programs and your ARD's shape, so it writes a
   plan for the version you have.
-* [Rendering, post-processing and assembly](output.html) -- the outputs
+* [Rendering, post-processing and assembly](https://ichirio.github.io/rtfreporter/articles/output.html) -- the outputs
   joined into one deliverable: a cover page, a linked table of contents and
   a bookmark per output, which Word and LibreOffice turn into PDF bookmarks
   when they export it.
-* [Headers, footers and tokens](headers-footers.html) --
+* [Headers, footers and tokens](https://ichirio.github.io/rtfreporter/articles/headers-footers.html) --
   `{PROGRAM_FULL}`, `program_fallback`, `drop_empty_rows` and tokens of your
   own.
 
@@ -287,15 +287,19 @@ doc2 <- rtf_document() |>
 generate_rtfreport(doc2, "t_byo.rtf")
 ```
 
-See [Importing tables with as_rtftables()](importing-tables.html),
+See [Importing tables with as_rtftables()](https://ichirio.github.io/rtfreporter/articles/importing-tables.html),
 [From gt and gtsummary](from-gt.html), [From rtables and tern](from-rtables.html), and the *same report, every
-framework* articles for [demographics](showcase-dm.html) and
-[adverse events](showcase-ae.html).
+framework* articles for [demographics](https://ichirio.github.io/rtfreporter/articles/showcase-dm.html) and
+[adverse events](https://ichirio.github.io/rtfreporter/articles/showcase-ae.html).
 
 ## Listings and figures
 
-* Listings: [Listings with a plan](plan-listings.html) and
-  [Listings end to end](listings.html).
-* Figures: [From a plot object to a page](figures.html).
+* Listings: [Listings with a plan](https://ichirio.github.io/rtfreporter/articles/plan-listings.html) and
+  [Listings end to end](https://ichirio.github.io/rtfreporter/articles/listings.html).
+* Figures: [From a plot object to a page](https://ichirio.github.io/rtfreporter/articles/figures.html).
 * Joining finished files into one deliverable with a table of contents:
-  [Rendering, post-processing and assembly](output.html).
+  [Rendering, post-processing and assembly](https://ichirio.github.io/rtfreporter/articles/output.html).
+
+```{r restore-options, include = FALSE, eval = TRUE}
+options(old_options)
+```

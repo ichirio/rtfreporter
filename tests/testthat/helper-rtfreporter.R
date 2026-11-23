@@ -28,3 +28,44 @@ local_deprecated <- function(...) {
   for (k in c(...)) assign(k, TRUE, envir = st)
   invisible()
 }
+
+# cards::ADAE for the hierarchical AE tables that are slow to widen: on CRAN
+# five of its system organ classes (a small and a large one, the one some
+# tests pin, VASCULAR DISORDERS, among them), anywhere else (CI sets
+# NOT_CRAN=true) all of them.  The tests' checks are the same either way;
+# only the number of SOCs they run over differs.
+.cran_socs <- c("CARDIAC DISORDERS", "EYE DISORDERS", "PSYCHIATRIC DISORDERS",
+                "RENAL AND URINARY DISORDERS", "VASCULAR DISORDERS")
+.cran_adae <- function() {
+  ae <- cards::ADAE
+  if (!.on_cran()) return(ae)
+  ae[ae$AEBODSYS %in% .cran_socs, , drop = FALSE]
+}
+# as testthat::skip_on_cran() decides it: not interactive, NOT_CRAN not "true"
+.on_cran <- function() !interactive() && !isTRUE(as.logical(Sys.getenv("NOT_CRAN", "false")))
+
+# Whether the session's native encoding can hold every character of `x`.  A
+# non-ASCII file name or argument name (a Japanese folder, `p<U+5024> = `)
+# cannot be made in a C locale: R stops ("unable to translate ... to native
+# encoding") or turns it into "<U+5024>".  A UTF-8 locale holds them all.
+native_can_hold <- function(x) {
+  !anyNA(iconv(enc2utf8(as.character(x)), "UTF-8", ""))
+}
+
+# Skip the rest of a test when the native encoding cannot hold `x` -- only
+# for a case that cannot work there at all.  Call it at the end of a block, so
+# the block's other cases have run.
+skip_unless_native_can_hold <- function(x) {
+  skip_if_not(native_can_hold(x), "A non-ASCII name the native encoding cannot hold")
+}
+
+# Run `code` with LC_CTYPE set to C (an ASCII native encoding), the locale put
+# back after; skip when this R cannot set it.
+with_c_ctype <- function(code) {
+  old <- Sys.getlocale("LC_CTYPE")
+  on.exit(Sys.setlocale("LC_CTYPE", old), add = TRUE)
+  if (!nzchar(suppressWarnings(Sys.setlocale("LC_CTYPE", "C")))) {
+    skip("LC_CTYPE cannot be set to C")
+  }
+  force(code)
+}

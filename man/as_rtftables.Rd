@@ -659,18 +659,16 @@ value-based (or the input was a named list) the list is named.
 \description{
 \code{as_rtftables()} is the single entry point for turning a \emph{table object}
 into a list of \code{\link[=rtftable]{rtftable()}} objects -- one per RTF page -- ready to hand
-straight to \code{\link[=rtf_tables]{rtf_tables()}}.  It unifies two jobs that used to be split
-across \code{paginate()} (page splitting) and \code{rtf_tables(read_gt = )} (metadata
-extraction), both removed in 0.9.0:
+straight to \code{\link[=rtf_tables]{rtf_tables()}}.  It does two jobs:
 }
 \details{
 \enumerate{
 \item \strong{Read the table's metadata} (only the parts the RTF renderer can use;
 see \emph{What is carried} below).
 \item \strong{Paginate.}  The rendered body is split into per-page chunks using
-the same strategies the old \code{paginate()} offered (\code{split}, \code{max_rows},
-\code{group_col}, blank-row controls, ...).  The shared header / width /
-spanning metadata is replicated onto every page.
+the strategies \code{split}, \code{max_rows}, \code{group_col}, blank-row controls and
+so on.  The shared header /
+width / spanning metadata is replicated onto every page.
 }
 
 The page-level title / source-note blocks travel with each returned
@@ -789,6 +787,18 @@ finishing a tidy hierarchy-column data.frame into the indented stub
 layout beforehand.
 }
 
+\section{Package versions}{
+
+The minimum gt in DESCRIPTION, 1.1.0, does all of the above except two
+things that need gt 1.4.0 or later:
+\itemize{
+\item a cell style on a member of \code{gt::gt_split(row_every_n = )}: gt before
+1.4.0 stops on it;
+\item rows hidden with \code{gt::rows_hide()}, which gt has from 1.4.0: they are
+left out of the pages, on every member of a \code{gt_split()} as well.
+}
+}
+
 \section{Superseded arguments}{
 
 These \code{...} arguments still work and are handy for simple one-shot tables,
@@ -806,6 +816,15 @@ shows the current header as editable source).
 
 Prefer the verbs for complex headers; the arguments are kept for
 convenience and backward compatibility.
+}
+
+\section{A table_plan}{
+
+\code{as_rtftables(plan)} runs a \code{\link[=table_plan]{table_plan()}} to its pages, as
+\code{plan_apply(plan, "pages")} does.  It takes no other argument: one given
+(\code{as_rtftables(plan, max_rows = 20)}) is an error that names it.  A plan's
+table settings go in \code{\link[=plan_style]{plan_style()}} and the other \verb{plan_*()} verbs
+(\code{\link[=plan_paginate_rows]{plan_paginate_rows()}} for \code{max_rows} and \code{split}).
 }
 
 \section{Supplying a source from another package}{
