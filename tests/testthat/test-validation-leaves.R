@@ -45,6 +45,30 @@ test_that("an FT id is given once: by a test's own name or by traceability_matri
                                 "needs no traceability_matrix.csv row): ", paste(twice, collapse = " ")))
 })
 
+test_that("a requirement id is given once in requirements.csv", {
+  skip_on_cran()
+  # two open PRs can each pick the next free id; the second one's CI runs on
+  # the merge with the first, so a duplicate fails here before it is merged
+  fr <- .leaf_read("requirements.csv")
+  twice <- unique(fr$id[duplicated(fr$id)])
+  expect(!length(twice), paste0("requirements.csv gives these ids twice (another PR took ",
+                                "the id: pick a free one): ", paste(twice, collapse = " ")))
+})
+
+test_that("every FR a test names, in its own name or in traceability_matrix.csv, is in requirements.csv", {
+  skip_on_cran()
+  fr <- .leaf_read("requirements.csv")
+  map <- .leaf_read("traceability_matrix.csv")
+  tb <- .leaf_test_names()
+  named <- grep(.leaf_head, tb$test, value = TRUE)
+  frs <- c(unlist(strsplit(map$fr, " ", fixed = TRUE)),
+           unlist(strsplit(sub(paste0(.leaf_head, ".*$"), "\\2", named), " ", fixed = TRUE)))
+  unknown <- unique(setdiff(frs, fr$id))
+  expect(!length(unknown), paste0("Tests name FR ids that are not in requirements.csv ",
+                                  "(a typo, or the FR was renumbered): ",
+                                  paste(unknown, collapse = " ")))
+})
+
 test_that("every active leaf FR has a test or a deviation with its risk", {
   skip_on_cran()
   fr <- .leaf_read("requirements.csv")
