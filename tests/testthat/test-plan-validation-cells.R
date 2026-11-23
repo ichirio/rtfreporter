@@ -1082,7 +1082,7 @@ test_that("FT-PL6803 [FR-PL993]: a listing with records, or with no plan_empty()
   expect_true(grepl("AETERM", bare, fixed = TRUE))
 })
 
-test_that("FT-PL2060 [FR-PL999]: plan_is_empty() says what plan_empty() judged, once the plan is resolved", {
+test_that("FT-PL2060 [FR-PL1003]: plan_is_empty() says what plan_empty() judged, once the plan is resolved", {
   # invented counts: an overall row and one event, then the same with no event
   ae <- data.frame(ARM = rep(c("Placebo", "Active"), 2),
                    .label = rep(c("Any adverse event", "Headache"), each = 2),
