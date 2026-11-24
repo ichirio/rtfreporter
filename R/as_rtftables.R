@@ -733,7 +733,10 @@
 #'       it, the key repeated with `cont_label`.  A listing with no key
 #'       columns groups on column 1.  These are **defaults** too: `split`,
 #'       `group_col` and `group_by` you pass yourself win, and without
-#'       `max_rows` the listing is one page.}
+#'       `max_rows` the listing is one page.  A record that prints on
+#'       several lines (a cell holding a line break) is kept whole as a
+#'       `listing` record is, by a hidden record column: a page break does
+#'       not fall between its lines unless it is longer than a page.}
 #'   }
 #' @param stub Row-stub settings, as a [stub_spec()] object -- or, as a
 #'   shorthand for `stub_spec(vars)`, a bare vector of hierarchy columns
@@ -1202,6 +1205,23 @@ as_rtftables.default <- function(x,
     cell_styles     <- kw$cell_styles
     titles_block    <- kw$titles_block
     footnotes_block <- kw$footnotes_block
+    # One record of the listing can print on several lines (a cell holding
+    # "\n", #1051).  The record id goes into the hidden record column a
+    # `listing =` listing has, so the same rules keep a record whole: a page
+    # is not cut inside one, and a sort moves it whole.  Not with `page_by`:
+    # a record's BY value is read from its own lines, and rlistings blanks a
+    # repeated key, so the record would key on "" instead of its subject.
+    rec_ids    <- kw$records
+    kw$records <- NULL
+    if (length(rec_ids) == nrow(body) && nrow(body) > 0L &&
+        is.null(page_by)) {
+      rec <- ".rtf_record"
+      body[[rec]]    <- rec_ids
+      listing_record <- rec
+      drop_cols <- if (is.null(drop_cols)) rec else {
+        c(as.list(drop_cols), list(rec))
+      }
+    }
     # A listing pages by subject (#1045): `max_rows` alone gives a
     # "group_safe" split on the first key column, so a subject's rows stay
     # together when they fit -- the default a `listing =` listing has, on
