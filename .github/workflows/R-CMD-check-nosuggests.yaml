@@ -55,6 +55,9 @@ jobs:
           dependencies: '"hard"'
           extra-packages: any::rcmdcheck, any::testthat, any::knitr, any::rmarkdown
           needs: check
+          # its own cache: the default key's prefix also restores the other
+          # jobs' libraries, which hold every suggested package
+          cache-version: nosuggests-1
 
       # some Suggests come in indirectly, as dependencies of testthat, knitr
       # or rmarkdown; this shows which (it never fails)
