@@ -390,27 +390,26 @@
          "\\loch\\f", idx("latin"), lw(c("\\lang", "\\langnp"), "latin"))
 }
 
-# The document-level words a slotted default adds to the RTF header: the
+# The document-level words the default font adds to the RTF header: the
 # associated default (\adeff), the style-sheet default fonts per class
 # (\stshfdbch / \stshfloch / \stshfhich / \stshfbi) and the default languages
 # (\deflangfe / \adeflang; \deflang replaces the fixed 1033 when `font_lang`
-# names a latin language).  An unslotted, untagged document gets its header
-# back unchanged.
+# names a latin language).  The five font words are written for every
+# document, each the index of the font the default gives that class: for a
+# default of one family that is its own index (0) in all five (#1110).
+# Without them Word takes its own East Asian default (Yu Mincho in Japanese
+# Word) for text that names no font, such as the final paragraph mark.
 .font_header_rtf <- function(header_open, map) {
   default <- attr(map, "default", exact = TRUE)
   lcid    <- attr(map, "lcids", exact = TRUE)
   if (is.null(lcid)) return(header_open)
-  extra <- ""
-  if (.is_slotted(default)) {
-    cs <- attr(map, "charsets", exact = TRUE)
-    r  <- .resolve_slots(default)
-    i  <- function(s) {
-      as.integer(map[[match(.font_entry_key(r[[s]], cs[[s]]), names(map))]])
-    }
-    extra <- sprintf("\\adeff%d\\stshfdbch%d\\stshfloch%d\\stshfhich%d\\stshfbi%d",
-                     i("complex"), i("east_asian"), i("latin"), i("hansi"),
-                     i("complex"))
-  }
+  cs   <- attr(map, "charsets", exact = TRUE)
+  keys <- stats::setNames(rep_len(.font_spec_keys(default, cs), length(.FONT_SLOTS)),
+                          .FONT_SLOTS)
+  i <- function(s) as.integer(map[[match(keys[[s]], names(map))]])
+  extra <- sprintf("\\adeff%d\\stshfdbch%d\\stshfloch%d\\stshfhich%d\\stshfbi%d",
+                   i("complex"), i("east_asian"), i("latin"), i("hansi"),
+                   i("complex"))
   if (!is.na(lcid[["latin"]])) {
     header_open <- sub("\\deflang1033", paste0("\\deflang", lcid[["latin"]]),
                        header_open, fixed = TRUE)
@@ -421,7 +420,6 @@
   if (!is.na(lcid[["complex"]])) {
     extra <- paste0(extra, "\\adeflang", lcid[["complex"]])
   }
-  if (!nzchar(extra)) return(header_open)
   sub("\\uc1", paste0(extra, "\\uc1"), header_open, fixed = TRUE)
 }
 

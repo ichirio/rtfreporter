@@ -108,8 +108,8 @@
 #' Every `font =` (a table, a header/footer band, titles, footnotes, a
 #' watermark, `plan_style()`, the `font_table` entries and
 #' `options(rtfreporter.font =)`) takes either one family name -- which keeps
-#' its old meaning and writes exactly the same RTF -- or a named character
-#' vector with a family per script slot:
+#' its old meaning -- or a named character vector with a family per script
+#' slot:
 #'
 #' * `latin`: ASCII and the high-ANSI range (Latin, Greek, Cyrillic);
 #'   RTF `\loch\f` / `\hich\af`.  Required.
@@ -118,9 +118,11 @@
 #' * `hansi` (optional): overrides `latin` for the high-ANSI range only.
 #'
 #' A slot an element leaves out takes the document default's family for that
-#' slot, else the element's `latin`.  A slotted document default also writes
-#' the document-level defaults Word uses for new text (`\adeff`,
-#' `\stshfdbch`, `\stshfloch`, `\stshfhich`, `\stshfbi`).  Use
+#' slot, else the element's `latin`.  The document default also gives the
+#' document-level defaults Word uses for text that names no font (`\adeff`,
+#' `\stshfdbch`, `\stshfloch`, `\stshfhich`, `\stshfbi`): each is the
+#' default's family for that class, so a default of one family names itself
+#' in all five, and Word does not put its own East Asian default in.  Use
 #' `font_lang` to tag a slot with its language, e.g.
 #' `rtf_document(font_table = list(list(name = c(latin = "Times New Roman",
 #' east_asian = "MS Mincho"))), font_lang = c(east_asian = "ja"))`.

@@ -32,9 +32,9 @@
 #   file malformed is an error                              | FR-DC124    | FT-DC265
 #   style: one rtf_style(); NULL none                       | FR-DC317    | FT-DC231
 #   style: a module's own argument wins                     | FR-DC315    | FT-DC236
-#   fonts per script: one family writes the same RTF        | FR-DC103    | FT-DC077
+#   fonts per script: one family keeps its meaning          | FR-DC103    | FT-DC077
 #   a slot left out: the default's family, else latin;      | FR-DC339    | FT-DC266
-#     a slotted default writes \adeff / \stshf*             |             |
+#     every default writes \adeff / \stshf* (#1110)         |             |
 #   @return: document / contents / sections                 | FR-DC101    | FT-DC056
 #   example: render after rtf_tables()                      | FR-DC268    | FT-DC160
 #
@@ -304,8 +304,9 @@ test_that("FT-DC266 [FR-DC339]: a slot an element leaves out takes the document 
   # the default's (f1), its complex slot its own latin (f2)
   expect_true(grepl("\\rtlch\\af2\\ltrch\\hich\\af2\\dbch\\af1\\loch\\f2 \\b TTL", s, fixed = TRUE))
   expect_true(grepl("\\adeff0\\stshfdbch1\\stshfloch0\\stshfhich0\\stshfbi0", s, fixed = TRUE))
-  # a document font with no slots writes none of them
-  expect_false(grepl("stshf", .au_rs(.au_one()), fixed = TRUE))
+  # a document font with no slots writes them too, each its own index (#1110)
+  expect_true(grepl("\\adeff0\\stshfdbch0\\stshfloch0\\stshfhich0\\stshfbi0",
+                    .au_rs(.au_one()), fixed = TRUE))
 })
 
 test_that("FT-DC267 [FR-DC127 FR-DC128 FR-DC129 FR-DC130 FR-IX305]: rtf_config() changes what is passed, merging page and style, replacing the rest", {

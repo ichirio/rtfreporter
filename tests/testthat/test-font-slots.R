@@ -17,8 +17,9 @@
                                 stringsAsFactors = FALSE)
 
 # The documents the byte-identity fixtures were written from (by the code
-# before font slots existed).  Regenerate the fixtures only when a deliberate
-# change elsewhere alters this output.
+# before font slots existed; written again for #1110, which added the header's
+# \adeff0\stshfdbch0\stshfloch0\stshfhich0\stshfbi0).  Regenerate the fixtures
+# only when a deliberate change elsewhere alters this output.
 .slot_base_doc <- function(font = NULL, tfont = NULL, hfont = NULL,
                            wm = NULL, tf = "table") {
   df <- data.frame(a = c("x", "\u65e5\u672c\u8a9e"), b = c("1", "caf\u00e9"),
@@ -216,7 +217,9 @@ test_that("font_lang writes the language words of every slot", {
       rtf_tables(rtftable(.ja_df(), font = c(latin = "Arial",
                                              east_asian = "MS Gothic",
                                              complex = "Arial Unicode"))))
+  # (the document default, Courier New, is f0 for every class: #1110)
   expect_equal(l[1L], paste0("{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033",
+                             "\\adeff0\\stshfdbch0\\stshfloch0\\stshfhich0\\stshfbi0",
                              "\\deflangfe1041\\adeflang1025\\uc1"))
   expect_match(.fonttbl(l), "\\fcharset178 Arial Unicode;", fixed = TRUE)
   expect_match(.line_of(l, "\\u24180?"), paste0(
@@ -238,6 +241,43 @@ test_that("a slotted document default writes the document-level defaults", {
   run0 <- "\\rtlch\\af0\\ltrch\\hich\\af0\\dbch\\af1\\langfe1041\\loch\\f0"
   expect_match(.line_of(l, "\\u24180?"), run0, fixed = TRUE)
   expect_match(.line_of(l, "{\\header"), run0, fixed = TRUE)
+})
+
+test_that("FT-DC6806 [FR-DC390]: a document font without slots writes \\adeff and the four \\stshf words with its own index; a slotted document's header is unchanged", {
+  head0 <- paste0("{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033",
+                  "\\adeff0\\stshfdbch0\\stshfloch0\\stshfhich0\\stshfbi0")
+  # one font, no slots: the font table is that one family, the header names
+  # it (index 0) for every class
+  one <- rtf_document(font_table = list(list(name = "Courier New"))) |>
+    rtf_tables(rtftable(.ja_df()))
+  l <- .run_slots(one)
+  expect_equal(.fonttbl(l), "{\\fonttbl{\\f0\\fnil\\fcharset0 Courier New;}}")
+  expect_equal(l[1L], paste0(head0, "\\uc1"))
+  # the default of options(rtfreporter.font =) is the same
+  expect_equal(.run_slots(rtf_document() |> rtf_tables(rtftable(.ja_df())))[1L],
+               paste0(head0, "\\uc1"))
+  # a second family an element asks for does not move the default's index
+  l <- .run_slots(rtf_titles(one, list("T"), font = "Arial"))
+  expect_equal(.fonttbl(l), paste0("{\\fonttbl{\\f0\\fnil\\fcharset0 Courier New;}",
+                                   "{\\f1\\fnil\\fcharset0 Arial;}}"))
+  expect_equal(l[1L], paste0(head0, "\\uc1"))
+  # the language words follow the font words, as in a slotted document
+  l <- .run_slots(rtf_config(one, font_lang = c(east_asian = "ja")))
+  expect_equal(l[1L], paste0(head0, "\\deflangfe1041\\uc1"))
+  # a slotted default: the header it wrote before, byte for byte
+  four <- c(latin = "Arial", east_asian = "MS Gothic", complex = "Arial",
+            hansi = "Calibri")
+  l <- .run_slots(rtf_document(font_table = list(list(name = four))) |>
+                    rtf_tables(rtftable(.ja_df())))
+  expect_equal(l[1L], paste0(
+    "{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033\\adeff0\\stshfdbch2",
+    "\\stshfloch0\\stshfhich1\\stshfbi0\\uc1"))
+  l <- .run_slots(rtf_document(font_table = list(list(name = .ja)),
+                               font_lang = c(east_asian = "ja")) |>
+                    rtf_tables(rtftable(.ja_df())))
+  expect_equal(l[1L], paste0(
+    "{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033\\adeff0\\stshfdbch1",
+    "\\stshfloch0\\stshfhich0\\stshfbi0\\deflangfe1041\\uc1"))
 })
 
 test_that("options(rtfreporter.font =, rtfreporter.font_lang =) set the default", {
