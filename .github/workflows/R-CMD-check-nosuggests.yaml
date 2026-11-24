@@ -9,6 +9,9 @@
 # the Quality Report: it uploads no env artifact, and the quality-report job
 # of R-CMD-check.yaml does not wait for it.
 on:
+  # (temporary, to run it once before the pull request; removed before merge)
+  push:
+    branches: [s2/ci-nosuggests]
   pull_request:
     branches: [main]
   release:
