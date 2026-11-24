@@ -21,22 +21,22 @@ site_lines <- function(msg) {
 
 test_that("FT-PLSITE1 [#1147]: a do.call() layer is blamed on its own verb, not an outer plan_cells()", {
   p0 <- table_plan(site_wide())
-  # The outer plan_cells() has its first argument as a promise, evaluated
-  # inside it, so its frame is still on the stack when the do.call() layers
-  # are built -- as in tflplanner's preview.  The old code took that call
-  # for the site of every layer.
-  p <- plan_cells(
+  # The outer verb has its first argument as a promise, evaluated inside
+  # it, so its frame is still on the stack when the do.call() layers are
+  # built -- as tflplanner's preview does with plan_cells(notes = FALSE).
+  # The old code took that call for the site of every layer.  (plan_titles()
+  # here: plan_cells() needs an ARD, and the mechanism is the same.)
+  p <- plan_titles(
     do.call(plan_style, list(
       do.call(plan_style, list(p0, border = "rtf_border(top = TRUE)")),
       border = "rtf_border(bottom = TRUE)")),
-    notes = FALSE)
+    "Table 1")
   msg <- site_msg(plan_apply(p))
   expect_match(msg, "declared by:", fixed = TRUE)
   ln <- site_lines(msg)
   expect_length(ln, 2L)
   expect_true(all(startsWith(ln, "plan_style(")))
-  expect_false(grepl("plan_cells", msg, fixed = TRUE))
-  expect_false(grepl("notes = FALSE", msg, fixed = TRUE))
+  expect_false(grepl("plan_titles", msg, fixed = TRUE))
 })
 
 test_that("FT-PLSITE2 [#1147]: the site of a layer made by name or as rtfreporter::verb() reads plan_style(...)", {
@@ -44,9 +44,10 @@ test_that("FT-PLSITE2 [#1147]: the site of a layer made by name or as rtfreporte
   p1 <- p0 |> plan_style(border = "nope")
   expect_identical(site_lines(site_msg(plan_apply(p1))),
                    "plan_style(border = \"nope\")")
+  # the plan, its first argument, is not shown whether piped or not
   p2 <- rtfreporter::plan_style(p0, border = "nope")
   expect_identical(site_lines(site_msg(plan_apply(p2))),
-                   "plan_style(p0, border = \"nope\")")
+                   "plan_style(border = \"nope\")")
 })
 
 test_that("FT-PLSITE3 [#1147]: the same statement from several layers is listed once with its count", {
