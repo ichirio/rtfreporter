@@ -225,6 +225,11 @@ navbar:
           href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.9.0.md
         - text: "AI developer manual"
           href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-dev-manual-0.9.0.md
+        # ── Migrating ───────────────────────────────────────────────────
+        - text: -------
+        - text: "Migrating"
+        - text: "Migrating from 0.8.x"
+          href: articles/migrating-from-0-8.html
         # ── Validation ──────────────────────────────────────────────────
         - text: -------
         - text: "Validation"
@@ -736,6 +741,14 @@ articles:
       - articles/borders
       - articles/output
       - articles/assembling
+
+  - title: Migrating
+    desc: >
+      What changed from 0.8.x to 0.9.0, the first CRAN release: what was
+      removed or renamed, what behaves differently, and what to write now.
+    navbar: ~
+    contents:
+      - articles/migrating-from-0-8
 
   - title: Validation
     desc: >

@@ -1,0 +1,231 @@
+---
+title: "Migrating from 0.8.x"
+description: >
+  What 0.9.0 removed, renamed and changed since 0.8.2, and what to write
+  instead.
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(eval = FALSE, collapse = TRUE, comment = "#>")
+```
+
+0.9.0 is the first CRAN release. It removes everything that 0.8.x deprecated, and it removes more: `rtf_tables()` no longer takes table-format arguments, and `rtf_default_format()` is gone. A call to a removed function stops with "could not find function". A call with a removed argument stops with "unused argument".
+
+Most of these items gave **no warning in 0.8.2**. The warnings were added after that release. Only `paginate()` and the older border helpers warned in 0.8.2: `rtf_border_top()`, `rtf_border_bottom()`, `rtf_border_box()`, `rtf_border_none()`, `rtf_border_with()`, `rtf_border_tfl()` and `rtf_table_border()`. So code written for 0.8.2 can fail on 0.9.0 with no earlier hint.
+
+The code on this page is not run. It shows what to write.
+
+## Find what to change
+
+Search your programs (R scripts, R Markdown, Quarto) for the names below. Each hit is a call that 0.9.0 does not accept.
+
+```{r find}
+pattern <- paste0(
+  "\\b(rtf_default_format|rtf_border_(none|top|bottom|box|with|tfl|side)|",
+  "rtf_table_border|add_col_header_row|col_header_from_names|set_header_cell|",
+  "update_(header|footer)_row|paginate|assemble_(files|spec|toc|from_spec)|",
+  "toc_(heading|entry)|fmt_count_paren_bare|realign_count_pct|",
+  "format_count_pct)\\s*\\(|",
+  "\\b(default_format|spanning_header|gt_obj|stub_vars|stub_label|",
+  "stub_indent|stub_group_summary|read_gt|toc_page_numbering)\\s*="
+)
+hits <- system2("grep", c("-rnE", shQuote(pattern), "analysis/"), stdout = TRUE)
+```
+
+(`paginate_cols()` is not removed. The pattern stops at `paginate(`.) The pattern does not find the 26 table arguments of `rtf_tables()`, because `rtftable()` keeps their names. Look at each `rtf_tables(` call for `border =`, `col_rel_width =`, `font =` and the others listed [below](#rtf_tables).
+
+## Removed or renamed
+
+### rtf_tables(): table arguments {#rtf_tables}
+
+0.8.2's `rtf_tables()` took 26 arguments for the table's format, and `read_gt`. 0.9.0's signature is:
+
+```{r signature}
+rtf_tables(doc, tables, titles, footnotes, auto_section, section_label_align,
+           auto_title, title_label_align, page_break, first_rows,
+           space_before, cont_title)
+```
+
+A call that passes one of the old arguments stops with "unused argument". The 26 arguments, in the order of 0.8.2's signature:
+
+| Group | Arguments |
+|---|---|
+| Header | `col_header`, `col_header_align`, `spanning_header` |
+| Columns and rows | `col_spec`, `row_title`, `blank_rows`, `blank_row_normalize` |
+| Borders and style | `border`, `style`, `markup` |
+| Widths | `col_rel_width`, `column_widths_twips`, `table_width_twips`, `table_width_pct_of_writable`, `table_width_pct`, `table_align` |
+| Heights | `row_height_twips`, `row_height_exact`, `header_row_height_twips`, `blank_row_height_twips` |
+| Cells | `cell_padding_left_twips`, `cell_padding_right_twips`, `cell_valign` |
+| Font | `font`, `font_size_half_points` |
+| Reading | `read_attributes`, and `read_gt` (removed, see below) |
+
+A table's format is now written where the table is made:
+
+- `rtftable()` takes every one of them under the same name, except `spanning_header` and `read_gt`.
+- `as_rtftables(x, ...)` passes `...` to `rtftable()`.
+- `plan_style()` takes the border, font, font size, row heights, cell paddings, `cell_valign`, `table_align`, `markup`, `blank_row_normalize` and the table widths.
+- `rtf_style(table = list(...))` sets `font`, `font_size_half_points`, the row heights, the paddings, `cell_valign`, `table_align` and `markup` for every table of a document.
+
+The simplest rewrite puts the argument on `rtftable()`:
+
+```{r rtf-tables}
+# 0.8.2
+doc |> rtf_tables(df, font_size_half_points = 18, border = "tfl")
+
+# 0.9.0
+doc |> rtf_tables(rtftable(df, font_size_half_points = 18, border = "tfl"))
+```
+
+`spanning_header` is written as spanning rows inside `col_header`. Each spanning row is a list of `list(from, to, label, underline)`:
+
+```{r spanning}
+# 0.8.2
+rtf_tables(doc, df,
+           col_header = c("Param", "Pbo", "Act", "Pbo", "Act"),
+           spanning_header = list(list(from = 2, to = 3, label = "Week 12"),
+                                  list(from = 4, to = 5, label = "Week 24")))
+
+# 0.9.0
+rtf_tables(doc, rtftable(df,
+  col_header = list(
+    list(list(from = 2, to = 3, label = "Week 12", underline = TRUE),
+         list(from = 4, to = 5, label = "Week 24", underline = TRUE)),
+    c("Param", "Pbo", "Act", "Pbo", "Act"))))
+```
+
+`read_gt` is gone. A gt, gtsummary, rtables, rlistings, flextable or huxtable table passed straight to `rtf_tables()` is read as `as_rtftables()` pages. That is what `read_gt = TRUE` did:
+
+```{r read-gt}
+# 0.8.2
+rtf_tables(doc, gt_tbl, read_gt = TRUE)
+
+# 0.9.0
+rtf_tables(doc, gt_tbl)
+```
+
+For a table from a plan, put the format in `plan_style()`:
+
+```{r plan-style}
+plan |> plan_style(font_size_half_points = 18, border = "tfl")
+```
+
+### Removed functions and arguments
+
+| 0.8.x | 0.9.0 | PR |
+|---|---|---|
+| `rtf_default_format()`, `default_format =` of `rtf_document()` and `rtf_config()` | `rtf_style()`, given as `style =` | #809, #982 |
+| `toc_page_numbering =` of `assemble_rtf()` and `assemble_folder()` | Removed; passing it stops. Every page is numbered in one sequence from page 1. | #1053 |
+| `rtf_border_top()`, `rtf_border_bottom()`, `rtf_border_box()`, `rtf_border_none()` | `rtf_border(top = TRUE)`, `rtf_border(bottom = TRUE)`, `rtf_border(all = TRUE)`, `rtf_border()` | #789 |
+| `rtf_border_tfl()`, `rtf_table_border()`, `rtf_border_with()` | `border = "tfl"` or `rtf_table_style_tfl()`; `border =` of `rtftable()` or `style_zone()`; layer the border where it is attached | #789 |
+| `rtf_border_side()` | `rtf_border_line()` (same arguments) | #539, #789 |
+| `paginate()` | `as_rtftables()` | #789 |
+| `add_col_header_row()`, `col_header_from_names()`, `set_header_cell()` | `rtf_col_header()`, `set_col_header()`, `add_header_row()`, `style_header()`; `header_sep =` of `as_rtftables()` splits delimited names | #789 |
+| `update_header_row()`, `update_footer_row()` | Make the band again with `rtf_header(rows = )` or `rtf_footer(rows = )` | #789 |
+| `assemble_files()`, `assemble_spec()`, `assemble_toc()`, `assemble_from_spec()`, `toc_heading()`, `toc_entry()` | `assemble_folder(dir)` without `output_file` returns the table of contents; `assemble_rtf(toc = )` takes that table or its `.xlsx` / `.csv` path | #539, #789 |
+| `fmt_count_paren_bare(x)` | `fmt_count_paren(x, bare = TRUE)` | #789 |
+| `realign_count_pct()`, cell format `"realign_count_pct"` | `as_rtftables(align_count_pct = TRUE)`, cell format `"count_pct"` | #789 |
+| `format_count_pct()` | `fmt_count_pct()` (same arguments) | #789 |
+| `as_rtftable(gt_obj = )` | `as_rtftable(x = )` | #789 |
+| `as_rtftables(stub_vars, stub_label, stub_indent, stub_group_summary)` | `stub = stub_spec(vars, label =, indent =, group_summary =)` | #789 |
+| `add_cont_label(chunk = )`, `set_blank_rows(df = )`, `auto_col_widths(df = )` | `data = ` | #789 |
+| `size_half_points =` of `text_width_in()`, `auto_col_widths()`, `fit_listing_widths()` | `font_size_half_points =` | #789 |
+| `paginate_cols(cols, by, carry, width, page_order)` | `paginate_cols(cut_by, keep, fit, order)`; `width = "fill"` is `fit = TRUE`, `"keep"` is `fit = FALSE` | #789 |
+| `plan_*(plan = )` named | `plan_*(.plan = )`. A plan piped in by position is unchanged. | #662 |
+| `rtfreporter_ai_manual(file = )` | `rtfreporter_ai_manual(dir = )`. `dir` is now the first argument, so `rtfreporter_ai_manual("dev")` needs `which = "dev"`. | 5272977 |
+
+Kept as they were: `rtf_section(secinfo = )`, the header and styling `...` of `as_rtftables()`, and `generate_rtfreport(report = )`.
+
+A few examples:
+
+```{r examples}
+# rtf_default_format() -> rtf_style()
+doc <- rtf_document(default_format = rtf_default_format(font_size_half_points = 18))   # 0.8.2
+doc <- rtf_document(style = rtf_style(font_size_half_points = 18))                    # 0.9.0
+
+# border helpers -> rtf_border()
+rtf_border_box()                                                                      # 0.8.2
+rtf_border(all = TRUE)                                                                # 0.9.0
+
+# stub arguments -> stub_spec()
+as_rtftables(df, stub_vars = c("soc", "pt"), stub_label = "Term")                     # 0.8.2
+as_rtftables(df, stub = stub_spec(c("soc", "pt"), label = "Term"))                    # 0.9.0
+
+# a table of contents is a table
+toc <- assemble_folder("out/")                                                        # 0.9.0
+assemble_rtf(toc = toc, output_file = "book.rtf")
+```
+
+## One rule for columns: name or position only
+
+Every argument that names a column now reads a column name or a whole position in `1..ncol`, and nothing else. In 0.8.2, `TRUE` and a fraction such as `1.5` were read as column 1, without a word. The usual case is `plan_row_group(collapse = TRUE)`, which meant "column 1". It now stops:
+
+```
+`collapse_repeats` must be a column name or a whole position (1..31), not TRUE
+```
+
+The other arguments say the same with their own name, for example "`sort_by` must be a column name or a whole position (1..8), not 1.5". A factor gives "`sort_by` must be column names or whole positions (1..8)."
+
+The arguments that read a column are:
+
+- `group_col` and `collapse_repeats` of `as_rtftables()` (so `collapse =` of `plan_row_group()`);
+- `sort_by`, `drop_cols` and `page_by` of `as_rtftables()`;
+- `vars` of `stub_cols()` and of `stub = stub_spec(vars = )`;
+- `cols` and `by` of `fmt_numeric()`;
+- `at`, `cut_by` and `keep` of `paginate_cols()`;
+- `cols` of `style_header()`, `style_cols()`, `style_body()` and `set_decimal_split()`.
+
+```{r columns}
+# 0.8.2: TRUE was column 1
+plan |> plan_row_group(collapse = TRUE)
+
+# 0.9.0: write the position, or the row key's name
+plan |> plan_row_group(collapse = 1)
+plan |> plan_row_group(collapse = "Analyte")
+```
+
+## Behaviour that changed
+
+These calls still run, but the output changes or a wrong value now stops.
+
+**Checks on values.** A wrong value used to be coerced or dropped. It now stops.
+
+- `blank_rows` positions must be whole numbers in `-1..nrow`. A position past the last row used to be dropped with a warning (#855).
+- `font_size_half_points`, the row heights and the other twips arguments take one whole number. A fraction, a string, `TRUE` or `NA` stops (#855).
+- An unknown text colour in `style_body()` or `style_cols()` stops; an unknown background warns (#1002).
+- An unknown `read_meta` token stops (#1012).
+- An ARD that states two different counts for one column stops; it printed `N=NA` (#944).
+
+**Plans.**
+
+- A repeated plan verb merges with the earlier call field by field. A second `plan_total()`, `plan_stub()`, `plan_empty()`, `plan_sort()` or `plan_paginate_group()` no longer resets an argument it leaves out (#949):
+
+  ```{r merge}
+  plan |> plan_total(label = "All") |> plan_total(position = "first")
+  # 0.8.2: the label is the default again
+  # 0.9.0: the label stays "All"
+  ```
+
+- `plan_columns(row_title = )` and `plan_row_group(collapse = )` count the printed columns. A page key is never a row group (#635).
+- `plan_style()` with a look field (for example `header_bold`) or `border_group` and no border now draws the default preset's rules (#953, #957).
+- A declared level order now orders a table that has no row keys (#534).
+- `pull_ard(levels = )` returns unnamed values in the data's order (#994).
+
+**Documents.**
+
+- `generate_rtfreport(overwrite = TRUE)` is the default (#594).
+- `rtf_table_style(align = )` is `NULL` by default, so each column keeps its own alignment. Write `align = "left"` for the old look (#522).
+- `{DATE}` is not a token. Write `{DATETIME:%Y-%m-%d}` (#532).
+- A record's blank row is dropped at a page cut. The next page no longer opens with an empty continuation row (#861).
+- `blank_rows` positions count the rows of the whole body. With pagination, a position no longer repeats on every page (#1037).
+
+**Assembling.** `assemble_rtf()` and `assemble_folder()` number every page, the cover and the table of contents included, from page 1, and the total is all pages (#1053). The table of contents has no indent by default; `toc_style = list(indent = )` sets one (#1069). `toc = "auto"` takes all title rows of a file (#1034).
+
+**Adapters.**
+
+- A gt table's row groups are heading rows. gt 0.11.1 or later is needed (#650).
+- A gt spanner is centred. A huxtable spanner takes its cell's alignment (#1039).
+- gt footnote lines start with `^{N}` with the default `read_meta` (#1033).
+- A huxtable's trailing full-width text row moves from the body to the footnotes (#918).
+- An rlistings table, or a list of tables, with `max_rows` and no `split` is paged by the listing defaults. It came out as one page, or one page per element (#1050, #1054).
+
+**Requirements.** R 4.3 or later (0.8.2: R 4.1), and the minimum versions of the suggested packages in `DESCRIPTION` (#919, #1044).
