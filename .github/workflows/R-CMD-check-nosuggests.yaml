@@ -1,0 +1,74 @@
+# R CMD check with none of the Suggests installed, to be ready for CRAN's
+# "noSuggests" additional check, which CRAN runs on a package after it is
+# accepted.  Every suggested package must be behind requireNamespace() /
+# skip_if_not_installed() (or an `eval =` guard in a vignette), or the check
+# fails there.
+#
+# Same triggers as R-CMD-check.yaml, so it runs once with the six
+# environments, and it can be run alone by hand.  It is NOT an environment of
+# the Quality Report: it uploads no env artifact, and the quality-report job
+# of R-CMD-check.yaml does not wait for it.
+on:
+  pull_request:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+name: R-CMD-check-nosuggests
+
+permissions:
+  contents: read
+
+jobs:
+  nosuggests:
+    runs-on: ubuntu-latest
+
+    name: ubuntu-latest (R release, no Suggests)
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+      # a Suggests that is missing must not stop R CMD check by itself; the
+      # tests and vignettes have to cope with it, as on CRAN
+      _R_CHECK_FORCE_SUGGESTS_: false
+      # CRAN's conditions: skip_on_cran() tests skip
+      NOT_CRAN: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      # `hard` = Depends, Imports and LinkingTo only; the extra packages are
+      # what is needed to run the tests and build the vignettes
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          dependencies: '"hard"'
+          extra-packages: any::rcmdcheck, any::testthat, any::knitr, any::rmarkdown
+          needs: check
+
+      # some Suggests come in indirectly, as dependencies of testthat, knitr
+      # or rmarkdown; this shows which (it never fails)
+      - name: What of Suggests is installed
+        shell: Rscript {0}
+        run: |
+          s <- read.dcf("DESCRIPTION", fields = "Suggests")[1, 1]
+          s <- trimws(strsplit(s, ",")[[1L]])
+          s <- s[nzchar(s)]
+          pkg <- sub("\s*[(].*$", "", s)
+          ver <- vapply(pkg, function(p) tryCatch(as.character(utils::packageVersion(p)),
+                                                 error = function(e) "not installed"), "")
+          print(data.frame(suggests = s, installed = ver), row.names = FALSE)
+
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          upload-snapshots: true
+          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+          args: 'c("--no-manual", "--as-cran")'
+          error-on: '"warning"'
