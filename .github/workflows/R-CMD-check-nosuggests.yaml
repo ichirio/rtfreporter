@@ -64,7 +64,7 @@ jobs:
           s <- read.dcf("DESCRIPTION", fields = "Suggests")[1, 1]
           s <- trimws(strsplit(s, ",")[[1L]])
           s <- s[nzchar(s)]
-          pkg <- sub("\s*[(].*$", "", s)
+          pkg <- sub("\\s*[(].*$", "", s)
           ver <- vapply(pkg, function(p) tryCatch(as.character(utils::packageVersion(p)),
                                                  error = function(e) "not installed"), "")
           print(data.frame(suggests = s, installed = ver), row.names = FALSE)
