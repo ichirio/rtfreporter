@@ -36,7 +36,7 @@
     rtf_footnotes(list("Foot"), font = tfont)
 }
 
-# ---- single strings: byte for byte what they always wrote --------------------
+# ---- single strings: byte for byte the fixtures (pre-slot runs; #1110 header) --
 
 test_that("a single-string font writes exactly the pre-slot RTF", {
   fx <- function(n) readLines(test_path("fixtures", "font-slots", n), warn = FALSE)
@@ -253,17 +253,21 @@ test_that("FT-DC6806 [FR-DC390]: a document font without slots writes \\adeff an
   l <- .run_slots(one)
   expect_equal(.fonttbl(l), "{\\fonttbl{\\f0\\fnil\\fcharset0 Courier New;}}")
   expect_equal(l[1L], paste0(head0, "\\uc1"))
-  # the default of options(rtfreporter.font =) is the same
-  expect_equal(.run_slots(rtf_document() |> rtf_tables(rtftable(.ja_df())))[1L],
-               paste0(head0, "\\uc1"))
+  # a default from options(rtfreporter.font =) is the same
+  old <- options(rtfreporter.font = "Arial")
+  on.exit(options(old), add = TRUE)
+  l <- .run_slots(rtf_document() |> rtf_tables(rtftable(.ja_df())))
+  expect_equal(.fonttbl(l), "{\\fonttbl{\\f0\\fnil\\fcharset0 Arial;}}")
+  expect_equal(l[1L], paste0(head0, "\\uc1"))
+  options(old)
   # a second family an element asks for does not move the default's index
   l <- .run_slots(rtf_titles(one, list("T"), font = "Arial"))
   expect_equal(.fonttbl(l), paste0("{\\fonttbl{\\f0\\fnil\\fcharset0 Courier New;}",
                                    "{\\f1\\fnil\\fcharset0 Arial;}}"))
   expect_equal(l[1L], paste0(head0, "\\uc1"))
   # the language words follow the font words, as in a slotted document
-  l <- .run_slots(rtf_config(one, font_lang = c(east_asian = "ja")))
-  expect_equal(l[1L], paste0(head0, "\\deflangfe1041\\uc1"))
+  l <- .run_slots(rtf_config(one, font_lang = c(east_asian = "ja", complex = "ar")))
+  expect_equal(l[1L], paste0(head0, "\\deflangfe1041\\adeflang1025\\uc1"))
   # a slotted default: the header it wrote before, byte for byte
   four <- c(latin = "Arial", east_asian = "MS Gothic", complex = "Arial",
             hansi = "Calibri")

@@ -39,7 +39,8 @@
 #   complex    -- right-to-left / complex scripts                 \rtlch
 .FONT_SLOTS <- c("latin", "hansi", "east_asian", "complex")
 
-# A font argument is either one family name (today's meaning, today's bytes)
+# A font argument is either one family name (its old meaning: one family for
+# every script)
 # or a named vector of families per slot.  A vector naming `latin` alone is
 # the same font as that one string, so it is returned as one.
 .check_font <- function(x, arg) {
@@ -351,8 +352,9 @@
 # key -> index map, and (as attributes of the map, so every renderer that is
 # already handed the map gets them) the slot charsets and LCIDs and the run
 # words an element that names no font writes.  For a single-string default
-# that is "" -- the document's \deff0 already selects it -- and the output is
-# the same as before slots existed.
+# that is "" -- the document's \deff0 already selects it -- so its runs are
+# as they were before slots existed (the header's \adeff / \stshf* words name
+# it too: .font_header_rtf()).
 .font_render_ctx <- function(declared, requested, font_lang = NULL) {
   specs <- .font_specs(declared)
   if (length(specs) == 0L) specs <- list(.opt("rtfreporter.font"))
