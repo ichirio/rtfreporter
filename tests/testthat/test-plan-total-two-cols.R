@@ -95,7 +95,7 @@ test_that("FT-PL6805 [FR-PL994]: each arm's Total column is its overall rows: th
 
 # Lab values by visit: columns the arm, then value / change (the analysis
 # variable) under it; the overall rows carry the variable but no arm.
-.t2c_by_visit <- function() {
+.t2c_by_visit_raw <- function() {
   na <- NA_character_
   vis <- c("WEEK 2", "WEEK 4")
   mean <- list(A = c(AVAL = 10, CHG = 1), B = c(AVAL = 12, CHG = 2),
@@ -115,8 +115,9 @@ test_that("FT-PL6805 [FR-PL994]: each arm's Total column is its overall rows: th
   out$group1_level[ov] <- out$group2_level[ov]
   out$group2[ov] <- na
   out$group2_level[ov] <- na
-  suppressMessages(normalize_ard(out))
+  out
 }
+.t2c_by_visit <- function() suppressMessages(normalize_ard(.t2c_by_visit_raw()))
 
 test_that("FT-PL6806 [FR-PL995]: no overall rows for the inner key: the outer key is folded, the inner kept under its Total", {
   nd <- .t2c_by_visit()
@@ -136,4 +137,108 @@ test_that("FT-PL6806 [FR-PL995]: no overall rows for the inner key: the outer ke
     .t2c_tab(plan_total(table_plan(bare, cols = c("TRT01A", "variable"), rows = "AVISIT") |>
                           plan_cells("{mean}", notes = FALSE))),
     "the ARD has no overall rows, rows without variable.", fixed = TRUE)
+})
+
+# A shift table as a template binds it (#1103): pages by PARAM (a plain
+# text key), columns the arm then the post-baseline category, rows the
+# baseline category; the arms' N (BIGN) tabulated on its own, no PARAM;
+# the Total column's records and the Total row's margins; no factor, so no
+# order for the categories but the data's.
+.t2c_rec3 <- function(g1, l1, g2, l2, g3, l3, var, vl, sn, x) {
+  data.frame(group1 = g1, group1_level = l1, group2 = g2, group2_level = l2,
+             group3 = g3, group3_level = l3, variable = var, variable_level = vl,
+             context = "tabulate", stat_name = sn, stat_label = sn, stat = x,
+             stringsAsFactors = FALSE)
+}
+.t2c_shift_bign <- function() {
+  na <- NA_character_
+  lv <- c("L", "N", "H")
+  n <- list(ALT = list(A = rbind(c(2, 1, 0), c(1, 5, 1), c(0, 1, 2)),
+                       B = rbind(c(1, 1, 0), c(2, 4, 1), c(0, 2, 1))),
+            HGB = list(A = rbind(c(3, 0, 0), c(1, 4, 0), c(0, 2, 3)),
+                       B = rbind(c(0, 2, 1), c(1, 3, 0), c(1, 1, 2))))
+  cells <- overall <- marg <- NULL
+  for (pm in names(n)) for (a in names(n[[pm]])) {
+    m <- n[[pm]][[a]]                  # rows ANRIND, columns BNRIND
+    for (i in seq_along(lv)) {
+      cells <- rbind(cells, .t2c_rec3("PARAM", pm, "TRT01A", a, "ANRIND", lv[i],
+                                      "BNRIND", lv, "n", m[i, ]))
+    }
+    overall <- rbind(overall, .t2c_rec3("PARAM", pm, "TRT01A", a, na, na,
+                                        "BNRIND", lv, "n", colSums(m)))
+    marg <- rbind(marg, .t2c_rec3("PARAM", pm, "TRT01A", a, na, na,
+                                  "ANRIND", lv, "n", rowSums(m)))
+  }
+  bign <- .t2c_rec3(na, na, na, na, na, na, "TRT01A", c("A", "B"), "n", c(30, 28))
+  suppressMessages(normalize_ard(rbind(bign, overall, cells, marg)))
+}
+
+.t2c_shift_plan <- function(nd, ...) {
+  table_plan(nd, cols = c("TRT01A", "ANRIND"), rows = c("PARAM", group = "variable")) |>
+    plan_cells("{n}", notes = FALSE) |>
+    plan_total(...)
+}
+
+test_that("FT-PL1103-1 [FR-PL1000]: (#1103) a shift table's BIGN is no Total: no row without PARAM, each arm's Total its categories summed", {
+  nd <- .t2c_shift_bign()
+  last <- c("A____L", "A____N", "A____H", "A____Total",
+            "B____L", "B____N", "B____H", "B____Total")
+  first <- c("A____Total", "A____L", "A____N", "A____H",
+             "B____Total", "B____L", "B____N", "B____H")
+  for (dir in c("cols", "both")) for (pos in c("last", "first")) {
+    tab <- .t2c_tab(.t2c_shift_plan(nd, direction = dir, position = pos))
+    expect_false(anyNA(tab$PARAM))
+    expect_identical(unique(tab$PARAM), c("ALT", "HGB"))
+    expect_identical(.t2c_vals(tab), if (pos == "last") last else first)
+    body <- tab[tab$label != "Total", ]
+    expect_identical(nrow(body), 6L)
+    for (a in c("A", "B")) {
+      inner <- rowSums(sapply(paste0(a, "____", c("L", "N", "H")),
+                              function(k) as.numeric(body[[k]])))
+      expect_identical(as.numeric(body[[paste0(a, "____Total")]]), unname(inner))
+    }
+    # the arms' N is the header's only
+    expect_false(any(c("30", "28") %in% unlist(body[, .t2c_vals(body)])))
+  }
+  # the pages: one per PARAM, no "group_0"
+  pg <- plan_apply(.t2c_shift_plan(nd, direction = "both") |> plan_paginate_group("PARAM"))
+  expect_false(any(grepl("group_0", names(pg), fixed = TRUE)))
+})
+
+test_that("FT-PL1103-2 [FR-PL1001]: (#1103) the Total row is in its block, last or first by position, with a plain row key and no factor", {
+  nd <- .t2c_shift_bign()
+  for (dir in c("rows", "both")) {
+    tl <- .t2c_tab(.t2c_shift_plan(nd, direction = dir, position = "last"))
+    tf <- .t2c_tab(.t2c_shift_plan(nd, direction = dir, position = "first"))
+    expect_identical(tl$PARAM, rep(c("ALT", "HGB"), each = 4L))
+    expect_identical(tf$PARAM, rep(c("ALT", "HGB"), each = 4L))
+    expect_identical(as.character(tl$label), rep(c("L", "N", "H", "Total"), 2L))
+    expect_identical(as.character(tf$label), rep(c("Total", "L", "N", "H"), 2L))
+    # the margin: ALT, arm A, ANRIND = L is 2 + 1 + 0
+    expect_identical(tl$A____L[tl$PARAM == "ALT" & tl$label == "Total"], "3")
+  }
+})
+
+test_that("FT-PL1109-1 [FR-PL1002]: (#1109) two column keys by visit with the arms' N and a pooled record: the arms totalled, value / change kept under it, by position", {
+  # the arms' N, and an overall mean over all visits (no arm, no AVISIT):
+  # each leaves a key the cells carry empty, so neither is a Total
+  bign <- .t2c_rec(NA, NA, NA, NA, "TRT01A", c("A", "B"), "tabulate", "n", c(30, 28))
+  pooled <- .t2c_rec(NA, NA, NA, NA, c("AVAL", "CHG"), NA, "continuous", "mean", c(99, 98))
+  nd <- suppressMessages(normalize_ard(rbind(bign, .t2c_by_visit_raw(), pooled)))
+  p <- table_plan(nd, cols = c("TRT01A", "variable"), rows = "AVISIT") |>
+    plan_cells("{mean}", notes = FALSE)
+  tl <- .t2c_tab(plan_total(p, direction = "cols", position = "last"))
+  tf <- .t2c_tab(plan_total(p, direction = "cols", position = "first"))
+  expect_identical(.t2c_vals(tl), c("A____AVAL", "A____CHG", "B____AVAL", "B____CHG",
+                                    "Total____AVAL", "Total____CHG"))
+  expect_identical(.t2c_vals(tf), c("Total____AVAL", "Total____CHG", "A____AVAL", "A____CHG",
+                                    "B____AVAL", "B____CHG"))
+  expect_identical(tl$AVISIT, c("WEEK 2", "WEEK 4"))
+  expect_identical(tf$AVISIT, c("WEEK 2", "WEEK 4"))
+  expect_false(any(c("99", "98", "30", "28") %in% unlist(tl[, .t2c_vals(tl)])))
+  expect_identical(tl$Total____AVAL, c("11", "11"))
+  expect_identical(tf$Total____CHG, c("3", "3"))
+  # direction = "both": value / change are two analysis variables, so no
+  # Total row is said -- the stop names that, not missing overall rows
+  expect_error(.t2c_tab(plan_total(p, direction = "both")), "no margins|one analysis")
 })
