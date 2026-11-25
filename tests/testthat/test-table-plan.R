@@ -4060,3 +4060,70 @@ test_that("FT-PL047 [FR-PL172 FR-IX102]: plan_columns(widths =) with column_widt
   tw <- if (inherits(tw, "rtftable")) tw else tw[[1L]]
   expect_identical(tw$column_widths_twips, c(3000L, 1500L))
 })
+
+# --------------------------------------------------- digits reach a guard (#1153)
+
+test_that("plan_digits() fills the template of a guarded cell", {
+  fe <- rtfreporter:::.plan_fill_entry
+  entry <- list(N < 3 ~ "{mean} (-)", "{mean} ({sd})")
+  out <- fe(entry, list(c(mean = 2)))
+  expect_s3_class(out[[1L]], "formula")
+  expect_identical(out[[1L]][[3L]], "{mean:.2f} (-)")
+  expect_identical(deparse(out[[1L]][[2L]]), "N < 3")
+  expect_identical(out[[2L]], "{mean:.2f} ({sd})")
+  # a bare guard, not in a list
+  one <- fe(N < 3 ~ "{mean}", list(c(mean = 1)))
+  expect_identical(one[[3L]], "{mean:.1f}")
+})
+
+test_that("a guard with no open token, or an explicit one, is unchanged", {
+  fe <- rtfreporter:::.plan_fill_entry
+  entry <- list(p.value < 0.001 ~ "<0.001", p.value < 0.5 ~ "{p.value:.3f}",
+                "{p.value}")
+  out <- fe(entry, list(c(p.value = 4)))
+  expect_identical(out[[1L]], entry[[1L]])
+  expect_identical(out[[2L]], entry[[2L]])
+  expect_identical(out[[3L]], "{p.value:.4f}")
+  # one-sided and non-string right side are left alone
+  odd <- list(~ N < 3, N < 3 ~ 1)
+  expect_identical(fe(odd, list(c(mean = 2))), odd)
+})
+
+test_that("a guard keeps its environment when its template is filled", {
+  fe <- rtfreporter:::.plan_fill_entry
+  mk <- function() {
+    cut <- 3
+    list(N < cut ~ "{mean}")
+  }
+  out <- fe(mk(), list(c(mean = 2)))
+  expect_true(eval(out[[1L]][[2L]], list(N = 2), environment(out[[1L]])))
+  expect_false(eval(out[[1L]][[2L]], list(N = 5), environment(out[[1L]])))
+  expect_identical(out[[1L]][[3L]], "{mean:.2f}")
+})
+
+test_that("a keyed digit splits a guarded chain value by value, base last", {
+  fk <- rtfreporter:::.plan_fill_keyed
+  mk <- function() {
+    cut <- 3
+    list(N < cut ~ "{mean} (-)", "{mean}")
+  }
+  dig <- list(continuous = c(mean = 2), PARAMCD = c(ALT = 1, BILI = 3))
+  sel <- data.frame(PARAMCD = c("ALT", "BILI", "AST"))
+  r <- fk(mk(), dig, "PARAMCD", sel, "AVAL", NA_character_, "continuous")
+  ch <- r$entry
+  expect_length(ch, 6L)
+  lhs <- vapply(ch[1:5], function(e) deparse(e[[2L]]), "")
+  rhs <- vapply(ch[1:5], function(e) e[[3L]], "")
+  expect_identical(lhs[1:3], c('(PARAMCD == "ALT") & (N < cut)',
+                               '(PARAMCD == "BILI") & (N < cut)',
+                               "N < cut"))
+  expect_identical(rhs[1:3], c("{mean:.1f} (-)", "{mean:.3f} (-)",
+                               "{mean:.2f} (-)"))
+  expect_identical(lhs[4:5], c('PARAMCD == "ALT"', 'PARAMCD == "BILI"'))
+  expect_identical(ch[[6L]], "{mean:.2f}")
+  # the guard's own environment survives
+  expect_true(eval(ch[[1L]][[2L]], list(PARAMCD = "ALT", N = 1),
+                   environment(ch[[1L]])))
+  expect_false(eval(ch[[1L]][[2L]], list(PARAMCD = "ALT", N = 9),
+                    environment(ch[[1L]])))
+})
