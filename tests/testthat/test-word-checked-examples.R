@@ -5,7 +5,7 @@
 test_that("FT-IX6807 [FR-IX131]: watermark-example.rtf (checked in Word) is rebuilt byte for byte from .wck_watermark_doc()", {
   skip_on_cran()
   shipped <- .wck_example("watermark-example.rtf")
-  skip_if_not(file.exists(shipped), "inst/rtf-examples/watermark-example.rtf not found")
+  skip_if_not(file.exists(shipped), "needs inst/rtf-examples/watermark-example.rtf; runs wherever the package is installed with its examples, as on every CI job")
   d <- tempfile("wck-ex-")
   dir.create(d)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -16,9 +16,9 @@ test_that("FT-IX6807 [FR-IX131]: watermark-example.rtf (checked in Word) is rebu
 test_that("FT-IX6808 [FR-IX133]: figure-example.rtf (checked in Word) is rebuilt from .wck_figure_doc() byte for byte with the picture data blanked out (the PNG bytes depend on the platform's device)", {
   skip_on_cran()
   shipped <- .wck_example("figure-example.rtf")
-  skip_if_not(file.exists(shipped), "inst/rtf-examples/figure-example.rtf not found")
+  skip_if_not(file.exists(shipped), "needs inst/rtf-examples/figure-example.rtf; runs wherever the package is installed with its examples, as on every CI job")
   skip_if_not(isTRUE(capabilities("png")) || isTRUE(capabilities("cairo")),
-              "no png() device in this R build: the figure example cannot be drawn")
+              "needs a PNG graphics device (capabilities png or cairo) to draw the figure example; runs wherever R has PNG support, as on every CI job")
   d <- tempfile("wck-ex-")
   dir.create(d)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -27,7 +27,7 @@ test_that("FT-IX6808 [FR-IX133]: figure-example.rtf (checked in Word) is rebuilt
     .wck_figure_png(png)
     file.exists(png)
   }, error = function(e) FALSE)
-  skip_if_not(drawn, "the png() device could not draw the figure example")
+  skip_if_not(drawn, "needs a PNG device that draws the figure example file; runs wherever R has PNG support, as on every CI job")
   f <- .wck_write(.wck_figure_doc(png), d, "figure-example.rtf")
 
   new <- .wck_blank_pict(f)
