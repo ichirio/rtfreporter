@@ -4089,6 +4089,27 @@ test_that("a guard with no open token, or an explicit one, is unchanged", {
   expect_identical(fe(odd, list(c(mean = 2))), odd)
 })
 
+test_that("plan_digits() fills a row's own chain in a named list of chains", {
+  fe <- rtfreporter:::.plan_fill_entry
+  entry <- list(`Mean (SD)` = list(N < 3 ~ "{mean} (-)", "{mean} ({sd})"),
+                `Median` = "{median}")
+  out <- fe(entry, list(c(mean = 1, sd = 2, median = 1)))
+  expect_identical(names(out), names(entry))
+  expect_s3_class(out$`Mean (SD)`[[1L]], "formula")
+  expect_identical(out$`Mean (SD)`[[1L]][[3L]], "{mean:.1f} (-)")
+  expect_identical(deparse(out$`Mean (SD)`[[1L]][[2L]]), "N < 3")
+  expect_identical(out$`Mean (SD)`[[2L]], "{mean:.1f} ({sd:.2f})")
+  expect_identical(out$Median, "{median:.1f}")
+})
+
+test_that("an open {x:%} in a row's own chain or a guard is still reported", {
+  co <- rtfreporter:::.plan_check_open
+  expect_error(co(list(`Mean (SD)` = list(N < 3 ~ "{mean:%} (-)", "{mean:.1f}")), "AVAL"),
+               "asks the plan for its digits")
+  expect_error(co(N < 3 ~ "{mean:%}", "AVAL"), "asks the plan for its digits")
+  expect_silent(co(list(`Mean (SD)` = list(N < 3 ~ "{mean:.1f} (-)", "{mean:.1f}")), "AVAL"))
+})
+
 test_that("a guard keeps its environment when its template is filled", {
   fe <- rtfreporter:::.plan_fill_entry
   mk <- function() {

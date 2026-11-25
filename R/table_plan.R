@@ -322,10 +322,12 @@
 }
 
 # A cells entry is a bare template, a named vector of row templates, a chain
-# (an unnamed list, possibly holding formulas) or an cell_rows object.  Only
-# templates can be rewritten: a bare one, and the template of a guard
-# (`cond ~ "tpl"`, whose condition and environment are kept).  One rule for
-# every template a cell can print, guarded or not.
+# (an unnamed list, possibly holding formulas), a named list of row chains
+# (`list(`Mean (SD)` = list(N < 3 ~ "{mean} (-)", "{mean} ({sd})"))`) or an
+# cell_rows object.  Only templates can be rewritten: a bare one, and the
+# template of a guard (`cond ~ "tpl"`, whose condition and environment are
+# kept).  One rule for every template a cell can print, guarded or not, at
+# whatever depth the entry holds it.
 .plan_fill_entry <- function(entry, cands) {
   if (is.null(entry) || !length(cands)) return(entry)
   if (is.character(entry)) return(.plan_fill_one(entry, cands))
@@ -336,6 +338,8 @@
         entry[[i]] <- .plan_fill_one(entry[[i]], cands)
       } else if (inherits(entry[[i]], "formula")) {
         entry[[i]] <- .plan_fill_formula(entry[[i]], cands)
+      } else if (is.list(entry[[i]])) {
+        entry[[i]] <- .plan_fill_entry(entry[[i]], cands)
       }
     }
   }
@@ -456,10 +460,18 @@
 # carrying it never had a `plan_digits()` to answer it, and the engine's own
 # message ("Unknown format spec") would not say that, so this one does.
 .plan_check_open <- function(entry, key) {
-  # one guard written bare is a chain of one (#549), not a list to walk
-  if (inherits(entry, "formula")) entry <- list(entry)
-  tpls <- if (is.character(entry)) entry else
-    unlist(entry[vapply(entry, is.character, logical(1L))], use.names = FALSE)
+  # every template the entry can print: bare, a guard's right side, and
+  # those of a row's own chain (a named list of chains), the same walk as
+  # .plan_fill_entry()
+  tpls_of <- function(e) {
+    if (is.character(e)) return(e)
+    if (inherits(e, "formula")) {
+      return(if (length(e) == 3L && is.character(e[[3L]])) e[[3L]] else character())
+    }
+    if (is.list(e)) return(unlist(lapply(e, tpls_of), use.names = FALSE))
+    character()
+  }
+  tpls <- tpls_of(entry)
   for (tpl in tpls) {
     for (tok in .ard_tokens(tpl)) {
       if (identical(.ard_token_parts(tok)$spec, "%")) {
