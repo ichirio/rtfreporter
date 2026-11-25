@@ -4127,3 +4127,30 @@ test_that("a keyed digit splits a guarded chain value by value, base last", {
   expect_false(eval(ch[[1L]][[2L]], list(PARAMCD = "ALT", N = 9),
                     environment(ch[[1L]])))
 })
+
+test_that("a guarded cell prints with the plan's digits, by row key value too (#1153)", {
+  d <- data.frame(
+    ARM = rep(c("A", "B"), each = 6),
+    PARAMCD = rep(rep(c("ALT", "BILI", "AST"), each = 2), 2),
+    variable = "AVAL", .label = NA_character_, .kind = "continuous",
+    context = "summary",
+    stat_name = rep(c("mean", "sd"), 6),
+    stat = c(31.2345, 4.10234, 0.61234, 0.123456, 28.5555, 3.3333,
+             33.1111, 5.30303, 0.70707, 0.151515, 29.9999, 4.4444),
+    stringsAsFactors = FALSE)
+  p <- table_plan(d, cols = "ARM", rows = c(param = "PARAMCD")) |>
+    plan_cells(continuous = list(sd < 0.2 ~ "{mean} (-)", "{mean} ({sd})"), notes = FALSE) |>
+    plan_digits(continuous = c(mean = 2, sd = 3))
+  tab <- function(p) as.data.frame(suppressMessages(plan_apply(p, "table")))
+  # the guard's alternative (BILI's small sd) takes the plan's digits
+  expect_identical(tab(p)$A, c("31.23 (4.102)", "0.61 (-)", "28.56 (3.333)"))
+  # and a value's own digits, guarded or not; a value with none keeps the base
+  k <- p |> plan_digits(PARAMCD = c(ALT = 1, BILI = 3))
+  expect_identical(tab(k)$A, c("31.2 (4.1)", "0.612 (-)", "28.56 (3.333)"))
+  expect_identical(tab(k)$B, c("33.1 (5.3)", "0.707 (-)", "30.00 (4.444)"))
+  # a guard that writes its own format stays as written
+  e <- table_plan(d, cols = "ARM", rows = c(param = "PARAMCD")) |>
+    plan_cells(continuous = list(sd < 0.2 ~ "<0.2", "{mean} ({sd:.1f})"), notes = FALSE) |>
+    plan_digits(continuous = c(mean = 2, sd = 3))
+  expect_identical(tab(e)$A, c("31.23 (4.1)", "<0.2", "28.56 (3.3)"))
+})
