@@ -4060,3 +4060,118 @@ test_that("FT-PL047 [FR-PL172 FR-IX102]: plan_columns(widths =) with column_widt
   tw <- if (inherits(tw, "rtftable")) tw else tw[[1L]]
   expect_identical(tw$column_widths_twips, c(3000L, 1500L))
 })
+
+# --------------------------------------------------- digits reach a guard (#1153)
+
+test_that("plan_digits() fills the template of a guarded cell", {
+  fe <- rtfreporter:::.plan_fill_entry
+  entry <- list(N < 3 ~ "{mean} (-)", "{mean} ({sd})")
+  out <- fe(entry, list(c(mean = 2)))
+  expect_s3_class(out[[1L]], "formula")
+  expect_identical(out[[1L]][[3L]], "{mean:.2f} (-)")
+  expect_identical(deparse(out[[1L]][[2L]]), "N < 3")
+  expect_identical(out[[2L]], "{mean:.2f} ({sd})")
+  # a bare guard, not in a list
+  one <- fe(N < 3 ~ "{mean}", list(c(mean = 1)))
+  expect_identical(one[[3L]], "{mean:.1f}")
+})
+
+test_that("a guard with no open token, or an explicit one, is unchanged", {
+  fe <- rtfreporter:::.plan_fill_entry
+  entry <- list(p.value < 0.001 ~ "<0.001", p.value < 0.5 ~ "{p.value:.3f}",
+                "{p.value}")
+  out <- fe(entry, list(c(p.value = 4)))
+  expect_identical(out[[1L]], entry[[1L]])
+  expect_identical(out[[2L]], entry[[2L]])
+  expect_identical(out[[3L]], "{p.value:.4f}")
+  # one-sided and non-string right side are left alone
+  odd <- list(~ N < 3, N < 3 ~ 1)
+  expect_identical(fe(odd, list(c(mean = 2))), odd)
+})
+
+test_that("plan_digits() fills a row's own chain in a named list of chains", {
+  fe <- rtfreporter:::.plan_fill_entry
+  entry <- list(`Mean (SD)` = list(N < 3 ~ "{mean} (-)", "{mean} ({sd})"),
+                `Median` = "{median}")
+  out <- fe(entry, list(c(mean = 1, sd = 2, median = 1)))
+  expect_identical(names(out), names(entry))
+  expect_s3_class(out$`Mean (SD)`[[1L]], "formula")
+  expect_identical(out$`Mean (SD)`[[1L]][[3L]], "{mean:.1f} (-)")
+  expect_identical(deparse(out$`Mean (SD)`[[1L]][[2L]]), "N < 3")
+  expect_identical(out$`Mean (SD)`[[2L]], "{mean:.1f} ({sd:.2f})")
+  expect_identical(out$Median, "{median:.1f}")
+})
+
+test_that("an open {x:%} in a row's own chain or a guard is still reported", {
+  co <- rtfreporter:::.plan_check_open
+  expect_error(co(list(`Mean (SD)` = list(N < 3 ~ "{mean:%} (-)", "{mean:.1f}")), "AVAL"),
+               "asks the plan for its digits")
+  expect_error(co(N < 3 ~ "{mean:%}", "AVAL"), "asks the plan for its digits")
+  expect_silent(co(list(`Mean (SD)` = list(N < 3 ~ "{mean:.1f} (-)", "{mean:.1f}")), "AVAL"))
+})
+
+test_that("a guard keeps its environment when its template is filled", {
+  fe <- rtfreporter:::.plan_fill_entry
+  mk <- function() {
+    cut <- 3
+    list(N < cut ~ "{mean}")
+  }
+  out <- fe(mk(), list(c(mean = 2)))
+  expect_true(eval(out[[1L]][[2L]], list(N = 2), environment(out[[1L]])))
+  expect_false(eval(out[[1L]][[2L]], list(N = 5), environment(out[[1L]])))
+  expect_identical(out[[1L]][[3L]], "{mean:.2f}")
+})
+
+test_that("a keyed digit splits a guarded chain value by value, base last", {
+  fk <- rtfreporter:::.plan_fill_keyed
+  mk <- function() {
+    cut <- 3
+    list(N < cut ~ "{mean} (-)", "{mean}")
+  }
+  dig <- list(continuous = c(mean = 2), PARAMCD = c(ALT = 1, BILI = 3))
+  sel <- data.frame(PARAMCD = c("ALT", "BILI", "AST"))
+  r <- fk(mk(), dig, "PARAMCD", sel, "AVAL", NA_character_, "continuous")
+  ch <- r$entry
+  expect_length(ch, 6L)
+  lhs <- vapply(ch[1:5], function(e) deparse(e[[2L]]), "")
+  rhs <- vapply(ch[1:5], function(e) e[[3L]], "")
+  expect_identical(lhs[1:3], c('(PARAMCD == "ALT") & (N < cut)',
+                               '(PARAMCD == "BILI") & (N < cut)',
+                               "N < cut"))
+  expect_identical(rhs[1:3], c("{mean:.1f} (-)", "{mean:.3f} (-)",
+                               "{mean:.2f} (-)"))
+  expect_identical(lhs[4:5], c('PARAMCD == "ALT"', 'PARAMCD == "BILI"'))
+  expect_identical(ch[[6L]], "{mean:.2f}")
+  # the guard's own environment survives
+  expect_true(eval(ch[[1L]][[2L]], list(PARAMCD = "ALT", N = 1),
+                   environment(ch[[1L]])))
+  expect_false(eval(ch[[1L]][[2L]], list(PARAMCD = "ALT", N = 9),
+                    environment(ch[[1L]])))
+})
+
+test_that("a guarded cell prints with the plan's digits, by row key value too (#1153)", {
+  d <- data.frame(
+    ARM = rep(c("A", "B"), each = 6),
+    PARAMCD = rep(rep(c("ALT", "BILI", "AST"), each = 2), 2),
+    variable = "AVAL", .label = NA_character_, .kind = "continuous",
+    context = "summary",
+    stat_name = rep(c("mean", "sd"), 6),
+    stat = c(31.2345, 4.10234, 0.61234, 0.123456, 28.5555, 3.3333,
+             33.1111, 5.30303, 0.70707, 0.151515, 29.9999, 4.4444),
+    stringsAsFactors = FALSE)
+  p <- table_plan(d, cols = "ARM", rows = c(param = "PARAMCD")) |>
+    plan_cells(continuous = list(sd < 0.2 ~ "{mean} (-)", "{mean} ({sd})"), notes = FALSE) |>
+    plan_digits(continuous = c(mean = 2, sd = 3))
+  tab <- function(p) as.data.frame(suppressMessages(plan_apply(p, "table")))
+  # the guard's alternative (BILI's small sd) takes the plan's digits
+  expect_identical(tab(p)$A, c("31.23 (4.102)", "0.61 (-)", "28.56 (3.333)"))
+  # and a value's own digits, guarded or not; a value with none keeps the base
+  k <- p |> plan_digits(PARAMCD = c(ALT = 1, BILI = 3))
+  expect_identical(tab(k)$A, c("31.2 (4.1)", "0.612 (-)", "28.56 (3.333)"))
+  expect_identical(tab(k)$B, c("33.1 (5.3)", "0.707 (-)", "30.00 (4.444)"))
+  # a guard that writes its own format stays as written
+  e <- table_plan(d, cols = "ARM", rows = c(param = "PARAMCD")) |>
+    plan_cells(continuous = list(sd < 0.2 ~ "<0.2", "{mean} ({sd:.1f})"), notes = FALSE) |>
+    plan_digits(continuous = c(mean = 2, sd = 3))
+  expect_identical(tab(e)$A, c("31.23 (4.1)", "<0.2", "28.56 (3.3)"))
+})

@@ -85,8 +85,6 @@
 #    plan").  The alternative -- a later `plan_digits()` overriding an
 #    explicit token -- would make house-library templates tunable per study,
 #    and is the first thing to reconsider.
-#  * Guards (`c(n == 0 ~ "0", "{n} ({p})")`) are carried through untouched:
-#    `plan_digits()` does not reach inside a formula.
 #  * The call site recorded on a layer (.plan_site()) is the verb's call as
 #    written, so an error names the statements that declared it.  It is
 #    found by the verb's FUNCTION, so a call made through do.call() is
@@ -350,20 +348,43 @@
 }
 
 # A cells entry is a bare template, a named vector of row templates, a chain
-# (an unnamed list, possibly holding formulas) or an cell_rows object.  Only
-# the character parts can be rewritten; a formula carries its own environment
-# and is carried through untouched.
+# (an unnamed list, possibly holding formulas), a named list of row chains
+# (`list(`Mean (SD)` = list(N < 3 ~ "{mean} (-)", "{mean} ({sd})"))`) or an
+# cell_rows object.  Only templates can be rewritten: a bare one, and the
+# template of a guard (`cond ~ "tpl"`, whose condition and environment are
+# kept).  One rule for every template a cell can print, guarded or not, at
+# whatever depth the entry holds it.
 .plan_fill_entry <- function(entry, cands) {
   if (is.null(entry) || !length(cands)) return(entry)
   if (is.character(entry)) return(.plan_fill_one(entry, cands))
+  if (inherits(entry, "formula")) return(.plan_fill_formula(entry, cands))
   if (is.list(entry)) {
     for (i in seq_along(entry)) {
       if (is.character(entry[[i]])) {
         entry[[i]] <- .plan_fill_one(entry[[i]], cands)
+      } else if (inherits(entry[[i]], "formula")) {
+        entry[[i]] <- .plan_fill_formula(entry[[i]], cands)
+      } else if (is.list(entry[[i]])) {
+        entry[[i]] <- .plan_fill_entry(entry[[i]], cands)
       }
     }
   }
   entry
+}
+
+# A guard `cond ~ "tpl"` with its template filled; the condition and the
+# formula's own environment are kept.  A one-sided formula or one whose
+# right side is no string is returned as it was.  With `key` and `val` the
+# condition becomes `(key == "val") & (cond)`.
+.plan_fill_formula <- function(f, cands, key = NULL, val = NULL) {
+  if (length(f) != 3L || !is.character(f[[3L]])) return(f)
+  lhs <- f[[2L]]
+  if (!is.null(key)) {
+    lhs <- call("&", call("(", call("==", as.name(key), val)),
+                call("(", lhs))
+  }
+  stats::as.formula(call("~", lhs, .plan_fill_one(f[[3L]], cands)),
+                    env = environment(f))
 }
 
 # Digits keyed by a row key's value (#751): `plan_digits(PARAMCD = c(ALT = 1,
@@ -389,7 +410,8 @@
 # row key (`rk`) taking that value's own.  Every template of a chain becomes
 # `KEY == "<value>" ~ <template, the value's digits>` for each value the
 # rows `sel` carry, followed by the template with the digits it had; a guard
-# of the caller's keeps its place.  So a variable's own digits win, then the
+# of the caller's (`cond ~ "tpl"`) is split the same way, `(KEY == "<value>") &
+# (cond)` first, so its place in the chain is kept.  So a variable's own digits win, then the
 # value's, then the context's, the kind's and the default.
 # Returns list(entry, filled = the entry without the values' digits, check =
 # whether a row can reach that entry, so its open tokens need an answer).
@@ -423,16 +445,28 @@
     if (inherits(ch, "formula")) ch <- list(ch)
     els <- list()
     for (el in as.list(ch)) {
-      if (!is.character(el)) {
+      isf <- inherits(el, "formula")
+      if (isf && (length(el) != 3L || !is.character(el[[3L]]))) {
         els[[length(els) + 1L]] <- el
         next
       }
-      tpl <- .plan_fill_one(el, base)
+      if (!isf && !is.character(el)) {
+        els[[length(els) + 1L]] <- el
+        next
+      }
+      tpl <- if (isf) .plan_fill_formula(el, base) else .plan_fill_one(el, base)
       for (g in guards) {
-        mine <- .plan_fill_one(el, g$cands)
-        if (identical(mine, tpl)) next
-        els[[length(els) + 1L]] <- stats::as.formula(
-          call("~", call("==", as.name(g$key), g$val), mine), env = baseenv())
+        if (isf) {
+          if (identical(.plan_fill_one(el[[3L]], g$cands), tpl[[3L]])) next
+          els[[length(els) + 1L]] <-
+            .plan_fill_formula(el, g$cands, g$key, g$val)
+        } else {
+          mine <- .plan_fill_one(el, g$cands)
+          if (identical(mine, tpl)) next
+          els[[length(els) + 1L]] <- stats::as.formula(
+            call("~", call("==", as.name(g$key), g$val), mine),
+            env = baseenv())
+        }
       }
       els[[length(els) + 1L]] <- tpl
     }
@@ -452,10 +486,18 @@
 # carrying it never had a `plan_digits()` to answer it, and the engine's own
 # message ("Unknown format spec") would not say that, so this one does.
 .plan_check_open <- function(entry, key) {
-  # one guard written bare is a chain of one (#549), not a list to walk
-  if (inherits(entry, "formula")) entry <- list(entry)
-  tpls <- if (is.character(entry)) entry else
-    unlist(entry[vapply(entry, is.character, logical(1L))], use.names = FALSE)
+  # every template the entry can print: bare, a guard's right side, and
+  # those of a row's own chain (a named list of chains), the same walk as
+  # .plan_fill_entry()
+  tpls_of <- function(e) {
+    if (is.character(e)) return(e)
+    if (inherits(e, "formula")) {
+      return(if (length(e) == 3L && is.character(e[[3L]])) e[[3L]] else character())
+    }
+    if (is.list(e)) return(unlist(lapply(e, tpls_of), use.names = FALSE))
+    character()
+  }
+  tpls <- tpls_of(entry)
   for (tpl in tpls) {
     for (tok in .ard_tokens(tpl)) {
       if (identical(.ard_token_parts(tok)$spec, "%")) {
