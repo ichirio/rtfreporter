@@ -23,7 +23,7 @@
   do.call(rbind, out)
 }
 
-.leaf_head <- "^(FT-[A-Z]{2}[0-9]{3,4}) [[]([^]]*)[]]:"
+.leaf_head <- "^(FT-[A-Z]{2}[0-9]{3,4}(-[0-9]+)?) [[]([^]]*)[]]:"
 
 test_that("every test traceability_matrix.csv names is in its file", {
   skip_on_cran()
@@ -62,7 +62,7 @@ test_that("every FR a test names, in its own name or in traceability_matrix.csv,
   tb <- .leaf_test_names()
   named <- grep(.leaf_head, tb$test, value = TRUE)
   frs <- c(unlist(strsplit(map$fr, " ", fixed = TRUE)),
-           unlist(strsplit(sub(paste0(.leaf_head, ".*$"), "\\2", named), " ", fixed = TRUE)))
+           unlist(strsplit(sub(paste0(.leaf_head, ".*$"), "\\3", named), " ", fixed = TRUE)))
   unknown <- unique(setdiff(frs, fr$id))
   expect(!length(unknown), paste0("Tests name FR ids that are not in requirements.csv ",
                                   "(a typo, or the FR was renumbered): ",
@@ -78,7 +78,7 @@ test_that("every active leaf FR has a test or a deviation with its risk", {
   leaf <- fr$id[!fr$id %in% fr$parent & fr$status == "active"]
   named <- grep(.leaf_head, tb$test, value = TRUE)
   tested <- c(unlist(strsplit(map$fr, " ", fixed = TRUE)),
-              unlist(strsplit(sub(paste0(.leaf_head, ".*$"), "\\2", named), " ", fixed = TRUE)))
+              unlist(strsplit(sub(paste0(.leaf_head, ".*$"), "\\3", named), " ", fixed = TRUE)))
   assessed <- unlist(strsplit(dev$ids[!is.na(dev$risk) & nzchar(dev$risk)], " ", fixed = TRUE))
   miss <- setdiff(leaf, c(tested, assessed))
   expect(!length(miss), paste0("Active leaves with no test and no assessed deviation; ",
@@ -103,7 +103,7 @@ test_that("every mapping of a test to an active FR is checked in traceability_re
   expect_named(rv, c("ft", "fr", "verdict", "evidence", "fr_covered"))
   named <- grep(.leaf_head, tb$test, value = TRUE)
   ft <- c(map$ft, sub(paste0(.leaf_head, ".*$"), "\\1", named))
-  frs <- c(map$fr, sub(paste0(.leaf_head, ".*$"), "\\2", named))
+  frs <- c(map$fr, sub(paste0(.leaf_head, ".*$"), "\\3", named))
   pairs <- unlist(Map(function(f, r) paste(f, strsplit(r, " ", fixed = TRUE)[[1L]]), ft, frs),
                   use.names = FALSE)
   active <- fr$id[fr$status == "active"]
@@ -143,9 +143,24 @@ test_that("an FT or FR id of four digits is read, as one of three", {
     title <- paste0("FT-TB", n, " [FR-TB", n, "]: x")
     expect_match(title, .leaf_head)
     expect_identical(sub(paste0(.leaf_head, ".*$"), "\\1", title), paste0("FT-TB", n))
-    expect_identical(sub(paste0(.leaf_head, ".*$"), "\\2", title), paste0("FR-TB", n))
+    expect_identical(sub(paste0(.leaf_head, ".*$"), "\\3", title), paste0("FR-TB", n))
   }
   # a title that is not of the form is not taken as an FT
   expect_false(grepl(.leaf_head, "FT-TB10000 [FR-TB1]: x"))
   expect_false(grepl(.leaf_head, "FT-TB1000: no FR list"))
+})
+
+test_that("an FT id may carry an issue block suffix: FT-PL1137-2 [FR-PL005]", {
+  skip_on_cran()
+  title <- "FT-PL1137-2 [FR-PL005]: a new test takes its issue's number"
+  expect_match(title, .leaf_head)
+  expect_identical(sub(paste0(.leaf_head, ".*$"), "\\1", title), "FT-PL1137-2")
+  expect_identical(sub(paste0(.leaf_head, ".*$"), "\\3", title), "FR-PL005")
+  # an id already in use is read as before
+  old <- "FT-PL049 [FR-PL122]: x"
+  expect_match(old, .leaf_head)
+  expect_identical(sub(paste0(.leaf_head, ".*$"), "\\1", old), "FT-PL049")
+  # a dash with no number, or two suffixes, is not an id
+  expect_false(grepl(.leaf_head, "FT-PL1137- [FR-PL005]: x"))
+  expect_false(grepl(.leaf_head, "FT-PL1137-1-2 [FR-PL005]: x"))
 })

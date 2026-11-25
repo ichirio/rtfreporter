@@ -571,9 +571,8 @@ releases -- is not written again; this section says only what it does not.
 - **Functional Tests (FT)** are the `test_that()` blocks that check an FR,
   as the developer making the change decided -- not a block that merely calls
   the function.  A new test names its id and FRs at its head
-  (`"FT-PL<nnn> [FR-PL157 FR-PL159]: plan_columns(widths = ) ..."`, three or four
-  digits, the
-  next unused FT number in its area);
+  (`"FT-PL1137-1 [FR-PL157 FR-PL159]: plan_columns(widths = ) ..."`).  A new test's FT id takes its issue's number: `FT-<AREA><issue>-<n>` (`FT-PL1137-1`, `FT-PL1137-2` ...). A block per issue cannot collide across parallel PRs. Ids already in use keep their numbers.
+  An id of the old form, `FT-PL<nnn>` (three or four digits), is still read;
   an existing one is mapped by hand in `inst/validation/traceability_matrix.csv`.  An
   FR no test checks is a deviation until a test is added.
   `validation/trace.R` lists the blocks that call a function in scope but

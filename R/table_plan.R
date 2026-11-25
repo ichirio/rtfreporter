@@ -85,8 +85,10 @@
 #    plan").  The alternative -- a later `plan_digits()` overriding an
 #    explicit token -- would make house-library templates tunable per study,
 #    and is the first thing to reconsider.
-#  * No call site is recorded on a layer, so an error still points at the
-#    resolver.  That is the main thing to fix before this could be real.
+#  * The call site recorded on a layer (.plan_site()) is the verb's call as
+#    written, so an error names the statements that declared it.  It is
+#    found by the verb's FUNCTION, so a call made through do.call() is
+#    attributed to the right verb too.
 #  * `plan_*` collides with the verb names on design/plan-resolver.  That is
 #    informative rather than accidental -- both spikes want the same namespace
 #    -- but the two would have to be reconciled before either shipped.
@@ -101,16 +103,37 @@
 # The call the author actually wrote.  A plan is ONE statement, so when
 # the resolver fails at the end there is no line number to go on -- and
 # that was the one clear advantage the immediate form still had.  Walk out
-# to the nearest frame whose function is a plan verb and keep its call.
+# to the nearest frame whose FUNCTION is one of the exported plan verbs and
+# keep its call, with the verb's name put in front.  The frame is found by
+# the function, not by the name in the call: do.call(plan_style, args) puts
+# the function object there, and an outer plan_cells(<lazy plan>) call
+# still on the stack must not be taken for the site of every layer.
+.plan_verbs <- new.env(parent = emptyenv())
+
+.plan_verb_list <- function() {
+  if (is.null(.plan_verbs$fns)) {
+    ns <- asNamespace("rtfreporter")
+    nms <- sort(grep("^plan_|^table_plan$", getNamespaceExports(ns),
+                     value = TRUE))
+    .plan_verbs$fns <- stats::setNames(
+      lapply(nms, function(n) get(n, envir = ns)), nms)
+  }
+  .plan_verbs$fns
+}
+
 .plan_site <- function() {
-  for (i in seq_len(sys.nframe())) {
-    cl <- sys.call(-i)
-    if (is.null(cl) || !is.call(cl)) next
-    f <- cl[[1L]]
-    nm <- if (is.name(f)) as.character(f)
-          else if (is.call(f) && identical(as.character(f[[1L]]), "::"))
-            as.character(f[[3L]]) else ""
-    if (startsWith(nm, "plan_") || identical(nm, "table_plan")) return(cl)
+  verbs <- .plan_verb_list()
+  # sys.call(0) is this function, -1 is .plan_layer(), -2 the verb (or a
+  # verb further out): the innermost verb is met first.
+  for (i in seq_len(max(sys.nframe() - 1L, 0L))) {
+    fn <- sys.function(-i)
+    for (nm in names(verbs)) {
+      if (identical(fn, verbs[[nm]])) {
+        cl <- sys.call(-i)
+        cl[[1L]] <- as.name(nm)
+        return(cl)
+      }
+    }
   }
   NULL
 }
@@ -130,6 +153,9 @@
     paste(deparse(z), collapse = " ")
   }, "")
   txt <- ifelse(nchar(txt) > 64L, paste0(substr(txt, 1L, 61L), "..."), txt)
+  # the same statement once, with how many layers it set up
+  n <- table(factor(txt, levels = unique(txt)))
+  txt <- paste0(names(n), ifelse(n > 1L, paste0(" (", n, " times)"), ""))
   paste0("\n  declared by:\n",
          paste0("    ", txt, collapse = "\n"))
 }

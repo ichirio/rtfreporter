@@ -40,7 +40,7 @@ test_that("the map of the tests: unique FT ids, each to known requirements", {
   map <- .val_read("traceability_matrix.csv")
   expect_named(map, c("file", "test", "ft", "fr"))
   expect_false(anyDuplicated(map$ft) > 0L)
-  expect_true(all(grepl("^FT-[A-Z]{2}[0-9]{3,4}$", map$ft)))
+  expect_true(all(grepl("^FT-[A-Z]{2}[0-9]{3,4}(-[0-9]+)?$", map$ft)))
   ids <- unique(unlist(strsplit(map$fr, " ", fixed = TRUE)))
   expect_true(all(ids %in% fr$id))
   # to the leaves only
