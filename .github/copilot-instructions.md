@@ -30,7 +30,8 @@ without being asked:
   argument must be named by a leaf FR of its function (`arg =`, or bare
   inside `f(...)`), or `test-validation-coverage.R` fails.
 - Give each leaf FR a test.  A new test names its id and FRs in its title,
-  `test_that("FT-PL049 [FR-PL122]: ...")`; only an existing test is mapped
+  `test_that("FT-PL1137-1 [FR-PL122]: ...")` (the id is `FT-<AREA><issue>-<n>`, a
+  block per issue; ids already in use keep their numbers); only an existing test is mapped
   by a row in `inst/validation/traceability_matrix.csv` (file, test, ft, fr).  Never
   both: an FT id given twice fails.
 - Check each new mapping: the test's expectations must assert what the FR
