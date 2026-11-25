@@ -179,7 +179,7 @@ test_that("FT-PL6806 [FR-PL995]: no overall rows for the inner key: the outer ke
     plan_total(...)
 }
 
-test_that("FT-PL6811 [FR-PL1000]: a shift table's BIGN is no Total: no row without PARAM, each arm's Total its categories summed", {
+test_that("FT-PL1103-1 [FR-PL1000]: (#1103) a shift table's BIGN is no Total: no row without PARAM, each arm's Total its categories summed", {
   nd <- .t2c_shift_bign()
   last <- c("A____L", "A____N", "A____H", "A____Total",
             "B____L", "B____N", "B____H", "B____Total")
@@ -205,7 +205,7 @@ test_that("FT-PL6811 [FR-PL1000]: a shift table's BIGN is no Total: no row witho
   expect_false(any(grepl("group_0", names(pg), fixed = TRUE)))
 })
 
-test_that("FT-PL6812 [FR-PL1001]: the Total row is in its block, last or first by position, with a plain row key and no factor", {
+test_that("FT-PL1103-2 [FR-PL1001]: (#1103) the Total row is in its block, last or first by position, with a plain row key and no factor", {
   nd <- .t2c_shift_bign()
   for (dir in c("rows", "both")) {
     tl <- .t2c_tab(.t2c_shift_plan(nd, direction = dir, position = "last"))
@@ -219,7 +219,7 @@ test_that("FT-PL6812 [FR-PL1001]: the Total row is in its block, last or first b
   }
 })
 
-test_that("FT-PL6813 [FR-PL1002]: two column keys by visit with the arms' N and a pooled record: the arms totalled, value / change kept under it, by position", {
+test_that("FT-PL1109-1 [FR-PL1002]: (#1109) two column keys by visit with the arms' N and a pooled record: the arms totalled, value / change kept under it, by position", {
   # the arms' N, and an overall mean over all visits (no arm, no AVISIT):
   # each leaves a key the cells carry empty, so neither is a Total
   bign <- .t2c_rec(NA, NA, NA, NA, "TRT01A", c("A", "B"), "tabulate", "n", c(30, 28))

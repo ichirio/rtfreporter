@@ -85,10 +85,10 @@
 #    plan").  The alternative -- a later `plan_digits()` overriding an
 #    explicit token -- would make house-library templates tunable per study,
 #    and is the first thing to reconsider.
-#  * Guards (`c(n == 0 ~ "0", "{n} ({p})")`) are carried through untouched:
-#    `plan_digits()` does not reach inside a formula.
-#  * No call site is recorded on a layer, so an error still points at the
-#    resolver.  That is the main thing to fix before this could be real.
+#  * The call site recorded on a layer (.plan_site()) is the verb's call as
+#    written, so an error names the statements that declared it.  It is
+#    found by the verb's FUNCTION, so a call made through do.call() is
+#    attributed to the right verb too.
 #  * `plan_*` collides with the verb names on design/plan-resolver.  That is
 #    informative rather than accidental -- both spikes want the same namespace
 #    -- but the two would have to be reconciled before either shipped.
@@ -103,16 +103,37 @@
 # The call the author actually wrote.  A plan is ONE statement, so when
 # the resolver fails at the end there is no line number to go on -- and
 # that was the one clear advantage the immediate form still had.  Walk out
-# to the nearest frame whose function is a plan verb and keep its call.
+# to the nearest frame whose FUNCTION is one of the exported plan verbs and
+# keep its call, with the verb's name put in front.  The frame is found by
+# the function, not by the name in the call: do.call(plan_style, args) puts
+# the function object there, and an outer plan_cells(<lazy plan>) call
+# still on the stack must not be taken for the site of every layer.
+.plan_verbs <- new.env(parent = emptyenv())
+
+.plan_verb_list <- function() {
+  if (is.null(.plan_verbs$fns)) {
+    ns <- asNamespace("rtfreporter")
+    nms <- sort(grep("^plan_|^table_plan$", getNamespaceExports(ns),
+                     value = TRUE))
+    .plan_verbs$fns <- stats::setNames(
+      lapply(nms, function(n) get(n, envir = ns)), nms)
+  }
+  .plan_verbs$fns
+}
+
 .plan_site <- function() {
-  for (i in seq_len(sys.nframe())) {
-    cl <- sys.call(-i)
-    if (is.null(cl) || !is.call(cl)) next
-    f <- cl[[1L]]
-    nm <- if (is.name(f)) as.character(f)
-          else if (is.call(f) && identical(as.character(f[[1L]]), "::"))
-            as.character(f[[3L]]) else ""
-    if (startsWith(nm, "plan_") || identical(nm, "table_plan")) return(cl)
+  verbs <- .plan_verb_list()
+  # sys.call(0) is this function, -1 is .plan_layer(), -2 the verb (or a
+  # verb further out): the innermost verb is met first.
+  for (i in seq_len(max(sys.nframe() - 1L, 0L))) {
+    fn <- sys.function(-i)
+    for (nm in names(verbs)) {
+      if (identical(fn, verbs[[nm]])) {
+        cl <- sys.call(-i)
+        cl[[1L]] <- as.name(nm)
+        return(cl)
+      }
+    }
   }
   NULL
 }
@@ -132,6 +153,9 @@
     paste(deparse(z), collapse = " ")
   }, "")
   txt <- ifelse(nchar(txt) > 64L, paste0(substr(txt, 1L, 61L), "..."), txt)
+  # the same statement once, with how many layers it set up
+  n <- table(factor(txt, levels = unique(txt)))
+  txt <- paste0(names(n), ifelse(n > 1L, paste0(" (", n, " times)"), ""))
   paste0("\n  declared by:\n",
          paste0("    ", txt, collapse = "\n"))
 }
@@ -324,20 +348,43 @@
 }
 
 # A cells entry is a bare template, a named vector of row templates, a chain
-# (an unnamed list, possibly holding formulas) or an cell_rows object.  Only
-# the character parts can be rewritten; a formula carries its own environment
-# and is carried through untouched.
+# (an unnamed list, possibly holding formulas), a named list of row chains
+# (`list(`Mean (SD)` = list(N < 3 ~ "{mean} (-)", "{mean} ({sd})"))`) or an
+# cell_rows object.  Only templates can be rewritten: a bare one, and the
+# template of a guard (`cond ~ "tpl"`, whose condition and environment are
+# kept).  One rule for every template a cell can print, guarded or not, at
+# whatever depth the entry holds it.
 .plan_fill_entry <- function(entry, cands) {
   if (is.null(entry) || !length(cands)) return(entry)
   if (is.character(entry)) return(.plan_fill_one(entry, cands))
+  if (inherits(entry, "formula")) return(.plan_fill_formula(entry, cands))
   if (is.list(entry)) {
     for (i in seq_along(entry)) {
       if (is.character(entry[[i]])) {
         entry[[i]] <- .plan_fill_one(entry[[i]], cands)
+      } else if (inherits(entry[[i]], "formula")) {
+        entry[[i]] <- .plan_fill_formula(entry[[i]], cands)
+      } else if (is.list(entry[[i]])) {
+        entry[[i]] <- .plan_fill_entry(entry[[i]], cands)
       }
     }
   }
   entry
+}
+
+# A guard `cond ~ "tpl"` with its template filled; the condition and the
+# formula's own environment are kept.  A one-sided formula or one whose
+# right side is no string is returned as it was.  With `key` and `val` the
+# condition becomes `(key == "val") & (cond)`.
+.plan_fill_formula <- function(f, cands, key = NULL, val = NULL) {
+  if (length(f) != 3L || !is.character(f[[3L]])) return(f)
+  lhs <- f[[2L]]
+  if (!is.null(key)) {
+    lhs <- call("&", call("(", call("==", as.name(key), val)),
+                call("(", lhs))
+  }
+  stats::as.formula(call("~", lhs, .plan_fill_one(f[[3L]], cands)),
+                    env = environment(f))
 }
 
 # Digits keyed by a row key's value (#751): `plan_digits(PARAMCD = c(ALT = 1,
@@ -363,7 +410,8 @@
 # row key (`rk`) taking that value's own.  Every template of a chain becomes
 # `KEY == "<value>" ~ <template, the value's digits>` for each value the
 # rows `sel` carry, followed by the template with the digits it had; a guard
-# of the caller's keeps its place.  So a variable's own digits win, then the
+# of the caller's (`cond ~ "tpl"`) is split the same way, `(KEY == "<value>") &
+# (cond)` first, so its place in the chain is kept.  So a variable's own digits win, then the
 # value's, then the context's, the kind's and the default.
 # Returns list(entry, filled = the entry without the values' digits, check =
 # whether a row can reach that entry, so its open tokens need an answer).
@@ -397,16 +445,28 @@
     if (inherits(ch, "formula")) ch <- list(ch)
     els <- list()
     for (el in as.list(ch)) {
-      if (!is.character(el)) {
+      isf <- inherits(el, "formula")
+      if (isf && (length(el) != 3L || !is.character(el[[3L]]))) {
         els[[length(els) + 1L]] <- el
         next
       }
-      tpl <- .plan_fill_one(el, base)
+      if (!isf && !is.character(el)) {
+        els[[length(els) + 1L]] <- el
+        next
+      }
+      tpl <- if (isf) .plan_fill_formula(el, base) else .plan_fill_one(el, base)
       for (g in guards) {
-        mine <- .plan_fill_one(el, g$cands)
-        if (identical(mine, tpl)) next
-        els[[length(els) + 1L]] <- stats::as.formula(
-          call("~", call("==", as.name(g$key), g$val), mine), env = baseenv())
+        if (isf) {
+          if (identical(.plan_fill_one(el[[3L]], g$cands), tpl[[3L]])) next
+          els[[length(els) + 1L]] <-
+            .plan_fill_formula(el, g$cands, g$key, g$val)
+        } else {
+          mine <- .plan_fill_one(el, g$cands)
+          if (identical(mine, tpl)) next
+          els[[length(els) + 1L]] <- stats::as.formula(
+            call("~", call("==", as.name(g$key), g$val), mine),
+            env = baseenv())
+        }
       }
       els[[length(els) + 1L]] <- tpl
     }
@@ -426,10 +486,18 @@
 # carrying it never had a `plan_digits()` to answer it, and the engine's own
 # message ("Unknown format spec") would not say that, so this one does.
 .plan_check_open <- function(entry, key) {
-  # one guard written bare is a chain of one (#549), not a list to walk
-  if (inherits(entry, "formula")) entry <- list(entry)
-  tpls <- if (is.character(entry)) entry else
-    unlist(entry[vapply(entry, is.character, logical(1L))], use.names = FALSE)
+  # every template the entry can print: bare, a guard's right side, and
+  # those of a row's own chain (a named list of chains), the same walk as
+  # .plan_fill_entry()
+  tpls_of <- function(e) {
+    if (is.character(e)) return(e)
+    if (inherits(e, "formula")) {
+      return(if (length(e) == 3L && is.character(e[[3L]])) e[[3L]] else character())
+    }
+    if (is.list(e)) return(unlist(lapply(e, tpls_of), use.names = FALSE))
+    character()
+  }
+  tpls <- tpls_of(entry)
   for (tpl in tpls) {
     for (tok in .ard_tokens(tpl)) {
       if (identical(.ard_token_parts(tok)$spec, "%")) {
@@ -1574,7 +1642,9 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
     chain(e)
   }
   if (ok(x, identical(verb, "plan_compare"))) return(invisible(NULL))
-  # what was given, said in the words of the help
+  # what was given, said in the words of the help; `nested` is set when the
+  # fault is a list or a vector standing as one element of a chain
+  nested <- FALSE
   what <- function(e, map = FALSE) {
     if (is.null(e)) return("NULL")
     if (inherits(e, "formula")) return("a guard")
@@ -1600,7 +1670,13 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
         return(if (inherits(e, "cell_rows")) "a cell_rows()" else "a named list")
       }
       bad <- bad[[1L]]
-      inner <- if (is.character(bad) && length(bad) > 1L && !anyNA(bad)) {
+      # a list or a vector of templates inside a chain (#1129): said as
+      # such, by type and length alone, not by describing what is inside
+      inner <- if (is.list(bad) && !is.object(bad)) {
+        nested <<- TRUE
+        if (length(bad)) "a list" else "an empty list"
+      } else if (is.character(bad) && length(bad) > 1L && !anyNA(bad)) {
+        nested <<- TRUE
         "a vector of templates"
       } else what(bad)
       return(sprintf("%s with %s in it",
@@ -1616,9 +1692,10 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
   } else {
     "a template, a named vector of templates, guards or cell_rows()"
   }
-  .ard_stop(sprintf(paste0("%s is %s, not %s.\n",
-                           "  A constant cell is written as text: \"-\"."),
-                    arg, shapes, what(x, identical(verb, "plan_compare"))))
+  given <- what(x, identical(verb, "plan_compare"))
+  .ard_stop(sprintf("%s is %s, not %s.\n", arg, shapes, given),
+            if (nested) paste0("  ", .ard_chain_hint, "\n"),
+            "  A constant cell is written as text: \"-\".")
 }
 
 # `round` used to be a verb of its own, and it never earned one: the whole

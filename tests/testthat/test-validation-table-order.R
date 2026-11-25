@@ -35,9 +35,12 @@ test_that("traceability_review.csv is in order: fr as in requirements.csv, then 
   rv <- .ord_read("traceability_review.csv")
   pos <- match(rv$fr, req$id)
   known <- !is.na(pos)
-  num <- suppressWarnings(as.integer(sub("^\\D*", "", rv$ft)))
+  # FT-AR063, FT-PL1137-2: the area, the number as a number, the issue-block suffix
+  num <- suppressWarnings(as.integer(sub("^\\D*([0-9]*).*$", "\\1", rv$ft)))
+  suf <- suppressWarnings(as.integer(sub("^[^-]*-[A-Z]*[0-9]+-?", "", rv$ft)))
   keys <- list(ifelse(known, pos, nrow(req) + 1L), ifelse(known, "", rv$fr),
-               sub("[0-9]+$", "", rv$ft), ifelse(is.na(num), -1L, num), rv$ft)
+               sub("^(FT-[A-Z]*).*$", "\\1", rv$ft), ifelse(is.na(num), -1L, num),
+               ifelse(is.na(suf), 0L, suf), rv$ft)
   msg <- .ord_first_out(keys, paste(rv$ft, rv$fr), "traceability_review.csv")
   expect(!nzchar(msg), paste(msg, "A row goes to its place: by fr in the order of",
                              "requirements.csv, then by ft (the number as a number); never to the end."))

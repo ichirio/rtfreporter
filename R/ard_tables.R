@@ -654,12 +654,35 @@
   list(cond = NULL, env = NULL, tpl = as.character(x))
 }
 
+# What a chain is, said when one of its elements is not (#1129).
+.ard_chain_hint <- paste0(
+  "A cell template is one text or a guard, not a list inside the chain. ",
+  "A chain of them is one list or c(): c(n == 0 ~ \"0\", \"{n} ({p:.1f%})\").")
+
 # A chain is whatever c() or list() produced: strings, guards, or both.
 .ard_chain <- function(x, one_sided = FALSE) {
   # one guard written bare (`n > 0 ~ "tpl"`, not inside c()) is a chain of
   # one: as.list() would split the formula into its parts (#549)
   if (inherits(x, "formula")) x <- list(x)
-  lapply(as.list(x), .ard_chain_el, one_sided = one_sided)
+  x <- as.list(x)
+  # The type rule of a cell chain (#1129): each element is one text or one
+  # guard.  A list, or a value whose length is not 1, would otherwise reach
+  # the cell through as.character() -- "list(...)" printed in the RTF.  Only
+  # the type and the length are looked at.  A label chain (one-sided) keeps
+  # its plain strings as column names and is not checked here.
+  if (!one_sided) {
+    for (i in seq_along(x)) {
+      e <- x[[i]]
+      if (inherits(e, "formula")) next
+      if (is.list(e) || length(e) != 1L) {
+        what <- if (is.list(e)) "a list"
+                else sprintf("a value of length %d", length(e))
+        .ard_stop(sprintf("Element %d of a cell template chain is %s.\n  %s",
+                          i, what, .ard_chain_hint))
+      }
+    }
+  }
+  lapply(x, .ard_chain_el, one_sided = one_sided)
 }
 
 # What a guard sees: every statistic of the record by name, plus the record's
