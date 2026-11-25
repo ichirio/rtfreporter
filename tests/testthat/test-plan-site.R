@@ -19,7 +19,7 @@ site_lines <- function(msg) {
   trimws(strsplit(x, "\n", fixed = TRUE)[[1L]])
 }
 
-test_that("FT-PL6810 [FR-PL1004]: (#1147) a do.call() layer is blamed on its own verb, not an outer plan_cells()", {
+test_that("FT-PL1147-1 [FR-PL1004]: (#1147) a do.call() layer is blamed on its own verb, not an outer plan_cells()", {
   p0 <- table_plan(site_wide())
   # The outer verb has its first argument as a promise, evaluated inside
   # it, so its frame is still on the stack when the do.call() layers are
@@ -39,7 +39,7 @@ test_that("FT-PL6810 [FR-PL1004]: (#1147) a do.call() layer is blamed on its own
   expect_false(grepl("plan_titles", msg, fixed = TRUE))
 })
 
-test_that("FT-PL6811 [FR-PL1004]: (#1147) the site of a layer made by name or as rtfreporter::verb() reads plan_style(...)", {
+test_that("FT-PL1147-2 [FR-PL1004]: (#1147) the site of a layer made by name or as rtfreporter::verb() reads plan_style(...)", {
   p0 <- table_plan(site_wide())
   p1 <- p0 |> plan_style(border = "nope")
   expect_identical(site_lines(site_msg(plan_apply(p1))),
@@ -50,7 +50,7 @@ test_that("FT-PL6811 [FR-PL1004]: (#1147) the site of a layer made by name or as
                    "plan_style(border = \"nope\")")
 })
 
-test_that("FT-PL6812 [FR-PL1004]: (#1147) the same statement from several layers is listed once with its count", {
+test_that("FT-PL1147-3 [FR-PL1004]: (#1147) the same statement from several layers is listed once with its count", {
   p0 <- table_plan(site_wide())
   p <- p0 |>
     plan_style(border = "nope") |>
