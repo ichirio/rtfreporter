@@ -143,12 +143,12 @@ tb <- do.call(rbind, lapply(files, blocks))
 # ---- the map: by hand, and the new tests' own names -------------------------------
 map <- utils::read.csv(file.path(vdir, "traceability_matrix.csv"), colClasses = "character",
                        stringsAsFactors = FALSE)
-head_re <- "^(FT-[A-Z]{2}[0-9]{3,4}) \\[([^]]*)\\]:"
+head_re <- "^(FT-[A-Z]{2}[0-9]{3,4}(-[0-9]+)?) \\[([^]]*)\\]:"
 named <- tb[grepl(head_re, tb$test), , drop = FALSE]
 if (nrow(named)) {
   map <- rbind(map, data.frame(file = named$file, test = named$test,
                                ft = sub(paste0(head_re, ".*$"), "\\1", named$test),
-                               fr = sub(paste0(head_re, ".*$"), "\\2", named$test),
+                               fr = sub(paste0(head_re, ".*$"), "\\3", named$test),
                                stringsAsFactors = FALSE))
 }
 gone <- !paste(map$file, map$test, sep = "\r") %in% paste(tb$file, tb$test, sep = "\r")
