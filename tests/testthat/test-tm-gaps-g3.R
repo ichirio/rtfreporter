@@ -38,6 +38,7 @@
 # ------------------------------------------------------------------- IX
 
 test_that("FT-IX3000 [FR-IX123]: a footer in its own font starts in the document's font", {
+  skip_on_cran()
   doc <- rtf_document() |>
     rtf_section(page = 1, secinfo = list(
       header = NULL, footer = rtf_footer(c(l = "FOOTX"), font = "Arial"))) |>
@@ -50,6 +51,7 @@ test_that("FT-IX3000 [FR-IX123]: a footer in its own font starts in the document
 })
 
 test_that("FT-IX3001 [FR-IX201]: with templates an open {x} reads stat_fmt, else stat", {
+  skip_on_cran()
   with_fmt <- plan_apply(
     table_plan(.g3_ard(), cols = "TRT") |> plan_cells("{mean}", notes = FALSE),
     "table")
@@ -68,6 +70,7 @@ test_that("FT-IX3001 [FR-IX201]: with templates an open {x} reads stat_fmt, else
 })
 
 test_that("FT-IX3002 [FR-IX251]: plan_col_header(header_sep) wins over plan_columns(sep)", {
+  skip_on_cran()
   p <- table_plan(.g3_ard2(), cols = c("TRT", "SEX")) |>
     plan_cells("{mean}", notes = FALSE) |>
     plan_columns(sep = "--")
@@ -87,6 +90,7 @@ test_that("FT-IX3002 [FR-IX251]: plan_col_header(header_sep) wins over plan_colu
 })
 
 test_that("FT-IX3003 [FR-IX301]: option beats a program found, a document's beats the option, the call's fallback beats the document's", {
+  skip_on_cran()
   fb <- function(...) {
     rtf_document(...) |>
       rtf_section(page = 1, secinfo = list(header = NULL,
@@ -114,6 +118,7 @@ test_that("FT-IX3003 [FR-IX301]: option beats a program found, a document's beat
 })
 
 test_that("FT-IX3004 [FR-IX303]: a default argument is taken from the option, an explicit one beats it", {
+  skip_on_cran()
   old <- options(rtfreporter.font_lang = c(east_asian = "ja"),
                  rtfreporter.page.paper_size = NULL)
   on.exit(options(old), add = TRUE)
@@ -126,6 +131,7 @@ test_that("FT-IX3004 [FR-IX303]: a default argument is taken from the option, an
 })
 
 test_that("FT-IX3005 [FR-IX305]: rtf_config() replaces watermark and font_lang whole", {
+  skip_on_cran()
   d <- rtf_document(watermark = rtf_watermark("A", color = "#112233")) |>
     rtf_config(watermark = "B")
   expect_identical(d$document$watermark$text, "B")
@@ -147,6 +153,7 @@ test_that("FT-IX3005 [FR-IX305]: rtf_config() replaces watermark and font_lang w
 }
 
 test_that("FT-IX3006 [FR-IX317]: an explicit col_header wins over the rebuilt, the listing's and the labelled header", {
+  skip_on_cran()
   df <- data.frame(label = c("x", "y"), G_a = 1:2, G_b = 3:4)
   rebuilt <- as_rtftables(df, header_sep = "_")[[1L]]$col_header
   expect_length(rebuilt, 2L)                       # the spanning row is rebuilt
@@ -168,6 +175,7 @@ test_that("FT-IX3006 [FR-IX317]: an explicit col_header wins over the rebuilt, t
 })
 
 test_that("FT-IX3007 [FR-IX318 FR-IX351]: a listing supplies defaults only; the caller's arguments win", {
+  skip_on_cran()
   df <- .g3_lst_df()
   spec <- .g3_lst_spec()
   meta <- function(p) attr(p$data, "rtf_paginate_meta", exact = TRUE)
@@ -227,6 +235,7 @@ test_that("FT-IX3007 [FR-IX318 FR-IX351]: a listing supplies defaults only; the 
 })
 
 test_that("FT-IX3008 [FR-IX319]: column_widths_twips wins outright over table_width_twips and col_rel_width", {
+  skip_on_cran()
   d3 <- data.frame(a = "1", b = "2", c = "3")
   tbl <- rtftable(d3, column_widths_twips = c(3000, 2000, 1000),
                   table_width_twips = 9000, col_rel_width = c(1, 1, 1))
@@ -238,6 +247,7 @@ test_that("FT-IX3008 [FR-IX319]: column_widths_twips wins outright over table_wi
 })
 
 test_that("FT-IX3009 [FR-IX320]: without by_value the stub is built first and the arguments name the reshaped columns", {
+  skip_on_cran()
   ae <- data.frame(SOC = c("Cardiac", "Cardiac", "GI"),
                    PT = c("Arrhythmia", "Tachycardia", "Nausea"),
                    Placebo = c("3", "2", "5"), Active = c("1", "0", "4"),
@@ -272,6 +282,7 @@ test_that("FT-IX3009 [FR-IX320]: without by_value the stub is built first and th
 })
 
 test_that("FT-IX3010 [FR-IX322]: drop_cols: row_title and col_rel_width pre-drop, paginate_cols final", {
+  skip_on_cran()
   df <- data.frame(A = c("a1", "a2"), B = c("b1", "b2"), C = c("c1", "c2"),
                    D = c("d1", "d2"), E = c("e1", "e2"),
                    stringsAsFactors = FALSE)
@@ -287,6 +298,7 @@ test_that("FT-IX3010 [FR-IX322]: drop_cols: row_title and col_rel_width pre-drop
 })
 
 test_that("FT-IX3011 [FR-IX323]: sort_by is applied first: group detection, continuation labels and blank rows see the sorted order", {
+  skip_on_cran()
   df <- data.frame(G = c("b", "a", "b", "a", "a", "a"),
                    V = c("v1", "v2", "v3", "v4", "v5", "v6"),
                    stringsAsFactors = FALSE)
@@ -329,6 +341,7 @@ test_that("FT-IX3011 [FR-IX323]: sort_by is applied first: group detection, cont
 })
 
 test_that("FT-IX3012 [FR-IX326]: paginate_cols(order) decides how many sections auto_section opens", {
+  skip_on_cran()
   d <- data.frame(a = letters[1:6], b = 1:6, c = LETTERS[1:6], d = 6:1,
                   stringsAsFactors = FALSE)
   pg <- list(g1 = rtftable(d[1:3, ]), g2 = rtftable(d[4:6, ]))
@@ -342,6 +355,7 @@ test_that("FT-IX3012 [FR-IX326]: paginate_cols(order) decides how many sections 
 })
 
 test_that("FT-IX3013 [FR-IX329]: set_blank_rows(group_col, group_by) leave by_change, by_rule and integer positions alone", {
+  skip_on_cran()
   df <- data.frame(G = c("A", "  a1", "  a2", "B", "  b1", "  b2"),
                    L = c("x", "x", "y", "y", "y", "z"), stringsAsFactors = FALSE)
   rules <- list(
@@ -364,6 +378,7 @@ test_that("FT-IX3013 [FR-IX329]: set_blank_rows(group_col, group_by) leave by_ch
 })
 
 test_that("FT-IX3014 [FR-IX336]: a look field resolves explicit argument, col_spec, style, default", {
+  skip_on_cran()
   d <- data.frame(a = "x", b = "y", c = "z")
   aligns <- function(t) vapply(t$col_spec, function(s) s$align, "")
   # no style: the package default (row title left, the others centred)
@@ -393,6 +408,7 @@ test_that("FT-IX3014 [FR-IX336]: a look field resolves explicit argument, col_sp
 })
 
 test_that("FT-IX3015 [FR-IX338]: a col_cell() border is the four outer edges of that one cell", {
+  skip_on_cran()
   d <- data.frame(a = "x", b = "y", c = "z")
   tbl <- rtftable(d, border = NULL, col_header = list(
     list(col_cell(1L, ""), col_cell(2:3, "SPAN", border = rtf_border(all = TRUE))),
@@ -412,6 +428,7 @@ test_that("FT-IX3015 [FR-IX338]: a col_cell() border is the four outer edges of 
 })
 
 test_that("FT-IX3016 [FR-IX342]: a column-name col_cell stays over its column when a stub is prepended or columns are dropped", {
+  skip_on_cran()
   d <- data.frame(SOC = c("X", "X"), PT = c("p", "q"), Active = c("1", "2"),
                   Placebo = c("3", "4"), stringsAsFactors = FALSE)
   named <- rtf_col_header(list(col_cell("Active", "SPAN")))
@@ -433,6 +450,7 @@ test_that("FT-IX3016 [FR-IX342]: a column-name col_cell stays over its column wh
 })
 
 test_that("FT-IX3017 [FR-IX344]: layout = \"flow\" with a width breaks after the separator once the line is full", {
+  skip_on_cran()
   d <- data.frame(AEDECOD = "40/F/SCREENING/COMPLETED", stringsAsFactors = FALSE)
   body <- build_listing(d, listing_spec(list(
     listing_col("AEDECOD", layout = "flow", width = 12, sep = "/"))))
@@ -444,6 +462,7 @@ test_that("FT-IX3017 [FR-IX344]: layout = \"flow\" with a width breaks after the
 })
 
 test_that("FT-IX3018 [FR-IX347]: a column's sep, align and layout win over the listing's; NULL takes the listing's, then the type's", {
+  skip_on_cran()
   d <- data.frame(A = "x", B = "y", stringsAsFactors = FALSE)
   sp <- listing_spec(list(
     listing_col(c("A", "B"), name = "AB", sep = " | ", align = "right",
@@ -476,6 +495,7 @@ test_that("FT-IX3018 [FR-IX347]: a column's sep, align and layout win over the l
 })
 
 test_that("FT-IX3019 [FR-IX348]: an explicit listing_spec() argument overrides the multiline template's", {
+  skip_on_cran()
   base <- listing_spec(list(listing_col("A")))
   expect_identical(c(base$spacer_rel_width, base$blank_row_first), c(1, TRUE))
   expect_identical(base$layout, "stack")
@@ -492,6 +512,7 @@ test_that("FT-IX3019 [FR-IX348]: an explicit listing_spec() argument overrides t
 })
 
 test_that("FT-IX3020 [FR-IX350 FR-LS153]: rel_width wins over width, then the longest label line, then 10", {
+  skip_on_cran()
   d <- data.frame(A = "a", B = "b", C = "c", D = "d", stringsAsFactors = FALSE)
   spec <- listing_spec(list(
     listing_col("A", width = 11, rel_width = 20),
@@ -509,6 +530,7 @@ test_that("FT-IX3020 [FR-IX350 FR-LS153]: rel_width wins over width, then the lo
 })
 
 test_that("FT-IX3021 [FR-IX361]: fmt_numeric(): by takes formats and refuses signif / digits; without by, formats is not read", {
+  skip_on_cran()
   df <- data.frame(stat = c("a", "b", "a"), v = c(1.23456, 123.456, 0.0123456),
                    stringsAsFactors = FALSE)
   fm <- list(a = list(signif = 3), b = list(digits = 1))
@@ -526,6 +548,7 @@ test_that("FT-IX3021 [FR-IX361]: fmt_numeric(): by takes formats and refuses sig
 })
 
 test_that("FT-IX3022 [FR-IX364]: pct_unit says what pct means; pct_sign widens by one, the parenthesis stays in the same column", {
+  skip_on_cran()
   nb <- intToUtf8(160L)
   want <- paste0(nb, nb, "1", nb, "(50.0)")
   expect_identical(fmt_count_pct(1L, 0.5), want)
@@ -544,6 +567,7 @@ test_that("FT-IX3022 [FR-IX364]: pct_unit says what pct means; pct_sign widens b
 })
 
 test_that("FT-IX3023 [FR-IX365]: the na cell is padded with nbsp like the others, or with plain spaces when nbsp = \" \"", {
+  skip_on_cran()
   nb <- intToUtf8(160L)
   x <- c("1 (1.2%)", NA, "108 (35.3%)")
   # fmt_count_paren: the token's right edge is under the ones digit (column 3)
@@ -572,6 +596,7 @@ test_that("FT-IX3023 [FR-IX365]: the na cell is padded with nbsp like the others
 })
 
 test_that("FT-IX3024 [FR-IX366]: fmt_count_paren(): a missing cell is aligned like a bare count; a wide token widens the field", {
+  skip_on_cran()
   nb <- intToUtf8(160L)
   unbsp <- function(z) gsub(nb, " ", z, fixed = TRUE)
   x <- c("1 (1.2%)", NA, "9 (3.6%)")
@@ -587,6 +612,7 @@ test_that("FT-IX3024 [FR-IX366]: fmt_count_paren(): a missing cell is aligned li
 })
 
 test_that("FT-IX3025 [FR-IX368]: widen_ard(value = ) is ignored with stats = \"cells\"; each token says which value it takes", {
+  skip_on_cran()
   ard <- .g3_ard()
   w <- function(...) widen_ard(ard, cols = "TRT", notes = FALSE, ...)
   expect_identical(w(cells = "{mean}", value = "stat"),
@@ -603,6 +629,7 @@ test_that("FT-IX3025 [FR-IX368]: widen_ard(value = ) is ignored with stats = \"c
 })
 
 test_that("FT-IX3026 [FR-IX369]: widen_ard(stats = \"rows\") ignores cells and reads the default label as stat_label", {
+  skip_on_cran()
   ard <- .g3_ard()
   rows <- widen_ard(ard, cols = "TRT", stats = "rows", notes = FALSE)
   expect_identical(names(rows), c("label", "A", "B"))
@@ -636,6 +663,7 @@ test_that("FT-IX3026 [FR-IX369]: widen_ard(stats = \"rows\") ignores cells and r
 }
 
 test_that("FT-IX3027 [FR-IX371]: labels never set an order; a level is ordered by its own name or by the text labels gives it", {
+  skip_on_cran()
   ard <- .g3_two_vars()
   w <- function(...) widen_ard(ard, cols = "TRT", rows = c(group = "variable"),
                                cells = .g3_two_cells(), notes = FALSE, ...)
@@ -654,6 +682,7 @@ test_that("FT-IX3027 [FR-IX371]: labels never set an order; a level is ordered b
 })
 
 test_that("FT-IX3028 [FR-IX372]: a labels scope matches the output name, then the source name, then the plain entries; an analysis variable's scope recodes its levels", {
+  skip_on_cran()
   ard <- .g3_two_vars()
   w <- function(labs) widen_ard(ard, cols = "TRT", rows = c(group = "variable"),
                                 cells = .g3_two_cells(), notes = FALSE, labels = labs)
@@ -676,6 +705,7 @@ test_that("FT-IX3028 [FR-IX372]: a labels scope matches the output name, then th
 })
 
 test_that("FT-IX3029 [FR-IX373]: widen_ard(sort = FALSE) still orders on a factor key", {
+  skip_on_cran()
   d <- data.frame(PARAM = factor(c("B", "B", "A", "A"), levels = c("A", "B")),
                   TRT = c("x", "y", "x", "y"), variable = "V",
                   variable_level = "L", context = "categorical",
@@ -693,6 +723,7 @@ test_that("FT-IX3029 [FR-IX373]: widen_ard(sort = FALSE) still orders on a facto
 })
 
 test_that("FT-IX3030 [FR-IX374]: an explicit rows wins over the default; a hierarchy turns the default off", {
+  skip_on_cran()
   ard <- .g3_two_vars()
   def <- widen_ard(ard, cols = "TRT", cells = .g3_two_cells(), notes = FALSE)
   expect_identical(names(def)[1L], "group")                    # c(group = "variable")
@@ -718,6 +749,7 @@ test_that("FT-IX3030 [FR-IX374]: an explicit rows wins over the default; a hiera
 })
 
 test_that("FT-IX3031 [FR-IX376]: overall_row(from = ) rows are not marked .key_own and stay as the overall row", {
+  skip_on_cran()
   ard <- rbind(
     data.frame(group1 = NA_character_, group1_level = NA_character_,
                variable = "SEX", variable_level = c("F", "M"),
@@ -740,6 +772,7 @@ test_that("FT-IX3031 [FR-IX376]: overall_row(from = ) rows are not marked .key_o
 })
 
 test_that("FT-IX3032 [FR-IX378]: normalize_ard(drop_contexts = \"attributes\") keeps the total_n row and states no attribute", {
+  skip_on_cran()
   ard <- rbind(
     data.frame(group1 = NA_character_, group1_level = NA_character_,
                variable = "..ard_total_n..", variable_level = NA_character_,
@@ -758,6 +791,7 @@ test_that("FT-IX3032 [FR-IX378]: normalize_ard(drop_contexts = \"attributes\") k
 })
 
 test_that("FT-IX3033 [FR-IX380 FR-IX382]: assemble_rtf(toc = ) takes the table's files; assemble_folder() never reads its spec file back", {
+  skip_on_cran()
   mk <- function(dir, file, no, title, mark) {
     doc <- rtf_document() |>
       rtf_section(page = 1, secinfo = list(
@@ -813,7 +847,8 @@ test_that("FT-IX3033 [FR-IX380 FR-IX382]: assemble_rtf(toc = ) takes the table's
 })
 
 test_that("FT-IX3034 [FR-IX386]: rtf_figures(width_twips) sets the page size, whatever render_width", {
-  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  skip_on_cran()
+  skip_if_not(isTRUE(unname(capabilities("png"))), "needs a PNG graphics device (capabilities png); runs wherever R has PNG support, as on every CI job")
   old <- options(rtfreporter.png_device = "png")
   on.exit(options(old), add = TRUE)
   draw <- function() plot(1:10)
@@ -830,6 +865,7 @@ test_that("FT-IX3034 [FR-IX386]: rtf_figures(width_twips) sets the page size, wh
 })
 
 test_that("FT-IX3035 [FR-IX389]: rtfplot(png_device) given wins over the option, which wins over \"auto\"", {
+  skip_on_cran()
   dev <- rtfreporter:::.rtfplot_png_device
   old <- options(rtfreporter.png_device = "ragg")
   on.exit(options(old), add = TRUE)
@@ -845,6 +881,7 @@ test_that("FT-IX3035 [FR-IX389]: rtfplot(png_device) given wins over the option,
 })
 
 test_that("FT-IX3036 [FR-IX392]: rtfreporter_ai_manual(which = \"dev\") ignores ard, shell, size and values", {
+  skip_on_cran()
   plain <- tempfile("kit"); dir.create(plain)
   extra <- tempfile("kit"); dir.create(extra)
   on.exit(unlink(c(plain, extra), recursive = TRUE), add = TRUE)
@@ -858,6 +895,7 @@ test_that("FT-IX3036 [FR-IX392]: rtfreporter_ai_manual(which = \"dev\") ignores 
 })
 
 test_that("FT-IX3037 [FR-IX404]: fmt_numeric(): a rule's own small, an all-missing row needs no key, no numeric column returns the data whole", {
+  skip_on_cran()
   d <- data.frame(stat = c("a", "a", NA), v = c(1.23456, 0.0123456, NA),
                   w = c("x", "y", "z"), stringsAsFactors = FALSE)
   # the call's small = "signif" is beaten by the rule's own small = "fixed"
@@ -947,6 +985,7 @@ test_that("FT-IX3037 [FR-IX404]: fmt_numeric(): a rule's own small, an all-missi
 }
 
 test_that("FT-LS3000 [FR-LS101 FR-LS105 FR-LS106]: build_listing() columns, gutters named .sp1, .sp2 and the record column", {
+  skip_on_cran()
   d <- .g3_ls_df()
   b <- build_listing(d, listing_spec(.g3_ls_cols()))
   expect_s3_class(b, "data.frame")
@@ -967,6 +1006,7 @@ test_that("FT-LS3000 [FR-LS101 FR-LS105 FR-LS106]: build_listing() columns, gutt
 })
 
 test_that("FT-LS3001 [FR-LS107]: the omitted label is resolved against the data and handed back on the body", {
+  skip_on_cran()
   d <- .g3_ls_df()
   b <- build_listing(d, listing_spec(.g3_ls_cols()))
   labels <- function(x) vapply(attr(x, "rtf_listing")$cols, function(cl) cl$label, "")
@@ -981,6 +1021,7 @@ test_that("FT-LS3001 [FR-LS107]: the omitted label is resolved against the data 
 })
 
 test_that("FT-LS3002 [FR-LS110]: build_listing() |> as_rtftables() renders the same listing as as_rtftables(listing = )", {
+  skip_on_cran()
   d <- .g3_ls_df()
   spec <- listing_spec(.g3_ls_cols())
   via_body <- as_rtftables(build_listing(d, spec), max_rows = 4)
@@ -995,6 +1036,7 @@ test_that("FT-LS3002 [FR-LS110]: build_listing() |> as_rtftables() renders the s
 })
 
 test_that("FT-LS3003 [FR-LS115]: several missing variables stop with the plural message", {
+  skip_on_cran()
   d <- data.frame(S = c("S1", "S2"), stringsAsFactors = FALSE)
   expect_error(build_listing(d, listing_spec(list(listing_col(c("A", "B"))))),
                "Columns \"A\", \"B\" not in `data` (listing column \"A\").",
@@ -1005,6 +1047,7 @@ test_that("FT-LS3003 [FR-LS115]: several missing variables stop with the plural 
 })
 
 test_that("FT-LS3004 [FR-LS117]: a wrap returning a bad value stops, for a header and for a cell, with the full message", {
+  skip_on_cran()
   d <- data.frame(S = c("S1", "S2"), stringsAsFactors = FALSE)
   msg <- "The listing's `wrap` function must return a non-empty character vector of lines."
   sp <- function(w) listing_spec(list(listing_col("S", width = 10)), wrap = w)
@@ -1019,6 +1062,7 @@ test_that("FT-LS3004 [FR-LS117]: a wrap returning a bad value stops, for a heade
 })
 
 test_that("FT-LS3005 [FR-LS121 FR-LS124]: the multiline defaults and the default wrapping rule; spacer_rel_width sets the gutters", {
+  skip_on_cran()
   sp <- listing_spec(list(listing_col("A")))
   expect_identical(sp$spacer_rel_width, 1)
   expect_identical(c(sp$sep, sp$align, sp$layout), c("/", "left", "stack"))
@@ -1045,6 +1089,7 @@ test_that("FT-LS3005 [FR-LS121 FR-LS124]: the multiline defaults and the default
 })
 
 test_that("FT-LS3006 [FR-LS129 FR-LS130]: a custom wrap is called positionally; per variable under stack, whole under flow or with no width", {
+  skip_on_cran()
   dd <- data.frame(A = "x", B = "y", stringsAsFactors = FALSE)
   rec <- function(...) {
     r <- .g3_recorder()
@@ -1082,6 +1127,7 @@ test_that("FT-LS3006 [FR-LS129 FR-LS130]: a custom wrap is called positionally; 
 })
 
 test_that("FT-LS3007 [FR-LS142]: listing_col(\"USUBJID\") takes the listing's own sep, align, layout and a derived label", {
+  skip_on_cran()
   cl <- listing_col("USUBJID")
   expect_s3_class(cl, "rtf_listing_col")
   expect_identical(cl$name, "USUBJID")
@@ -1093,6 +1139,7 @@ test_that("FT-LS3007 [FR-LS142]: listing_col(\"USUBJID\") takes the listing's ow
 })
 
 test_that("FT-LS3008 [FR-LS145]: width is an integer in characters, a full-width glyph counts as two, NULL never wraps", {
+  skip_on_cran()
   expect_identical(listing_col("A", width = 15)$width, 15L)
   d <- data.frame(A = "ああいい", B = strrep("word ", 30),
                   stringsAsFactors = FALSE)
@@ -1112,6 +1159,7 @@ test_that("FT-LS3008 [FR-LS145]: width is an integer in characters, a full-width
 })
 
 test_that("FT-LS3009 [FR-LS149]: fit_listing_widths(labels = ) supplies the derived header", {
+  skip_on_cran()
   d <- data.frame(USUBJID = c("A1", "A2"), stringsAsFactors = FALSE)
   sp <- listing_spec(list(listing_col("USUBJID")))
   fitted <- fit_listing_widths(d, sp, labels = c(USUBJID = "Unique Subject ID"),
@@ -1122,6 +1170,7 @@ test_that("FT-LS3009 [FR-LS149]: fit_listing_widths(labels = ) supplies the deri
 })
 
 test_that("FT-LS3010 [FR-LS171 FR-LS173 FR-LS178]: listing_wrap(): stack breaks after every separator, word boundaries, no limit", {
+  skip_on_cran()
   expect_identical(listing_wrap("a/b/c", 20, "/", layout = "stack"), c("a/", "b/", "c"))
   expect_identical(listing_wrap("a/b/c", 20, "/", layout = "flow"), "a/b/c")
   # a listing calls it on one variable's value as "flow"
@@ -1139,6 +1188,7 @@ test_that("FT-LS3010 [FR-LS171 FR-LS173 FR-LS178]: listing_wrap(): stack breaks 
 })
 
 test_that("FT-LS3011 [FR-LS182 FR-LS183]: listing_wrap_code() is rtf_listing_code, prints its lines, and calls the exported helpers", {
+  skip_on_cran()
   code <- listing_wrap_code("my_wrap")
   expect_s3_class(code, "rtf_listing_code")
   lines <- as.character(unclass(code))
@@ -1159,6 +1209,7 @@ test_that("FT-LS3011 [FR-LS182 FR-LS183]: listing_wrap_code() is rtf_listing_cod
 })
 
 test_that("FT-LS3012 [FR-LS191 FR-LS193]: listing_code() writes each column's own settings; NULL name writes the call alone", {
+  skip_on_cran()
   sp <- listing_spec(list(
     listing_col(c("A", "B"), width = 12, sep = " | ", rel_width = 7, name = "X"),
     listing_col("C", collapse_repeats = TRUE, label = "Line one\nLine two")))
@@ -1184,6 +1235,7 @@ test_that("FT-LS3012 [FR-LS191 FR-LS193]: listing_code() writes each column's ow
 })
 
 test_that("FT-LS3013 [FR-LS192]: a fitted spec writes width, rel_width and label on every column", {
+  skip_on_cran()
   d <- data.frame(A = c("aaaa", "bbbbbbbbbb"), C = c("c1", "c2"),
                   stringsAsFactors = FALSE)
   fitted <- fit_listing_widths(d, listing_spec(list(listing_col("A"), listing_col("C"))),
@@ -1210,6 +1262,7 @@ test_that("FT-LS3013 [FR-LS192]: a fitted spec writes width, rel_width and label
 .g3_widths <- function(spec) vapply(spec$cols, function(cl) as.integer(cl$width), 1L)
 
 test_that("FT-LS3014 [FR-LS209]: a column's demand is the largest of the quantile, the header, the unbreakable token and min_width, scaled to the budget", {
+  skip_on_cran()
   d <- .g3_fit_df()
   sp <- .g3_fit_spec()
   # probs: the median ignores the one long cell, 1 asks for all of it
@@ -1240,6 +1293,7 @@ test_that("FT-LS3014 [FR-LS209]: a column's demand is the largest of the quantil
 })
 
 test_that("FT-LS3015 [FR-LS211]: the fit writes rel_width and a frozen label only where the author set none, and renders the same table", {
+  skip_on_cran()
   d <- data.frame(A = c("aaa", "bbb"), B = c("cc", "dd"), C = c("e", "f"),
                   stringsAsFactors = FALSE)
   attr(d$B, "label") <- "B label long words here"
@@ -1260,6 +1314,7 @@ test_that("FT-LS3015 [FR-LS211]: the fit writes rel_width and a frozen label onl
 })
 
 test_that("FT-LS3016 [FR-LS212 FR-LS214]: page, total_width and font_size_half_points", {
+  skip_on_cran()
   d <- .g3_fit_df()
   sp <- .g3_fit_spec()
   as_list <- fit_listing_widths(d, sp, page = list(orientation = "portrait", paper_size = "A4"))
@@ -1280,6 +1335,7 @@ test_that("FT-LS3016 [FR-LS212 FR-LS214]: page, total_width and font_size_half_p
 })
 
 test_that("FT-LS3017 [FR-LS218]: header_lines defaults to 4", {
+  skip_on_cran()
   expect_identical(formals(fit_listing_widths)$header_lines, 4L)
   lng <- data.frame(SHORT = c("12.5", "36.2"), OTHER = c("aaaa", "bbbb"),
                     stringsAsFactors = FALSE)
@@ -1296,6 +1352,7 @@ test_that("FT-LS3017 [FR-LS218]: header_lines defaults to 4", {
 })
 
 test_that("FT-LS3018 [FR-LS247]: catx() stops on an NA sep", {
+  skip_on_cran()
   msg <- "`sep` must be a single string."
   expect_error(catx(NA, "a"), msg, fixed = TRUE)
   expect_error(catx(NA_character_, "a"), msg, fixed = TRUE)
@@ -1303,6 +1360,7 @@ test_that("FT-LS3018 [FR-LS247]: catx() stops on an NA sep", {
 })
 
 test_that("FT-LS3019 [FR-LS252]: a font given as a named vector is measured by its latin font", {
+  skip_on_cran()
   d <- .g3_fit_df()
   sp <- .g3_fit_spec()
   named <- fit_listing_widths(d, sp, font = c(latin = "Arial", east_asian = "SimSun"))
@@ -1345,6 +1403,7 @@ test_that("FT-LS3019 [FR-LS252]: a font given as a named vector is measured by i
 .g3_tab <- function(p) as.data.frame(plan_apply(p, "table"))
 
 test_that("FT-PL3000 [FR-PL101]: table_plan() holds the data and its roles with no layers, and computes nothing", {
+  skip_on_cran()
   d <- .g3_ard()
   p <- table_plan(d, cols = "TRT", rows = c(group = "variable"))
   expect_s3_class(p, "table_plan")
@@ -1362,6 +1421,7 @@ test_that("FT-PL3000 [FR-PL101]: table_plan() holds the data and its roles with 
 })
 
 test_that("FT-PL3001 [FR-PL106 FR-PL168]: cols = c(K1, K2) spreads one column per combination, named by the values and the key separator", {
+  skip_on_cran()
   p <- table_plan(.g3_ard2(), cols = c("TRT", "SEX")) |> plan_cells("{mean}", notes = FALSE)
   expect_identical(names(plan_apply(p, "table")),
                    c("label", "Placebo____F", "Placebo____M", "Drug____F", "Drug____M"))
@@ -1374,6 +1434,7 @@ test_that("FT-PL3001 [FR-PL106 FR-PL168]: cols = c(K1, K2) spreads one column pe
 })
 
 test_that("FT-PL3002 [FR-PL109 FR-PL113]: rows left out is the analysis variable in `group`; a guarded label chain", {
+  skip_on_cran()
   m <- normalize_ard(rbind(
     data.frame(group1 = "TRT", group1_level = rep(c("A", "B"), each = 2L), variable = "AGE",
                variable_level = NA_character_, context = "continuous",
@@ -1399,6 +1460,7 @@ test_that("FT-PL3002 [FR-PL109 FR-PL113]: rows left out is the analysis variable
 })
 
 test_that("FT-PL3003 [FR-PL117 FR-PL126 FR-PL128]: an edited normalized frame is the input unchanged; bad input and bad stat stop", {
+  skip_on_cran()
   d <- .g3_ard()
   f <- d
   f$stat[2L] <- 99
@@ -1421,6 +1483,7 @@ test_that("FT-PL3003 [FR-PL117 FR-PL126 FR-PL128]: an edited normalized frame is
 })
 
 test_that("FT-PL3004 [FR-PL121]: a hierarchy with an overall row: the overall row first, one row per SOC and per term", {
+  skip_on_cran()
   tab <- .g3_tab(.g3_hier_plan())
   n_soc <- 3L
   n_pt <- 4L                                       # (SOC, term) pairs
@@ -1433,6 +1496,7 @@ test_that("FT-PL3004 [FR-PL121]: a hierarchy with an overall row: the overall ro
 })
 
 test_that("FT-PL3005 [FR-PL144 FR-PL145 FR-PL149]: plan_filter() parents keep / drop, and the unnamed-condition stop", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   base <- .g3_hier_plan()
   keep <- .g3_tab(plan_filter(base, p >= 0.30))
   # a SOC stays exactly when a child is kept: S2 (own .20, P3 .35) and S3
@@ -1449,6 +1513,7 @@ test_that("FT-PL3005 [FR-PL144 FR-PL145 FR-PL149]: plan_filter() parents keep / 
 })
 
 test_that("FT-PL3006 [FR-PL201]: plan_apply(stage = \"input\") on a finished table or a listing is the data itself", {
+  skip_on_cran()
   wide <- data.frame(label = c("a", "b"), v = c("1.5", "2.5"), stringsAsFactors = FALSE)
   expect_identical(plan_apply(table_plan(wide) |> plan_columns(), "input"), wide)
   expect_identical(plan_apply(table_plan(wide) |> plan_listing(listing_col("label", width = 5),
@@ -1457,6 +1522,7 @@ test_that("FT-PL3006 [FR-PL201]: plan_apply(stage = \"input\") on a finished tab
 })
 
 test_that("FT-PL3007 [FR-PL206]: an error inside a stage names the verbs that declared it with their own arguments", {
+  skip_on_cran()
   two <- normalize_ard(data.frame(
     group1 = "TRT", group1_level = rep(c("A", "B"), each = 4L), variable = "SEX",
     variable_level = rep(c("F", "F", "M", "M"), 2L), context = "categorical",
@@ -1477,6 +1543,7 @@ test_that("FT-PL3007 [FR-PL206]: an error inside a stage names the verbs that de
 })
 
 test_that("FT-PL3008 [FR-PL211]: plan_layers() declared order; after and restyle one entry per call; a later plan_cells(default =) wins", {
+  skip_on_cran()
   p <- table_plan(.g3_ard(), cols = "TRT") |>
     plan_cells("{mean}", notes = FALSE) |>
     plan_after(function(x) x) |> plan_after(function(x) x) |>
@@ -1491,6 +1558,7 @@ test_that("FT-PL3008 [FR-PL211]: plan_layers() declared order; after and restyle
 })
 
 test_that("FT-PL3009 [FR-PL213 FR-PL214]: plan_layers()$cells parses the templates; header n_text and cell rows", {
+  skip_on_cran()
   d <- .g3_ard()
   lay <- plan_layers(table_plan(d, cols = "TRT") |>
                        plan_cells("AGE\rcontinuous" = c(Mean = "{mean:.1f}", n = "{N}"),
@@ -1523,6 +1591,7 @@ test_that("FT-PL3009 [FR-PL213 FR-PL214]: plan_layers()$cells parses the templat
 })
 
 test_that("FT-PL3010 [FR-PL227]: variable, context, kind and default entries are picked by specificity", {
+  skip_on_cran()
   b <- function(v, x, ctx) data.frame(
     group1 = "TRT", group1_level = rep(c("A", "B"), each = 2L), variable = v,
     variable_level = NA_character_, context = ctx, stat_name = rep(c("N", "mean"), 2L),
@@ -1544,6 +1613,7 @@ test_that("FT-PL3010 [FR-PL227]: variable, context, kind and default entries are
 })
 
 test_that("FT-PL3011 [FR-PL232 FR-PL233]: notes = TRUE says which statistics no template used, also from rtf_tables(); an option-free plan_cells() adds no template layer", {
+  skip_on_cran()
   d <- .g3_ard()
   loud <- table_plan(d, cols = "TRT") |> plan_cells("{mean}")
   said <- character()
@@ -1579,6 +1649,7 @@ test_that("FT-PL3011 [FR-PL232 FR-PL233]: notes = TRUE says which statistics no 
 }
 
 test_that("FT-PL3012 [FR-PL254]: later plan_levels() add a key; the same key is replaced; a map handed whole is its entries", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   p <- .g3_lab_plan() |> plan_levels(TRT = c("B", "A")) |>
     plan_levels(list(PARAM = c("AST", "ALT")))
   expect_identical(plan_layers(p)$layers$levels$levels,
@@ -1597,6 +1668,7 @@ test_that("FT-PL3012 [FR-PL254]: later plan_levels() add a key; the same key is 
 })
 
 test_that("FT-PL3013 [FR-PL257]: plan_labels() prints the text without ordering; later calls add or replace a key's entry", {
+  skip_on_cran()
   p <- .g3_lab_plan()
   one <- .g3_tab(plan_labels(p, TRT = c(B = "Drug")))
   expect_identical(names(one), c("param", "label", "A", "Drug"))   # order unchanged
@@ -1611,6 +1683,7 @@ test_that("FT-PL3013 [FR-PL257]: plan_labels() prints the text without ordering;
 })
 
 test_that("FT-PL3014 [FR-PL268]: plan_total() makes no Total column for records with no outer key", {
+  skip_on_cran()
   rec <- function(g1, l1, g2, l2, x) data.frame(
     group1 = g1, group1_level = l1, group2 = g2, group2_level = l2, variable = "AGE",
     variable_level = NA_character_, context = "continuous", stat_name = "mean",
@@ -1632,6 +1705,7 @@ test_that("FT-PL3014 [FR-PL268]: plan_total() makes no Total column for records 
 })
 
 test_that("FT-PL3015 [FR-PL305]: a row key's empty value (a group's own row) comes first in its group, ascending or descending", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   for (key in c("pt", "-pt")) {
     tab <- .g3_tab(.g3_hier_plan() |> plan_sort(key))
     for (s in c("S1", "S2", "S3")) {
@@ -1645,6 +1719,7 @@ test_that("FT-PL3015 [FR-PL305]: a row key's empty value (a group's own row) com
 })
 
 test_that("FT-PL3016 [FR-PL307]: .overall puts the overall rows first", {
+  skip_on_cran()
   p <- .g3_hier_plan()
   asc <- .g3_tab(p |> plan_sort(".overall", "soc"))
   expect_identical(asc$soc[1L], "Any TEAE")
@@ -1655,6 +1730,7 @@ test_that("FT-PL3016 [FR-PL307]: .overall puts the overall rows first", {
 })
 
 test_that("FT-PL3017 [FR-PL331]: plan_empty() twice merges field by field", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   d <- .g3_hier()
   p <- table_plan(d, cols = "TRT", rows = c(soc = "AESOC")) |>
     plan_cells("{n}", notes = FALSE)
@@ -1675,6 +1751,7 @@ test_that("FT-PL3017 [FR-PL331]: plan_empty() twice merges field by field", {
 }
 
 test_that("FT-PL3018 [FR-PL350]: plan_template() prints and returns the pipeline code, which runs to RTF pages", {
+  skip_on_cran()
   ard <- .g3_ard()
   res <- withVisible(plan_template(ard, cols = "TRT"))
   out <- utils::capture.output(print(res$value))
@@ -1711,6 +1788,7 @@ test_that("FT-PL3018 [FR-PL350]: plan_template() prints and returns the pipeline
 })
 
 test_that("FT-PL3019 [FR-PL352]: the column header is written only for one cols key with one denominator per column; otherwise a comment explains", {
+  skip_on_cran()
   ard <- .g3_ard()
   one <- .g3_template(ard, cols = "TRT")
   expect_true(any(grepl("rtfreporter::plan_col_header(", one, fixed = TRUE)))
@@ -1732,6 +1810,7 @@ test_that("FT-PL3019 [FR-PL352]: the column header is written only for one cols 
 })
 
 test_that("FT-PL3020 [FR-PL355]: plan_template(form = \"widen\") writes normalize_ard() into widen_ard() into as_rtftables()", {
+  skip_on_cran()
   ard <- .g3_ard()
   code <- .g3_template(ard, cols = "TRT", form = "widen")
   expect_true(any(grepl("generated by rtfreporter::plan_template(form = \"widen\")",
@@ -1749,6 +1828,7 @@ test_that("FT-PL3020 [FR-PL355]: plan_template(form = \"widen\") writes normaliz
 })
 
 test_that("FT-PL3021 [FR-PL358]: the pipe follows the option, then RStudio's preference, then %>%", {
+  skip_on_cran()
   ard <- .g3_ard()
   old <- options(rtfreporter.ard_pipe = NULL)
   on.exit(options(old), add = TRUE)
@@ -1787,6 +1867,7 @@ test_that("FT-PL3021 [FR-PL358]: the pipe follows the option, then RStudio's pre
 }
 
 test_that("FT-PL3022 [FR-PL361 FR-PL476]: the derived stub leaves out the page key and the hidden columns; its headings are the outermost printed key", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   p <- .g3_site_plan()
   expect_identical(names(.g3_tab(p)), c("site", "soc", "pt", "label", "A", "B"))
   # no page key, nothing hidden: every row key and the label are folded
@@ -1812,6 +1893,7 @@ test_that("FT-PL3022 [FR-PL361 FR-PL476]: the derived stub leaves out the page k
 })
 
 test_that("FT-PL3023 [FR-PL455]: with plan_stub() the pages are cut by value, then each page's stub is folded", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   p <- .g3_site_plan()
   pg <- plan_apply(p |> plan_paginate_group(col = "soc", keep = FALSE) |> plan_stub(),
                    "pages")
@@ -1833,6 +1915,7 @@ test_that("FT-PL3023 [FR-PL455]: with plan_stub() the pages are cut by value, th
 })
 
 test_that("FT-PL3024 [FR-PL373]: a header set with rtf_col_header() is on every page, and a full-length row stays positional", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   p <- .g3_site_plan() |> plan_paginate_group(col = "soc", keep = FALSE) |> plan_stub()
   hdr <- rtf_col_header(c("Term", "Group A", "Group B"))
   pg <- plan_apply(p |> plan_col_header(header = hdr), "pages")
@@ -1852,6 +1935,7 @@ test_that("FT-PL3024 [FR-PL373]: a header set with rtf_col_header() is on every 
 })
 
 test_that("FT-PL3025 [FR-PL374 FR-PL384]: {col} is the column's name and {n} its own number, from a vector named by column", {
+  skip_on_cran()
   p <- table_plan(.g3_ard(), cols = "TRT") |> plan_cells("{mean}", notes = FALSE)
   hdr <- rtf_col_header(c("Statistic", "{col} (N={n})"))
   pg <- plan_apply(p |> plan_col_header(values = c(A = 86, B = 84), hdr), "pages")
@@ -1868,6 +1952,7 @@ test_that("FT-PL3025 [FR-PL374 FR-PL384]: {col} is the column's name and {n} its
 })
 
 test_that("FT-PL3026 [FR-PL375]: a header row shorter than the table repeats its last cell over the value columns", {
+  skip_on_cran()
   p <- table_plan(.g3_ard2(), cols = c("TRT", "SEX"), rows = c(group = "variable")) |>
     plan_cells("{mean}", notes = FALSE)
   expect_identical(names(.g3_tab(p)),
@@ -1880,6 +1965,7 @@ test_that("FT-PL3026 [FR-PL375]: a header row shorter than the table repeats its
 })
 
 test_that("FT-PL3027 [FR-PL376]: with several cols keys {col} is the leaf and {col1}, {col2} the levels; the joined name is never printed", {
+  skip_on_cran()
   p <- table_plan(.g3_ard2(), cols = c("TRT", "SEX"), rows = c(group = "variable")) |>
     plan_cells("{mean}", notes = FALSE)
   pg <- plan_apply(p |> plan_col_header(rtf_col_header(
@@ -1896,6 +1982,7 @@ test_that("FT-PL3027 [FR-PL376]: with several cols keys {col} is the leaf and {c
 })
 
 test_that("FT-PL3028 [FR-PL377]: {n:sum} over columns that include a Total column leaves the Total out", {
+  skip_on_cran()
   rec <- function(g1, l1, x) data.frame(
     group1 = g1, group1_level = l1, variable = "AGE", variable_level = NA_character_,
     context = "continuous", stat_name = "mean", stat_label = "mean", stat = x,
@@ -1916,6 +2003,7 @@ test_that("FT-PL3028 [FR-PL377]: {n:sum} over columns that include a Total colum
 })
 
 test_that("FT-PL3029 [FR-PL381]: a header sheet's cols by position, span \"each\" and a key's name, resolved on the page and read back as cells", {
+  skip_on_cran()
   p <- table_plan(.g3_ard2(), cols = c("TRT", "SEX"), rows = c(group = "variable")) |>
     plan_cells("{mean}", notes = FALSE)
   hd <- data.frame(
@@ -1946,6 +2034,7 @@ test_that("FT-PL3029 [FR-PL381]: a header sheet's cols by position, span \"each\
 })
 
 test_that("FT-PL3030 [FR-PL385]: values = list(n = \"page\", N = \"table\") takes the page's population for {n} and the whole table's for {N}", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- data.frame(USUBJID = sprintf("S%02d", 1:20), stringsAsFactors = FALSE)
   lb <- expand.grid(USUBJID = adsl$USUBJID, PARAM = c("ALT", "HGB"),
@@ -1970,6 +2059,7 @@ test_that("FT-PL3030 [FR-PL385]: values = list(n = \"page\", N = \"table\") take
 })
 
 test_that("FT-PL3031 [FR-PL387]: header_sep given to plan_col_header() wins over plan_columns(sep = ) and is what the names are split on", {
+  skip_on_cran()
   p <- table_plan(.g3_ard2(), cols = c("TRT", "SEX"), rows = c(group = "variable")) |>
     plan_cells("{mean}", notes = FALSE)
   both <- p |> plan_columns(sep = "__") |> plan_col_header(header_sep = "--")
@@ -2004,6 +2094,7 @@ test_that("FT-PL3031 [FR-PL387]: header_sep given to plan_col_header() wins over
 }
 
 test_that("FT-PL3032 [FR-PL409]: plan_cell_style() without where styles whole columns: .values, a column left out is every column", {
+  skip_on_cran()
   d <- .g3_df12()
   p <- table_plan(d) |>
     plan_columns(row_title = 1L)
@@ -2024,6 +2115,7 @@ test_that("FT-PL3032 [FR-PL409]: plan_cell_style() without where styles whole co
 })
 
 test_that("FT-PL3033 [FR-PL409]: .values styles every value column of an ARD plan and not the stub columns", {
+  skip_on_cran()
   p <- table_plan(.g3_ard2(), cols = c("TRT", "SEX"), rows = c(group = "variable")) |>
     plan_cells("{mean}", notes = FALSE)
   pg <- .g3_pages(p |> plan_cell_style(cols = ".values", color = "#CC0000",
@@ -2038,6 +2130,7 @@ test_that("FT-PL3033 [FR-PL409]: .values styles every value column of an ARD pla
 })
 
 test_that("FT-PL3034 [FR-PL429]: plan_style(border_<zone> = ) and border = give one table in either order and either call layout", {
+  skip_on_cran()
   d <- .g3_df12()
   dbl <- rtf_border(bottom = "double")
   one <- .g3_pages(table_plan(d) |> plan_style(border = "tfl", border_header = dbl))
@@ -2056,6 +2149,7 @@ test_that("FT-PL3034 [FR-PL429]: plan_style(border_<zone> = ) and border = give 
 })
 
 test_that("FT-PL3035 [FR-PL429]: a whole-table rtf_border() with a zone is rtftable(border = ) then style_zone()", {
+  skip_on_cran()
   d <- .g3_df12()
   whole <- rtf_border(all = TRUE, inside_h = TRUE)
   dbl <- rtf_border(bottom = "double")
@@ -2071,6 +2165,7 @@ test_that("FT-PL3035 [FR-PL429]: a whole-table rtf_border() with a zone is rtfta
 })
 
 test_that("FT-PL3036 [FR-PL440]: plan_paginate_rows() twice keeps the fields the later call leaves out", {
+  skip_on_cran()
   p <- table_plan(.g3_df12()) |>
     plan_paginate_rows(max_rows = 30, split = "group_safe") |>
     plan_paginate_rows(max_rows = 40)
@@ -2085,6 +2180,7 @@ test_that("FT-PL3036 [FR-PL440]: plan_paginate_rows() twice keeps the fields the
 })
 
 test_that("FT-PL3037 [FR-PL487]: plan_titles(pages = ) and plan_footnotes(pages = ) give each page its own block, in page order", {
+  skip_on_cran()
   p <- table_plan(.g3_df12()) |> plan_paginate_rows(max_rows = 4)
   n <- length(.g3_pages(p))
   expect_identical(n, 3L)
@@ -2099,6 +2195,7 @@ test_that("FT-PL3037 [FR-PL487]: plan_titles(pages = ) and plan_footnotes(pages 
 })
 
 test_that("FT-PL3038 [FR-PL490]: a count of blocks other than the pages' stops at plan_apply(), naming plan_paginate_rows()", {
+  skip_on_cran()
   p <- table_plan(.g3_df12()) |> plan_paginate_rows(max_rows = 6)
   expect_length(.g3_pages(p), 2L)
   expect_error(plan_apply(p |> plan_footnotes(pages = list("a"))),
@@ -2112,6 +2209,7 @@ test_that("FT-PL3038 [FR-PL490]: a count of blocks other than the pages' stops a
 })
 
 test_that("FT-PL3039 [FR-PL493]: plan_after(f, g) runs on the finished pages, g gets f's result", {
+  skip_on_cran()
   seen <- list()
   f <- function(pages) {
     seen$f <<- pages
@@ -2159,6 +2257,7 @@ test_that("FT-PL3039 [FR-PL493]: plan_after(f, g) runs on the finished pages, g 
 }
 
 test_that("FT-PL3040 [FR-PL903]: unnamed parts are part2, part3; a name twice stops; a statistic a part lacks prints that part's empty text", {
+  skip_on_cran()
   one <- .g3_child(c("mean", "sd"), ~ "Summary")
   two <- .g3_child("mean", ~ "Other")
   t3 <- as.data.frame(plan_apply(.g3_parent() |> plan_append(one) |> plan_append(two),
@@ -2181,6 +2280,7 @@ test_that("FT-PL3040 [FR-PL903]: unnamed parts are part2, part3; a name twice st
 })
 
 test_that("FT-PL3041 [FR-PL906]: a part carrying plan_footnotes(), plan_titles(), plan_after() or plan_paginate_group() stops, naming the verb", {
+  skip_on_cran()
   one <- .g3_child("mean", ~ "Summary")
   bad <- function(child, what) {
     expect_error(.g3_parent() |> plan_append(child), what, fixed = TRUE)
@@ -2197,6 +2297,7 @@ test_that("FT-PL3041 [FR-PL906]: a part carrying plan_footnotes(), plan_titles()
 })
 
 test_that("FT-PL3042 [FR-PL907]: plan_columns(decimal = ) applies to the stacked table's value columns", {
+  skip_on_cran()
   p <- .g3_parent() |> plan_append(.g3_child("mean", ~ "Summary"))
   bare <- plan_apply(p, "pages")[[1L]]
   expect_null(bare$decimal_split)
@@ -2206,6 +2307,7 @@ test_that("FT-PL3042 [FR-PL907]: plan_columns(decimal = ) applies to the stacked
 })
 
 test_that("FT-PL3043 [FR-PL944]: plan_paginate_rows(max_rows = ) on a listing plan pages as split = \"group_safe\"; a split with no row budget stops", {
+  skip_on_cran()
   d <- data.frame(USUBJID = sprintf("S-%03d", 1:12), ARM = rep(c("A", "B"), 6),
                   stringsAsFactors = FALSE)
   cols <- function() list(listing_col("USUBJID", width = 12), listing_col("ARM", width = 10))
@@ -2224,6 +2326,7 @@ test_that("FT-PL3043 [FR-PL944]: plan_paginate_rows(max_rows = ) on a listing pl
 })
 
 test_that("FT-PL3044 [FR-PL981]: with no last-row zone a body border stays on each page's last row", {
+  skip_on_cran()
   side <- rtf_border(bottom = "single")
   p <- table_plan(.g3_df12()) |> plan_paginate_rows(max_rows = 5) |>
     plan_cell_style(where = ~ TRUE, border = side)
@@ -2261,6 +2364,7 @@ test_that("FT-PL3044 [FR-PL981]: with no last-row zone a body border stays on ea
 }
 
 test_that("FT-PL3045 [FR-PL985]: plan_titles(border = ) draws top, a rule between the rows, and left and right on every row", {
+  skip_on_cran()
   b <- rtf_border(top = TRUE, inside_h = TRUE, left = TRUE, right = TRUE)
   pages <- .g3_block_pages(tb = b)
   expect_s3_class(attr(pages[[1L]], "rtf_titles_border"), "rtf_border")
@@ -2278,6 +2382,7 @@ test_that("FT-PL3045 [FR-PL985]: plan_titles(border = ) draws top, a rule betwee
 })
 
 test_that("FT-PL3046 [FR-PL986]: plan_footnotes(border = rtf_border(top = TRUE)) is the separator rule above the block only", {
+  skip_on_cran()
   pages <- .g3_block_pages(fb = rtf_border(top = TRUE))
   expect_s3_class(attr(pages[[1L]], "rtf_footnotes_border"), "rtf_border")
   r <- .g3_block_lines(.g3_blocks_doc(pages), "Note: Example|Source: ADSL")
@@ -2288,6 +2393,7 @@ test_that("FT-PL3046 [FR-PL986]: plan_footnotes(border = rtf_border(top = TRUE))
 })
 
 test_that("FT-PL3047 [FR-PL987]: a content without a footnote border takes the document's; its own wins", {
+  skip_on_cran()
   fdoc <- rtf_border(bottom = "double")
   # rtf_style(footnotes = list(border = )) reaches a plan that has none
   r <- .g3_block_lines(.g3_blocks_doc(.g3_block_pages(), footnotes = list(border = fdoc)),

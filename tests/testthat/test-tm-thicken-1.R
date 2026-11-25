@@ -48,6 +48,7 @@
 # ---- assemble_folder --------------------------------------------------------
 
 test_that("FT-AS5001 [FR-AS148]: assemble_folder(dir) without output_file returns the table of contents (natural file order, then by table number) with the seven columns and writes nothing", {
+  skip_on_cran()
   d <- .t1_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   # the table numbers run against the file names: t10.rtf is Table 14.1.2, t2.rtf is
@@ -74,6 +75,7 @@ test_that("FT-AS5001 [FR-AS148]: assemble_folder(dir) without output_file return
 # ---- rtfplot ------------------------------------------------------------------
 
 test_that("FT-AS5002 [FR-AS201]: rtfplot(align = ) is center by default, or left or right, and sets the paragraph's alignment in the RTF", {
+  skip_on_cran()
   d <- .t1_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f <- .t1_png(d)
@@ -88,6 +90,7 @@ test_that("FT-AS5002 [FR-AS201]: rtfplot(align = ) is center by default, or left
 })
 
 test_that("FT-AS5003 [FR-AS211]: rtfplot() of a missing path stops with Image file not found: <path>, and of another extension (or none) with the PNG, JPEG and EMF message", {
+  skip_on_cran()
   d <- .t1_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   nf <- file.path(d, "nope.png")
@@ -101,6 +104,7 @@ test_that("FT-AS5003 [FR-AS211]: rtfplot() of a missing path stops with Image fi
 })
 
 test_that("FT-AS5004 [FR-AS212]: rtfplot() of a PNG shorter than 24 bytes, and of a JPEG with no frame marker, stops with the messages", {
+  skip_on_cran()
   d <- .t1_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   short <- file.path(d, "short.png")
@@ -123,6 +127,7 @@ test_that("FT-AS5004 [FR-AS212]: rtfplot() of a PNG shorter than 24 bytes, and o
 # ---- rtfplot / rtf_figures: the picture in the RTF --------------------------------
 
 test_that("FT-AS5005 [FR-AS214]: a PNG and a JPEG are embedded as \\pict with \\pngblip or \\jpegblip, the pixel size, the display size in twips and the file's bytes as hex", {
+  skip_on_cran()
   skip_if_not(isTRUE(unname(capabilities("jpeg"))))
   d <- .t1_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)

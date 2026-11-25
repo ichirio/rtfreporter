@@ -11,7 +11,13 @@ nz <- function(x) {
     suppressMessages(normalize_ard(x)) else x
 }
 
+# the ARD most tests start from, built once per file (cards is the slow part)
+plan_ard_cache <- new.env()
 plan_ard <- function() {
+  if (is.null(plan_ard_cache$ard)) plan_ard_cache$ard <- plan_ard_build()
+  plan_ard_cache$ard
+}
+plan_ard_build <- function() {
   adsl <- cards::ADSL
   adsl$SEX <- as.character(adsl$SEX)
   adsl$TRT <- as.character(adsl$ARM)
@@ -3093,7 +3099,8 @@ test_that("normalize_ard(stack = ): the arm in a later slot than the subgroup, c
 
 test_that("sort keys -n@<key> and -n[<col>]: a group's own count carried to its rows, one column's count (#619)", {
   skip_if_not_installed("cards")
-  adae <- cards::ADAE[cards::ADAE$AESOC %in% unique(cards::ADAE$AESOC)[1:4], ]
+  # four SOCs; on CRAN the five small ones of helper-rtfreporter.R
+  adae <- if (.on_cran()) .cran_adae() else cards::ADAE[cards::ADAE$AESOC %in% unique(cards::ADAE$AESOC)[1:4], ]
   ard <- cards::ard_stack_hierarchical(adae, variables = c(AESOC, AEDECOD), by = TRTA,
                                        denominator = cards::ADSL, id = USUBJID)
   d <- normalize_ard(ard, hierarchy = c("AESOC", "AEDECOD"))
@@ -3441,7 +3448,8 @@ test_that("plan_stat_groups(): a split record takes its group's cells, an .other
 
 test_that("plan_filter(): PTs with p >= 5% in any arm, a SOC with its PTs; the RTF a hand-filtered ARD gives (#620)", {
   skip_if_not_installed("cards")
-  ard <- cards::ard_stack_hierarchical(cards::ADAE, variables = c(AESOC, AEDECOD), by = TRTA,
+  # on CRAN five SOCs (helper-rtfreporter.R)
+  ard <- cards::ard_stack_hierarchical(.cran_adae(), variables = c(AESOC, AEDECOD), by = TRTA,
                                        denominator = cards::ADSL, id = USUBJID, over_variables = TRUE)
   d <- normalize_ard(ard, hierarchy = c("AESOC", "AEDECOD"), overall = "Any TEAE")
   plan <- function(x) table_plan(x, cols = "TRTA", rows = c(soc = "AESOC", pt = "AEDECOD"), label = NA) |>
@@ -3743,7 +3751,7 @@ test_that("plan_sort() by a plan_compare() statistic: the rows by the arms' diff
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   skip_if_not("diff_ard_hierarchical" %in% getNamespaceExports("cards"),
-              "cards has no diff_ard_hierarchical()")
+              "needs a cards with diff_ard_hierarchical() (a newer cards); runs with the newest packages, not in the minimum-versions job")
   adae <- cards::ADAE[cards::ADAE$AESOC %in% c("CARDIAC DISORDERS", "SKIN AND SUBCUTANEOUS TISSUE DISORDERS"), ]
   arms <- c("Placebo", "Xanomeline High Dose")
   adsl <- adsl[adsl$ARM %in% arms, ]

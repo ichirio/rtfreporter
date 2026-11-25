@@ -76,7 +76,8 @@ pages <- table_plan(ae, cols = "ARM") |>
 pages[[1]]
 }
 \seealso{
-\link{plan_verbs} for every verb.
+\link{plan_verbs} for every verb; \code{\link[=plan_is_empty]{plan_is_empty()}} to ask whether a
+resolved plan came out empty.
 
 Other plan verbs:
 \code{\link[=plan_after]{plan_after()}},

@@ -4,7 +4,13 @@ skip_if_no_cards <- function() {
   testthat::skip_if_not_installed("cards")
 }
 
+# the ARD most tests start from, built once per file (cards is the slow part)
+make_ard_cache <- new.env()
 make_ard <- function() {
+  if (is.null(make_ard_cache$ard)) make_ard_cache$ard <- make_ard_build()
+  make_ard_cache$ard
+}
+make_ard_build <- function() {
   adsl <- cards::ADSL
   adsl$AGEGR <- as.character(cut(adsl$AGE, c(0, 64, 74, 200),
                                  labels = c("<65", "65-74", ">=75")))
@@ -1515,6 +1521,7 @@ test_that(".kind is decided per summary, not per variable", {
 
 test_that("normalize_ard() keeps `stat` numeric when a statistic is text", {
   skip_if_no_cards()
+  skip_if_not_installed("dplyr")
   ard <- make_ard()
   # a test's result rows, as cardx::ard_stats_t_test() writes them: numbers
   # beside text (method, alternative) and a flag (paired)

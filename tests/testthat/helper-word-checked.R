@@ -58,7 +58,7 @@
 .wck_lo_fodt <- function(files) {
   skip_on_cran()
   soffice <- Sys.which("soffice")
-  skip_if(!nzchar(soffice), "LibreOffice absent")
+  skip_if(!nzchar(soffice), "needs LibreOffice (soffice) to convert RTF; installed on the Linux CI")
   d <- tempfile("wck-lo-")
   dir.create(file.path(d, "profile"), recursive = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -73,7 +73,7 @@
                            stdout = FALSE, stderr = FALSE,
                            env = "LD_LIBRARY_PATH=", timeout = 180))
   out <- file.path(d, sub("[.]rtf$", ".fodt", basename(files)))
-  skip_if(!all(file.exists(out)), "LibreOffice did not convert")
+  skip_if(!all(file.exists(out)), "needs LibreOffice (soffice) to convert the RTF to flat ODF; installed on the Linux CI")
   stats::setNames(
     vapply(out, function(f) paste(readLines(f, warn = FALSE, encoding = "UTF-8"),
                                   collapse = "\n"), ""),

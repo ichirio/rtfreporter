@@ -36,49 +36,6 @@
 # A warning that is not a deprecation, said once a session the same way
 .warn_once <- function(key, msg) .deprecate_once(paste0("warn:", key), msg)
 
-# The pre-0.5 reading of an rtf_border was uniform: `left`/`right` reached every
-# cell of a row and a multi-row zone's `top`/`bottom` reached every one of its
-# rows.  Both now mean the selection's outer edge only.  The two readings are
-# spelled identically, so the only honest signal is "edges set, matching
-# inside_* never named" -- and it is worth raising only where the readings
-# actually differ, which is why ncols / nrows are needed.
-.warn_old_edge_reading <- function(tb, ncols, nrows) {
-  if (is.null(tb)) return(invisible(FALSE))
-  differs <- function(b, multi_row) {
-    if (!inherits(b, "rtf_border")) return(FALSE)
-    named <- attr(b, "inside_named") %||% c(h = FALSE, v = FALSE)
-    v <- ncols > 1L && !isTRUE(named[["v"]]) &&
-         (!is.null(b$left) || !is.null(b$right))
-    h <- multi_row && nrows > 1L && !isTRUE(named[["h"]]) &&
-         (!is.null(b$top) || !is.null(b$bottom))
-    v || h
-  }
-  # `header` has always read top/bottom as the block's outer edges, so only its
-  # vertical axis can have changed; `first_row` / `last_row` are single rows.
-  # `outer` is deliberately not checked: rtftable(border = <rtf_border>) was an
-  # error before 0.5.0 (#326), so no existing code can mean the old thing by it.
-  hit <- differs(tb$body, TRUE) || differs(tb$header, FALSE) ||
-         differs(tb$spanning, FALSE) || differs(tb$first_row, FALSE) ||
-         differs(tb$last_row, FALSE)
-  if (!hit) return(invisible(FALSE))
-  .deprecate_once(
-    "border_edge_reading",
-    paste0(
-      "The edges of `rtf_border()` now mean the *outer* edges of whatever you ",
-      "attach it to.\n",
-      "  Before 0.5.0 `left`/`right` were drawn on every cell of a row, and a ",
-      "multi-row zone's\n  `top`/`bottom` on every one of its rows.  ",
-      "To keep that look, name the interior rule:\n",
-      "    rtf_border(left = s, right = s, inside_v = s)   # was: left/right ",
-      "alone\n",
-      "    rtf_border(bottom = s, inside_h = s)            # was: bottom alone ",
-      "on a body zone\n",
-      "  Naming `inside_h` / `inside_v` (with `rtf_border_line(\"none\")` for ",
-      "\"no rule\") silences this.\n",
-      "  See ?rtf_border, section \"Writing borders before and after 0.5.0\", ",
-      "for the old and new spelling of each case."))
-}
-
 # The four physical edges an RTF cell can carry.
 .border_edges <- c("top", "bottom", "left", "right")
 
@@ -323,11 +280,6 @@ print.rtf_border_line <- function(x, ...) {
 #' ([col_cell()], `cell_styles`) has no inside, so its four edges are just that
 #' cell's edges.
 #'
-#' rtfreporter warns once per session when it meets a border whose edges could
-#' be read as either the outer edge or every rule.  Naming `inside_h` /
-#' `inside_v` says which you mean and silences it -- use `"none"` for "no rule
-#' there".
-#'
 #' @param all Shorthand for `top`, `bottom`, `left` and `right` at once. A side
 #'   named explicitly wins over it.
 #' @param top,bottom,left,right The selection's four outer edges. A side takes
@@ -372,14 +324,7 @@ rtf_border <- function(all = NULL, top = NULL, bottom = NULL, left = NULL,
   sides <- lapply(.border_slots, function(sl) .as_border_side(given[[sl]], sl))
   names(sides) <- .border_slots
 
-  b <- structure(sides, class = "rtf_border")
-  # Not part of the value, only of its provenance: it lets rtftable() tell a
-  # border written for the pre-0.5 uniform reading from one written for the
-  # current outer/inside reading, and warn about the first (see
-  # .warn_old_edge_reading()).  Dropped by any merge, which is what we want --
-  # a merged border is a new statement.
-  attr(b, "inside_named") <- c(h = !missing(inside_h), v = !missing(inside_v))
-  b
+  structure(sides, class = "rtf_border")
 }
 
 #' @export

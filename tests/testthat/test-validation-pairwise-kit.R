@@ -86,6 +86,7 @@
 }
 
 test_that("FT-AS145 [FR-AS229 FR-AS230 FR-AS232]: validation kit decision table -- the folder before against overwrite", {
+  skip_on_cran()
   kit <- c("build_user_matrix.R", "uat_cases.csv", "uat_cases.xlsx", "urs.csv", "urs.md",
            "validation_plan.md", "validation_summary_report.md", "quality-plan.md",
            "requirements.csv")
@@ -95,6 +96,7 @@ test_that("FT-AS145 [FR-AS229 FR-AS230 FR-AS232]: validation kit decision table 
                     state = c("missing", "empty", "user_file", "earlier_kit"),
                     stringsAsFactors = FALSE)
   for (r in seq_len(nrow(dt))) {
+    .cran_cut(r)
     cs <- dt[r, ]
     lab <- paste(cs$state, cs$overwrite)
     d <- tempfile("vk")
@@ -151,6 +153,7 @@ test_that("FT-AS145 [FR-AS229 FR-AS230 FR-AS232]: validation kit decision table 
 }
 
 test_that("FT-AS146 [FR-AS249]: validation kit pairwise -- build_user_matrix.R on edited URS, UAT and requirements CSVs", {
+  skip_on_cran()
   skip_if_not_installed("writexl")
   des <- .vk_design()
   expect_setequal(des$pw$need, des$every)
@@ -159,6 +162,7 @@ test_that("FT-AS146 [FR-AS249]: validation kit pairwise -- build_user_matrix.R o
   expect_lte(nrow(cases), 20L)
 
   for (r in seq_len(nrow(cases))) {
+    .cran_cut(r)
     cs <- as.list(cases[r, , drop = FALSE])
     lab <- paste0("case ", r, " (", paste(names(cs), unlist(cs), sep = "=", collapse = ", "), ")")
     d <- tempfile("vk")

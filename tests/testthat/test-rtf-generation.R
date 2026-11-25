@@ -64,10 +64,10 @@ test_that("FT-DC6802 [FR-DC386]: generate_rtfreport() reads its resource files f
   skip_on_cran()
   rscript <- file.path(R.home("bin"),
                        if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
-  if (!file.exists(rscript)) skip("no Rscript to start a child R")
+  if (!file.exists(rscript)) skip("needs Rscript in R.home(\"bin\") to start a child R; present in every standard R installation")
   pkg <- find.package("rtfreporter")
   if (!file.exists(file.path(pkg, "Meta", "package.rds"))) {
-    skip("rtfreporter is not installed (tests run from source): nothing to give a child R")
+    skip("needs rtfreporter installed, not run from source, to give a child R; runs in R CMD check, where the package is installed")
   }
   tmp <- tempfile("ft-dc6802-")
   dir.create(tmp)

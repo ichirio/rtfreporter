@@ -2645,10 +2645,14 @@ plan_nest <- function(.plan, ...) {
 #'   earlier `plan_total()` said):
 #'   \describe{
 #'     \item{`"cols"`}{the Total **column**, from the records
-#'       with no value of the column key.  With two column keys the
-#'       innermost is folded: `cols = c(TRTA, AESEV)` gives each arm a
+#'       with no value of a column key.  With two or more column keys the
+#'       key folded is the first one, from the innermost out, that has
+#'       overall rows (records with no value of it and a value of every
+#'       other column key): `cols = c(TRTA, AESEV)` gives each arm a
 #'       total column from its records with no `AESEV` (an AE at any
-#'       grade), placed among that arm's grades.}
+#'       grade), placed among that arm's grades; with no such records,
+#'       the records with no `TRTA` and a grade fold `TRTA` instead, one
+#'       Total column per grade.}
 #'     \item{`"rows"`}{the Total **row**, a shift table's margin: read
 #'       from the column key tabulated by the row keys, without the body's
 #'       variable (`ard_tabulate(x, variables = base_gr, by = PARAM)`
@@ -2682,6 +2686,21 @@ plan_nest <- function(.plan, ...) {
 #' # The study's wording, and the total before the arms
 #' p |>
 #'   plan_total(label = "All subjects", position = "first") |>
+#'   plan_apply("table")
+#'
+#' # Two column keys, arm by visit, and no overall rows for the visit:
+#' # the arm is folded, a Total column for each visit
+#' st2 <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active", NA), each = 2),
+#'   AVISIT    = rep(c("Week 1", "Week 2"), 3),
+#'   variable  = "AVAL",
+#'   .label    = NA_character_,
+#'   .kind     = "continuous",
+#'   stat_name = "mean",
+#'   stat      = c(1.5, 2.5, 1.8, 2.9, 1.6, 2.7))
+#' table_plan(st2, cols = c("ARM", "AVISIT"), rows = c(group = "variable")) |>
+#'   plan_cells(continuous = c(Mean = "{mean:.1f}")) |>
+#'   plan_total() |>
 #'   plan_apply("table")
 #' @export
 plan_total <- function(.plan, label = NULL, position = NULL, direction = NULL) {
@@ -3108,7 +3127,8 @@ plan_sort <- function(.plan, ..., stat = NULL, keep = NULL) {
 #'
 #' @return The plan, with one more layer.
 #' @family plan verbs
-#' @seealso [plan_verbs] for every verb.
+#' @seealso [plan_verbs] for every verb; [plan_is_empty()] to ask whether a
+#'   resolved plan came out empty.
 #' @examples
 #' # Invented counts: no subject had a serious adverse event
 #' sae <- data.frame(ARM = c("Placebo", "Active"),
@@ -3155,6 +3175,51 @@ plan_empty <- function(.plan, text = "No subjects met the criteria.",
   .plan_layer(.plan, "empty", list(text = if (given) text, when = when,
                                    position = position, footnote = footnote,
                                    .no_text = if (given) is.null(text)))
+}
+
+#' Did a plan's table come out empty?
+#'
+#' `plan_is_empty()` reports rtfreporter's own judgment of whether a table
+#' or listing came out empty under [plan_empty()]: the same one that decides
+#' whether the sentence row and the footnote are added.  So a caller that
+#' only needs to know "was there anything to report?" does not have to
+#' re-derive it from the data (a row count differs from it: the overall
+#' row of a table of no events is a row).
+#'
+#' The judgment is made when the plan is resolved, by [plan_apply()]
+#' at the stage `"table"` or `"pages"`, and kept on the plan
+#' object it was made on.  Ask that same object, after the call: a plan
+#' changed by another verb afterwards is a new plan and has
+#' not been resolved.
+#'
+#' @param .plan A [table_plan()].
+#' @return `TRUE` when the plan has been resolved and its table is empty
+#'   as `plan_empty(when = )` says (a table with no body row, or whose
+#'   overall row is 0 in every column; a listing with no record); `FALSE`
+#'   when it has been resolved and is not empty.  `NA` when the plan has no
+#'   [plan_empty()], or has not been resolved yet (or only to a stage
+#'   before the table, `"input"` or `"args"`).
+#' @seealso [plan_empty()], [plan_apply()]
+#' @examples
+#' # Invented counts: no subject had a serious adverse event
+#' sae <- data.frame(ARM = c("Placebo", "Active"),
+#'                   .label = "Any serious adverse event", .overall = TRUE,
+#'                   .kind = "categorical", stat_name = "n", stat = 0)
+#' p <- table_plan(sae, cols = "ARM") |>
+#'   plan_cells(categorical = "{n}") |>
+#'   plan_empty()
+#'
+#' plan_is_empty(p)            # NA: not resolved yet
+#' plan_apply(p)
+#' plan_is_empty(p)            # TRUE: the overall row is 0 in every column
+#' @export
+plan_is_empty <- function(.plan) {
+  if (!inherits(.plan, "table_plan")) {
+    .ard_stop("plan_is_empty(): expected a table_plan.")
+  }
+  if (!length(.plan_of(.plan, "empty"))) return(NA)
+  v <- .plan$cache$empty
+  if (is.null(v)) NA else isTRUE(v)
 }
 
 #' Say where the blank rows go
@@ -4933,6 +4998,17 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   out
 }
 
+# plan_paginate_rows(split = ) is a split's name or the caller's own
+# function (as_rtftables(split = f)).  Only a name is one of the named
+# splits, and a function is written in a message as what it is.
+.plan_split_named <- function(split, names) {
+  is.character(split) && length(split) == 1L && split %in% names
+}
+
+.plan_split_label <- function(split) {
+  if (is.function(split)) "<a function>" else sQuote(split)
+}
+
 # The display half, in the order a report is built.  Each step calls the
 # function it stands for with the arguments the caller declared, so nothing
 # here reimplements as_rtftables() or anything around it.
@@ -5054,7 +5130,7 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
       .ard_stop(paste0(
         "plan_paginate_group() splits the pages by the group value, ",
         "and\n  plan_paginate_rows(split = ",
-        sQuote(out$split), ") splits them another way.  Use one.
+        .plan_split_label(out$split), ") splits them another way.  Use one.
 ",
         "  A page per value with a row budget inside is ",
         "plan_paginate_rows(page_by = , max_rows = , split = ),
@@ -5076,10 +5152,10 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   # one: a value split makes a page per value, "rows" cuts at the
   # positions given, "none" makes one page.  Declaring a budget that
   # is then dropped is how someone spends an afternoon raising it and
-  # watching nothing change.
+  # watching nothing change.  A split function of the caller's is given
+  # the budget (as_rtftables() passes it max_rows =), so it has one.
   if (!is.null(out$max_rows) &&
-      !is.null(out$split) &&
-      out$split %in% c("by_value", "rows", "none")) {
+      .plan_split_named(out$split, c("by_value", "rows", "none"))) {
     .ard_stop(paste0(
       "plan_paginate_rows(max_rows = ", out$max_rows, ") has no ",
       "effect with split = ", sQuote(out$split), ".\n",
@@ -7700,6 +7776,18 @@ print.rtfreporter_plan_code <- function(x, ...) {
 
 
 # A plan is a table source: rtf_tables(doc, plan) and
-# as_rtftables(plan) both work through the generic.
+# as_rtftables(plan) both work through the generic.  The plan holds all of
+# its table's settings, so an argument given here would be lost: it stops.
 #' @export
-as_rtftables.table_plan <- function(x, ...) plan_apply(x, "pages")
+as_rtftables.table_plan <- function(x, ...) {
+  dots <- match.call(expand.dots = FALSE)$...
+  if (length(dots)) {
+    nm <- names(dots) %||% character(length(dots))
+    shown <- ifelse(nzchar(nm), paste0("`", nm, "`"), "an unnamed argument")
+    stop("as_rtftables(): a table_plan takes no other argument; got ",
+         paste(shown, collapse = ", "), ".\n  A plan's table settings go in ",
+         "plan_style() and the other plan_*() verbs (plan_paginate_rows() for ",
+         "max_rows and split).", call. = FALSE)
+  }
+  plan_apply(x, "pages")
+}

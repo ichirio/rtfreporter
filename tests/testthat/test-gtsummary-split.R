@@ -12,7 +12,7 @@ library(testthat)
 .make_tbl_split <- function() {
   skip_if_not(
     "tbl_split_by_rows" %in% getNamespaceExports("gtsummary"),
-    "gtsummary has no tbl_split_by_rows()"
+    "needs a gtsummary with tbl_split_by_rows() (a newer gtsummary); runs with the newest packages, not in the minimum-versions job"
   )
   gtsummary::tbl_summary(gtsummary::trial,
                          by = trt, include = c(age, grade)) |>

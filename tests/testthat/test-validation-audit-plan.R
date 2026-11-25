@@ -157,6 +157,7 @@
 .ap_nrows <- function(pages) vapply(pages, function(pg) nrow(pg$data), integer(1L))
 
 test_that("FT-PL931 [FR-PL921]: table_plan(rows = ) left unnamed keeps the key's column name", {
+  skip_on_cran()
   d <- .ap_st()
   tab <- function(...) names(plan_apply(.ap_cells(table_plan(d, cols = "ARM", ...)), "table"))
   expect_identical(tab(rows = "variable")[1L], "variable")
@@ -166,6 +167,7 @@ test_that("FT-PL931 [FR-PL921]: table_plan(rows = ) left unnamed keeps the key's
 })
 
 test_that("FT-PL932 [FR-PL922]: table_plan(cols = c(new = old)) lets later verbs name the key by its new name", {
+  skip_on_cran()
   d <- .ap_st()
   renamed <- .ap_cells(table_plan(d, cols = c(Arm = "ARM"), rows = c(group = "variable"))) |>
     plan_levels(Arm = c("Placebo", "Drug A"))
@@ -176,6 +178,7 @@ test_that("FT-PL932 [FR-PL922]: table_plan(cols = c(new = old)) lets later verbs
 })
 
 test_that("FT-PL933 [FR-PL923]: plan_digits() follows options(rtfreporter.rounding) unless its rounding = says", {
+  skip_on_cran()
   d <- .ap_st()
   d$stat[1L] <- 50.25
   p <- table_plan(d, cols = "ARM", rows = c(group = "variable")) |>
@@ -193,6 +196,7 @@ test_that("FT-PL933 [FR-PL923]: plan_digits() follows options(rtfreporter.roundi
 })
 
 test_that("FT-PL934 [FR-PL924]: plan_stub() indents each level by four non-breaking spaces by default", {
+  skip_on_cran()
   p <- .ap_plan()
   nb <- function(k) strrep(" ", k)
   for (before in c(FALSE, TRUE)) {
@@ -205,6 +209,7 @@ test_that("FT-PL934 [FR-PL924]: plan_stub() indents each level by four non-break
 })
 
 test_that("FT-PL935 [FR-PL925]: plan_stub(before = TRUE) folds the row keys away, so plan_paginate_group() can no longer page on one", {
+  skip_on_cran()
   p <- .ap_plan()
   pages <- plan_apply(p |> plan_stub(name = "Char") |> plan_paginate_group(col = "group"))
   expect_identical(names(pages), c("AGE", "SEX"))
@@ -214,6 +219,7 @@ test_that("FT-PL935 [FR-PL925]: plan_stub(before = TRUE) folds the row keys away
 })
 
 test_that("FT-PL936 [FR-PL926 FR-PL927]: plan_col_header() {n1} / {n2} name a depth of the keys; values may be a function of the data", {
+  skip_on_cran()
   d <- .ap_st()
   d2 <- rbind(transform(d, GRP = "F"), transform(d, GRP = "M"))
   p <- table_plan(d2, cols = c("ARM", "GRP"), rows = c(group = "variable")) |>
@@ -240,12 +246,14 @@ test_that("FT-PL936 [FR-PL926 FR-PL927]: plan_col_header() {n1} / {n2} name a de
 })
 
 test_that("FT-PL937 [FR-PL928]: plan_levels(variable = ) with a named element orders the blocks and gives the heading", {
+  skip_on_cran()
   out <- plan_apply(.ap_plan() |> plan_levels(variable = c(SEX = "Sex", "AGE")), "table")
   expect_identical(as.character(out$group), c("Sex", "Sex", "AGE"))
   expect_identical(out$label, c("F", "M", "Mean (SD)"))
 })
 
 test_that("FT-PL938 [FR-PL929]: plan_levels(.drop_empty = ) calls add up, on a long frame built without cards too", {
+  skip_on_cran()
   d <- data.frame(ARM = rep(c("A", "B"), each = 4),
                   variable = rep(c("SEX", "SEX", "RACE", "RACE"), 2),
                   .label = rep(c("F", "U", "W", "X"), 2), .kind = "categorical",
@@ -263,6 +271,7 @@ test_that("FT-PL938 [FR-PL929]: plan_levels(.drop_empty = ) calls add up, on a l
 })
 
 test_that("FT-PL939 [FR-PL930]: plan_labels(<variable> = c(<variable> = )) is the block's heading beside its levels' text", {
+  skip_on_cran()
   pg <- plan_apply(.ap_plan() |> plan_labels(SEX = c(SEX = "Sex, n", F = "Female")) |>
                      plan_stub(name = "Char"), "pages")[[1L]]
   nb <- strrep(" ", 4)
@@ -271,6 +280,7 @@ test_that("FT-PL939 [FR-PL930]: plan_labels(<variable> = c(<variable> = )) is th
 })
 
 test_that("FT-PL940 [FR-PL931]: plan_labels() gives one code two texts on two axes", {
+  skip_on_cran()
   sh <- data.frame(BL = rep(c("0", "1"), each = 2), variable = "GR",
                    .label = rep(c("0", "1"), 2), .kind = "categorical",
                    stat_name = "n", stat = c(5, 1, 2, 3))
@@ -285,6 +295,7 @@ test_that("FT-PL940 [FR-PL931]: plan_labels() gives one code two texts on two ax
 })
 
 test_that("FT-PL941 [FR-PL932]: plan_labels(<one named vector>) is the whole map, and may come before plan_cells()", {
+  skip_on_cran()
   d <- .ap_st()
   labs <- c(AGE = "Age (years)", SEX = "Sex")
   early <- table_plan(d, cols = "ARM", rows = c(group = "variable")) |>
@@ -296,6 +307,7 @@ test_that("FT-PL941 [FR-PL932]: plan_labels(<one named vector>) is the whole map
 })
 
 test_that("FT-PL942 [FR-PL933]: plan_sort() on a listing sorts the records, a leading - descending", {
+  skip_on_cran()
   recs <- data.frame(USUBJID = c("02", "01", "01"),
                      AETERM = c("Fatigue", "Nausea", "Headache"))
   lst <- function(...) {
@@ -309,6 +321,7 @@ test_that("FT-PL942 [FR-PL933]: plan_sort() on a listing sorts the records, a le
 })
 
 test_that("FT-PL943 [FR-PL934]: plan_blanks(where = 0) puts a blank row before the body's first row, at the top of the first page only", {
+  skip_on_cran()
   t4 <- data.frame(A = letters[1:4], B = 1:4)
   expect_identical(as.integer(plan_apply(table_plan(t4) |> plan_blanks(where = c(0, 2)))[[1L]]$blank_rows),
                    c(0L, 2L))
@@ -321,6 +334,7 @@ test_that("FT-PL943 [FR-PL934]: plan_blanks(where = 0) puts a blank row before t
 })
 
 test_that("FT-PL944 [FR-PL935]: plan_blanks(first = FALSE) takes away the blank row a multiline listing puts at the top", {
+  skip_on_cran()
   recs <- data.frame(USUBJID = c("01", "01", "02"),
                      AETERM = c("Headache", "Nausea", "Fatigue"))
   p <- table_plan(recs) |>
@@ -330,6 +344,7 @@ test_that("FT-PL944 [FR-PL935]: plan_blanks(first = FALSE) takes away the blank 
 })
 
 test_that("FT-PL945 [FR-PL936]: plan_blanks(counted = FALSE), the default, lets a page print more rows than max_rows", {
+  skip_on_cran()
   t9 <- data.frame(G = rep(c("a", "b", "c"), each = 3), V = 1:9)
   base <- table_plan(t9) |>
     plan_paginate_rows(max_rows = 4, split = "group_force", min_group_rows = 0)
@@ -342,6 +357,7 @@ test_that("FT-PL945 [FR-PL936]: plan_blanks(counted = FALSE), the default, lets 
 })
 
 test_that("FT-PL946 [FR-PL937]: plan_titles() / plan_footnotes() join strings and character vectors into one block on every page", {
+  skip_on_cran()
   t9 <- data.frame(G = rep(c("a", "b", "c"), each = 3), V = 1:9)
   pages <- plan_apply(table_plan(t9) |>
                         plan_paginate_rows(max_rows = 5, split = "group_force") |>
@@ -355,6 +371,7 @@ test_that("FT-PL946 [FR-PL937]: plan_titles() / plan_footnotes() join strings an
 })
 
 test_that("FT-PL947 [FR-PL938 FR-PL442]: plan_paginate_rows() with several page_by columns names its pages by a token per column", {
+  skip_on_cran()
   lab <- data.frame(Period = rep(c("P1", "P2"), each = 4),
                     Site = rep(c("S1", "S1", "S2", "S2"), 2), ALT = 1:8)
   pages <- plan_apply(table_plan(lab) |>
@@ -375,6 +392,7 @@ test_that("FT-PL947 [FR-PL938 FR-PL442]: plan_paginate_rows() with several page_
 })
 
 test_that("FT-PL948 [FR-PL939]: plan_paginate_rows(split = <function>) is a split of one's own", {
+  skip_on_cran()
   t8 <- data.frame(A = letters[1:8], B = 1:8)
   pages <- plan_apply(table_plan(t8) |>
                         plan_paginate_rows(split = function(df, ...) list(df[1:3, ], df[4:8, ])))
@@ -383,6 +401,7 @@ test_that("FT-PL948 [FR-PL939]: plan_paginate_rows(split = <function>) is a spli
 })
 
 test_that("FT-PL949 [FR-PL940]: plan_paginate_cols(cut_by = <one key per column>) makes each run of one key a block", {
+  skip_on_cran()
   w <- data.frame(P = c("x", "y"), D1 = 1:2, D2 = 3:4, D3 = 5:6, D4 = 7:8)
   pages <- plan_apply(table_plan(w) |> plan_paginate_cols(cut_by = c("", "a", "a", "b", "b")))
   expect_identical(lapply(pages, function(pg) names(pg$data)),
@@ -390,6 +409,7 @@ test_that("FT-PL949 [FR-PL940]: plan_paginate_cols(cut_by = <one key per column>
 })
 
 test_that("FT-PL950 [FR-PL941]: plan_paginate_cols(keep = NULL) repeats the row titles: column 1, or plan_columns(row_title = )", {
+  skip_on_cran()
   w <- data.frame(P = c("x", "y"), D1 = 1:2, D2 = 3:4, D3 = 5:6, D4 = 7:8)
   cols_of <- function(p) lapply(plan_apply(p), function(pg) names(pg$data))
   expect_identical(cols_of(table_plan(w) |> plan_paginate_cols(every = 2)),
@@ -400,6 +420,7 @@ test_that("FT-PL950 [FR-PL941]: plan_paginate_cols(keep = NULL) repeats the row 
 })
 
 test_that("FT-PL951 [FR-PL942]: plan_paginate_group(heading = ) leaves {PROGRAM}, {DATETIME} and the page tokens for the renderer", {
+  skip_on_cran()
   lab <- data.frame(PARAM = rep(c("ALT", "AST"), each = 2), V = 1:4)
   pages <- plan_apply(table_plan(lab) |>
                         plan_paginate_group(col = "PARAM",
@@ -409,6 +430,7 @@ test_that("FT-PL951 [FR-PL942]: plan_paginate_group(heading = ) leaves {PROGRAM}
 })
 
 test_that("FT-PL952 [FR-PL943]: table_plan(value = ): two records of one key and column stop, naming them", {
+  skip_on_cran()
   rec <- data.frame(USUBJID = c("S1", "S1", "S2"), AGE = c(30, 30, 41),
                     VIS = c("W1", "W1", "W1"), AVAL = c(1, 2, 3))
   tab <- function(d, rows) {
@@ -433,6 +455,7 @@ test_that("FT-PL952 [FR-PL943]: table_plan(value = ): two records of one key and
 })
 
 test_that("FT-PL953 [FR-PL944]: plan_paginate_rows(max_rows = ) with the split left out is group_safe; with \"none\" it stops", {
+  skip_on_cran()
   t9 <- data.frame(G = rep(c("a", "b", "c"), each = 3), V = 1:9)
   alone <- plan_apply(table_plan(t9) |> plan_paginate_rows(max_rows = 4))
   safe <- plan_apply(table_plan(t9) |> plan_paginate_rows(max_rows = 4, split = "group_safe"))

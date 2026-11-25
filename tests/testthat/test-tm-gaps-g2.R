@@ -46,6 +46,7 @@
 # ---- assemble_rtf -----------------------------------------------------------
 
 test_that("FT-AS3000 [FR-AS101]: assemble_rtf() writes file 1 whole but its brace, file 2 from its first \\sectd, joined by \\sect, one closing brace, and returns output_file invisibly", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f1 <- .g2_fake(file.path(d, "a.rtf"), "A", pre = "PRE-A")
@@ -61,6 +62,7 @@ test_that("FT-AS3000 [FR-AS101]: assemble_rtf() writes file 1 whole but its brac
 })
 
 test_that("FT-AS3001 [FR-AS102]: input_files are joined in the order given, and a toc table (or the path of one) names the files when input_files is left out", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f1 <- .g2_fake(file.path(d, "a.rtf"), "A")
@@ -91,6 +93,7 @@ test_that("FT-AS3001 [FR-AS102]: input_files are joined in the order given, and 
 })
 
 test_that("FT-AS3002 [FR-AS106]: assemble_rtf() with a cover and a first file without \\sectd stops", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   bad <- file.path(d, "bad.rtf")
@@ -106,6 +109,7 @@ test_that("FT-AS3002 [FR-AS106]: assemble_rtf() with a cover and a first file wi
 })
 
 test_that("FT-AS3003 [FR-AS109]: the cover is 22 pt bold centred title, 14 pt subtitle, 11 pt date and version, 10 pt meta lines, escaped, before the table of contents; NULL adds none", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f1 <- .g2_fake(file.path(d, "a.rtf"), "A")
@@ -138,6 +142,7 @@ test_that("FT-AS3003 [FR-AS109]: the cover is 22 pt bold centred title, 14 pt su
 })
 
 test_that("FT-AS3004 [FR-AS110]: NULL, NA and empty cover fields (and an NA line of meta) are skipped without a message", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f1 <- .g2_fake(file.path(d, "a.rtf"), "A")
@@ -157,6 +162,7 @@ test_that("FT-AS3004 [FR-AS110]: NULL, NA and empty cover fields (and an NA line
 })
 
 test_that("FT-AS3005 [FR-AS111]: toc = NULL with cover = NULL is byte for byte the plain concatenation", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f1 <- .g2_fake(file.path(d, "a.rtf"), "A", pre = "PRE-A")
@@ -175,6 +181,7 @@ test_that("FT-AS3005 [FR-AS111]: toc = NULL with cover = NULL is byte for byte t
 })
 
 test_that("FT-AS3006 [FR-AS112]: toc = \"auto\" makes one level-1 entry per file from the decoded title, and the file name without .rtf for a file with no title", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f1 <- .g2_demo(file.path(d, "t_one.rtf"), "Lab \u00b5g/mL summary")
@@ -191,6 +198,7 @@ test_that("FT-AS3006 [FR-AS112]: toc = \"auto\" makes one level-1 entry per file
 })
 
 test_that("FT-AS3007 [FR-AS115]: a toc table prints a heading above an entry when its value changes (NA or empty none), uses each label, and puts entries at level 2 (flush left by default) when level is absent", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   fs <- vapply(1:4, function(i) .g2_fake(file.path(d, paste0("f", i, ".rtf")), i),
@@ -273,6 +281,7 @@ test_that("FT-AS3008 [FR-AS117]: an .xlsx toc without readxl stops with its mess
 })
 
 test_that("FT-AS3009 [FR-AS125]: each HYPERLINK target is the bookmark written at the start of its file's section, entry for entry", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f1 <- .g2_demo(file.path(d, "g2_a.rtf"), "Table 1 A")
@@ -295,6 +304,7 @@ test_that("FT-AS3009 [FR-AS125]: each HYPERLINK target is the bookmark written a
 })
 
 test_that("FT-AS3010 [FR-AS127]: toc_title is the centred bold title of the contents page", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f1 <- .g2_fake(file.path(d, "a.rtf"), "A")
@@ -314,6 +324,7 @@ test_that("FT-AS3010 [FR-AS127]: toc_title is the centred bold title of the cont
 })
 
 test_that("FT-AS3011 [FR-AS133]: bookmark names are prefix + file name without .rtf, other characters an underscore, cut to 32, bk_ before a name not starting with a letter", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   long <- strrep("abcdefghij", 6)
@@ -334,6 +345,7 @@ test_that("FT-AS3011 [FR-AS133]: bookmark names are prefix + file name without .
 })
 
 test_that("FT-AS3012 [FR-AS135]: each section starts, after its header / footer preamble, with an invisible outline paragraph carrying its entry label or its file name", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f1 <- .g2_demo(file.path(d, "one.rtf"), "Table 1 A")
@@ -366,6 +378,7 @@ test_that("FT-AS3012 [FR-AS135]: each section starts, after its header / footer 
 })
 
 test_that("FT-AS3013 [FR-AS140]: inputs without page tokens are unchanged apart from the cover / TOC; with a cover alone every NUMPAGES cache is the pages plus one", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   g1 <- .g2_fake(file.path(d, "a.rtf"), "A")
@@ -416,6 +429,7 @@ test_that("FT-AS3013 [FR-AS140]: inputs without page tokens are unchanged apart 
 }
 
 test_that("FT-AS3014 [FR-AS149]: the table assemble_folder() returns has heading NA in every row", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   .g2_demo(file.path(d, "a.rtf"), "Table 1 A")
@@ -451,6 +465,7 @@ test_that("FT-AS3014 [FR-AS149]: the table assemble_folder() returns has heading
 })
 
 test_that("FT-AS3015 [FR-AS150]: the title is the longest centred header cell that is not the Table N line or a <...> subtitle, decoded (signed / unsigned, surrogate pairs, no-break space), or the rest of the Table N line", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   .g2_hdr_file(file.path(d, "a.rtf"), c(
@@ -466,6 +481,7 @@ test_that("FT-AS3015 [FR-AS150]: the title is the longest centred header cell th
 })
 
 test_that("FT-AS3016 [FR-AS153]: no spec_file writes no file; a spec_file is written before assembling and holds the returned table", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   .g2_demo(file.path(d, "a.rtf"), "Table 1 A")
@@ -519,6 +535,7 @@ test_that("FT-AS3017 [FR-AS154]: an .xlsx spec_file without writexl stops with i
 })
 
 test_that("FT-AS3018 [FR-AS157]: assemble_folder() defaults to the title Table of Contents, a dot leader, no page-number command and overwrite = FALSE", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   .g2_demo(file.path(d, "a.rtf"), "Table 1 A")
@@ -544,6 +561,7 @@ test_that("FT-AS3018 [FR-AS157]: assemble_folder() defaults to the title Table o
 })
 
 test_that("FT-AS3019 [FR-AS158]: assemble_folder() passes bookmark_prefix and book_page to assemble_rtf()", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   slot <- function(path, t) {
@@ -571,6 +589,7 @@ test_that("FT-AS3019 [FR-AS158]: assemble_folder() passes bookmark_prefix and bo
 })
 
 test_that("FT-AS3020 [FR-AS159]: a table from assemble_folder(), edited, gives the new label, the new indent, no dropped file and the new order", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   .g2_demo(file.path(d, "a.rtf"), "Table 1 Alpha")
@@ -602,6 +621,7 @@ test_that("FT-AS3020 [FR-AS159]: a table from assemble_folder(), edited, gives t
 })
 
 test_that("FT-AS3021 [FR-AS250]: a contents entry keeps the text of markup (H_{2}O) without its formatting and the decoded non-ASCII text, for toc = \"auto\" and assemble_folder()", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   .g2_demo(file.path(d, "a.rtf"), "Table 1 H_{2}O at \u00b5g/mL")
@@ -637,6 +657,7 @@ test_that("FT-AS3021 [FR-AS250]: a contents entry keeps the text of markup (H_{2
 .g2_blocks <- function(doc) unclass(doc$contents)
 
 test_that("FT-AS3022 [FR-AS179]: rtf_figures() appends one block per figure, in the order given, after the document's content, each with its own page flag", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -655,6 +676,7 @@ test_that("FT-AS3022 [FR-AS179]: rtf_figures() appends one block per figure, in 
 })
 
 test_that("FT-AS3023 [FR-AS180]: a single path, a single drawing function, a plot object each give one block", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -687,6 +709,7 @@ test_that("FT-AS3023 [FR-AS180]: a single path, a single drawing function, a plo
 })
 
 test_that("FT-AS3024 [FR-AS181]: a PNG path, a JPEG path, a patchwork, a lattice object, a gtable and a recorded base plot are each one figure", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("ggplot2")
   skip_if_not_installed("patchwork")
   skip_if_not_installed("lattice")
@@ -728,6 +751,7 @@ test_that("FT-AS3024 [FR-AS181]: a PNG path, a JPEG path, a patchwork, a lattice
 })
 
 test_that("FT-AS3025 [FR-AS185]: width_twips and height_twips set the display size of a figure; NULL is the native size of a file and render_width x render_height of a plot object", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -755,6 +779,7 @@ test_that("FT-AS3025 [FR-AS185]: width_twips and height_twips set the display si
 })
 
 test_that("FT-AS3026 [FR-AS186]: rtf_figures(align) is center, left or right; another value stops as rtfplot() does", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -770,6 +795,7 @@ test_that("FT-AS3026 [FR-AS186]: rtf_figures(align) is center, left or right; an
 })
 
 test_that("FT-AS3027 [FR-AS187]: titles and footnotes are NULL, one block for every figure, or one block per figure", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -789,6 +815,7 @@ test_that("FT-AS3027 [FR-AS187]: titles and footnotes are NULL, one block for ev
 })
 
 test_that("FT-AS3028 [FR-AS189]: page_break TRUE or FALSE for every figure or one each; the document's first content always begins a page", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -817,6 +844,7 @@ test_that("FT-AS3028 [FR-AS189]: page_break TRUE or FALSE for every figure or on
 })
 
 test_that("FT-AS3029 [FR-AS190]: a page_break that is not TRUE or FALSE, or not of length 1 or the number of figures, stops with the full message", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -836,6 +864,7 @@ test_that("FT-AS3029 [FR-AS190]: a page_break that is not TRUE or FALSE, or not 
 })
 
 test_that("FT-AS3030 [FR-AS194]: png_device = NULL takes the option rtfreporter.png_device; \"auto\" resolves", {
+  skip_on_cran()
   skip_if_not_installed("ragg")
   old <- options(rtfreporter.png_device = "png")
   on.exit(options(old), add = TRUE)
@@ -858,6 +887,7 @@ test_that("FT-AS3030 [FR-AS194]: png_device = NULL takes the option rtfreporter.
 })
 
 test_that("FT-AS3031 [FR-AS195]: a render_* value rtfplot() refuses stops with the number of the figure", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -876,6 +906,7 @@ test_that("FT-AS3031 [FR-AS195]: a render_* value rtfplot() refuses stops with t
 })
 
 test_that("FT-AS3032 [FR-AS197]: rtfplot() reads an upper-case .PNG's pixel size and a JPEG's JFIF density in dots per centimetre as dots per inch", {
+  skip_on_cran()
   skip_if_not(isTRUE(unname(capabilities("jpeg"))))
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -919,6 +950,7 @@ test_that("FT-AS3032 [FR-AS197]: rtfplot() reads an upper-case .PNG's pixel size
 })
 
 test_that("FT-AS3033 [FR-AS198]: a ggplot, a lattice object, a patchwork and a gtable are each drawn into an image of render_width x render_height", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("ggplot2")
   skip_if_not_installed("patchwork")
   skip_if_not_installed("lattice")
@@ -950,6 +982,7 @@ test_that("FT-AS3033 [FR-AS198]: a ggplot, a lattice object, a patchwork and a g
 })
 
 test_that("FT-AS3034 [FR-AS203]: a plot object without sizes is drawn 6.5 x 4.5 in: 1950 x 1350 px at 300 dpi, shown 9360 x 6480 twips", {
+  skip_on_cran()
   rp <- rtfplot(.g2_pl)
   expect_identical(c(rp$img_width, rp$img_height), c(1950L, 1350L))
   expect_identical(c(rp$dpi_x, rp$dpi_y), c(300, 300))
@@ -991,6 +1024,7 @@ test_that("FT-AS3035 [FR-AS207]: an option png_device that is not auto, ragg or 
 })
 
 test_that("FT-AS3036 [FR-AS210]: a figure that is a character vector of other than one element, NA, NULL or another atomic vector stops with the messages", {
+  skip_on_cran()
   expect_error(rtfplot(NA_character_), "A figure is one file path, or one plot object.",
                fixed = TRUE)
   expect_error(rtfplot(c("a.png", "b.png")), "A figure is one file path, or one plot object.",
@@ -1008,6 +1042,7 @@ test_that("FT-AS3036 [FR-AS210]: a figure that is a character vector of other th
 })
 
 test_that("FT-AS3037 [FR-AS213]: a plot object that fails while drawn leaves no PNG file behind and the error is its own", {
+  skip_on_cran()
   before <- list.files(tempdir(), pattern = "[.]png$")
   devs <- grDevices::dev.list()
   expect_error(rtfplot(function() stop("boom")), "boom", fixed = TRUE)
@@ -1016,6 +1051,7 @@ test_that("FT-AS3037 [FR-AS213]: a plot object that fails while drawn leaves no 
 })
 
 test_that("FT-AS3038 [FR-AS253]: render_format reaches each plot object, never a file, and an rtfplot() keeps the format it was made with", {
+  skip_on_cran()
   skip_if_not_installed("devEMF")
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -1042,6 +1078,7 @@ test_that("FT-AS3038 [FR-AS253]: render_format reaches each plot object, never a
 }
 
 test_that("FT-AS3039 [FR-AS218]: which = \"dev\" writes the developer manual alone: no kit files and no PASTE.md", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -1051,6 +1088,7 @@ test_that("FT-AS3039 [FR-AS218]: which = \"dev\" writes the developer manual alo
 })
 
 test_that("FT-AS3040 [FR-AS219]: 05_ard.csv holds every normalized row up to 2,000, else each analysis' first 30; 06_ard_shape.md lists each variable's statistics", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("cards")
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -1081,6 +1119,7 @@ test_that("FT-AS3040 [FR-AS219]: 05_ard.csv holds every normalized row up to 2,0
 })
 
 test_that("FT-AS3041 [FR-AS220]: shell = NULL writes no 07_shell.md and none in PASTE.md", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -1099,6 +1138,7 @@ test_that("FT-AS3041 [FR-AS220]: shell = NULL writes no 07_shell.md and none in 
 })
 
 test_that("FT-AS3042 [FR-AS224]: overwrite = TRUE restores a changed file of the kit; the default keeps it and stops with the overwrite hint", {
+  skip_on_cran()
   d <- .g2_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -1237,6 +1277,7 @@ test_that("FT-AS3045 [FR-AS232]: the validation kit not installed, or a file tha
 .g2_tb <- function() data.frame(A = c("1", "2"), B = c("x", "y"), stringsAsFactors = FALSE)
 
 test_that("FT-DC3000 [FR-DC101]: rtf_document() has no content and no section, the colour table c(\"#000000\") and writes Courier New on a landscape Letter page", {
+  skip_on_cran()
   doc <- rtf_document()
   expect_s3_class(doc, "rtf_document")
   expect_identical(names(doc), c("document", "contents", "sections"))
@@ -1251,6 +1292,7 @@ test_that("FT-DC3000 [FR-DC101]: rtf_document() has no content and no section, t
 })
 
 test_that("FT-DC3001 [FR-DC105]: a declared colour is in \\colortbl after black and white; colours of borders and cells are added after it; black and white are not repeated", {
+  skip_on_cran()
   tbl <- rtftable(.g2_tb(), col_spec = list(list(col = 2, color = "#FF0000"),
                                             list(col = 1, color = "#1F4E79")))
   hdr <- rtf_header(rows = list(c(l = "H")),
@@ -1271,6 +1313,7 @@ test_that("FT-DC3001 [FR-DC105]: a declared colour is in \\colortbl after black 
 })
 
 test_that("FT-DC3002 [FR-DC106]: page = NULL is landscape Letter with 0.75 in margins from the options; rtf_page() and a partial list set the page, a key left out resolved at write", {
+  skip_on_cran()
   txt <- .render_to_string(rtf_tables(rtf_document(), .g2_tb()))
   expect_true(grepl("\\paperw15840\\paperh12240\\landscape\\margl1080\\margr1080\\margt1080\\margb1080",
                     txt, fixed = TRUE))
@@ -1292,6 +1335,7 @@ test_that("FT-DC3002 [FR-DC106]: page = NULL is landscape Letter with 0.75 in ma
 })
 
 test_that("FT-DC3003 [FR-DC109]: watermark = an rtf_watermark() writes one shape with its text, a bare string is the same with the defaults, NULL, NA and an empty string write none", {
+  skip_on_cran()
   count <- function(txt) lengths(regmatches(txt, gregexpr("shpinst", txt, fixed = TRUE)))
   render <- function(wm) .render_to_string(rtf_tables(rtf_document(watermark = wm), .g2_tb()))
   one <- render(rtf_watermark("DRAFT"))
@@ -1335,6 +1379,7 @@ test_that("FT-DC3004 [FR-DC111]: the program of rtf_document(program = ) fills {
 })
 
 test_that("FT-DC3005 [FR-DC132]: rtf_config(watermark = ) with an rtf_watermark() writes it; NULL leaves the document's watermark", {
+  skip_on_cran()
   count <- function(txt) lengths(regmatches(txt, gregexpr("shpinst", txt, fixed = TRUE)))
   base <- rtf_tables(rtf_document(), .g2_tb())
   withx <- rtf_config(base, watermark = rtf_watermark("XMARK"))
@@ -1356,6 +1401,7 @@ test_that("FT-DC3005 [FR-DC132]: rtf_config(watermark = ) with an rtf_watermark(
 })
 
 test_that("FT-DC3006 [FR-DC133]: rtf_config(font_lang = NULL) leaves the document's font language", {
+  skip_on_cran()
   doc <- rtf_document(font_lang = c(east_asian = "ja"))
   kept <- rtf_config(doc, font_lang = NULL)
   expect_identical(kept$document$font_lang, doc$document$font_lang)
@@ -1375,6 +1421,7 @@ test_that("FT-DC3006 [FR-DC133]: rtf_config(font_lang = NULL) leaves the documen
 })
 
 test_that("FT-DC3007 [FR-DC137]: rtf_config(font_lang = ) with an unknown language or slot stops with the messages of rtf_document()", {
+  skip_on_cran()
   doc <- rtf_document()
   for (bad in list(c(east_asian = "zz"), c(bad = "ja"), c("ja"))) {
     msg <- tryCatch(rtf_document(font_lang = bad), error = function(e) conditionMessage(e))
@@ -1393,6 +1440,7 @@ test_that("FT-DC3007 [FR-DC137]: rtf_config(font_lang = ) with an unknown langua
 })
 
 test_that("FT-DC3008 [FR-DC163]: rtf_section(page = 2) starts a section at the second table, pages counted from 1 in the order of the contents", {
+  skip_on_cran()
   doc <- rtf_document() |> rtf_tables(list(
     data.frame(T1 = "one"), data.frame(T2 = "two"), data.frame(T3 = "three")))
   doc <- rtf_section(doc, page = 1, secinfo = list(header = rtf_header(rows = list(c(l = "HDRONE")))))
@@ -1410,6 +1458,7 @@ test_that("FT-DC3008 [FR-DC163]: rtf_section(page = 2) starts a section at the s
 })
 
 test_that("FT-DC3009 [FR-DC168]: secinfo = list(header, footer, watermark) is held in the section; a list of such lists gives one section per page", {
+  skip_on_cran()
   h <- rtf_header(rows = list(c(l = "HH")))
   f <- rtf_footer(rows = list(c(l = "FF")))
   doc <- rtf_document() |> rtf_tables(list(data.frame(A = "a"), data.frame(A = "b")))
@@ -1436,6 +1485,7 @@ test_that("FT-DC3009 [FR-DC168]: secinfo = list(header, footer, watermark) is he
 })
 
 test_that("FT-DC3010 [FR-DC169]: a string watermark in secinfo draws that text in that section only", {
+  skip_on_cran()
   doc <- rtf_document() |> rtf_tables(list(data.frame(A = "a1"), data.frame(A = "b2")))
   doc <- rtf_section(doc, page = 1, secinfo = list(header = rtf_header(rows = list(c(l = "S1")))))
   doc <- rtf_section(doc, page = 2, secinfo = list(
@@ -1461,6 +1511,7 @@ test_that("FT-DC3010 [FR-DC169]: a string watermark in secinfo draws that text i
 })
 
 test_that("FT-DC3011 [FR-DC170]: a string header with a vector page is applied to every page named; rtf_header() / rtf_footer() objects and a list of rows are stored as given", {
+  skip_on_cran()
   doc <- rtf_document() |> rtf_tables(list(data.frame(A = "a"), data.frame(A = "b"),
                                            data.frame(A = "c")))
   d <- rtf_section(doc, page = c(1, 3), secinfo = list(header = "HSTR"))
@@ -1483,6 +1534,7 @@ test_that("FT-DC3011 [FR-DC170]: a string header with a vector page is applied t
 })
 
 test_that("FT-DC3012 [FR-DC174]: secinfo with an element that is not header, footer or watermark, or an unnamed one, stops in the same place", {
+  skip_on_cran()
   doc <- rtf_document() |> rtf_tables(.g2_tb())
   m1 <- tryCatch(rtf_section(doc, page = 1, secinfo = list(hdr = "h")),
                  error = function(e) conditionMessage(e))
@@ -1497,6 +1549,7 @@ test_that("FT-DC3012 [FR-DC174]: secinfo with an element that is not header, foo
 })
 
 test_that("FT-DC3013 [FR-DC175]: a secinfo header that is not an rtf_header(), or a footer that is not an rtf_footer(), stops", {
+  skip_on_cran()
   doc <- rtf_document() |> rtf_tables(.g2_tb())
   expect_error(rtf_section(doc, page = 1, secinfo = list(header = 1)),
                "`secinfo`'s `header` must be an rtf_header() or NULL, not a numeric.",
@@ -1507,6 +1560,7 @@ test_that("FT-DC3013 [FR-DC175]: a secinfo header that is not an rtf_header(), o
 })
 
 test_that("FT-DC3014 [FR-DC184]: combine_sections() with something that is not an rtftable names its argument, an unnamed one by position", {
+  skip_on_cran()
   t1 <- rtftable(.g2_tb())
   expect_error(combine_sections(A = list(1, 2)),
                "`combine_sections()` argument 'A' must contain only rtftable objects.",
@@ -1523,6 +1577,7 @@ test_that("FT-DC3014 [FR-DC184]: combine_sections() with something that is not a
 })
 
 test_that("FT-DC3015 [FR-DC220]: a section's watermark is a shape inside that section's header group only; a section without its own holds the document's", {
+  skip_on_cran()
   doc <- rtf_document(watermark = "DOCMARK") |>
     rtf_tables(list(data.frame(A = "a1"), data.frame(A = "b2")))
   doc <- rtf_section(doc, page = 1, secinfo = list(header = rtf_header(rows = list(c(l = "S1")))))
@@ -1549,6 +1604,7 @@ test_that("FT-DC3015 [FR-DC220]: a section's watermark is a shape inside that se
 })
 
 test_that("FT-DC3016 [FR-DC221]: a watermark of an empty string writes no shape", {
+  skip_on_cran()
   expect_identical(rtf_watermark("")$text, "")
   expect_identical(rtf_watermark(NA)$text, "")
   expect_identical(rtf_watermark(NA_character_)$text, "")
@@ -1567,6 +1623,7 @@ test_that("FT-DC3016 [FR-DC221]: a watermark of an empty string writes no shape"
 })
 
 test_that("FT-DC3017 [FR-DC223 FR-DC231 FR-DC229]: rtf_watermark() size, box and font: 144 half-points by default, a 6 x 2 in box, the document font unless font is given", {
+  skip_on_cran()
   shape <- function(wm, doc_args = list()) {
     doc <- do.call(rtf_document, c(list(watermark = wm), doc_args))
     .render_to_string(rtf_tables(doc, .g2_tb()))
@@ -1600,6 +1657,7 @@ test_that("FT-DC3017 [FR-DC223 FR-DC231 FR-DC229]: rtf_watermark() size, box and
 # ---- titles / footnotes / header / footer / style ---------------------------
 
 test_that("FT-DC3018 [FR-DC189]: a styled title row's border is drawn in the table form", {
+  skip_on_cran()
   doc <- rtf_document(style = rtf_style(title_format = "table")) |>
     rtf_tables(.g2_tb()) |>
     rtf_titles(list(list(list(text = "TBORDER", border = rtf_border(bottom = TRUE)), "TPLAIN")))
@@ -1613,6 +1671,7 @@ test_that("FT-DC3018 [FR-DC189]: a styled title row's border is drawn in the tab
 })
 
 test_that("FT-DC3019 [FR-DC192]: rtf_titles(font_size_half_points = 20L) is the block's size over the document's rtf_style(); NULL inherits", {
+  skip_on_cran()
   base <- rtf_document(style = rtf_style(font_size_half_points = 30)) |> rtf_tables(.g2_tb())
   set <- .render_to_string(rtf_titles(base, "TitleX", font_size_half_points = 20L))
   line <- grep("TitleX", strsplit(set, "\n")[[1]], value = TRUE)
@@ -1625,6 +1684,7 @@ test_that("FT-DC3019 [FR-DC192]: rtf_titles(font_size_half_points = 20L) is the 
 })
 
 test_that("FT-DC3020 [FR-DC194]: rtf_titles(markup = ) is the block's own markup; NULL takes the document's", {
+  skip_on_cran()
   base <- rtf_document() |> rtf_tables(.g2_tb())
   line <- function(doc) grep("MK", strsplit(.render_to_string(doc), "\n")[[1]], value = TRUE)
   expect_identical(line(rtf_titles(base, "MK x^{2} y>=1", markup = "script")),
@@ -1644,6 +1704,7 @@ test_that("FT-DC3020 [FR-DC194]: rtf_titles(markup = ) is the block's own markup
 })
 
 test_that("FT-DC3021 [FR-DC196]: rtf_titles(font = ) adds a font the document does not have and writes the block in it; a named vector gives one family per slot; NULL adds none", {
+  skip_on_cran()
   base <- rtf_document() |> rtf_tables(.g2_tb())
   txt <- .render_to_string(rtf_titles(base, "TitleF", font = "Arial"))
   expect_true(grepl("{\\fonttbl{\\f0\\fnil\\fcharset0 Courier New;}{\\f1\\fnil\\fcharset0 Arial;}}",
@@ -1658,6 +1719,7 @@ test_that("FT-DC3021 [FR-DC196]: rtf_titles(font = ) adds a font the document do
 })
 
 test_that("FT-DC3022 [FR-DC207 FR-DC363]: a footnote block border draws left / right on every row's outer edges, inside_h between rows and inside_v between the cells; a row's own border merges over it", {
+  skip_on_cran()
   rows <- list(c(l = "a1", c = "b1", r = "c1"), c(l = "a2", c = "b2", r = "c2"),
                c(l = "a3", c = "b3", r = "c3"))
   doc <- function(border, rws = rows) {
@@ -1699,6 +1761,7 @@ test_that("FT-DC3022 [FR-DC207 FR-DC363]: a footnote block border draws left / r
 })
 
 test_that("FT-DC3023 [FR-DC208]: rtf_footnotes(row_height_twips = ) is the row height whatever the size; the size alone makes the height follow it; NULL inherits the document's", {
+  skip_on_cran()
   base <- rtf_document(style = rtf_style(font_size_half_points = 20L)) |> rtf_tables(.g2_tb())
   row_of <- function(...) .g2_rows_with(.render_to_string(rtf_footnotes(base, list(list("FootX")), ...)), "FootX")
   both <- row_of(font_size_half_points = 14L, row_height_twips = 300L)
@@ -1714,6 +1777,7 @@ test_that("FT-DC3023 [FR-DC208]: rtf_footnotes(row_height_twips = ) is the row h
 })
 
 test_that("FT-DC3024 [FR-DC210]: rtf_footnotes(markup = \"none\") switches the markup off for the footnote alone", {
+  skip_on_cran()
   doc <- rtf_document() |>
     rtf_tables(.g2_tb(), titles = list("Ttl x^{2}")) |>
     rtf_footnotes(list(list("Fn x^{2}")), markup = "none")
@@ -1731,6 +1795,7 @@ test_that("FT-DC3024 [FR-DC210]: rtf_footnotes(markup = \"none\") switches the m
 })
 
 test_that("FT-DC3025 [FR-DC234]: rtf_header_source() of a list of pages takes the first page, the same as the rtftable", {
+  skip_on_cran()
   tab1 <- rtftable(data.frame(A = "x", B = "y"), col_header = c("First A", "First B"))
   tab2 <- rtftable(data.frame(A = "x", B = "y"), col_header = c("Second A", "Second B"))
   from_list <- rtf_header_source(list(tab1, tab2))
@@ -1742,6 +1807,7 @@ test_that("FT-DC3025 [FR-DC234]: rtf_header_source() of a list of pages takes th
 })
 
 test_that("FT-DC3026 [FR-DC237 FR-DC239]: level \"default\" writes the effective align and default border widths but not FALSE flags; \"all\" writes them; snippet = FALSE is the bare rtf_col_header() and snippet = TRUE has the header and spanning borders in style_zone()", {
+  skip_on_cran()
   df5 <- data.frame(Item = "x", A_N = 1L, A_M = 2.5, B_N = 3L, B_M = 4.5,
                     stringsAsFactors = FALSE)
   hdr <- rtf_col_header(
@@ -1775,6 +1841,7 @@ test_that("FT-DC3026 [FR-DC237 FR-DC239]: level \"default\" writes the effective
 })
 
 test_that("FT-DC3027 [FR-DC240 FR-DC241]: add_span_level = FALSE (the default) writes no scaffold row; stub = 2 keeps the second column single and empty, the default the first", {
+  skip_on_cran()
   tbl <- rtftable(data.frame(Item = "x", A = 1, B = 2, C = 3),
                   col_header = c("Item", "A", "B", "C"))
   dflt <- rtf_header_source(tbl, snippet = FALSE)
@@ -1792,6 +1859,7 @@ test_that("FT-DC3027 [FR-DC240 FR-DC241]: add_span_level = FALSE (the default) w
 })
 
 test_that("FT-DC3028 [FR-DC245]: rtf_text_tokens() is a data frame of the eleven tokens with the kinds and the times they are filled", {
+  skip_on_cran()
   tk <- rtf_text_tokens()
   expect_s3_class(tk, "data.frame")
   expect_identical(names(tk), c("token", "kind", "when", "description", "example"))
@@ -1828,6 +1896,7 @@ test_that("FT-DC3028 [FR-DC245]: rtf_text_tokens() is a data frame of the eleven
 })
 
 test_that("FT-DC3029 [FR-DC250]: rtf_replace_text() applies the replacements one after the other, so an earlier one can affect a later one", {
+  skip_on_cran()
   p <- tempfile(fileext = ".rtf")
   on.exit(unlink(c(p, paste0(p, ".bak"))), add = TRUE)
   writeLines("a", p)
@@ -1851,6 +1920,7 @@ test_that("FT-DC3029 [FR-DC250]: rtf_replace_text() applies the replacements one
 })
 
 test_that("FT-DC3030 [FR-DC254]: rtf_replace_text() is case-sensitive by default", {
+  skip_on_cran()
   p <- tempfile(fileext = ".rtf")
   on.exit(unlink(c(p, paste0(p, ".bak"))), add = TRUE)
   writeLines("Draft DRAFT draft", p)
@@ -1871,6 +1941,7 @@ test_that("FT-DC3030 [FR-DC254]: rtf_replace_text() is case-sensitive by default
 # ---- options / generate_rtfreport / rtf_style / bands -----------------------
 
 test_that("FT-DC3031 [FR-DC263]: rtfreporter_options() has one element per rtfreporter.* default, each the option's value where set and the factory baseline otherwise", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   nms <- c("rtfreporter.page.paper_size", "rtfreporter.page.orientation",
            "rtfreporter.page.margin_top_in", "rtfreporter.page.margin_bottom_in",
            "rtfreporter.page.margin_left_in", "rtfreporter.page.margin_right_in",
@@ -1910,6 +1981,7 @@ test_that("FT-DC3031 [FR-DC263]: rtfreporter_options() has one element per rtfre
 })
 
 test_that("FT-DC3032 [FR-DC264]: the factory baseline is landscape Letter with 0.75 in margins, Courier New at 18 half-points, markup script, title text, footnote table, 96 dpi, png_device auto, rounding r, and NULL for the rest", {
+  skip_on_cran()
   saved <- rtfreporter:::.rtfreporter_factory_defaults()
   saved <- stats::setNames(lapply(names(saved), getOption), names(saved))
   on.exit(options(saved), add = TRUE)
@@ -1950,6 +2022,7 @@ test_that("FT-DC3032 [FR-DC264]: the factory baseline is landscape Letter with 0
 })
 
 test_that("FT-DC3033 [FR-DC267]: rtfreporter_reset_defaults() returns invisibly the factory list it applied", {
+  skip_on_cran()
   saved <- rtfreporter:::.rtfreporter_factory_defaults()
   saved <- stats::setNames(lapply(names(saved), getOption), names(saved))
   on.exit(options(saved), add = TRUE)
@@ -1962,6 +2035,7 @@ test_that("FT-DC3033 [FR-DC267]: rtfreporter_reset_defaults() returns invisibly 
 })
 
 test_that("FT-DC3034 [FR-DC269]: generate_rtfreport(doc = ) takes an rtfreport object and writes the file", {
+  skip_on_cran()
   doc <- rtf_tables(rtf_document(), data.frame(Cellvalue = "zzz"))
   rep <- rtfreporter:::.pipe_doc_to_rtfreport(doc)
   expect_s3_class(rep, "rtfreport")
@@ -1989,6 +2063,7 @@ test_that("FT-DC3034 [FR-DC269]: generate_rtfreport(doc = ) takes an rtfreport o
 })
 
 test_that("FT-DC3035 [FR-DC274]: generate_rtfreport() writes over an existing file by default", {
+  skip_on_cran()
   f <- tempfile(fileext = ".rtf")
   on.exit(unlink(f), add = TRUE)
   writeLines("OLD CONTENT", f)
@@ -2075,6 +2150,7 @@ test_that("FT-DC3036 [FR-DC278]: with no program said, the script Rscript runs, 
 })
 
 test_that("FT-DC3037 [FR-DC280]: a {PROGRAM...} token in a header, footer, title or footnote with no program known stops with the full message and how to say one", {
+  skip_on_cran()
   old <- options(rtfreporter.program = NULL)
   on.exit(options(old), add = TRUE)
   local_mocked_bindings(.find_program = function() NULL)
@@ -2101,6 +2177,7 @@ test_that("FT-DC3037 [FR-DC280]: a {PROGRAM...} token in a header, footer, title
 })
 
 test_that("FT-DC3038 [FR-DC281]: {DATETIME} is taken once per file (every page shows the same time), in the datetime_format option or the given format, with an English month whatever the locale", {
+  skip_on_cran()
   mk <- function() {
     rtf_document() |>
       rtf_tables(list(data.frame(A = "p1"), data.frame(A = "p2")),
@@ -2136,12 +2213,13 @@ test_that("FT-DC3038 [FR-DC281]: {DATETIME} is taken once per file (every page s
       break
     }
   }
-  skip_if(is.null(other), "no non-English time locale installed")
+  skip_if(is.null(other), "needs a non-English time locale (Japanese, German or French) installed; runs where one is, as on the local Windows runs")
   expect_false(identical(format(as.POSIXct("2026-09-25"), "%b"), "Sep"))
   expect_true(grepl("M 25Sep2026  10:05", .render_to_string(doc2), fixed = TRUE))
 })
 
 test_that("FT-DC3039 [FR-DC293]: a header row that is a named character vector is matched to the columns by name; a single label is allowed", {
+  skip_on_cran()
   tb <- rtftable(data.frame(a = 1, b = 2), col_header = rtf_col_header(c(b = "B", a = "A")))
   expect_identical(tb$col_header, list(c("A", "B")))
   rev <- rtftable(data.frame(a = 1, b = 2, c = 3),
@@ -2154,6 +2232,7 @@ test_that("FT-DC3039 [FR-DC293]: a header row that is a named character vector i
 })
 
 test_that("FT-DC3040 [FR-DC308]: rtf_style() holds every shared key as given and the sections as named lists of the keys set; NULL is unset", {
+  skip_on_cran()
   st <- rtf_style(font = "Arial", font_size_half_points = 20L, row_height_twips = 300L,
                   cell_padding_left_twips = 1L, cell_padding_right_twips = 2L,
                   cell_padding_top_twips = 3L, cell_padding_bottom_twips = 4L,
@@ -2192,6 +2271,7 @@ test_that("FT-DC3040 [FR-DC308]: rtf_style() holds every shared key as given and
 })
 
 test_that("FT-DC3041 [FR-DC309]: rtf_style() row height, padding, markup and font reach every module: table, title, footnote, header and footer", {
+  skip_on_cran()
   st <- function(top) {
     rtf_style(row_height_twips = 300L, cell_padding_top_twips = top,
               cell_padding_bottom_twips = 20L, cell_padding_left_twips = 50L,
@@ -2237,6 +2317,7 @@ test_that("FT-DC3041 [FR-DC309]: rtf_style() row height, padding, markup and fon
 })
 
 test_that("FT-DC3042 [FR-DC312]: rtf_style(table = ) reaches every content table: font, exact row height, blank row height, paddings", {
+  skip_on_cran()
   t1 <- rtftable(.g2_tb(), blank_rows = 1L)
   doc <- rtf_document(style = rtf_style(table = list(
     font = "Arial", row_height_twips = 300L, blank_row_height_twips = 100L,
@@ -2267,6 +2348,7 @@ test_that("FT-DC3042 [FR-DC312]: rtf_style(table = ) reaches every content table
 })
 
 test_that("FT-DC3043 [FR-DC313]: rtf_style(titles = , footnotes = ) font, row height, align, markup and border reach the title and the footnote block", {
+  skip_on_cran()
   doc <- rtf_document(style = rtf_style(
     title_format = "table",
     titles = list(font = "Arial", row_height_twips = 300L, align = "left", markup = "none",
@@ -2297,6 +2379,7 @@ test_that("FT-DC3043 [FR-DC313]: rtf_style(titles = , footnotes = ) font, row he
 })
 
 test_that("FT-DC3044 [FR-DC314]: rtf_style(header = , footer = ) font, row height, markup, paddings, border and colour reach the band of every section", {
+  skip_on_cran()
   doc <- rtf_document(style = rtf_style(
     header = list(font = "Arial", row_height_twips = 300L, markup = "none",
                   cell_padding_right_twips = 5L, cell_padding_top_twips = 6L,
@@ -2340,6 +2423,7 @@ test_that("FT-DC3044 [FR-DC314]: rtf_style(header = , footer = ) font, row heigh
 })
 
 test_that("FT-DC3045 [FR-DC328]: a band's row_height_twips wins over the height its font size gives; a size of NULL inherits the document's", {
+  skip_on_cran()
   doc <- function(...) {
     rtf_document(style = rtf_style(font_size_half_points = 20L)) |>
       rtf_section(page = 1, secinfo = list(header = rtf_header(c(l = "H"), ...),
@@ -2361,6 +2445,7 @@ test_that("FT-DC3045 [FR-DC328]: a band's row_height_twips wins over the height 
 })
 
 test_that("FT-DC3046 [FR-DC354]: a band or block width above 1 that is not a whole finite number stops with the message, naming the argument", {
+  skip_on_cran()
   msg <- "must be \"content\", \"page\", a fraction in (0, 1], or twips."
   for (w in c(1.01, 1.5, Inf)) {
     expect_error(rtf_header(list(c(l = "a")), width = w), paste("`width`", msg), fixed = TRUE)
@@ -2375,6 +2460,7 @@ test_that("FT-DC3046 [FR-DC354]: a band or block width above 1 that is not a who
 })
 
 test_that("FT-DC3047 [FR-DC358]: a row of three cells divides the block's width evenly and its last cell ends at the block's right edge, in a header, a footer and a footnote", {
+  skip_on_cran()
   doc <- rtf_document(style = rtf_style(footnote_width = 5000)) |>
     rtf_section(page = 1, secinfo = list(
       header = rtf_header(list(c(l = "a", c = "b", r = "c")), width = 5000),
@@ -2388,6 +2474,7 @@ test_that("FT-DC3047 [FR-DC358]: a row of three cells divides the block's width 
 })
 
 test_that("FT-DC3048 [FR-DC359]: a value of a token of one's own, of a page's column and of the program that holds a token prints it with its braces, in a header, footer, title and footnote", {
+  skip_on_cran()
   doc <- rtf_document(tokens = list(OWN = "{PAGE}", OWN2 = "{AUTO_PAGE}")) |>
     rtf_section(page = 1, secinfo = list(
       header = rtf_header(c(l = "h[{OWN}]")), footer = rtf_footer(c(l = "f[{OWN}] {OWN2}")))) |>
@@ -2418,6 +2505,7 @@ test_that("FT-DC3048 [FR-DC359]: a value of a token of one's own, of a page's co
 })
 
 test_that("FT-DC3049 [FR-DC362]: rtf_header(border = rtf_border(all = TRUE)) on a two-row band: top on the first row, bottom on the last, left and right on the outer edges of every row", {
+  skip_on_cran()
   rows <- list(c(l = "r1a", r = "r1b"), c(l = "r2a", c = "r2b", r = "r2c"))
   doc <- rtf_document() |>
     rtf_section(page = 1, secinfo = list(
@@ -2435,6 +2523,7 @@ test_that("FT-DC3049 [FR-DC362]: rtf_header(border = rtf_border(all = TRUE)) on 
 })
 
 test_that("FT-DC3050 [FR-DC363]: a header / footer / footnote row's own border = rtf_border(inside_v = \"dot\") draws a dotted rule between that row's cells only", {
+  skip_on_cran()
   rows <- list(list(columns = c(l = "r1a", r = "r1b"), border = rtf_border(inside_v = "dot")),
                c(l = "r2a", r = "r2b"))
   doc <- rtf_document() |>
@@ -2459,6 +2548,7 @@ test_that("FT-DC3050 [FR-DC363]: a header / footer / footnote row's own border =
 })
 
 test_that("FT-DC3051 [FR-DC365]: rtf_titles(border = ) in the table form: inside_h between rows, left / right on every row, a row's own border merged over it, rtf_style(titles = list(border = )) for a block that sets none, anything else stops", {
+  skip_on_cran()
   tb <- .g2_tb()
   doc <- function(...) {
     rtf_document(style = rtf_style(title_format = "table")) |> rtf_tables(tb) |> rtf_titles(...)
@@ -2497,6 +2587,7 @@ test_that("FT-DC3051 [FR-DC365]: rtf_titles(border = ) in the table form: inside
 })
 
 test_that("FT-DC3052 [FR-DC276]: generate_rtfreport(program = ) overrides the document's own program for one file; NULL uses the document's; {PROGRAM_FULL} is made absolute", {
+  skip_on_cran()
   doc <- rtf_document(program = "doc/own.R") |>
     rtf_section(page = 1, secinfo = list(header = NULL, footer = rtf_footer(list(
       c(l = "P=<{PROGRAM}> N=<{PROGRAM_NAME}> D=<{PROGRAM_DIR}>"))))) |>

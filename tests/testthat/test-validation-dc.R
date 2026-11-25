@@ -2,6 +2,7 @@
 # the first validation version): each test names its FT id and its FRs.
 
 test_that("FT-DC219 [FR-DC136 FR-DC137]: rtf_config() refuses a watermark that is not one and a font_lang that is not a named vector", {
+  skip_on_cran()
   doc <- rtf_document()
   expect_error(rtf_config(doc, watermark = list(1, 2)),
                "`watermark` must be an rtf_watermark object, a single string, or NULL / NA for none.",
@@ -15,6 +16,7 @@ test_that("FT-DC219 [FR-DC136 FR-DC137]: rtf_config() refuses a watermark that i
 })
 
 test_that("FT-DC220 [FR-DC166 FR-DC167]: a section without a header or footer of its own keeps the previous section's; rtf_header(\"\") gives a blank band", {
+  skip_on_cran()
   t1 <- as_rtftable(data.frame(a = 1))
   t2 <- as_rtftable(data.frame(b = 2))
   t3 <- as_rtftable(data.frame(c = 3))
@@ -38,12 +40,14 @@ test_that("FT-DC220 [FR-DC166 FR-DC167]: a section without a header or footer of
 })
 
 test_that("FT-DC221 [FR-DC238]: rtf_header_source(level = ) takes explicit, default or all", {
+  skip_on_cran()
   t1 <- rtftable(data.frame(a = 1, b = 2))
   expect_error(rtf_header_source(t1, level = "x"), "'arg' should be one of")
   expect_type(rtf_header_source(t1, level = "all"), "character")
 })
 
 test_that("FT-DC222 [FR-DC255 FR-DC256 FR-DC257 FR-DC259]: rtf_replace_text() reads and writes in the encoding given, matches literally, and checks its arguments", {
+  skip_on_cran()
   read_raw <- function(p) rawToChar(readBin(p, what = "raw", n = file.info(p)$size))
   # the encoding: a Latin-1 file is read and written as Latin-1
   p <- tempfile(fileext = ".rtf")
@@ -65,6 +69,7 @@ test_that("FT-DC222 [FR-DC255 FR-DC256 FR-DC257 FR-DC259]: rtf_replace_text() re
 })
 
 test_that("FT-DC223 [FR-DC267]: rtfreporter_reset_defaults() returns the factory defaults invisibly", {
+  skip_on_cran()
   old <- options(rtfreporter.rounding = "sas")
   on.exit(options(old), add = TRUE)
   v <- withVisible(rtfreporter_reset_defaults())
@@ -85,6 +90,7 @@ test_that("FT-DC223 [FR-DC267]: rtfreporter_reset_defaults() returns the factory
 }
 
 test_that("FT-DC241 [FR-DC325 FR-DC326]: rtf_header() / rtf_footer() rows place each cell by its name; border is the band's rule", {
+  skip_on_cran()
   # one row: l and r share the writable width (13680 twips) equally
   h <- .vg_band(.vg_doc(rtf_header(c(l = "HL", r = "HR"))))
   expect_true(grepl("\\cellx6840\\cellx13680\\ql\\li0\\ri0 HL\\cell\\qr\\li0\\ri0 HR\\cell\\row",
@@ -113,6 +119,7 @@ test_that("FT-DC241 [FR-DC325 FR-DC326]: rtf_header() / rtf_footer() rows place 
 })
 
 test_that("FT-DC242 [FR-DC327 FR-DC328 FR-DC330]: a band's width, font size and left / right padding", {
+  skip_on_cran()
   # width: a fraction of the writable width, or twips; width_twips wins
   h <- .vg_band(.vg_doc(rtf_header(c(l = "HL", r = "HR"), width = 0.5)))
   expect_true(grepl("\\cellx3420\\cellx6840\\ql", h, fixed = TRUE))
@@ -139,6 +146,7 @@ test_that("FT-DC242 [FR-DC327 FR-DC328 FR-DC330]: a band's width, font size and 
 })
 
 test_that("FT-DC243 [FR-DC329]: a band's markup is its own, NULL inheriting the document's", {
+  skip_on_cran()
   h <- .vg_band(.vg_doc(rtf_header(c(l = "H >= 1"), markup = "relational")))
   expect_true(grepl("H \\u8805? 1\\cell", h, fixed = TRUE))
   h <- .vg_band(.vg_doc(rtf_header(c(l = "H >= 1"))))
@@ -150,6 +158,7 @@ test_that("FT-DC243 [FR-DC329]: a band's markup is its own, NULL inheriting the 
 })
 
 test_that("FT-DC244 [FR-DC331]: drop_empty_rows leaves out a band row whose own tokens are all empty", {
+  skip_on_cran()
   doc <- function(drop) {
     .vg_doc(rtf_header(list(c(l = "PROT"), c(l = "<{POP}>"), c(c = "MID")), drop_empty_rows = drop),
             rtf_footer(list(c(r = "FOOT"), c(l = "({POP})")), drop_empty_rows = drop),
@@ -182,6 +191,7 @@ test_that("FT-DC244 [FR-DC331]: drop_empty_rows leaves out a band row whose own 
 }
 
 test_that("FT-DC245 [FR-DC311]: the title and footnote format and width options reach a document that sets none", {
+  skip_on_cran()
   s <- .render_to_string(.vg_titled())
   expect_length(.vg_rows(s, "TTL"), 0L)                     # text by default
   expect_true(grepl("\\cellx13680\\ql\\li0\\ri0 FNT\\cell", .vg_rows(s, "FNT"), fixed = TRUE))
@@ -199,6 +209,7 @@ test_that("FT-DC245 [FR-DC311]: the title and footnote format and width options 
 })
 
 test_that("FT-DC246 [FR-DC315]: the font size, row height, left / right padding and markup options reach a document that sets none", {
+  skip_on_cran()
   s <- .render_to_string(.vg_titled())
   expect_true(grepl("\\widowctrl\\fs18", s, fixed = TRUE))
   expect_true(grepl("\\trrh230", .vg_rows(s, "a1"), fixed = TRUE))
@@ -217,6 +228,7 @@ test_that("FT-DC246 [FR-DC315]: the font size, row height, left / right padding 
 })
 
 test_that("FT-DC247 [FR-DC333]: rtf_layout(doc) stops when doc is not an rtf_document", {
+  skip_on_cran()
   expect_error(rtf_layout(list()), "`doc` must be an rtf_document object", fixed = TRUE)
   expect_error(rtf_layout(data.frame(a = 1)), "`doc` must be an rtf_document object", fixed = TRUE)
 })

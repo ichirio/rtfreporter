@@ -30,6 +30,7 @@
 }
 
 test_that("traceability_review.csv is in order: fr as in requirements.csv, then ft", {
+  skip_on_cran()
   req <- .ord_read("requirements.csv")
   rv <- .ord_read("traceability_review.csv")
   pos <- match(rv$fr, req$id)
@@ -43,6 +44,7 @@ test_that("traceability_review.csv is in order: fr as in requirements.csv, then 
 })
 
 test_that("reference_review.csv is in order by file", {
+  skip_on_cran()
   rr <- .ord_read("reference_review.csv")
   msg <- .ord_first_out(list(rr$file), rr$file, "reference_review.csv")
   expect(!nzchar(msg), paste(msg, "A row goes to its place by file; never to the end."))

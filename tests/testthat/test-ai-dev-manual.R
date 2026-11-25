@@ -17,7 +17,7 @@ library(testthat)
 
 .dev_manual_lines <- function() {
   p <- .dev_manual_path()
-  skip_if_not(file.exists(p), "AI dev manual not present (installed package)")
+  skip_if_not(file.exists(p), "needs the AI developer manual of the source checkout; runs where the tests run from the checkout")
   readLines(p, encoding = "UTF-8", warn = FALSE)
 }
 
@@ -55,7 +55,7 @@ test_that("the manual's Imports list matches DESCRIPTION", {
 
 test_that("the S3-only invariant still holds in R/", {
   r_dir <- test_path("..", "..", "R")
-  skip_if_not(dir.exists(r_dir), "source tree not available")
+  skip_if_not(dir.exists(r_dir), "needs the R/ folder of the source checkout; runs where the tests run from the checkout")
   files <- list.files(r_dir, pattern = "[.]R$", full.names = TRUE)
   hits <- Filter(function(f) {
     any(grepl("R6Class|setRefClass|setClass\\(", readLines(f, warn = FALSE)))
@@ -68,7 +68,7 @@ test_that("the two manuals point at each other", {
   dev <- .dev_manual_lines()
   user_path <- test_path("..", "..", "inst", "ai",
                          "rtfreporter-ai-user-manual.md")
-  skip_if_not(file.exists(user_path), "AI user manual not present")
+  skip_if_not(file.exists(user_path), "needs the AI user manual of the source checkout (inst/ai); runs where the tests run from the checkout")
   usr <- readLines(user_path, encoding = "UTF-8", warn = FALSE)
 
   expect_true(any(grepl("rtfreporter-ai-user-manual.md", dev, fixed = TRUE)),
@@ -82,7 +82,7 @@ test_that("each manual is reachable from the page written for its reader", {
   readme  <- test_path("..", "..", "README.md")
   article <- test_path("..", "..", "vignettes", "articles", "ai-development.Rmd")
   skip_if_not(file.exists(readme) && file.exists(article),
-              "README / contributor article not available")
+              "needs README and the contributor article of the source checkout; runs where the tests run from the checkout")
 
   # The home page is written for people USING the package: it links the user
   # manual, and points contributors at the article rather than carrying the
@@ -108,7 +108,7 @@ test_that("each manual is reachable from the page written for its reader", {
 test_that("the contributor article has its Japanese twin, each linking the other", {
   en <- test_path("..", "..", "vignettes", "articles", "ai-development.Rmd")
   ja <- test_path("..", "..", "vignettes", "articles", "ai-development-ja.Rmd")
-  skip_if_not(file.exists(en), "contributor article not available")
+  skip_if_not(file.exists(en), "needs the contributor article of the source checkout; runs where the tests run from the checkout")
   expect_true(file.exists(ja),
               info = "the For-contributors group's convention is an -ja twin per article")
   expect_true(any(grepl("ai-development-ja.html",
@@ -121,7 +121,7 @@ test_that("the navbar links the manuals by absolute URL, as .md (#668)", {
   # pkgdown rewrites a relative `.md` href to `.html`, which is not
   # published: the manuals' links are absolute, so they stay `.md`.
   yml <- test_path("..", "..", "_pkgdown.yml")
-  skip_if_not(file.exists(yml), "_pkgdown.yml not available")
+  skip_if_not(file.exists(yml), "needs _pkgdown.yml of the source checkout; runs where the tests run from the checkout")
   L <- readLines(yml, encoding = "UTF-8", warn = FALSE)
   href <- grep("href:.*rtfreporter-ai-(user|dev)-manual", L, value = TRUE)
   expect_length(href, 2L)
@@ -132,7 +132,7 @@ test_that("the navbar links the manuals by absolute URL, as .md (#668)", {
 
 test_that("both manuals and the article are declared in _pkgdown.yml", {
   yml <- test_path("..", "..", "_pkgdown.yml")
-  skip_if_not(file.exists(yml), "_pkgdown.yml not available")
+  skip_if_not(file.exists(yml), "needs _pkgdown.yml of the source checkout; runs where the tests run from the checkout")
   L <- readLines(yml, encoding = "UTF-8", warn = FALSE)
   for (f in c("rtfreporter-ai-user-manual", "rtfreporter-ai-dev-manual")) {
     expect_true(any(grepl(f, L, fixed = TRUE)),

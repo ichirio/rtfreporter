@@ -27,6 +27,7 @@
 }
 
 test_that("FT-TB5101 [FR-TB121]: each split gives the pages the statement says", {
+  skip_on_cran()
   d <- data.frame(grp = c(rep("A", 3), rep("B", 3)), v = as.character(1:6),
                   stringsAsFactors = FALSE)
   nr <- function(p) unname(vapply(p, function(x) nrow(x$data), integer(1)))
@@ -66,6 +67,7 @@ test_that("FT-TB5101 [FR-TB121]: each split gives the pages the statement says",
 })
 
 test_that("FT-TB5102 [FR-TB131 FR-TB132]: page_by pages, their names, tails and meta", {
+  skip_on_cran()
   s <- data.frame(period = c("P1", "P1", "P2", "P1"), param = c("ALT", "AST", "ALT", "ALT"),
                   v = as.character(1:4), stringsAsFactors = FALSE)
   # one page per value, named by it; P1's rows are scattered (1, 2, 4) and gathered in order
@@ -110,6 +112,7 @@ test_that("FT-TB5102 [FR-TB131 FR-TB132]: page_by pages, their names, tails and 
 })
 
 test_that("FT-TB5103 [FR-TB142]: count_blank_rows makes max_rows the rows the page prints", {
+  skip_on_cran()
   # three groups of three rows; between_groups puts a blank after row 3 and row 6
   df9 <- data.frame(label = c("Group A", "  a1", "  a2", "Group B", "  b1", "  b2",
                               "Group C", "  c1", "  c2"),
@@ -153,6 +156,7 @@ test_that("FT-TB5103 [FR-TB142]: count_blank_rows makes max_rows the rows the pa
 })
 
 test_that("FT-TB5104 [FR-TB151]: first_rows with page_by, a custom split or by_value stops with its message", {
+  skip_on_cran()
   d <- data.frame(g = c("x", "x", "y", "y", "z"), k = 1:5, stringsAsFactors = FALSE)
   msg <- paste0("`first_rows` paginates one table by rows or groups: ",
                 "not with `page_by` or a custom `split`.")
@@ -165,6 +169,7 @@ test_that("FT-TB5104 [FR-TB151]: first_rows with page_by, a custom split or by_v
 })
 
 test_that("FT-TB5105 [FR-TB284 FR-TB287 FR-TB288]: paginate_cols() stops with the message of a bad at, cut_by, fit, order or col_header", {
+  skip_on_cran()
   tb <- rtftable(.t2_pc_df())
   # FR-TB284: at, cut_by
   expect_error(paginate_cols(tb, at = 1),
@@ -197,6 +202,7 @@ test_that("FT-TB5105 [FR-TB284 FR-TB287 FR-TB288]: paginate_cols() stops with th
 })
 
 test_that("FT-TB5106 [FR-TB596]: max_rows = 1 gives pages of one row and no continuation row; max_rows at or above the rows gives one page", {
+  skip_on_cran()
   d <- data.frame(g = c("A", "A", "B"), v = as.character(1:3), stringsAsFactors = FALSE)
   for (s in c("group_force", "group_safe")) {
     p <- as_rtftables(d, split = s, max_rows = 1, group_col = "g", group_by = "value")
@@ -236,6 +242,7 @@ test_that("FT-TB5106 [FR-TB596]: max_rows = 1 gives pages of one row and no cont
 }
 
 test_that("FT-DC5101 [FR-DC206]: a footnote row is a string or c(l, c, r) cells; align picks the slot of a bare string; the row's own slot wins; a blank string is a row", {
+  skip_on_cran()
   # a bare string: one cell, left by default
   r <- .t2_fn(list(c("FN one", "FN two")))
   expect_identical(.t2_cells(r), c(1L, 1L))
@@ -263,6 +270,7 @@ test_that("FT-DC5101 [FR-DC206]: a footnote row is a string or c(l, c, r) cells;
 })
 
 test_that("FT-DC5102 [FR-DC207]: rtf_footnotes(border = ) NULL is no rule; top is the rule on the first row, bottom below the last", {
+  skip_on_cran()
   rows <- list(c("FN one", "FN two", "FN three"))
   # NULL: no border on any row
   none <- .t2_fn(rows)
@@ -286,6 +294,7 @@ test_that("FT-DC5102 [FR-DC207]: rtf_footnotes(border = ) NULL is no rule; top i
 })
 
 test_that("FT-DC5103 [FR-DC218]: a footnote row named other than l / c / r, or a per-row style list, stops at render with the message", {
+  skip_on_cran()
   doc <- function(rows) rtf_document() |> rtf_tables(.t2_tbl()) |> rtf_footnotes(list(rows))
   expect_error(.t2_lines(doc(list(c(x = "FN one")))),
                "A footnote row may only be named l / c / r; got 'x'.", fixed = TRUE)
@@ -300,6 +309,7 @@ test_that("FT-DC5103 [FR-DC218]: a footnote row named other than l / c / r, or a
 })
 
 test_that("FT-DC5104 [FR-DC189 FR-TB172]: a title block is a character vector or rows with a style; a blank string is a blank row; rows default to centred and bold; rtf_tables(titles = ) takes one block or one each", {
+  skip_on_cran()
   tb <- .t2_tbl()
   # a character vector, one entry per row: centred and bold, the blank string a blank row
   l <- .t2_lines(rtf_document() |> rtf_tables(tb) |> rtf_titles(list(c("T1", "", "T2"))))
@@ -337,6 +347,7 @@ test_that("FT-DC5104 [FR-DC189 FR-TB172]: a title block is a character vector or
 })
 
 test_that("FT-DC5105 [FR-DC192]: rtf_titles(font_size_half_points = ) overrides the document's titles style, then its shared size; NULL inherits", {
+  skip_on_cran()
   tb <- .t2_tbl()
   line <- function(doc, pat = "TX") grep(pat, .t2_lines(doc), value = TRUE)
   # the shared level only (rtf_style(font_size_half_points = 30)): the block's own size wins
@@ -359,6 +370,7 @@ test_that("FT-DC5105 [FR-DC192]: rtf_titles(font_size_half_points = ) overrides 
 })
 
 test_that("FT-DC5106 [FR-DC364]: a header, footer or footnote row's border that is not NULL or an rtf_border() stops, naming the row", {
+  skip_on_cran()
   expect_error(
     rtf_header(list(c(l = "A"), list(columns = c(l = "B"), border = "bottom"))),
     "`rtf_header()` row 2's `border` must be NULL or an rtf_border() object.", fixed = TRUE)
@@ -378,6 +390,7 @@ test_that("FT-DC5106 [FR-DC364]: a header, footer or footnote row's border that 
 })
 
 test_that("FT-TB5107 [FR-TB261]: add_cont_label() appends \" (Cont.)\" as the built-in strategies do, in the column col", {
+  skip_on_cran()
   x <- data.frame(g = rep("A", 6), v = as.character(1:6), stringsAsFactors = FALSE)
   # the default suffix is what group_force writes on the next page
   built <- as_rtftables(x, split = "group_force", max_rows = 4, group_col = "g",
@@ -398,6 +411,7 @@ test_that("FT-TB5107 [FR-TB261]: add_cont_label() appends \" (Cont.)\" as the bu
 })
 
 test_that("FT-TB5108 [FR-TB280]: paginate_cols() keeps the page names, numbering repeats with a \"...n\" tail; an unnamed list stays unnamed", {
+  skip_on_cran()
   d <- data.frame(P = letters[1:6], A_n = "1", A_m = "2", B_n = "3", B_m = "4",
                   stringsAsFactors = FALSE)
   pg <- list(g1 = rtftable(d[1:3, ]), g2 = rtftable(d[4:6, ]))

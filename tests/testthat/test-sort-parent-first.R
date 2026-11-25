@@ -6,7 +6,7 @@ test_that("three levels: the overall rows, then each SOC's own rows, then its PT
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
   adsl <- cards::ADSL
-  ae <- cards::ADAE
+  ae <- .cran_adae()  # on CRAN five SOCs (helper-rtfreporter.R)
   ae$AESEV <- factor(ae$AESEV, levels = c("MILD", "MODERATE", "SEVERE"))
   top <- function(...) dplyr::slice_max(ae, as.integer(AESEV), by = c(USUBJID, ...), n = 1,
                                         with_ties = FALSE)
@@ -52,7 +52,7 @@ test_that("plan_total() with two column keys folds the inner one: each arm's 'An
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
   adsl <- cards::ADSL
-  ae <- cards::ADAE
+  ae <- .cran_adae()  # on CRAN five SOCs (helper-rtfreporter.R)
   ae$AESEV <- factor(ae$AESEV, levels = c("MILD", "MODERATE", "SEVERE"))
   top <- dplyr::slice_max(ae, as.integer(AESEV), by = c(USUBJID, AEBODSYS, AEDECOD), n = 1,
                           with_ties = FALSE)
@@ -84,7 +84,7 @@ test_that("plan_total() with two column keys folds the inner one: each arm's 'An
 test_that("levels(<key>): plan_levels' values first, the others by the next keys (#695)", {
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
-  ae <- cards::ADAE
+  ae <- .cran_adae()  # on CRAN five SOCs (helper-rtfreporter.R)
   ard <- cards::ard_stack_hierarchical(ae, variables = c(AEBODSYS, AEDECOD), by = TRTA,
                                        denominator = adsl, id = USUBJID)
   base <- table_plan(normalize_ard(ard, hierarchy = c("AEBODSYS", "AEDECOD")),

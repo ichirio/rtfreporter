@@ -125,6 +125,10 @@ pages <- as_rtftables(
     max_rows   = 21L,              # 3 time points per row page
     blank_rows = blank_rows_by_change("Nominal Time (h)",
                                       group_by = "indent"),
+    # a blank under the column header and after the last row of every page:
+    # the page edges are blank_row_first / blank_row_end (#1139)
+    blank_row_first = TRUE,
+    blank_row_end   = TRUE,
     col_header = list(
       list(col_cell(c(2, length(VISITS) + 1L),
                     "Plasma Concentration (ng/mL)")),

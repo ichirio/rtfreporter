@@ -171,11 +171,13 @@
 # ---- cell_rows(), pull_ard() ----------------------------------------------------
 
 test_that("FT-AR095 [FR-AR238]: cell_rows() needs at least one row", {
+  skip_on_cran()
   expect_error(cell_rows(), "`cell_rows()` needs at least one row.", fixed = TRUE)
   expect_s3_class(cell_rows("{n}"), "cell_rows")
 })
 
 test_that("FT-AR096 [FR-AR239]: pull_ard(levels = ) is a named list; a plain vector is not read", {
+  skip_on_cran()
   a <- .a6_sex()
   expect_identical(pull_ard(a, cols = "TRT"), c(A = 5, B = 6))
   expect_identical(pull_ard(a, cols = "TRT", levels = c("B", "A")), c(A = 5, B = 6))
@@ -183,6 +185,7 @@ test_that("FT-AR096 [FR-AR239]: pull_ard(levels = ) is a named list; a plain vec
 })
 
 test_that("FT-AR097 [FR-AR240]: with several cols, pull_ard(levels = ) is matched on the joined names", {
+  skip_on_cran()
   pull <- function(lv) pull_ard(.a6_crossed(), cols = c("TRT", "SEX"), stat = "n",
                                 variable = "SEX", levels = lv)
   expect_identical(pull(NULL), c(A____F = 3, A____M = 2, B____F = 4, B____M = 1))
@@ -194,6 +197,7 @@ test_that("FT-AR097 [FR-AR240]: with several cols, pull_ard(levels = ) is matche
 # ---- normalize_ard() -------------------------------------------------------------
 
 test_that("FT-AR098 [FR-AR241]: normalize_ard(overall = ) needs a hierarchy", {
+  skip_on_cran()
   h <- rbind(.a6_rows("A", "..ard_hierarchical_overall..", NA, "n", 5, ctx = "hierarchical"),
              .a6_rows("A", "AEDECOD", "Headache", "n", 2, ctx = "hierarchical"))
   h$group2 <- c(NA, "AEDECOD")
@@ -204,6 +208,7 @@ test_that("FT-AR098 [FR-AR241]: normalize_ard(overall = ) needs a hierarchy", {
 })
 
 test_that("FT-AR099 [FR-AR242]: dropping ard_ignored leaves the table and shortens only the notes", {
+  skip_on_cran()
   a <- rbind(.a6_sex(), .a6_rows(NA, "TRT", "A", "n", 5, g1 = NA))
   d <- normalize_ard(a, drop_key_variables = TRUE)
   expect_identical(attr(d, "ard_ignored")$reason, "a key variable's own tabulation")
@@ -221,6 +226,7 @@ test_that("FT-AR099 [FR-AR242]: dropping ard_ignored leaves the table and shorte
 # ---- widen_ard() -----------------------------------------------------------------
 
 test_that("FT-AR100 [FR-AR243]: a cells guard may name the caller's variables", {
+  skip_on_cran()
   lim <- 3
   t <- .a6_wide(cells = c(n > lim ~ "many", "{n}"))
   expect_identical(t$B, c("many", "1"))
@@ -229,12 +235,14 @@ test_that("FT-AR100 [FR-AR243]: a cells guard may name the caller's variables", 
 })
 
 test_that("FT-AR101 [FR-AR244]: a cells list with no names is a chain, not a map", {
+  skip_on_cran()
   expect_identical(.a6_wide(cells = list(n > 3 ~ "big", "{n}")),
                    .a6_wide(cells = c(n > 3 ~ "big", "{n}")))
   expect_identical(.a6_wide(cells = list(n > 3 ~ "big", "{n}"))$B, c("big", "1"))
 })
 
 test_that("FT-AR102 [FR-AR245]: labels from setNames() of two lengths stop", {
+  skip_on_cran()
   lab <- stats::setNames(c("Female", "Male", "Other"), c("F", "M"))
   expect_error(.a6_wide(cells = "{n}", labels = lab),
                "`labels` must name every element; element(s) 3 have no name.", fixed = TRUE)
@@ -243,6 +251,7 @@ test_that("FT-AR102 [FR-AR245]: labels from setNames() of two lengths stop", {
 })
 
 test_that("FT-AR103 [FR-AR246]: sort = \"sum(n)\" is \"n\"; \"min(n)\"; \"-n[A]\" totals the outer level's columns", {
+  skip_on_cran()
   lab <- function(sort) .a6_wide(cells = "{n}", sort = sort)$label
   expect_identical(lab("n"), c("M", "F"))                  # 3 against 7
   expect_identical(.a6_wide(cells = "{n}", sort = "sum(n)"), .a6_wide(cells = "{n}", sort = "n"))
@@ -260,6 +269,7 @@ test_that("FT-AR103 [FR-AR246]: sort = \"sum(n)\" is \"n\"; \"min(n)\"; \"-n[A]\
 })
 
 test_that("FT-AR104 [FR-AR247]: label = takes a bare formula and a chain of one formula", {
+  skip_on_cran()
   age <- normalize_ard(rbind(
     .a6_rows(c("A", "B"), "AGE", NA, "mean", c(50, 52), ctx = "summary")))
   t <- widen_ard(age, cols = "TRT", cells = "{mean}", label = ~ "Age", notes = FALSE)
@@ -271,6 +281,7 @@ test_that("FT-AR104 [FR-AR247]: label = takes a bare formula and a chain of one 
 })
 
 test_that("FT-AR105 [FR-AR164 FR-AR248]: an unnamed cell_rows() line is one row per level, labelled from label", {
+  skip_on_cran()
   t <- .a6_wide(cells = cell_rows("{n}"))
   expect_identical(t$label, c("F", "M"))
   expect_identical(t$A, c("3", "2"))
@@ -293,6 +304,7 @@ test_that("FT-AR105 [FR-AR164 FR-AR248]: an unnamed cell_rows() line is one row 
 })
 
 test_that("FT-AR106 [FR-AR249]: a named row on a variable with several levels stops, naming it", {
+  skip_on_cran()
   msg <- "`cells` gives 'SEX' named rows ('n'), but 'SEX' has several levels ('F', 'M')."
   expect_error(.a6_wide(cells = c(n = "{n}")), msg, fixed = TRUE)
   expect_error(.a6_wide(cells = cell_rows(n = "{n}")), msg, fixed = TRUE)
@@ -308,11 +320,13 @@ test_that("FT-AR106 [FR-AR249]: a named row on a variable with several levels st
 # ---- the number formats ---------------------------------------------------------
 
 test_that("FT-FM100 [FR-FM249]: fmt_count_pct() takes whole counts only", {
+  skip_on_cran()
   expect_error(fmt_count_pct(2.5, 0.5), "`count` must be whole numbers; got 2.5.", fixed = TRUE)
   expect_identical(fmt_count_pct(2, 0.5, nbsp = " "), "  2 (50.0)")
 })
 
 test_that("FT-FM101 [FR-FM250]: a numeric NaN is missing to the cell formats, an Inf is not", {
+  skip_on_cran()
   expect_identical(fmt_right_align(c(NaN, Inf, 12), na = "-", nbsp = " "), c("  -", "Inf", " 12"))
   expect_identical(fmt_right_align(c(NaN, 12), nbsp = " "), c("", "12"))
   expect_identical(fmt_count_paren(c(NaN, Inf), na = "-", nbsp = " "), c("-", "Inf"))
