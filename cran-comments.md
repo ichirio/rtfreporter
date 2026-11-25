@@ -2,25 +2,45 @@
 
 0 errors | 0 warnings | 1 note
 
-* This is a new submission.  The one NOTE is the "New submission" note.
+* This is a new submission.  The one NOTE is from "checking CRAN
+  incoming feasibility":
+  * "New submission".
+  * On win-builder, "Possibly misspelled words in DESCRIPTION: ARD, RTF,
+    TFLs".  These are abbreviations, spelled correctly, and each is
+    spelled out in the Description where it first appears there: "Rich
+    Text Format (RTF)", "Tables, Listings and Figures (TFLs)" and
+    "analysis results dataset (ARD, ...)".  RTF is also in the Title.
 
 There are no reverse dependencies (this is the package's first release).
 
 ## Test environments
 
-* local: Windows 11, R 4.6.1
-* GitHub Actions: ubuntu-latest (devel, release, oldrel-1),
+* local: Windows 11 x64, R 4.6.1 (ucrt)
+* GitHub Actions: ubuntu-latest (R devel, release, oldrel-1),
   macos-latest (release), windows-latest (release), and ubuntu-24.04
   with R 4.3 and every dependency at the minimum version DESCRIPTION
   names
 * win-builder: R-devel, R-release, R-oldrelease
-* R-hub: linux, macos-arm64, windows, and one sanitizer run
 
-Results of the release test run:
+The package has no compiled code, so it was not run on R-hub.
 
-* local Windows 11, R 4.6.1, every suggested package installed, on the release
-  candidate (fd1a4af): tests FAIL 0 | WARN 0 | SKIP 6 | PASS 26383
-* GitHub Actions, win-builder, R-hub: (to be filled before submission)
+## Results
+
+* local, Windows 11, R 4.6.1, `R CMD check --as-cran` of the tarball
+  built from the tag v0.9.0, with the PDF and HTML manuals:
+  0 errors | 0 warnings | 1 note ("New submission")
+* local, Windows 11, R 4.6.1, every suggested package installed, the
+  tests of the tag v0.9.0: FAIL 0 | WARN 2 | SKIP 8 | PASS 26416 (both
+  warnings are "package 'cards' / 'magrittr' was built under R version
+  4.6.2" from the local library, not from rtfreporter)
+* GitHub Actions, R-CMD-check on the tag v0.9.0: all six jobs passed
+  (0 errors, 0 warnings)
+* win-builder R-devel (2026-11-17 r90926 ucrt): 0 errors | 0 warnings |
+  1 note ("New submission", and the abbreviations above)
+* win-builder R-release (R 4.6.2): 0 errors | 0 warnings | 1 note
+  ("New submission", and the abbreviations above)
+* win-builder R-oldrelease (R 4.5.3): 0 errors | 0 warnings | 1 note
+  ("New submission", and the abbreviations above)
 
 ## Notes for the reviewers
 
