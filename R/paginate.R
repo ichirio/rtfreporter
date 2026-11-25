@@ -324,6 +324,7 @@
       # one value) is cut between records, not inside one.
       if (!is.null(collapse_record) && !isTRUE(info$no_cont)) {
         info$record <- collapse_record
+        info <- .record_whole_groups(info, x[[collapse_record]])
       }
       list(idx = gidx, info = info)
     }
@@ -920,6 +921,29 @@
   if (any(nonempty & first_ch %in% .GROUP_INDENT_CHARS)) return("indent")
   if (any(!nonempty) && any(nonempty)) return("filled")
   "value"
+}
+
+# A group opens only where a record does (#1051).  A record printed on several
+# lines -- a listing's wrapped value, an rlistings cell holding "\n" -- can
+# show a new value in the group column on a later line ("S-0" / "01"); that
+# line continues the record, and so the group, rather than opening another.
+# `rec` is the record id per row; the ids are renumbered from the headers.
+# Only where a group is opened by a heading ("filled", "indent"): under
+# group_by = "value" every change of value opens one, as documented.
+.record_whole_groups <- function(info, rec) {
+  n <- length(info$id)
+  if (n < 2L || length(rec) != n || is.null(info$headers) ||
+      identical(info$mode, "value")) {
+    return(info)
+  }
+  same <- c(FALSE, !is.na(rec[-1L]) & !is.na(rec[-n]) & rec[-1L] == rec[-n])
+  if (!any(same & info$headers)) return(info)
+  h   <- info$headers & !same
+  raw <- cumsum(h)
+  info$id      <- ifelse(raw == 0L, NA_integer_, as.integer(raw))
+  info$label   <- ifelse(raw == 0L, info$label, info$label[which(h)][pmax(raw, 1L)])
+  info$headers <- h
+  info
 }
 
 # Compute per-row group id + label, used by all group-aware split modes.

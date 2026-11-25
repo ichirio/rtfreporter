@@ -192,3 +192,66 @@ test_that("FT-TB7708 [FR-IX418]: every rlistings default and every override, at 
   expect_length(as_rtftables(list(a = l, b = l), max_rows = 5,
                              split = "none"), 2L)
 })
+
+# Fictional data: S-001's third record holds "\n", so it prints on two lines,
+# its key and its other cells blank on the second (#1051).
+.t77_nl_dat <- function() {
+  data.frame(
+    USUBJID = rep(c("S-001", "S-002"), c(5L, 1L)),
+    AEDECOD = c("Headache", "Nausea", "Rash\nItching", "Cough", "Fatigue",
+                "Pyrexia"),
+    stringsAsFactors = FALSE
+  )
+}
+
+# The page of the written RTF each text prints on.
+.t77_page_of <- function(pages, txt) {
+  pg <- strsplit(.t77_rtf(pages), "\\\\page(?![a-z])", perl = TRUE)[[1L]]
+  vapply(txt, function(t) which(grepl(t, pg, fixed = TRUE))[1L], 1L)
+}
+
+test_that("FT-TB7709 [FR-IX420]: a record that prints on two lines is kept whole across a page break", {
+  l <- .t77_listing(.t77_nl_dat())
+  # one record, two lines; the cut by max_rows = 3 falls between them
+  expect_identical(as_rtftables(l)[[1L]]$data[[2L]],
+                   c("Headache", "Nausea", "Rash", "Itching", "Cough",
+                     "Fatigue", "Pyrexia"))
+  pages <- as_rtftables(l, max_rows = 3)
+  expect_identical(.t77_rows(pages), c(2L, 3L, 3L, 1L))
+  expect_true(all(.t77_rows(pages) <= 3L))
+  expect_identical(pages[[2L]]$data[[2L]], c("", "Rash", "Itching"))
+  expect_identical(pages[[2L]]$data[[1L]], c("S-001 (Cont.)", "", ""))
+  p <- .t77_page_of(pages, c("Rash", "Itching"))
+  expect_identical(unname(p[1L]), unname(p[2L]))
+  # the record id is a hidden column: nothing more is printed
+  expect_true(all(vapply(pages, function(q) ncol(q$data), 1L) == 2L))
+  expect_false(grepl(".rtf_record", .t77_rtf(pages), fixed = TRUE))
+  # group_force and first_rows keep the record whole too
+  force <- as_rtftables(l, max_rows = 3, split = "group_force")
+  expect_identical(force[[2L]]$data[[2L]], c("", "Rash", "Itching"))
+  first <- as_rtftables(l, max_rows = 4, first_rows = 3)
+  expect_identical(first[[1L]]$data[[2L]], c("Headache", "Nausea"))
+  expect_identical(first[[2L]]$data[[2L]], c("", "Rash", "Itching"))
+  # a sort moves the record whole
+  srt <- as_rtftables(l, sort_by = 2L)
+  expect_identical(srt[[1L]]$data[[2L]],
+                   c("Cough", "Fatigue", "Headache", "Nausea", "Pyrexia",
+                     "Rash", "Itching"))
+  # a listing with no line break pages as it did
+  expect_identical(.t77_rows(as_rtftables(.t77_listing(), max_rows = 3)),
+                   c(2L, 3L, 2L, 3L))
+})
+
+test_that("FT-TB7710 [FR-IX420]: a key that prints on two lines opens one group, not two", {
+  d <- data.frame(
+    USUBJID = rep(c("S-001", "S-002\nB", "S-003"), c(2L, 2L, 2L)),
+    AEDECOD = c("Headache", "Nausea", "Rash", "Cough", "Fatigue", "Pyrexia"),
+    stringsAsFactors = FALSE
+  )
+  l <- .t77_listing(d)
+  pages <- as_rtftables(l, max_rows = 3)
+  # S-002's three lines ("S-002", "B", and its second record) are one subject
+  expect_identical(.t77_rows(pages), c(2L, 3L, 2L))
+  expect_identical(pages[[2L]]$data[[1L]], c("S-002", "B", ""))
+  expect_identical(pages[[2L]]$data[[2L]], c("Rash", "", "Cough"))
+})

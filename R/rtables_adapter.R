@@ -129,7 +129,8 @@
 }
 
 .mpf_to_rtftable_kwargs <- function(x, tokens = .RTABLES_TOKENS_ALL,
-                                    what = "a MatrixPrintForm table") {
+                                    what = "a MatrixPrintForm table",
+                                    records = FALSE) {
   .need_pkg("formatters", paste("Reading", what))
 
   # `indent_rownames = TRUE` bakes the row-label indentation into the
@@ -152,6 +153,18 @@
   rownames(df) <- NULL
   out$data <- df
   nbody <- nrow(df)
+
+  # ---- records: which source row each body line prints (#1051) -----------
+  # matrix_form() splits a cell holding "\n" over several lines, so one row
+  # of the source can be several body lines.  mf_lgrouping() names each
+  # line's source row; numbered 1, 2, ... here.  NULL when it is not there.
+  if (isTRUE(records)) {
+    lg <- tryCatch(formatters::mf_lgrouping(mf), error = function(e) NULL)
+    if (length(lg) == nrow_t) {
+      lg <- lg[body_idx]
+      out$records <- match(lg, unique(lg))
+    }
+  }
 
   # ---- "footnote_marks": rewrite {N} -> ^{N} in the body ------------------
   if ("footnote_marks" %in% tokens) {

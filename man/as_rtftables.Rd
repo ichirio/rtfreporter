@@ -537,7 +537,10 @@ one page when they fit; a longer one is cut as \code{"group_safe"} cuts
 it, the key repeated with \code{cont_label}.  A listing with no key
 columns groups on column 1.  These are \strong{defaults} too: \code{split},
 \code{group_col} and \code{group_by} you pass yourself win, and without
-\code{max_rows} the listing is one page.}
+\code{max_rows} the listing is one page.  A record that prints on
+several lines (a cell holding a line break) is kept whole as a
+\code{listing} record is, by a hidden record column: a page break does
+not fall between its lines unless it is longer than a page.}
 }}
 
 \item{stub}{Row-stub settings, as a \code{\link[=stub_spec]{stub_spec()}} object -- or, as a

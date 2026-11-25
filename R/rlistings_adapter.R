@@ -39,6 +39,13 @@
 #    * main_title() + subtitles() -> page title block;
 #    * main_footer() + prov_footer() + referential footnotes -> footnote block.
 #
+#  One more thing comes across, for the pagination only: the record each body
+#  line belongs to (`records`, from mf_lgrouping()).  A cell holding "\n"
+#  prints on two lines, the key and the other cells blank on the second, and
+#  as_rtftables() carries the record id in the hidden record column a
+#  `listing_spec()` listing has, so a page break never parts the lines of
+#  one record (#1051).
+#
 #  What does not, by design:
 #    * `paginate_listing()`.  rtfreporter paginates itself, and matrix_form()
 #      hands us an unpaginated table, which is what `split` / `max_rows` want.
@@ -78,7 +85,7 @@
     stop("`x` must be an rlistings listing (listing_df).", call. = FALSE)
   }
   .mpf_to_rtftable_kwargs(x, tokens = tokens,
-                          what = "an rlistings listing")
+                          what = "an rlistings listing", records = TRUE)
 }
 
 
