@@ -43,7 +43,7 @@ test_that("every reference RTF has been read: reference_review.csv holds its md5
   expect(all(!is.na(rv$issue[rv$verdict == "wrong"])),
          "A reference read as wrong names its issue.")
   files <- .ref_files()
-  skip_if(!length(files), "no reference files here")
+  skip_if(!length(files), "needs the reference files of the source checkout; runs where the tests run from the checkout")
   miss <- setdiff(names(files), rv$file)
   expect(!length(miss), paste0("Reference RTFs never read; read each against the code that ",
                                "made it and add a row to reference_review.csv: ",

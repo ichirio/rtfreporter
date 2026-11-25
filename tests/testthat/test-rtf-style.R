@@ -113,7 +113,7 @@ test_that("FT-DC234 [FR-DC310 FR-DC314]: the header and footer sections reach th
   expect_true(grepl("\\clpadl15\\clpadfl3", hr, fixed = TRUE))
   # the colour is written once rtf_header() / rtf_footer() take one (#800)
   skip_if_not("color" %in% names(formals(rtf_header)),
-              "band colour not written yet (#800)")
+              "needs rtf_header() to have a color argument (#800); runs once it has")
   expect_true(grepl("\\cf[0-9]+ HDR", txt))
   expect_true(grepl("\\cf[0-9]+ FTR", txt))
 })

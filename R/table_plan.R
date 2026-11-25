@@ -3124,7 +3124,8 @@ plan_sort <- function(.plan, ..., stat = NULL, keep = NULL) {
 #'
 #' @return The plan, with one more layer.
 #' @family plan verbs
-#' @seealso [plan_verbs] for every verb.
+#' @seealso [plan_verbs] for every verb; [plan_is_empty()] to ask whether a
+#'   resolved plan came out empty.
 #' @examples
 #' # Invented counts: no subject had a serious adverse event
 #' sae <- data.frame(ARM = c("Placebo", "Active"),
@@ -3171,6 +3172,51 @@ plan_empty <- function(.plan, text = "No subjects met the criteria.",
   .plan_layer(.plan, "empty", list(text = if (given) text, when = when,
                                    position = position, footnote = footnote,
                                    .no_text = if (given) is.null(text)))
+}
+
+#' Did a plan's table come out empty?
+#'
+#' `plan_is_empty()` reports rtfreporter's own judgment of whether a table
+#' or listing came out empty under [plan_empty()]: the same one that decides
+#' whether the sentence row and the footnote are added.  So a caller that
+#' only needs to know "was there anything to report?" does not have to
+#' re-derive it from the data (a row count differs from it: the overall
+#' row of a table of no events is a row).
+#'
+#' The judgment is made when the plan is resolved, by [plan_apply()]
+#' at the stage `"table"` or `"pages"`, and kept on the plan
+#' object it was made on.  Ask that same object, after the call: a plan
+#' changed by another verb afterwards is a new plan and has
+#' not been resolved.
+#'
+#' @param .plan A [table_plan()].
+#' @return `TRUE` when the plan has been resolved and its table is empty
+#'   as `plan_empty(when = )` says (a table with no body row, or whose
+#'   overall row is 0 in every column; a listing with no record); `FALSE`
+#'   when it has been resolved and is not empty.  `NA` when the plan has no
+#'   [plan_empty()], or has not been resolved yet (or only to a stage
+#'   before the table, `"input"` or `"args"`).
+#' @seealso [plan_empty()], [plan_apply()]
+#' @examples
+#' # Invented counts: no subject had a serious adverse event
+#' sae <- data.frame(ARM = c("Placebo", "Active"),
+#'                   .label = "Any serious adverse event", .overall = TRUE,
+#'                   .kind = "categorical", stat_name = "n", stat = 0)
+#' p <- table_plan(sae, cols = "ARM") |>
+#'   plan_cells(categorical = "{n}") |>
+#'   plan_empty()
+#'
+#' plan_is_empty(p)            # NA: not resolved yet
+#' plan_apply(p)
+#' plan_is_empty(p)            # TRUE: the overall row is 0 in every column
+#' @export
+plan_is_empty <- function(.plan) {
+  if (!inherits(.plan, "table_plan")) {
+    .ard_stop("plan_is_empty(): expected a table_plan.")
+  }
+  if (!length(.plan_of(.plan, "empty"))) return(NA)
+  v <- .plan$cache$empty
+  if (is.null(v)) NA else isTRUE(v)
 }
 
 #' Say where the blank rows go

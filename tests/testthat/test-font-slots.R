@@ -310,9 +310,9 @@ test_that("LibreOffice renders the east_asian slot in its family", {
   skip_on_cran()
   soffice <- Sys.which("soffice")
   pdffonts <- Sys.which("pdffonts")
-  skip_if(!nzchar(soffice) || !nzchar(pdffonts), "LibreOffice / pdffonts absent")
+  skip_if(!nzchar(soffice) || !nzchar(pdffonts), "needs LibreOffice (soffice) and pdffonts to convert RTF to PDF and read its fonts; installed on the Linux CI")
   fams <- system2("fc-list", ":lang=ja family", stdout = TRUE, stderr = FALSE)
-  skip_if(!length(fams), "no Japanese font installed")
+  skip_if(!length(fams), "needs a Japanese font (fc-list :lang=ja); runs where one is installed")
   ja_font <- sub(",.*$", "", fams[[1L]])
   d <- tempfile("font-slots-lo-")
   dir.create(d)
@@ -329,7 +329,7 @@ test_that("LibreOffice renders the east_asian slot in its family", {
                            stdout = FALSE, stderr = FALSE,
                            env = "LD_LIBRARY_PATH=", timeout = 120))
   pdf <- file.path(d, "ja.pdf")
-  skip_if(!file.exists(pdf), "LibreOffice did not convert")
+  skip_if(!file.exists(pdf), "needs LibreOffice (soffice) to convert the RTF to flat ODF; installed on the Linux CI")
   used <- system2(pdffonts, shQuote(pdf), stdout = TRUE)
   # the PDF names a font by its PostScript name, whose case can differ from
   # the family name ("Noto Serif CJK JP" is NotoSerifCJKjp-Regular)

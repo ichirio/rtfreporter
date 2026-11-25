@@ -56,7 +56,7 @@ native_can_hold <- function(x) {
 # for a case that cannot work there at all.  Call it at the end of a block, so
 # the block's other cases have run.
 skip_unless_native_can_hold <- function(x) {
-  skip_if_not(native_can_hold(x), "A non-ASCII name the native encoding cannot hold")
+  skip_if_not(native_can_hold(x), "needs a locale whose native encoding holds the non-ASCII name (any UTF-8 locale); runs in every UTF-8 locale")
 }
 
 # Run `code` with LC_CTYPE set to C (an ASCII native encoding), the locale put
@@ -65,7 +65,7 @@ with_c_ctype <- function(code) {
   old <- Sys.getlocale("LC_CTYPE")
   on.exit(Sys.setlocale("LC_CTYPE", old), add = TRUE)
   if (!nzchar(suppressWarnings(Sys.setlocale("LC_CTYPE", "C")))) {
-    skip("LC_CTYPE cannot be set to C")
+    skip("needs a system where R can set LC_CTYPE to C; runs where it can")
   }
   force(code)
 }

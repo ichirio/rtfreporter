@@ -184,7 +184,7 @@ rtfreporter writes RTF; it does not write PDF. Convert the assembled file to
 PDF with Adobe Acrobat or a similar tool -- Word, or LibreOffice -- and keep
 the options that create bookmarks from headings.
 
-**A sample.** [xyz-001-tables-sample.pdf](../xyz-001-tables-sample.pdf)
+**A sample.** [`xyz-001-tables-sample.pdf`](../xyz-001-tables-sample.pdf)
 (28 pages, 124 KB) is the assembled file above -- the Gallery's outputs, made
 from the CDISC pilot data -- converted with **LibreOffice**, not Acrobat.
 It opens with the bookmarks panel beside the first page; each bookmark, and
@@ -224,7 +224,7 @@ both use tools outside rtfreporter:
   properties.
 - **Fast Web View** (a linearized PDF). LibreOffice and Word's plain export
   do not linearize; Acrobat can, and so can the free command-line tool
-  [qpdf](https://qpdf.readthedocs.io/):
+  [`qpdf`](https://qpdf.readthedocs.io/):
 
 ```sh
 qpdf --linearize xyz-001-tables.pdf xyz-001-tables-fwv.pdf
@@ -237,7 +237,7 @@ neutral values (no person's name).
 ### The sample against the FDA PDF specifications
 
 Checked against the FDA's *Portable Document Format (PDF) Specifications*,
-version 4.1, with qpdf, pypdf and PyMuPDF:
+version 4.1, with `qpdf`, `pypdf` and `PyMuPDF`:
 
 | Item | FDA v4.1 | The sample | Result |
 |---|---|---|---|
@@ -247,7 +247,7 @@ version 4.1, with qpdf, pypdf and PyMuPDF:
 | Bookmarks | one for each TOC item | 4 bookmarks, one per output | Pass |
 | TOC links | linked TOC; "Inherit Zoom" | 8 links (label and page number), each to its page, zoom inherited | Pass |
 | Initial view | Bookmarks Panel and Page; layout and magnification default | `/UseOutlines`, no layout or zoom set | Pass |
-| Fast Web View | optimized for fast web view | linearized (qpdf) | Pass |
+| Fast Web View | optimized for fast web view | linearized (`qpdf`) | Pass |
 | Page size | 8.5 x 11 in, orientation kept | letter; landscape tables, one portrait | Pass |
 | Margins | left 3/4 in; 3/8 in elsewhere; landscape top 3/4 in | every page 0.75 in left and right; top 0.75 in on the table pages, 0.9 in on the cover and TOC | Pass |
 | Images | resolution, lossless compression | no images: text only, searchable | Pass |

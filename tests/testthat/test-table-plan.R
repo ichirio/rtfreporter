@@ -3751,7 +3751,7 @@ test_that("plan_sort() by a plan_compare() statistic: the rows by the arms' diff
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   skip_if_not("diff_ard_hierarchical" %in% getNamespaceExports("cards"),
-              "cards has no diff_ard_hierarchical()")
+              "needs a cards with diff_ard_hierarchical() (a newer cards); runs with the newest packages, not in the minimum-versions job")
   adae <- cards::ADAE[cards::ADAE$AESOC %in% c("CARDIAC DISORDERS", "SKIN AND SUBCUTANEOUS TISSUE DISORDERS"), ]
   arms <- c("Placebo", "Xanomeline High Dose")
   adsl <- adsl[adsl$ARM %in% arms, ]

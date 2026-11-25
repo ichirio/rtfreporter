@@ -68,8 +68,9 @@ test_that("the effective export count is the reviewed number", {
   # table's; 137 / 114 since rtfreporter_validation_kit(), the user's
   # validation templates; 114 since 0.9.0 removed the 23 deprecated ones,
   # #788; 115 since #804 added rtf_style(), one style object for every
-  # module; 114 since #975 removed rtf_default_format().)
-  expect_length(.exports(), 114L)
+  # module; 114 since #975 removed rtf_default_format(); 115 since plan_is_empty(), whether
+  # plan_empty() judged a resolved plan empty.)
+  expect_length(.exports(), 115L)
 })
 
 test_that("the argument names removed in 0.9.0 are gone (#788)", {
