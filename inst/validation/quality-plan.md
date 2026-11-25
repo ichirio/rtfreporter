@@ -42,7 +42,7 @@ the user's report, and deepest where it is likeliest or hardest to see:
   `FR-IX000`, apart from the functions').
 - **Functional Tests (FT)** are testthat blocks mapped to the leaves by the
   developer making the change: in `inst/validation/traceability_matrix.csv`, or by a new
-  test's own name (`"FT-PL<nnn> [FR-PL157 FR-PL159]: ..."`).  A test that
+  test's own name (`"FT-PL1137-1 [FR-PL157 FR-PL159]: ..."`; the id takes its issue's number, `FT-<AREA><issue>-<n>`, a block per issue; ids already in use keep theirs, `FT-PL<nnn>`).  A test that
   merely calls a function is not coverage.  A parent requirement is covered
   when every leaf under it is.
 - **The Traceability Matrix (FR -> FT)** (`traceability_matrix.xlsx`) holds the
