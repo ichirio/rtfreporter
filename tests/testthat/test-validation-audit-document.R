@@ -160,6 +160,7 @@
 .au_n <- function(s, pat) lengths(regmatches(s, gregexpr(pat, s, fixed = TRUE)))
 
 test_that("FT-DC257 [FR-DC104]: rtf_document(font_table = ) needs a latin font and known slots", {
+  skip_on_cran()
   expect_error(rtf_document(font_table = list(list(name = c(hansi = "A")))),
                "`font_table` must name a `latin` font", fixed = TRUE)
   expect_error(rtf_document(font_table = list(list(name = c(latin = "A", bad = "B")))),
@@ -167,6 +168,7 @@ test_that("FT-DC257 [FR-DC104]: rtf_document(font_table = ) needs a latin font a
 })
 
 test_that("FT-DC258 [FR-DC107 FR-DC135]: a page that is not an rtf_page() or a named list is refused", {
+  skip_on_cran()
   msg <- paste0("`page` must be an rtf_page() object or a named list of its settings ",
                 "(e.g. list(paper_size = \"A4\")), not the string \"a4\".  For a ",
                 "paper size write page = rtf_page(paper_size = \"a4\").")
@@ -177,6 +179,7 @@ test_that("FT-DC258 [FR-DC107 FR-DC135]: a page that is not an rtf_page() or a n
 })
 
 test_that("FT-DC259 [FR-IX300]: a section's watermark overrides the document's; NA switches it off", {
+  skip_on_cran()
   t2 <- list(rtftable(data.frame(A = 1)), rtftable(data.frame(B = 2)))
   doc <- rtf_tables(rtf_document(watermark = "DOCWM"), t2) |>
     rtf_section(page = 1, header = rtf_header(c(l = "H")))
@@ -192,6 +195,7 @@ test_that("FT-DC259 [FR-IX300]: a section's watermark overrides the document's; 
 })
 
 test_that("FT-DC260 [FR-DC111 FR-DC112]: rtf_document(program = ) names the program for the run tokens", {
+  skip_on_cran()
   doc <- .au_one(rtf_document(program = "programs/t_dm.R"),
                  footer = rtf_footer(c(l = "N={PROGRAM_NAME} D={PROGRAM_DIR}")))
   expect_no_message(s <- .au_rs(doc))
@@ -203,6 +207,7 @@ test_that("FT-DC260 [FR-DC111 FR-DC112]: rtf_document(program = ) names the prog
 })
 
 test_that("FT-DC261 [FR-DC113 FR-DC277]: program_fallback is the last resort, said in a message", {
+  skip_on_cran()
   old <- options(rtfreporter.program = NULL)
   on.exit(options(old), add = TRUE)
   local_mocked_bindings(.find_program = function() NULL)
@@ -218,6 +223,7 @@ test_that("FT-DC261 [FR-DC113 FR-DC277]: program_fallback is the last resort, sa
 })
 
 test_that("FT-DC262 [FR-DC115 FR-DC283]: tokens of one's own are filled in headers, footers, titles and footnotes", {
+  skip_on_cran()
   doc <- rtf_document(tokens = list(STUDY = "XYZ-9", N = 12)) |>
     rtf_tables(list(rtftable(data.frame(A = 1)))) |>
     rtf_titles("T={STUDY}") |>
@@ -234,6 +240,7 @@ test_that("FT-DC262 [FR-DC115 FR-DC283]: tokens of one's own are filled in heade
 })
 
 test_that("FT-DC263 [FR-DC117 FR-DC118 FR-DC119 FR-DC120]: a token's name and value are checked", {
+  skip_on_cran()
   expect_error(rtf_document(tokens = list(study = "x")),
                "`tokens`: a token's name is upper case -- a letter, then letters, digits or _ (STUDY, DATA_CUTOFF): not `study`.",
                fixed = TRUE)
@@ -254,6 +261,7 @@ test_that("FT-DC263 [FR-DC117 FR-DC118 FR-DC119 FR-DC120]: a token's name and va
 })
 
 test_that("FT-DC264 [FR-DC123 FR-DC271 FR-IX302 FR-DC272 FR-DC275]: the document's file, the file_path that wins, and overwrite = FALSE", {
+  skip_on_cran()
   f <- tempfile(fileext = ".rtf")
   g <- tempfile(fileext = ".rtf")
   on.exit(unlink(c(f, g)), add = TRUE)
@@ -279,6 +287,7 @@ test_that("FT-DC264 [FR-DC123 FR-DC271 FR-IX302 FR-DC272 FR-DC275]: the document
 })
 
 test_that("FT-DC265 [FR-DC124 FR-DC273]: a file that is not one string is refused", {
+  skip_on_cran()
   msg <- "`file` must be a single string: the RTF file's path."
   for (bad in list(c("a.rtf", "b.rtf"), "", NA_character_, 1)) {
     expect_error(rtf_document(file = bad), msg, fixed = TRUE)
@@ -288,6 +297,7 @@ test_that("FT-DC265 [FR-DC124 FR-DC273]: a file that is not one string is refuse
 })
 
 test_that("FT-DC266 [FR-DC339]: a slot an element leaves out takes the document default's family; a slotted default writes the document defaults", {
+  skip_on_cran()
   ft <- list(list(name = c(latin = "Times New Roman", east_asian = "MS Mincho")))
   s <- .au_rs(rtf_titles(.au_one(rtf_document(font_table = ft)), "TTL", font = "Arial"))
   # Times New Roman f0, MS Mincho f1, Arial f2: the title's east_asian slot is
@@ -299,6 +309,7 @@ test_that("FT-DC266 [FR-DC339]: a slot an element leaves out takes the document 
 })
 
 test_that("FT-DC267 [FR-DC127 FR-DC128 FR-DC129 FR-DC130 FR-IX305]: rtf_config() changes what is passed, merging page and style, replacing the rest", {
+  skip_on_cran()
   base <- rtf_document(font_table = list(list(name = "Arial"), list(name = "Symbol")),
                        color_table = c("#000000", "#FF0000"),
                        page = rtf_page(paper_size = "A4", margin_left_in = 1),
@@ -322,6 +333,7 @@ test_that("FT-DC267 [FR-DC127 FR-DC128 FR-DC129 FR-DC130 FR-IX305]: rtf_config()
 })
 
 test_that("FT-DC268 [FR-DC151 FR-DC340]: rtf_page() defaults; given dimensions leave paper and orientation unset", {
+  skip_on_cran()
   p <- rtf_page()
   expect_s3_class(p, "rtf_page")
   expect_identical(p$paper_size, "letter")
@@ -343,6 +355,7 @@ test_that("FT-DC268 [FR-DC151 FR-DC340]: rtf_page() defaults; given dimensions l
 })
 
 test_that("FT-DC269 [FR-DC158 FR-DC160]: page sizes and margins in inches are single positive numbers", {
+  skip_on_cran()
   expect_error(rtf_page(width_in = "wide"),
                "`width_in` must be a single positive number of inches, or NULL.", fixed = TRUE)
   expect_error(rtf_page(height_in = 0), "`height_in` must be a single positive", fixed = TRUE)
@@ -354,6 +367,7 @@ test_that("FT-DC269 [FR-DC158 FR-DC160]: page sizes and margins in inches are si
 })
 
 test_that("FT-DC270 [FR-DC185 FR-DC186 FR-DC187 FR-DC188]: rtf_titles() sets one block per content, or one for all", {
+  skip_on_cran()
   d <- rtf_tables(rtf_document(), list(data.frame(A = 1), data.frame(B = 2)))
   d0 <- d
   titles_of <- function(x) lapply(x$contents, function(b) b$title)
@@ -367,6 +381,7 @@ test_that("FT-DC270 [FR-DC185 FR-DC186 FR-DC187 FR-DC188]: rtf_titles() sets one
 })
 
 test_that("FT-DC271 [FR-DC192 FR-DC193]: a title's size and height resolve together, over the document's style", {
+  skip_on_cran()
   doc <- function(...) rtf_document(style = rtf_style(title_format = "table", ...))
   trrh <- function(s) regmatches(s, regexpr("\\\\trrh[0-9]+(?=[^\n]*TTL)", s, perl = TRUE))
   # the size, over the style's section and shared level
@@ -386,6 +401,7 @@ test_that("FT-DC271 [FR-DC192 FR-DC193]: a title's size and height resolve toget
 })
 
 test_that("FT-DC272 [FR-DC197 FR-DC198 FR-DC199 FR-DC200 FR-DC201]: rtf_titles() checks its document, its blocks and its style", {
+  skip_on_cran()
   expect_error(rtf_titles(list(), list("T")), "`doc` must be an rtf_document object", fixed = TRUE)
   expect_error(rtf_titles(rtf_document(), list("T")),
                "Cannot set titles before any content has been added.  Call rtf_titles() after rtf_tables() / rtf_figures()",
@@ -409,6 +425,7 @@ test_that("FT-DC272 [FR-DC197 FR-DC198 FR-DC199 FR-DC200 FR-DC201]: rtf_titles()
 })
 
 test_that("FT-DC273 [FR-DC202 FR-DC203 FR-DC204 FR-DC205 FR-DC209]: rtf_footnotes() sets one block per content, or one for all; NULL suppresses one", {
+  skip_on_cran()
   d <- rtf_tables(rtf_document(), list(data.frame(A = 1), data.frame(B = 2)))
   d0 <- d
   fn_of <- function(x) lapply(x$contents, function(b) b$footnote)
@@ -425,6 +442,7 @@ test_that("FT-DC273 [FR-DC202 FR-DC203 FR-DC204 FR-DC205 FR-DC209]: rtf_footnote
 })
 
 test_that("FT-DC274 [FR-DC213 FR-DC214 FR-DC215 FR-DC216 FR-DC219]: rtf_footnotes() checks its document, its blocks and its style", {
+  skip_on_cran()
   expect_error(rtf_footnotes(list(), list("F")), "`doc` must be an rtf_document object", fixed = TRUE)
   expect_error(rtf_footnotes(rtf_document(), list("F")),
                "Cannot set footnotes before any content has been added.  Call rtf_footnotes() after rtf_tables() / rtf_figures()",
@@ -447,6 +465,7 @@ test_that("FT-DC274 [FR-DC213 FR-DC214 FR-DC215 FR-DC216 FR-DC219]: rtf_footnote
 })
 
 test_that("FT-DC275 [FR-DC341]: a band's font is added to the font table; a named vector gives one per slot", {
+  skip_on_cran()
   s <- .au_rs(.au_one(header = rtf_header(c(l = "HDR"), font = "Arial")))
   expect_true(grepl("{\\f1\\fnil\\fcharset0 Arial;}", s, fixed = TRUE))
   expect_true(grepl("\\f1", .au_band(s), fixed = TRUE))
@@ -460,6 +479,7 @@ test_that("FT-DC275 [FR-DC341]: a band's font is added to the font table; a name
 })
 
 test_that("FT-DC276 [FR-DC342]: a band's row height inherits the document's, else follows its font size", {
+  skip_on_cran()
   hh <- function(doc) regmatches(.au_band(.au_rs(doc)), regexpr("\\\\trrh[0-9]+", .au_band(.au_rs(doc))))
   h <- rtf_header(c(l = "H"))
   base <- hh(.au_one(header = h))
@@ -478,6 +498,7 @@ test_that("FT-DC276 [FR-DC342]: a band's row height inherits the document's, els
 })
 
 test_that("FT-DC277 [FR-DC343]: a band's twips arguments are single non-negative integers", {
+  skip_on_cran()
   # these used to be written into the file as NA (fixed in this audit)
   for (fn in list(rtf_header, rtf_footer)) {
     expect_error(fn(c(l = "H"), row_height_twips = "a"),
@@ -498,6 +519,7 @@ test_that("FT-DC277 [FR-DC343]: a band's twips arguments are single non-negative
 })
 
 test_that("FT-DC278 [FR-DC344]: rtf_header() / rtf_footer() return a named list of the band's settings for rtf_section()", {
+  skip_on_cran()
   h <- rtf_header(c(l = "A", r = "B"), row_height_twips = 300L)
   expect_type(h, "list")
   expect_true(all(c("rows", "border", "width_twips", "width", "row_height_twips") %in% names(h)))
@@ -510,6 +532,7 @@ test_that("FT-DC278 [FR-DC344]: rtf_header() / rtf_footer() return a named list 
 })
 
 test_that("FT-DC279 [FR-DC345]: a table is cut into pages before the style's row height reaches it", {
+  skip_on_cran()
   big <- data.frame(A = sprintf("row %03d", 1:90))
   pages <- as_rtftables(big, split = "group_force", max_rows = 30)
   plain <- rtf_tables(rtf_document(), pages)
@@ -522,6 +545,7 @@ test_that("FT-DC279 [FR-DC345]: a table is cut into pages before the style's row
 })
 
 test_that("FT-DC280 [FR-DC346]: generate_rtfreport(overwrite = ) is TRUE or FALSE", {
+  skip_on_cran()
   f <- tempfile(fileext = ".rtf")
   on.exit(unlink(f), add = TRUE)
   # these used to be read as FALSE without a word (fixed in this audit)

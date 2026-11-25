@@ -66,7 +66,7 @@ test_that(".gtsummary_to_gt() returns a gt_tbl", {
 
 test_that(".gtsummary_to_gt() errors without gtsummary installed", {
   skip_if(requireNamespace("gtsummary", quietly = TRUE),
-          "gtsummary is installed; cannot test missing-package error")
+          "needs gtsummary not installed, to test the missing-package error; skipped wherever it is installed, as on the CI jobs")
   fake <- structure(list(), class = "gtsummary")
   expect_error(.gtsummary_to_gt(fake), "gtsummary")
 })

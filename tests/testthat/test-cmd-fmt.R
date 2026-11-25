@@ -112,9 +112,9 @@ test_that("a portrait report is equally clean", {
 
 test_that("the committed examples carry no placeholder", {
   dir <- system.file("rtf-examples", package = "rtfreporter")
-  skip_if(!nzchar(dir) || !dir.exists(dir), "rtf-examples not installed")
+  skip_if(!nzchar(dir) || !dir.exists(dir), "needs the installed rtf-examples folder; runs wherever the package is installed with it")
   files <- list.files(dir, pattern = "\\.rtf$", full.names = TRUE)
-  skip_if(length(files) == 0L, "no example files")
+  skip_if(length(files) == 0L, "needs .rtf files in the installed rtf-examples folder; runs wherever the package ships them")
   bad <- Filter(function(f) {
     any(grepl(rtfreporter:::.CMD_FMT_SLOT, readLines(f, warn = FALSE)))
   }, files)

@@ -92,7 +92,7 @@ unless \code{toc_style = list(indent = )}, in \code{...}, indents them) and \cod
 }
 \examples{
 # two TFL files in a folder, as a study's output
-dir <- file.path(tempdir(), "tfl")
+dir <- tempfile("tfl")
 dir.create(dir, showWarnings = FALSE)
 for (t in c("14.1.1", "14.2.1")) {
   doc <- rtf_document() |>
@@ -109,6 +109,7 @@ assemble_folder(dir, tempfile(fileext = ".rtf"), toc_title = "Contents")
 spec <- assemble_folder(dir)
 spec$heading <- "Demographics and safety"
 assemble_rtf(toc = spec, output_file = tempfile(fileext = ".rtf"))
+unlink(dir, recursive = TRUE)
 }
 \seealso{
 \code{\link[=assemble_rtf]{assemble_rtf()}}.

@@ -13,7 +13,7 @@ library(testthat)
 
 .kit_src <- function() {
   kit <- system.file("ai", "kit", package = "rtfreporter")
-  skip_if(!nzchar(kit), "the kit is not installed")
+  skip_if(!nzchar(kit), "needs the installed AI kit (inst/ai/kit); runs wherever the package is installed, as on every CI job")
   kit
 }
 
@@ -119,7 +119,7 @@ test_that("every code block of the ai-plan-code articles runs, in order", {
   skip_if_not_installed("cards")
   for (lang in c("ai-plan-code.Rmd", "ai-plan-code-ja.Rmd")) {
     rmd <- test_path("..", "..", "vignettes", "articles", lang)
-    skip_if_not(file.exists(rmd), "articles not present (installed package)")
+    skip_if_not(file.exists(rmd), "needs the articles (vignettes/articles) of the source checkout; runs where the tests run from the checkout")
     blocks <- .article_blocks(normalizePath(rmd))
     expect_length(blocks, 3L)                    # the kit, the paste, the run
     wd <- tempfile("article"); dir.create(wd)
@@ -195,7 +195,7 @@ test_that("the kit's files are UTF-8 in a non-UTF-8 locale too", {
   old <- Sys.getlocale("LC_CTYPE")
   on.exit(Sys.setlocale("LC_CTYPE", old), add = TRUE)
   ok <- suppressWarnings(Sys.setlocale("LC_CTYPE", "C"))
-  skip_if(!nzchar(ok) || isTRUE(l10n_info()[["UTF-8"]]), "cannot switch to a non-UTF-8 locale")
+  skip_if(!nzchar(ok) || isTRUE(l10n_info()[["UTF-8"]]), "needs a UTF-8 session that can switch LC_CTYPE to C; runs on the UTF-8 CI jobs")
   d <- tempfile("kit-c")
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   rtfreporter_ai_manual(d, ard = .jp_ard())
@@ -219,7 +219,7 @@ test_that("the kit tells what to paste, what never, and the answer's form", {
 
 test_that("every argument of the plan verbs is named in the manual's section 17", {
   p <- test_path("..", "..", "inst", "ai", "rtfreporter-ai-user-manual.md")
-  skip_if_not(file.exists(p), "AI manual not present (installed package)")
+  skip_if_not(file.exists(p), "needs the AI user manual of the source checkout; runs where the tests run from the checkout")
   lines <- readLines(p, warn = FALSE, encoding = "UTF-8")
   from <- grep("^## 17\\. Tables from a cards", lines)
   to   <- grep("^## 18\\.", lines)

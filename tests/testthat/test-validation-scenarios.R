@@ -5,6 +5,7 @@
 .val_reference <- function(nm) readLines(.val_fixture(paste0(nm, ".rtf")), warn = FALSE)
 
 test_that("FT-IX022 [FR-IX132]: a listing from records is written byte for byte as its reference", {
+  skip_on_cran()
   out <- .val_render(.val_listing_doc())
   expect_identical(out, .val_reference("listing"))
   # what the reference holds: the records paginated, the blocks on each page
@@ -16,6 +17,7 @@ test_that("FT-IX022 [FR-IX132]: a listing from records is written byte for byte 
 })
 
 test_that("FT-IX023 [FR-IX133]: a figure from a PNG file is written byte for byte as its reference", {
+  skip_on_cran()
   out <- .val_render(.val_figure_doc())
   expect_identical(out, .val_reference("figure"))
   expect_true(any(grepl("\\pngblip", out, fixed = TRUE)))
@@ -24,6 +26,7 @@ test_that("FT-IX023 [FR-IX133]: a figure from a PNG file is written byte for byt
 })
 
 test_that("FT-IX024 [FR-IX134]: a summary and its listing on one page are written byte for byte as their reference", {
+  skip_on_cran()
   doc <- .val_page_doc()
   expect_length(rtf_layout(doc)$pages, 1L)
   out <- .val_render(doc)

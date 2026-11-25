@@ -26,6 +26,7 @@
 .leaf_head <- "^(FT-[A-Z]{2}[0-9]{3,4}) [[]([^]]*)[]]:"
 
 test_that("every test traceability_matrix.csv names is in its file", {
+  skip_on_cran()
   map <- .leaf_read("traceability_matrix.csv")
   tb <- .leaf_test_names()
   gone <- !paste(map$file, map$test, sep = "\r") %in% paste(tb$file, tb$test, sep = "\r")
@@ -34,6 +35,7 @@ test_that("every test traceability_matrix.csv names is in its file", {
 })
 
 test_that("an FT id is given once: by a test's own name or by traceability_matrix.csv, not both", {
+  skip_on_cran()
   map <- .leaf_read("traceability_matrix.csv")
   tb <- .leaf_test_names()
   named <- grep(.leaf_head, tb$test, value = TRUE)
@@ -43,7 +45,32 @@ test_that("an FT id is given once: by a test's own name or by traceability_matri
                                 "needs no traceability_matrix.csv row): ", paste(twice, collapse = " ")))
 })
 
+test_that("a requirement id is given once in requirements.csv", {
+  skip_on_cran()
+  # two open PRs can each pick the next free id; the second one's CI runs on
+  # the merge with the first, so a duplicate fails here before it is merged
+  fr <- .leaf_read("requirements.csv")
+  twice <- unique(fr$id[duplicated(fr$id)])
+  expect(!length(twice), paste0("requirements.csv gives these ids twice (another PR took ",
+                                "the id: pick a free one): ", paste(twice, collapse = " ")))
+})
+
+test_that("every FR a test names, in its own name or in traceability_matrix.csv, is in requirements.csv", {
+  skip_on_cran()
+  fr <- .leaf_read("requirements.csv")
+  map <- .leaf_read("traceability_matrix.csv")
+  tb <- .leaf_test_names()
+  named <- grep(.leaf_head, tb$test, value = TRUE)
+  frs <- c(unlist(strsplit(map$fr, " ", fixed = TRUE)),
+           unlist(strsplit(sub(paste0(.leaf_head, ".*$"), "\\2", named), " ", fixed = TRUE)))
+  unknown <- unique(setdiff(frs, fr$id))
+  expect(!length(unknown), paste0("Tests name FR ids that are not in requirements.csv ",
+                                  "(a typo, or the FR was renumbered): ",
+                                  paste(unknown, collapse = " ")))
+})
+
 test_that("every active leaf FR has a test or a deviation with its risk", {
+  skip_on_cran()
   fr <- .leaf_read("requirements.csv")
   map <- .leaf_read("traceability_matrix.csv")
   dev <- .leaf_read("deviations.csv")
@@ -64,6 +91,7 @@ test_that("every active leaf FR has a test or a deviation with its risk", {
 })
 
 test_that("every mapping of a test to an active FR is checked in traceability_review.csv", {
+  skip_on_cran()
   # A mapping is checked when it is made: someone read the FR and the test and
   # recorded that the test's expectations assert what the FR states -- all of
   # it ("asserts") or a part of it ("part"), the FR's tests together asserting
@@ -98,6 +126,7 @@ test_that("every mapping of a test to an active FR is checked in traceability_re
 })
 
 test_that("a test title that starts with FT- parses as an FT id with its FRs", {
+  skip_on_cran()
   tb <- .leaf_test_names()
   ft_like <- tb[startsWith(tb$test, "FT-"), , drop = FALSE]
   bad <- ft_like[!grepl(.leaf_head, ft_like$test), , drop = FALSE]
@@ -109,6 +138,7 @@ test_that("a test title that starts with FT- parses as an FT id with its FRs", {
 })
 
 test_that("an FT or FR id of four digits is read, as one of three", {
+  skip_on_cran()
   for (n in c("999", "1000")) {
     title <- paste0("FT-TB", n, " [FR-TB", n, "]: x")
     expect_match(title, .leaf_head)

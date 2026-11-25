@@ -15,10 +15,12 @@ discarding any site or session overrides. Use this to recover a known state
 if a configuration has been changed in error.
 }
 \examples{
-old <- options(rtfreporter.font = "Arial")
+# every rtfreporter.* option as it is now, to put back afterwards
+saved <- options()[startsWith(names(options()), "rtfreporter.")]
+options(rtfreporter.font = "Arial")
 rtfreporter_reset_defaults()       # back to "Courier New"
 getOption("rtfreporter.font")
-options(old)
+options(saved)
 
 }
 \seealso{

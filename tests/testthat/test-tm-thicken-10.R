@@ -51,6 +51,7 @@
 # ------------------------------------------------- default_col_widths, text_width_in
 
 test_that("FT-TB6001 [FR-TB376]: default_col_widths() is a named vector, smallest data column 1, and what rtftable() and plan_columns(widths = ) use", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   skip_if_not_installed("cards")
   d <- data.frame(Characteristic = c("Age (years)", "  Mean (SD)", "  Median"),
                   Placebo = c("", "75.2 (8.59)", "76.0"),
@@ -86,6 +87,7 @@ test_that("FT-TB6001 [FR-TB376]: default_col_widths() is a named vector, smalles
 })
 
 test_that("FT-TB6002 [FR-TB383]: the row-heading share is its longest line + 2, capped, floored, and the indent adds 5 points", {
+  skip_on_cran()
   share <- function(d) {
     w <- default_col_widths(d, digits = 8L)
     w[[1L]] / sum(w)
@@ -118,6 +120,7 @@ test_that("FT-TB6002 [FR-TB383]: the row-heading share is its longest line + 2, 
 })
 
 test_that("FT-TB6003 [FR-TB387]: every block of paginate_cols() keeps each column's default width, in the relative widths and in the rendered cells", {
+  skip_on_cran()
   d <- data.frame(Param = c("a", "b"), V1 = c("1", "2"), V2 = c(strrep("x", 30L), "y"),
                   V3 = c("1", "2"), V4 = c("1", "2"), V5 = c("1", "2"),
                   stringsAsFactors = FALSE)
@@ -140,6 +143,7 @@ test_that("FT-TB6003 [FR-TB387]: every block of paginate_cols() keeps each colum
 })
 
 test_that("FT-TB6004 [FR-TB388]: text_width_in() is one number per text, proportional to the characters in a monospace font, the sum of the characters' widths in Arial and Times New Roman", {
+  skip_on_cran()
   txt <- c("hello", "w", NA, "")
   out <- text_width_in(txt)
   expect_type(out, "double")
@@ -182,6 +186,7 @@ test_that("FT-TB6004 [FR-TB388]: text_width_in() is one number per text, proport
 }
 
 test_that("FT-TB6005 [FR-TB395]: style_body(rows = ) takes NULL (every row), positions, a logical over all rows, a predicate and a one-sided formula", {
+  skip_on_cran()
   t0 <- rtftable(.t10_df())
   # NULL: every body row
   expect_identical(.t10_flag_rows(style_body(t0, bold = TRUE), "bold"), 1:4)
@@ -204,6 +209,7 @@ test_that("FT-TB6005 [FR-TB395]: style_body(rows = ) takes NULL (every row), pos
 })
 
 test_that("FT-TB6006 [FR-TB396]: style_body(rows = ) on several data frames counts rows across them, evaluates a predicate or formula on each in turn, and NA selects nothing", {
+  skip_on_cran()
   d1 <- data.frame(g = c("a", "b"), b = c(1, 2), stringsAsFactors = FALSE)
   d2 <- data.frame(g = c("c", "d", "e"), b = c(0, 3, NA), stringsAsFactors = FALSE)
   m <- rtftable(list(d1, d2))
@@ -226,6 +232,7 @@ test_that("FT-TB6006 [FR-TB396]: style_body(rows = ) on several data frames coun
 })
 
 test_that("FT-TB6007 [FR-TB399]: style_body(cols = ) is every column by default, names and positions mix in a list(), against the final printed columns", {
+  skip_on_cran()
   d <- data.frame(Param = c("x", "x"), Visit = c("V1", "V2"), A = c("1", "2"),
                   B = c("3", "4"), stringsAsFactors = FALSE)
   tbl <- as_rtftables(d, stub = stub_spec(vars = c("Param", "Visit")))[[1L]]
@@ -249,6 +256,7 @@ test_that("FT-TB6007 [FR-TB399]: style_body(cols = ) is every column by default,
 })
 
 test_that("FT-TB6008 [FR-TB401]: style_body(bold = , italic = , underline = ) set the flag on the selected cells, NULL leaves it as it is", {
+  skip_on_cran()
   t0 <- rtftable(.t10_df())
   # the cell of row 2, column 2 only
   t1 <- style_body(t0, rows = 2, cols = 2, bold = TRUE, italic = TRUE, underline = TRUE)
@@ -271,6 +279,7 @@ test_that("FT-TB6008 [FR-TB401]: style_body(bold = , italic = , underline = ) se
 })
 
 test_that("FT-TB6009 [FR-TB405]: style_body(background = ) fills the selected cells over the column's own fill, NULL leaves them unfilled, an empty or unknown colour is not drawn, a colour used is in the colour table", {
+  skip_on_cran()
   d <- data.frame(Item = c("Age", "Sex"), A = c("1", "2"), stringsAsFactors = FALSE)
   # NULL (the default): nothing is filled
   expect_false(any(grepl("clcbpat", .t10_rtf(rtftable(d)), fixed = TRUE)))
@@ -304,6 +313,7 @@ test_that("FT-TB6009 [FR-TB405]: style_body(background = ) fills the selected ce
 })
 
 test_that("FT-TB6010 [FR-TB410]: style_body() keeps per-cell borders and alignments with their columns when drop_cols removes columns, and a selection that matches no row leaves the table unchanged", {
+  skip_on_cran()
   df <- data.frame(Item = c("Age", "Sex"), A = c("1", "2"), B = c("3", "4"), C = c("5", "6"),
                    stringsAsFactors = FALSE)
   b <- rtf_border(bottom = rtf_border_line("double"))
@@ -335,6 +345,7 @@ test_that("FT-TB6010 [FR-TB410]: style_body() keeps per-cell borders and alignme
 })
 
 test_that("FT-TB6011 [FR-TB411]: style_body() on a list of pages styles every page, a predicate or formula per page, and refuses integer or logical rows as ambiguous", {
+  skip_on_cran()
   df <- data.frame(Item = letters[1:4], A = 1:4, stringsAsFactors = FALSE)
   pages <- as_rtftables(df, split = "group_force", max_rows = 2)
   expect_length(pages, 2L)
@@ -370,6 +381,7 @@ test_that("FT-TB6011 [FR-TB411]: style_body() on a list of pages styles every pa
 }
 
 test_that("FT-TB6012 [FR-TB414]: style_cols() patches the selected columns' specification (all when cols is NULL), returns a copy, for a table or each page of a list, and the other columns keep their look", {
+  skip_on_cran()
   t1 <- rtftable(.t10_tb2())
   bolds <- function(x) vapply(x$col_spec, function(s) s$bold, logical(1L))
   # the selected column only
@@ -400,6 +412,7 @@ test_that("FT-TB6012 [FR-TB414]: style_cols() patches the selected columns' spec
 })
 
 test_that("FT-TB6013 [FR-TB415]: style_cols(cols = ) takes names, positions, both in a list(), NULL for all, and names the missing column or the position out of range", {
+  skip_on_cran()
   t1 <- rtftable(.t10_tb2())
   bolds <- function(x) vapply(x$col_spec, function(s) s$bold, logical(1L))
   expect_identical(bolds(style_cols(t1, cols = "B", bold = TRUE)), c(FALSE, FALSE, TRUE))
@@ -415,6 +428,7 @@ test_that("FT-TB6013 [FR-TB415]: style_cols(cols = ) takes names, positions, bot
 })
 
 test_that("FT-TB6014 [FR-TB416]: style_cols(align = ) aligns the body cells of the columns, header_align the header label, left / center / right", {
+  skip_on_cran()
   t1 <- rtftable(.t10_tb2())
   ctl <- c(left = "ql", center = "qc", right = "qr")
   for (al in names(ctl)) {
@@ -434,6 +448,7 @@ test_that("FT-TB6014 [FR-TB416]: style_cols(align = ) aligns the body cells of t
 })
 
 test_that("FT-TB6015 [FR-TB418]: style_cols(bold = , italic = , underline = ) set the body-cell flags, header_bold and header_italic the header label", {
+  skip_on_cran()
   t1 <- rtftable(.t10_tb2())
   body <- style_cols(t1, cols = "A", bold = TRUE, italic = TRUE, underline = TRUE)
   sp <- body$col_spec[[2L]]
@@ -455,6 +470,7 @@ test_that("FT-TB6015 [FR-TB418]: style_cols(bold = , italic = , underline = ) se
 })
 
 test_that("FT-TB6016 [FR-TB420]: style_cols(indent_twips = ) sets the body cells' left indent in twips and color = their text colour", {
+  skip_on_cran()
   t1 <- rtftable(.t10_tb2())
   out <- style_cols(t1, cols = "A", indent_twips = 360, color = "#FF0000")
   expect_identical(out$col_spec[[2L]]$indent_twips, 360L)
@@ -473,6 +489,7 @@ test_that("FT-TB6016 [FR-TB420]: style_cols(indent_twips = ) sets the body cells
 })
 
 test_that("FT-TB6017 [FR-TB421]: style_cols(background = ) fills the body cells, header_background the header cells only, NULL leaves cells unfilled", {
+  skip_on_cran()
   t1 <- rtftable(.t10_tb2())
   expect_false(any(grepl("clcbpat", .t10_rtf(t1), fixed = TRUE)))
   # background: the body cells of A, not the header cell
@@ -523,13 +540,8 @@ test_that("FT-TB6017 [FR-TB421]: style_cols(background = ) fills the body cells,
   }, integer(1L), USE.NAMES = FALSE)
 }
 
-.t10_reset_edge_warning <- function() {
-  if (exists("border_edge_reading", envir = .deprecation_state, inherits = FALSE)) {
-    rm(list = "border_edge_reading", envir = .deprecation_state)
-  }
-}
-
 test_that("FT-TB6018 [FR-TB426]: style_header(row = ) targets every header row by default, or the header rows given, 1 being the top", {
+  skip_on_cran()
   t3 <- .t10_hdr_tbl()
   # rows: 1 the spanner "Group", 2 "(N = 9)", 3 the leaf labels
   bold_rows <- function(x) {
@@ -555,6 +567,7 @@ test_that("FT-TB6018 [FR-TB426]: style_header(row = ) targets every header row b
 })
 
 test_that("FT-TB6019 [FR-TB430]: style_header(border = ) merges per side, a later call wins per side, and none erases the automatic group underline", {
+  skip_on_cran()
   t2 <- .t10_hdr_tbl()
   # the automatic underline: row 2's last cell (the "(N = 9)" span) has \clbrdrb
   expect_identical(.t10_count(t2, "\\clbrdrb\\brdrs\\brdrw15")[2L], 1L)
@@ -590,6 +603,7 @@ test_that("FT-TB6019 [FR-TB430]: style_header(border = ) merges per side, a late
 })
 
 test_that("FT-TB6020 [FR-TB436]: style_header() on a table with no header of its own makes the printed column names its header and styles that; on a table with no columns it stops", {
+  skip_on_cran()
   d <- data.frame(Param = c("x", "x"), Visit = c("V1", "V2"), A = c("1", "2"), stringsAsFactors = FALSE)
   # no header of its own: the names of the data
   plain <- rtftable(d)
@@ -609,11 +623,10 @@ test_that("FT-TB6020 [FR-TB436]: style_header() on a table with no header of its
 })
 
 test_that("FT-TB6021 [FR-TB439 FR-TB440]: style_zone() merges each rtf_border() onto its zone side by side, from an empty border, returning a copy; a NULL zone is untouched, no zone returns the table", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   t0 <- .t10_hdr_tbl(n = FALSE, border = "none")
   expect_null(t0$border)
-  .t10_reset_edge_warning()
-  on.exit(.t10_reset_edge_warning(), add = TRUE)
-  z <- function(...) suppressWarnings(style_zone(t0, ...))
+  z <- function(...) style_zone(t0, ...)
   # rows: 1 spanner, 2 leaf labels, 3-5 the data rows (Age, Sex, Mean)
   # header: the leaf row's bottom and the spanner's underline
   h <- z(header = rtf_border(bottom = "double"))
@@ -652,51 +665,6 @@ test_that("FT-TB6021 [FR-TB439 FR-TB440]: style_zone() merges each rtf_border() 
   for (k in c("header", "spanning", "first_row", "last_row")) expect_identical(o2$border[[k]], m$border[[k]])
 })
 
-test_that("FT-TB6022 [FR-TB443]: style_zone() warns once a session, in full, when a zone border sets left / right or a multi-row zone's top / bottom without naming inside_v / inside_h", {
-  .t10_reset_edge_warning()
-  on.exit(.t10_reset_edge_warning(), add = TRUE)
-  d <- data.frame(Item = c("a", "b", "c"), A = c("1", "2", "3"), stringsAsFactors = FALSE)
-  tbl <- rtftable(d, border = "none")
-  s <- rtf_border_line()
-  msg <- paste0(
-    "The edges of `rtf_border()` now mean the *outer* edges of whatever you attach it to.\n",
-    "  Before 0.5.0 `left`/`right` were drawn on every cell of a row, and a multi-row zone's\n",
-    "  `top`/`bottom` on every one of its rows.  To keep that look, name the interior rule:\n",
-    "    rtf_border(left = s, right = s, inside_v = s)   # was: left/right alone\n",
-    "    rtf_border(bottom = s, inside_h = s)            # was: bottom alone on a body zone\n",
-    "  Naming `inside_h` / `inside_v` (with `rtf_border_line(\"none\")` for \"no rule\") ",
-    "silences this.\n",
-    "  See ?rtf_border, section \"Writing borders before and after 0.5.0\", for the old ",
-    "and new spelling of each case.")
-  caught <- function(expr) {
-    ws <- character()
-    withCallingHandlers(expr, warning = function(w) {
-      ws <<- c(ws, conditionMessage(w))
-      invokeRestart("muffleWarning")
-    })
-    ws
-  }
-  # a multi-row zone's top, no inside_h named: warns, in full
-  expect_identical(caught(style_zone(tbl, body = rtf_border(top = s))), msg)
-  # once a session: silent the second time, whatever the shape
-  expect_identical(caught(style_zone(tbl, body = rtf_border(top = s))), character())
-  expect_identical(caught(style_zone(tbl, body = rtf_border(left = s))), character())
-  # left / right on their own warn as well (after a reset)
-  .t10_reset_edge_warning()
-  expect_identical(caught(style_zone(tbl, body = rtf_border(left = s, right = s))), msg)
-  .t10_reset_edge_warning()
-  expect_identical(caught(style_zone(tbl, last_row = rtf_border(bottom = s))), character())
-  expect_identical(caught(style_zone(tbl, body = rtf_border(bottom = s))), msg)
-  # naming inside_h / inside_v silences it, and so does a single row
-  .t10_reset_edge_warning()
-  expect_identical(caught(style_zone(tbl, body = rtf_border(top = s, inside_h = "none"))), character())
-  expect_identical(caught(style_zone(tbl, body = rtf_border(left = s, inside_v = "none"))), character())
-  expect_identical(caught(style_zone(rtftable(d[1L, ], border = "none"), body = rtf_border(top = s))),
-                   character())
-  # none of them used up the session's one warning
-  expect_identical(caught(style_zone(tbl, body = rtf_border(top = s))), msg)
-})
-
 # ------------------------------------------------------- rtf_table_style
 
 .t10_style_full <- function() {
@@ -712,6 +680,7 @@ test_that("FT-TB6022 [FR-TB443]: style_zone() warns once a session, in full, whe
 .t10_ab <- function() data.frame(Item = c("Age", "Sex"), A = c("1", "2"), stringsAsFactors = FALSE)
 
 test_that("FT-TB6023 [FR-TB445]: rtf_table_style() is a list of class rtf_table_style, and rtftable() takes a snapshot of it that later changes or derived styles do not reach", {
+  skip_on_cran()
   st <- .t10_style_full()
   expect_type(st, "list")
   expect_s3_class(st, "rtf_table_style")
@@ -745,6 +714,7 @@ test_that("FT-TB6023 [FR-TB445]: rtf_table_style() is a list of class rtf_table_
 })
 
 test_that("FT-TB6024 [FR-TB449]: rtf_table_style(header_bold = , header_italic = ) are the header labels' look; any value other than TRUE is stored as FALSE", {
+  skip_on_cran()
   expect_false(rtf_table_style()$header_bold)
   expect_false(rtf_table_style()$header_italic)
   expect_true(rtf_table_style(header_bold = TRUE)$header_bold)
@@ -767,6 +737,7 @@ test_that("FT-TB6024 [FR-TB449]: rtf_table_style(header_bold = , header_italic =
 })
 
 test_that("FT-TB6025 [FR-TB452]: rtf_table_style(cell_padding_left_twips = , cell_padding_right_twips = ) pad header and data cells in twips; NULL leaves the document's padding", {
+  skip_on_cran()
   d <- .t10_ab()
   on.exit(rtfreporter_reset_defaults(), add = TRUE)
   st <- rtf_table_style(cell_padding_left_twips = 60L, cell_padding_right_twips = 40L)
@@ -797,6 +768,7 @@ test_that("FT-TB6025 [FR-TB452]: rtf_table_style(cell_padding_left_twips = , cel
 })
 
 test_that("FT-TB6026 [FR-TB455]: a style given as rtftable(border = ) or as style = with border at its default gives the table the style's five border zones", {
+  skip_on_cran()
   st <- .t10_style_full()
   d <- .t10_ab()
   zones <- c("header", "spanning", "body", "first_row", "last_row")
@@ -824,6 +796,7 @@ test_that("FT-TB6026 [FR-TB455]: a style given as rtftable(border = ) or as styl
 })
 
 test_that("FT-TB6027 [FR-TB456]: rtf_table_style_tfl() is a style with a single 15-twip black rule above and below the header and nothing else, a new object on each call", {
+  skip_on_cran()
   s <- rtf_table_style_tfl()
   expect_s3_class(s, "rtf_table_style")
   line <- rtf_border_line("single", 15L, NULL)
@@ -855,6 +828,7 @@ test_that("FT-TB6027 [FR-TB456]: rtf_table_style_tfl() is a style with a single 
 .t10_slots <- c("top", "bottom", "left", "right", "inside_h", "inside_v")
 
 test_that("FT-TB6028 [FR-TB473]: rtf_border() is a list of class rtf_border with the six slots, every side not named unset, and building one never changes another", {
+  skip_on_cran()
   b0 <- rtf_border()
   expect_s3_class(b0, "rtf_border")
   expect_type(b0, "list")
@@ -879,6 +853,7 @@ test_that("FT-TB6028 [FR-TB473]: rtf_border() is a list of class rtf_border with
 })
 
 test_that("FT-TB6029 [FR-TB474]: rtf_border(top, bottom, left, right) take TRUE, FALSE or none, a style name, an rtf_border_line() or NULL", {
+  skip_on_cran()  # a slow scenario: CI only (NOT_CRAN=true), see helper-allpairs.R
   for (side in c("top", "bottom", "left", "right")) {
     mk <- function(v) do.call(rtf_border, stats::setNames(list(v), side))
     # TRUE: single, 15 twips, black (colour NULL)
@@ -907,6 +882,7 @@ test_that("FT-TB6029 [FR-TB474]: rtf_border(top, bottom, left, right) take TRUE,
 })
 
 test_that("FT-TB6030 [FR-TB475]: rtf_border(all = ) sets top, bottom, left and right at once, a side named explicitly wins, all = FALSE erases while rtf_border() says nothing", {
+  skip_on_cran()
   a <- rtf_border(all = "dot")
   for (s in c("top", "bottom", "left", "right")) expect_identical(a[[s]], rtf_border_line("dot"))
   expect_null(a$inside_h)
@@ -933,6 +909,7 @@ test_that("FT-TB6030 [FR-TB475]: rtf_border(all = ) sets top, bottom, left and r
 })
 
 test_that("FT-TB6031 [FR-TB476]: rtf_border(inside_h = , inside_v = ) are the rules between rows and between cells, values as the edges, NULL no rule, not printed when unset", {
+  skip_on_cran()
   b <- rtf_border(inside_h = TRUE, inside_v = "dot")
   expect_identical(b$inside_h, rtf_border_line("single", 15L))
   expect_identical(b$inside_v, rtf_border_line("dot"))
@@ -961,29 +938,8 @@ test_that("FT-TB6031 [FR-TB476]: rtf_border(inside_h = , inside_v = ) are the ru
   expect_false(any(grepl("clbrdr", r0, fixed = TRUE)))
 })
 
-test_that("FT-TB6032 [FR-TB480]: an rtf_border records which of inside_h and inside_v the caller named, as an attribute that is not part of its value", {
-  nm <- function(b) attr(b, "inside_named")
-  expect_identical(nm(rtf_border(top = TRUE)), c(h = FALSE, v = FALSE))
-  expect_identical(nm(rtf_border(top = TRUE, inside_h = TRUE)), c(h = TRUE, v = FALSE))
-  expect_identical(nm(rtf_border(left = TRUE, inside_v = "none")), c(h = FALSE, v = TRUE))
-  expect_identical(nm(rtf_border(inside_h = "none", inside_v = "none")), c(h = TRUE, v = TRUE))
-  # naming a side as NULL still counts as naming it
-  expect_identical(nm(rtf_border(inside_h = NULL)), c(h = TRUE, v = FALSE))
-  # not part of the value: the two compare equal apart from the attribute
-  a <- rtf_border(top = TRUE)
-  b <- rtf_border(top = TRUE, inside_h = NULL)
-  expect_equal(a, b, ignore_attr = TRUE)
-  expect_false(identical(a, b))
-  # the use of it: a left / right border without inside_v named warns (once), one that
-  # names it does not
-  .t10_reset_edge_warning()
-  on.exit(.t10_reset_edge_warning(), add = TRUE)
-  tbl <- rtftable(data.frame(Item = c("a", "b"), A = c("1", "2"), stringsAsFactors = FALSE), border = "none")
-  expect_silent(style_zone(tbl, body = rtf_border(left = TRUE, inside_v = "none")))
-  expect_warning(style_zone(tbl, body = rtf_border(left = TRUE)), "outer")
-})
-
 test_that("FT-TB6033 [FR-TB481]: a border line saved under the old class name rtf_border_side is still accepted as a side", {
+  skip_on_cran()
   old <- structure(list(style = "double", width = 30L, color = "#003366"), class = "rtf_border_side")
   b <- rtf_border(top = old, bottom = old, inside_h = old)
   expect_s3_class(b, "rtf_border")
@@ -1002,6 +958,7 @@ test_that("FT-TB6033 [FR-TB481]: a border line saved under the old class name rt
 })
 
 test_that("FT-TB6034 [FR-TB482]: print() of an rtf_border lists top, bottom, left and right (none when unset) with style, width and colour, and inside_h and inside_v only when set", {
+  skip_on_cran()
   p <- function(b) capture.output(print(b))
   expect_identical(p(rtf_border()), c("<rtf_border>", "  top     : none", "  bottom  : none",
                                       "  left    : none", "  right   : none"))
@@ -1024,6 +981,7 @@ test_that("FT-TB6034 [FR-TB482]: print() of an rtf_border lists top, bottom, lef
 })
 
 test_that("FT-TB6035 [FR-TB489]: rtf_border_line() is a list of class rtf_border_line holding style, width and color, and the three can differ from side to side in one rtf_border()", {
+  skip_on_cran()
   l <- rtf_border_line("double", 30L, "#003366")
   expect_s3_class(l, "rtf_border_line")
   expect_type(l, "list")
@@ -1052,6 +1010,7 @@ test_that("FT-TB6035 [FR-TB489]: rtf_border_line() is a list of class rtf_border
 })
 
 test_that("FT-TB6036 [FR-TB490]: rtf_border_line(style = ) is single by default, one of six, and none is an explicit no-line that overrides an inherited border where NULL does not", {
+  skip_on_cran()
   expect_identical(rtf_border_line()$style, "single")
   for (st in c("single", "double", "thick", "dash", "dot", "none")) {
     expect_identical(rtf_border_line(st)$style, st)
@@ -1069,6 +1028,7 @@ test_that("FT-TB6036 [FR-TB490]: rtf_border_line(style = ) is single by default,
 })
 
 test_that("FT-TB6037 [FR-TB492]: rtf_border_line(width = ) is the line weight in twips, 15 by default, converted to integer, and ignored when style is none", {
+  skip_on_cran()
   expect_identical(rtf_border_line()$width, 15L)
   expect_identical(rtf_border_line(width = 30)$width, 30L)
   expect_type(rtf_border_line(width = 30)$width, "integer")
@@ -1089,6 +1049,7 @@ test_that("FT-TB6037 [FR-TB492]: rtf_border_line(width = ) is the line weight in
 })
 
 test_that("FT-TB6038 [FR-TB494]: rtf_border_line(color = ) is black by default, otherwise a 6-digit hex string", {
+  skip_on_cran()
   expect_null(rtf_border_line()$color)
   expect_identical(rtf_border_line(color = "#003366")$color, "#003366")
   expect_identical(rtf_border_line(color = "#abcdef")$color, "#abcdef")
@@ -1116,6 +1077,7 @@ test_that("FT-TB6038 [FR-TB494]: rtf_border_line(color = ) is black by default, 
 .t10_leaf <- c("Item", "g1", "g2", "g3")
 
 test_that("FT-TB6039 [FR-TB520]: col_cell(pos, label, ...) is a list of class rtf_col_cell holding pos and label, the rest only when given, positions those of the data columns", {
+  skip_on_cran()
   c0 <- col_cell(2, "x")
   expect_s3_class(c0, "rtf_col_cell")
   expect_type(c0, "list")
@@ -1147,6 +1109,7 @@ test_that("FT-TB6039 [FR-TB520]: col_cell(pos, label, ...) is a list of class rt
 })
 
 test_that("FT-TB6040 [FR-TB521]: col_cell(pos = ) is one column or c(start, end), an inclusive range, start <= end, values at least 1", {
+  skip_on_cran()
   expect_identical(col_cell(3, "x")$pos, 3L)
   expect_identical(col_cell(c(2, 5), "x")$pos, c(2L, 5L))
   expect_identical(col_cell(c(3, 3), "x")$pos, c(3L, 3L))
@@ -1171,6 +1134,7 @@ test_that("FT-TB6040 [FR-TB521]: col_cell(pos = ) is one column or c(start, end)
 })
 
 test_that("FT-TB6041 [FR-TB525]: col_cell(pos = <function>) is a selector of the data column names returning a logical, integer or character vector, the matched columns adjacent, resolved when the header is attached", {
+  skip_on_cran()
   d <- .t10_g()
   seen <- 0L
   mk <- function(f) rtf_col_header(list(col_cell(1, ""), col_cell(f, "S")), .t10_leaf)
@@ -1211,6 +1175,7 @@ test_that("FT-TB6041 [FR-TB525]: col_cell(pos = <function>) is a selector of the
 })
 
 test_that("FT-TB6042 [FR-TB530]: col_cell(border = ) inherits the zone border when NULL; an rtf_border() applies to this header cell only and overrides the zone border and the automatic group underline", {
+  skip_on_cran()
   d <- .t10_g()
   hdr <- function(...) rtf_col_header(list(col_cell(1, ""), col_cell(c(2, 3), "Span", ...), col_cell(4, "Y")),
                                       .t10_leaf)
@@ -1242,6 +1207,7 @@ test_that("FT-TB6042 [FR-TB530]: col_cell(border = ) inherits the zone border wh
 })
 
 test_that("FT-TB6043 [FR-TB540 FR-TB541]: a col_key() that matches nothing or non-adjacent columns stops when the header is attached, naming the selector; a selector without the names, or returning the wrong thing, stops", {
+  skip_on_cran()
   d <- data.frame(Item = c("Age", "Sex"), P__1 = c("1", "2"), D__1 = c("3", "4"), P__2 = c("5", "6"),
                   D__2 = c("7", "8"), P__3 = c("1", "1"), stringsAsFactors = FALSE)
   hdr <- function(sel) rtf_col_header(list(col_cell(sel, "G")), names(d))
@@ -1274,6 +1240,7 @@ test_that("FT-TB6043 [FR-TB540 FR-TB541]: a col_key() that matches nothing or no
 })
 
 test_that("FT-TB6044 [FR-TB542]: text_width_in(font = Arial / Times New Roman) measures each character with the AFM metrics at the size given: i narrower than W, a character outside printable ASCII is an n, no AFM file the average width", {
+  skip_on_cran()
   ar <- function(x, size = 24L) text_width_in(x, font = "Arial", font_size_half_points = size)
   tr <- function(x, size = 24L) text_width_in(x, font = "Times New Roman", font_size_half_points = size)
   # Helvetica (Arial): i 222, W 944, n 556; Times-Roman: i 278, W 944, n 500 (1/1000 em);
@@ -1305,6 +1272,7 @@ test_that("FT-TB6044 [FR-TB542]: text_width_in(font = Arial / Times New Roman) m
 })
 
 test_that("FT-TB6045 [FR-TB568]: rtftable() sizes the columns by col_rel_width, column_widths_twips (which wins), table_width_twips, table_width_pct and table_width_pct_of_writable, the twips over the percentages and table_width_pct over the other", {
+  skip_on_cran()
   d <- data.frame(Item = "x", A = "y", B = "z", stringsAsFactors = FALSE)
   w <- function(...) .t10_widths(rtftable(d, ...))[[2L]]
   # relative widths apportion the table's total: 8000 twips as 2 : 1 : 1
@@ -1336,6 +1304,7 @@ test_that("FT-TB6045 [FR-TB568]: rtftable() sizes the columns by col_rel_width, 
 })
 
 test_that("FT-TB6046 [FR-TB570]: rtftable(cell_padding_left_twips = , cell_padding_right_twips = ) pad every cell as \\li and \\ri; NULL takes the style's, else the document's rtf_style(), else the option, else 0", {
+  skip_on_cran()
   on.exit(rtfreporter_reset_defaults(), add = TRUE)
   d <- data.frame(Item = "x", A = "y", stringsAsFactors = FALSE)
   rows_of <- function(doc) {
@@ -1377,6 +1346,7 @@ test_that("FT-TB6046 [FR-TB570]: rtftable(cell_padding_left_twips = , cell_paddi
 })
 
 test_that("FT-TB6047 [FR-TB573]: rtftable() returns an rtftable that rtf_tables() places as one page, and the help's examples render", {
+  skip_on_cran()
   df <- data.frame(Subject = c("001", "002"), Age = c(34L, 45L))
   tbl <- rtftable(df)
   expect_s3_class(tbl, "rtftable")
@@ -1411,6 +1381,7 @@ test_that("FT-TB6047 [FR-TB573]: rtftable() returns an rtftable that rtf_tables(
 })
 
 test_that("FT-TB6048 [FR-TB516]: cell_rows(<name> = ) holds a template, a chain of templates tried in order, a chain with guards, and a single bare guard is a row too", {
+  skip_on_cran()
   d <- data.frame(group1 = "TRT", group1_level = rep(c("A", "B"), each = 3L),
                   variable = "AGE", variable_level = NA, context = "continuous",
                   stat_name = rep(c("n", "p", "estimate"), 2L),
@@ -1452,6 +1423,7 @@ test_that("FT-TB6048 [FR-TB516]: cell_rows(<name> = ) holds a template, a chain 
 # ------------------------------------------------------- stub_spec(vars = one column)
 
 test_that("FT-TB6049 [FR-TB591]: stub_spec(vars = ) may name one column, kept as the stub as it is and renamed to label when one is given; the flat stub_* arguments of as_rtftables() are an error", {
+  skip_on_cran()
   h <- data.frame(SOC = c("Gastro", "Gastro", "Nerv"), PT = c("Nausea", "Vomit", "Headache"),
                   N = c("1", "2", "3"), stringsAsFactors = FALSE)
   # one column, no label: the table as it is, the column keeps its name and its values
@@ -1481,6 +1453,7 @@ test_that("FT-TB6049 [FR-TB591]: stub_spec(vars = ) may name one column, kept as
 # ------------------------------------------------------- huxtable header rows
 
 test_that("FT-TB6050 [FR-TB631]: in a huxtable only the header_rows() from the first row on are the column header, the last of them the leaf labels; a row flagged further down is a body row in its place; none at the top gives a blank header", {
+  skip_on_cran()
   skip_if_not_installed("huxtable")
   d <- data.frame(Param = c("Age", "Weight", "Height"), Mean = c("1", "2", "3"),
                   SD = c("4", "5", "6"), stringsAsFactors = FALSE)

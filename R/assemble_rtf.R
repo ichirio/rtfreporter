@@ -1081,7 +1081,7 @@
 #'
 #' @examples
 #' # two TFL files in a folder, as a study's output
-#' dir <- file.path(tempdir(), "tfl")
+#' dir <- tempfile("tfl")
 #' dir.create(dir, showWarnings = FALSE)
 #' for (t in c("14.1.1", "14.2.1")) {
 #'   doc <- rtf_document() |>
@@ -1118,6 +1118,7 @@
 #'   ),
 #'   overwrite = TRUE
 #' )
+#' unlink(c(dir, out), recursive = TRUE)
 #'
 #' @export
 assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,

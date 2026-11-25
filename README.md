@@ -29,17 +29,17 @@ included.**
 
 ## Installation
 
-Not on CRAN yet (0.9.0 is the version going there); install from GitHub:
+Install the released version from GitHub, or the development version:
 
 ``` r
 # install.packages("rtfreporter")   # from CRAN, once it is accepted
-remotes::install_github("ichirio/rtfreporter")          # the 0.9 line, in development
-remotes::install_github("ichirio/rtfreporter@v0.8.2")   # the latest release, 0.8.2
+remotes::install_github("ichirio/rtfreporter@v0.9.0")   # the latest release, 0.9.0
+remotes::install_github("ichirio/rtfreporter@next")     # the development version (next)
 ```
 
-The 0.9 line removes the functions and arguments 0.8.x deprecated (each
-0.8.x one warns and names its replacement); code that runs without those
-warnings on 0.8.2 runs on 0.9.
+0.9.0 removes the functions and arguments 0.8.x deprecated (each 0.8.x
+one warns and names its replacement); code that runs without those
+warnings on 0.8.2 runs on 0.9.0.
 
 ## From an ARD to an RTF table in 30 seconds
 
@@ -222,7 +222,7 @@ rtfreporter_ai_manual("ai-kit", ard = ard)  # a folder to attach: the request, t
                                             # three example programs, your ARD and its shape
 ```
 
-Or download it -- **[AI user manual (v0.8.2)](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.8.2.md)** -- one self-contained file sized for a single chat session.  Attach it at the **start** of the session and say *"use this manual"*.  [`ai/rtfreporter-ai-user-manual.md`](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual.md) always resolves to the newest release, so it is safe to bookmark; the development copy is published beside it under its own version.
+Or download it -- **[AI user manual (v0.9.0)](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.9.0.md)** -- one self-contained file sized for a single chat session.  Attach it at the **start** of the session and say *"use this manual"*.  [`ai/rtfreporter-ai-user-manual.md`](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual.md) always resolves to the newest release, so it is safe to bookmark; the development copy is published beside it under its own version.
 
 Every example in it is run by CI and its function list is checked against
 `NAMESPACE`, so a manual that drifts from the API fails the build.

@@ -246,9 +246,11 @@
 }
 
 test_that("FT-DC248 [FR-DC311 FR-DC315]: decision table -- argument > section > shared > option > baseline, for each key and module", {
+  skip_on_cran()
   cases <- .sp_cases_a()
   expect_identical(nrow(cases), 122L)
   for (i in seq_len(nrow(cases))) {
+    .cran_cut(i)
     set <- strsplit(cases$set[i], " ", fixed = TRUE)[[1L]]
     r <- .sp_run(cases$key[i], cases$module[i], set)
     expect_identical(r$got, r$want,
@@ -258,6 +260,7 @@ test_that("FT-DC248 [FR-DC311 FR-DC315]: decision table -- argument > section > 
 })
 
 test_that("FT-DC249 [FR-DC315 FR-DC318]: pairwise -- key x module x the two sources set x route; the higher source wins", {
+  skip_on_cran()
   pairs <- utils::combn(.SP_SOURCES, 2L, FUN = paste, collapse = " ")
   keys <- c("font_size_half_points", "cell_padding_left_twips", "markup")
   cand <- do.call(rbind, lapply(keys, function(k) {
@@ -270,6 +273,7 @@ test_that("FT-DC249 [FR-DC315 FR-DC318]: pairwise -- key x module x the two sour
   expect_lt(nrow(ap$rows), nrow(cand) / 3)
   set <- ap$rows
   for (i in seq_len(nrow(set))) {
+    .cran_cut(i)
     src <- strsplit(set$pair[i], " ", fixed = TRUE)[[1L]]
     r <- .sp_run(set$key[i], set$module[i], src, route = set$route[i])
     expect_identical(r$got, r$want,
@@ -279,6 +283,7 @@ test_that("FT-DC249 [FR-DC315 FR-DC318]: pairwise -- key x module x the two sour
 })
 
 test_that("FT-DC250 [FR-DC318 FR-DC337]: rtf_config(style = ) merges key by key over rtf_document(style = ); a section still beats a later shared key", {
+  skip_on_cran()
   cases <- list(
     list(doc = rtf_style(font_size_half_points = 26L),
          cfg = list(rtf_style(font_size_half_points = 20L)), fs = 20L, li = 0L),
@@ -308,6 +313,7 @@ test_that("FT-DC250 [FR-DC318 FR-DC337]: rtf_config(style = ) merges key by key 
 })
 
 test_that("FT-DC251 [FR-DC315 FR-DC316 FR-DC336]: a size set without a height keeps the height its size implies; a section's size too", {
+  skip_on_cran()
   sz <- c(arg = 30L, section = 28L, shared = 26L)
   hv <- c(arg = 410L, section = 420L, shared = 430L, option = 450L)
   run <- function(m, size_src, h_src) {
@@ -352,6 +358,7 @@ test_that("FT-DC251 [FR-DC315 FR-DC316 FR-DC336]: a size set without a height ke
 })
 
 test_that("FT-DC252 [FR-DC313 FR-DC314 FR-DC316 FR-DC326]: a band's default border counts as unset; a border passed is the band's own", {
+  skip_on_cran()
   b <- rtf_border(bottom = TRUE)
   tp <- rtf_border(top = TRUE)
   hdr <- function(...) rtf_header(c(l = .sp_text("header")), ...)
@@ -381,6 +388,7 @@ test_that("FT-DC252 [FR-DC313 FR-DC314 FR-DC316 FR-DC326]: a band's default bord
 })
 
 test_that("FT-DC253 [FR-DC312 FR-DC313 FR-DC314 FR-DC335]: a section key reaches its own module only", {
+  skip_on_cran()
   for (key in c("font_size_half_points", "cell_padding_left_twips", "markup")) {
     base <- .sp_value(key, "baseline", "section")
     for (s in .SP_MODULES[[key]]) {
@@ -397,6 +405,7 @@ test_that("FT-DC253 [FR-DC312 FR-DC313 FR-DC314 FR-DC335]: a section key reaches
 })
 
 test_that("FT-DC254 [FR-DC310 FR-DC314 FR-DC315]: the colour reaches the header and footer only; the band's own > its section > the shared colour", {
+  skip_on_cran()
   grey <- "#7F7F7F"
   red <- "#C00000"
   blue <- "#0000FF"

@@ -813,9 +813,12 @@ open a release Issue and perform a release.**
    attaches the Quality Report and its attachments to it.  Before step 5,
    on the release branch (`Version: X.Y.Z`), run
    `Rscript validation/env.R "<OS>, R <version>" local` on the
-   maintainers' PC for each R version of the Quality Plan and commit
+   maintainers' PC for each local environment of the Quality Plan
+   (section 5: the required one, and the additional one) and commit
    `validation/env-local/` in the release PR: the report counts only the
-   records of the version it reports.
+   records of the version it reports, and only a required record of this
+   code counts for the verdict.  R CMD check must succeed on every CI job
+   (a condition of the release, the Quality Plan, section 7).
 7. **(Once on CRAN)** run the CRAN pre-checks and submit —
    `devtools::check_win_devel()`, `urlchecker::url_check()`,
    `devtools::release()`.

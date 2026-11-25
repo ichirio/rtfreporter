@@ -1,11 +1,10 @@
 # rtfreporter — AI developer manual
 
-**This manual documents the rtfreporter 0.8.2.9100 codebase** (the
-development version, after release 0.8.2).
+**This manual documents the rtfreporter 0.9.0 codebase.**
 Check it matches the tree you are working in — `DESCRIPTION`'s `Version:`.
 If they differ, trust the tree, not this file.
 The manual of an installed version is `rtfreporter::rtfreporter_ai_manual(which = "dev")`.
-The released versions' manuals: [0.8.2](https://github.com/ichirio/rtfreporter/blob/v0.8.2/inst/ai/rtfreporter-ai-dev-manual.md), [0.8.1](https://github.com/ichirio/rtfreporter/blob/v0.8.1/inst/ai/rtfreporter-ai-dev-manual.md), [0.8.0](https://github.com/ichirio/rtfreporter/blob/v0.8.0/inst/ai/rtfreporter-ai-dev-manual.md).
+The released versions' manuals: [0.9.0](https://github.com/ichirio/rtfreporter/blob/v0.9.0/inst/ai/rtfreporter-ai-dev-manual.md), [0.8.2](https://github.com/ichirio/rtfreporter/blob/v0.8.2/inst/ai/rtfreporter-ai-dev-manual.md), [0.8.1](https://github.com/ichirio/rtfreporter/blob/v0.8.1/inst/ai/rtfreporter-ai-dev-manual.md), [0.8.0](https://github.com/ichirio/rtfreporter/blob/v0.8.0/inst/ai/rtfreporter-ai-dev-manual.md).
 
 **Repo:** <https://github.com/ichirio/rtfreporter> ·
 **Docs:** <https://ichirio.github.io/rtfreporter/>

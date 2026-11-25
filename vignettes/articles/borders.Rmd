@@ -406,11 +406,6 @@ tbl <- rtftable(df, border = "none") |>
                                inside_h = s, inside_v = s))
 ```
 
-rtfreporter warns **once per session** when it meets a border whose edges
-could be read as either the outer edge or every rule. Naming `inside_h` /
-`inside_v` says which you mean and silences it. Use `"none"` when the answer is
-"no rule there".
-
 <!-- where-next -->
 
 ## Where next

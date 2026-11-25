@@ -7,6 +7,7 @@
                   "(e.g. \"-\" or \"NA\").  \"\" (the default) leaves the cell empty.")
 
 test_that("FT-FM087 [FR-FM128 FR-FM174 FR-FM196]: fmt_round(), fmt_numeric() and fmt_count_pct() refuse a rounding other than r or sas; fmt_count_pct() a pct_unit it does not know", {
+  skip_on_cran()
   d <- data.frame(b = c(1.234, 5.678))
   expect_error(fmt_round(1.5, rounding = "x"), .rounding_msg, fixed = TRUE)
   expect_error(fmt_numeric(d, cols = "b", digits = 1, rounding = "x"), .rounding_msg, fixed = TRUE)
@@ -15,10 +16,12 @@ test_that("FT-FM087 [FR-FM128 FR-FM174 FR-FM196]: fmt_round(), fmt_numeric() and
 })
 
 test_that("FT-FM088 [FR-FM147]: fmt_signif() refuses a small other than signif or fixed", {
+  skip_on_cran()
   expect_error(fmt_signif(0.5, small = "x"), "should be one of")
 })
 
 test_that("FT-FM089 [FR-FM168 FR-FM172 FR-FM173]: fmt_numeric() refuses several by columns, a column that is not there, and a signif or digits that is not one non-negative integer", {
+  skip_on_cran()
   d <- data.frame(a = c("x", "y"), b = c(1.234, 5.678), c = c("g", "h"))
   fm <- list(x = list(digits = 1), y = list(digits = 2))
   expect_error(fmt_numeric(d, cols = "b", by = c("a", "c"), formats = fm),
@@ -48,6 +51,7 @@ test_that("FT-FM089 [FR-FM168 FR-FM172 FR-FM173]: fmt_numeric() refuses several 
 })
 
 test_that("FT-FM098 [FR-FM127 FR-FM146]: fmt_round() and fmt_signif() refuse a fractional digits as they refuse a negative one (#785)", {
+  skip_on_cran()
   expect_error(fmt_round(1.234, digits = 1.5), "`fmt_round(digits = )` must be a single non-negative integer.",
                fixed = TRUE)
   expect_error(fmt_signif(1.234, digits = 2.5), "`fmt_signif(digits = )` must be a single positive integer.",
@@ -56,6 +60,7 @@ test_that("FT-FM098 [FR-FM127 FR-FM146]: fmt_round() and fmt_signif() refuse a f
 })
 
 test_that("FT-FM090 [FR-FM195 FR-FM211 FR-FM239]: fmt_count_pct(), .realign_count_pct() and fmt_value_paren() refuse an na that is not one string", {
+  skip_on_cran()
   expect_error(fmt_count_pct(1, 0.5, na = NA), .na_msg, fixed = TRUE)
   expect_error(fmt_count_pct(1, 0.5, na = c("a", "b")), .na_msg, fixed = TRUE)
   expect_error(rtfreporter:::.realign_count_pct("1 (5.0)", na = 1), .na_msg, fixed = TRUE)
@@ -63,6 +68,7 @@ test_that("FT-FM090 [FR-FM195 FR-FM211 FR-FM239]: fmt_count_pct(), .realign_coun
 })
 
 test_that("FT-FM091 [FR-FM115 FR-FM136 FR-FM133]: fmt_round() keeps 2 decimals and fmt_signif() 3 digits by default; a value below 1 rounding up to 1 is recomputed", {
+  skip_on_cran()
   expect_identical(fmt_round(1.23456), "1.23")
   expect_identical(fmt_round(1.23456), fmt_round(1.23456, digits = 2L))
   expect_identical(fmt_signif(123.456), "123")
@@ -71,6 +77,7 @@ test_that("FT-FM091 [FR-FM115 FR-FM136 FR-FM133]: fmt_round() keeps 2 decimals a
 })
 
 test_that("FT-FM092 [FR-FM160]: fmt_numeric(small = ) is signif by default, or fixed, for the signif form and for rules that name none", {
+  skip_on_cran()
   d <- data.frame(b = c(0.000123, 12.3))
   expect_identical(fmt_numeric(d, cols = "b", signif = 2)$b, c(fmt_signif(0.000123, 2), fmt_signif(12.3, 2)))
   expect_identical(fmt_numeric(d, cols = "b", signif = 2, small = "fixed")$b,
@@ -83,6 +90,7 @@ test_that("FT-FM092 [FR-FM160]: fmt_numeric(small = ) is signif by default, or f
 })
 
 test_that("FT-FM094 [FR-FM237 FR-FM243]: fmt_value_paren(nbsp = ) and fmt_right_align(): the padding is non-breaking by default, plain with nbsp = \" \"; every space in a padded cell is replaced", {
+  skip_on_cran()
   x <- c("1.2 (3.4)", "10.25 (3.4)")
   expect_true(all(grepl(" ", fmt_value_paren(x))))
   plain <- fmt_value_paren(x, nbsp = " ")
@@ -94,6 +102,7 @@ test_that("FT-FM094 [FR-FM237 FR-FM243]: fmt_value_paren(nbsp = ) and fmt_right_
 })
 
 test_that("FT-FM095 [FR-FM104 FR-FM113]: round_num(): away from a half the two roundings agree; a fractional digits is cut to an integer", {
+  skip_on_cran()
   x <- c(1.234, 5.6789, -3.14159, 100.001)
   expect_identical(round_num(x, 2, rounding = "r"), round_num(x, 2, rounding = "sas"))
   expect_identical(round_num(1.2345, 1.9), round_num(1.2345, 1))
@@ -101,6 +110,7 @@ test_that("FT-FM095 [FR-FM104 FR-FM113]: round_num(): away from a half the two r
 })
 
 test_that("FT-FM096 [FR-FM123 FR-FM163 FR-FM191]: an NA prints the na text in its place, Inf prints as Inf, a zero-length count and pct give zero-length text", {
+  skip_on_cran()
   expect_identical(fmt_round(c(1.234, NA), na = "-"), c("1.23", "-"))
   out <- fmt_numeric(data.frame(b = c(Inf, -Inf, 1.5)), cols = "b", digits = 1)
   expect_identical(out$b, c("Inf", "-Inf", "1.5"))
@@ -108,6 +118,7 @@ test_that("FT-FM096 [FR-FM123 FR-FM163 FR-FM191]: an NA prints the na text in it
 })
 
 test_that("FT-FM097 [FR-FM215 FR-FM235]: fmt_count_paren() and fmt_value_paren() return an empty x as it is; numbers are read as text; nested parentheses are left alone", {
+  skip_on_cran()
   expect_identical(fmt_count_paren(character(0)), character(0))
   expect_identical(fmt_count_paren(c(12, 3)), fmt_count_paren(c("12", "3")))
   expect_identical(fmt_value_paren(character(0)), character(0))
@@ -115,6 +126,7 @@ test_that("FT-FM097 [FR-FM215 FR-FM235]: fmt_count_paren() and fmt_value_paren()
 })
 
 test_that("FT-FM099 [FR-FM248]: fmt_value_paren(rounding = ) rounds a parenthetical of 100 or more by r or sas, NULL following the option", {
+  skip_on_cran()
   x <- c("1 (100.5)", "2 (50.0)")
   expect_identical(fmt_value_paren(x, nbsp = " ", rounding = "r"), c("1  (100)", "2 (50.0)"))
   expect_identical(fmt_value_paren(x, nbsp = " ", rounding = "sas"), c("1  (101)", "2 (50.0)"))

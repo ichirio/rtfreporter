@@ -22,7 +22,7 @@ library(testthat)
 
 .manual_lines <- function() {
   p <- .manual_path()
-  skip_if_not(file.exists(p), "AI manual not present (installed package)")
+  skip_if_not(file.exists(p), "needs the AI user manual of the source checkout; runs where the tests run from the checkout")
   readLines(p, encoding = "UTF-8", warn = FALSE)
 }
 
@@ -89,7 +89,7 @@ test_that("the manual has no table of deprecated functions", {
 
 test_that("every idiom the manual teaches runs", {
   skip_if_not(file.exists(.manual_path()),
-              "AI manual not present (installed package)")
+              "needs the AI user manual of the source checkout; runs where the tests run from the checkout")
   f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
 
   # An idiom that draws a warning (an argument the function does not have is

@@ -133,6 +133,7 @@
 }
 
 test_that("FT-PL993 [FR-PL404 FR-PL408 FR-PL409 FR-PL410 FR-PL416 FR-PL417 FR-PL972 FR-PL973 FR-IX408]: plan_cell_style(): which attributes each place takes, the decision table", {
+  skip_on_cran()
   d <- .cs_tbl()
   hdr_msg <- "plan_cell_style(header = TRUE) takes bold, italic, underline, align, border, color and background."
   # a border on whole columns warns once a session (FR-PL409); not this test's
@@ -141,6 +142,7 @@ test_that("FT-PL993 [FR-PL404 FR-PL408 FR-PL409 FR-PL410 FR-PL416 FR-PL417 FR-PL
   bord <- rtf_border(bottom = TRUE)
   places <- c("cols", "header", "where", "formula")
   for (pl in places) for (a in c(.cs_attrs, "border")) {
+    .cran_cut(match(pl, places))
     label <- paste(pl, a)
     if (pl == "formula" && a == "border") next
     args <- list(table_plan(d))
@@ -184,6 +186,7 @@ test_that("FT-PL993 [FR-PL404 FR-PL408 FR-PL409 FR-PL410 FR-PL416 FR-PL417 FR-PL
 })
 
 test_that("FT-PL994 [FR-PL404 FR-PL405 FR-PL407 FR-PL408 FR-PL409 FR-PL410 FR-PL972 FR-PL973 FR-IX408]: plan_cell_style(): place x columns x attributes x a later call, pairwise", {
+  skip_on_cran()
   attr_sets <- list(bold = "bold", align = "align", biu = c("bold", "italic", "underline"),
                     cb = c("color", "background"), ai = c("align", "indent_twips"))
   cand <- expand.grid(place = c("cols", "header", "where", "formula", "flist"),
@@ -198,6 +201,7 @@ test_that("FT-PL994 [FR-PL404 FR-PL405 FR-PL407 FR-PL408 FR-PL409 FR-PL410 FR-PL
   d <- .cs_tbl()
   base <- .cs_snapshot(.cs_pg(table_plan(d) |> plan_style()))
   for (i in seq_len(nrow(ap$rows))) {
+    .cran_cut(i)
     r <- ap$rows[i, ]
     cols <- switch(r$cols, all = NULL, A = "A", AB = c("A", "B"))
     attrs <- attr_sets[[r$attrs]]
@@ -220,6 +224,7 @@ test_that("FT-PL994 [FR-PL404 FR-PL405 FR-PL407 FR-PL408 FR-PL409 FR-PL410 FR-PL
 })
 
 test_that("FT-PL995 [FR-PL412 FR-PL413 FR-PL414 FR-PL415 FR-IX408]: plan_cell_style(): what one call may not mix, the decision table", {
+  skip_on_cran()
   d <- .cs_tbl()
   p <- table_plan(d)
   f <- ~ lab == "n"

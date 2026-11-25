@@ -210,7 +210,7 @@ test_that("the program comes from the argument, else the option", {
   expect_match(render(run_doc(list(c(l = "{PROGRAM_NAME}"))), program = "arg.R"),
                "arg.R", fixed = TRUE)
   options(rtfreporter.program = NULL)
-  skip_if(any(grepl("^--file=", commandArgs(FALSE))), "running under Rscript")
+  skip_if(any(grepl("^--file=", commandArgs(FALSE))), "needs a session with no known program name (Rscript always names its script); runs inside R CMD check, as on every CI job")
   expect_error(render(run_doc(list(c(l = "{PROGRAM}")))), "no program is known")
 })
 
