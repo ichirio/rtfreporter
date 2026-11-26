@@ -37,3 +37,23 @@ test_that("FT-AR8007 [FR-AR264]: normalize_ard(cards::ard_total_n()) stops with 
   expect_error(normalize_ard(cards::ard_total_n(adsl)),
                "The ARD has only the total (`..ard_total_n..`", fixed = TRUE)
 })
+
+test_that("FT-AR1136-1 [FR-AR264]: normalize_ard() of an ARD with no rows at all names `x`", {
+  empty <- data.frame(variable = character(), context = character(),
+                      stat_name = character(), stat = numeric(),
+                      stringsAsFactors = FALSE)
+  msg <- "`x` has no rows: the ARD holds no statistics of a table."
+  expect_error(normalize_ard(empty), msg, fixed = TRUE)
+  expect_error(normalize_ard(empty, drop_contexts = character()), msg,
+               fixed = TRUE)
+  # not base R's message from a frame of no rows
+  e <- tryCatch(normalize_ard(empty), error = conditionMessage)
+  expect_false(grepl("replacement has", e, fixed = TRUE))
+})
+
+test_that("FT-AR1136-2 [FR-AR264]: normalize_ard() of a cards ARD with its rows filtered away names `x`", {
+  skip_if_not_installed("cards")
+  adsl <- data.frame(TRT01A = c("A", "B"), AGE = c(50, 60))
+  ard <- cards::ard_summary(adsl, by = TRT01A, variables = AGE)
+  expect_error(normalize_ard(ard[0, ]), "`x` has no rows:", fixed = TRUE)
+})

@@ -1729,6 +1729,14 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
   if (!"context" %in% names(d) || !"stat_name" %in% names(d)) {
     .ard_stop("`x` does not look like a cards ARD (no `context`/`stat_name` columns).")
   }
+  # An ARD of no rows at all (`ard[0, ]`, a filter that kept none): there is
+  # no table to normalize, and the frame of no rows would fail later in base
+  # R ("replacement has 1 row, data has 0").
+  if (!nrow(d)) {
+    .ard_stop(paste0(
+      "`x` has no rows: the ARD holds no statistics of a table.\n",
+      "  Check the cards call or the filter that made it."))
+  }
   ignored <- NULL
   total_n <- NULL
   if (length(drop_contexts)) {
