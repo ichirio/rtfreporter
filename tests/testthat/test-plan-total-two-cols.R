@@ -150,7 +150,7 @@ test_that("FT-PL6806 [FR-PL995]: no overall rows for the inner key: the outer ke
              context = "tabulate", stat_name = sn, stat_label = sn, stat = x,
              stringsAsFactors = FALSE)
 }
-.t2c_shift_bign <- function() {
+.t2c_shift_bign <- function(corner = FALSE) {
   na <- NA_character_
   lv <- c("L", "N", "H")
   n <- list(ALT = list(A = rbind(c(2, 1, 0), c(1, 5, 1), c(0, 1, 2)),
@@ -170,7 +170,15 @@ test_that("FT-PL6806 [FR-PL995]: no overall rows for the inner key: the outer ke
                                   "ANRIND", lv, "n", rowSums(m)))
   }
   bign <- .t2c_rec3(na, na, na, na, na, na, "TRT01A", c("A", "B"), "n", c(30, 28))
-  suppressMessages(normalize_ard(rbind(bign, overall, cells, marg)))
+  # the corner: the row key PARAM tabulated by the arm, no ANRIND -- each
+  # arm's subjects of the parameter, the Total row's Total column
+  crn <- NULL
+  if (corner) for (a in c("A", "B")) {
+    crn <- rbind(crn, .t2c_rec3("TRT01A", a, na, na, na, na, "PARAM", names(n), "n",
+                                vapply(names(n), function(pm) sum(n[[pm]][[a]]), 1,
+                                       USE.NAMES = FALSE)))
+  }
+  suppressMessages(normalize_ard(rbind(bign, overall, cells, marg, crn)))
 }
 
 .t2c_shift_plan <- function(nd, ...) {
@@ -241,4 +249,70 @@ test_that("FT-PL1109-1 [FR-PL1002]: (#1109) two column keys by visit with the ar
   # direction = "both": value / change are two analysis variables, so no
   # Total row is said -- the stop names that, not missing overall rows
   expect_error(.t2c_tab(plan_total(p, direction = "both")), "no margins|one analysis")
+})
+
+# The cells of a table as text, by column: no attribute (the notes) compared
+.t2c_cells <- function(tab) {
+  lapply(tab[c("PARAM", "label", .t2c_vals(tab))], as.character)
+}
+
+test_that("FT-PL1137-1 [FR-PL267]: a shift table's corner (PARAM by the arm) is each arm's Total row in its Total column, the other cells unchanged", {
+  nd <- .t2c_shift_bign()
+  nc <- .t2c_shift_bign(corner = TRUE)
+  # each arm's subjects of the parameter: the sum of its shift cells
+  crn <- list(ALT = c(A = "13", B = "12"), HGB = c(A = "13", B = "11"))
+  for (pos in c("last", "first")) {
+    tb <- .t2c_tab(.t2c_shift_plan(nc, direction = "both", position = pos))
+    t0 <- .t2c_tab(.t2c_shift_plan(nd, direction = "both", position = pos))
+    expect_identical(tb$PARAM, rep(c("ALT", "HGB"), each = 4L))
+    tot <- as.character(tb$label) == "Total"
+    expect_identical(sum(tot), 2L)
+    for (pm in c("ALT", "HGB")) for (a in c("A", "B")) {
+      expect_identical(tb[[paste0(a, "____Total")]][tot & tb$PARAM == pm],
+                       unname(crn[[pm]][[a]]))
+    }
+    # every other cell as without the corner
+    c1 <- .t2c_cells(tb)
+    c0 <- .t2c_cells(t0)
+    expect_identical(names(c1), names(c0))
+    for (k in names(c1)) {
+      keep <- if (grepl("____Total$", k)) !tot else rep(TRUE, length(tot))
+      expect_identical(c1[[k]][keep], c0[[k]][keep])
+    }
+  }
+  # "cols" and "rows" make no cell of the corner: the tables as without it
+  for (dir in c("cols", "rows")) {
+    expect_identical(.t2c_cells(.t2c_tab(.t2c_shift_plan(nc, direction = dir))),
+                     .t2c_cells(.t2c_tab(.t2c_shift_plan(nd, direction = dir))))
+  }
+})
+
+test_that("FT-PL1137-2 [FR-PL994 FR-PL1000]: two factor column keys: the columns in the factors' order, each arm's Total at position", {
+  nd <- .t2c_shift_bign(corner = TRUE)
+  nd$TRT01A <- factor(nd$TRT01A, levels = c("B", "A"))
+  nd$ANRIND <- factor(nd$ANRIND, levels = c("H", "N", "L"))
+  last <- c("B____H", "B____N", "B____L", "B____Total",
+            "A____H", "A____N", "A____L", "A____Total")
+  first <- c("B____Total", "B____H", "B____N", "B____L",
+             "A____Total", "A____H", "A____N", "A____L")
+  for (dir in c("cols", "both")) for (pos in c("last", "first")) {
+    tab <- .t2c_tab(.t2c_shift_plan(nd, direction = dir, position = pos))
+    expect_identical(.t2c_vals(tab), if (pos == "last") last else first)
+    expect_false(anyNA(tab$PARAM))
+    body <- tab[as.character(tab$label) != "Total", ]
+    expect_identical(nrow(body), 6L)
+    for (a in c("A", "B")) {
+      inner <- rowSums(sapply(paste0(a, "____", c("L", "N", "H")),
+                              function(k) as.numeric(body[[k]])))
+      expect_identical(as.numeric(body[[paste0(a, "____Total")]]), unname(inner))
+    }
+    expect_false(any(c("30", "28") %in% unlist(body[, .t2c_vals(body)])))
+  }
+  # "both": the Total row in its block, the corner in each arm's Total column
+  tb <- .t2c_tab(.t2c_shift_plan(nd, direction = "both"))
+  tot <- as.character(tb$label) == "Total"
+  expect_identical(tb$PARAM[tot], c("ALT", "HGB"))
+  expect_identical(tb$A____Total[tot], c("13", "13"))
+  expect_identical(tb$B____Total[tot], c("12", "11"))
+  expect_identical(tb$A____L[tot & tb$PARAM == "ALT"], "3")
 })
