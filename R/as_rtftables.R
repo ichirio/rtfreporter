@@ -736,7 +736,9 @@
 #'       `max_rows` the listing is one page.  A record that prints on
 #'       several lines (a cell holding a line break) is kept whole as a
 #'       `listing` record is, by a hidden record column: a page break does
-#'       not fall between its lines unless it is longer than a page.}
+#'       not fall between its lines unless it is longer than a page.
+#'       Not with `page_by`: there the lines of a record are paged as
+#'       rows, and a break can fall between them.}
 #'   }
 #' @param stub Row-stub settings, as a [stub_spec()] object -- or, as a
 #'   shorthand for `stub_spec(vars)`, a bare vector of hierarchy columns
@@ -1399,6 +1401,15 @@ as_rtftables.default <- function(x,
         is.null(user_args$column_widths_twips) &&
         is.null(user_args$col_rel_width)) {
       flat_hdr <- .flatten_col_header_labels(kw$col_header, ncol(body))
+      # Sized on the columns that print: a `drop_cols` column -- a listing's
+      # hidden record column too -- is gone before the table is built, so
+      # a width given to it would leave the printed table that much narrower
+      # than its budget.  It gets 0, dropped with it.
+      w_keep <- setdiff(seq_len(ncol(body)), drop_idx)
+      w_body <- body[w_keep]
+      w_hdr  <- if (!is.null(flat_hdr)) flat_hdr[w_keep]
+      w_prot <- match(1L, w_keep)
+      w_prot <- if (is.na(w_prot)) integer(0) else w_prot
       # The budget is the table's total width, resolved the way rtftable()
       # resolves it: absolute first, then a percentage of the writable width
       # (#382).  Reading only `table_width_twips` here made
@@ -1408,17 +1419,21 @@ as_rtftables.default <- function(x,
       # total-width logic.
       tw <- .resolve_total_width_twips(table_width_twips, user_args)
       if (is.null(tw)) {
-        nat <- tryCatch(auto_col_widths(body, col_header = flat_hdr),
+        nat <- tryCatch(auto_col_widths(w_body, col_header = w_hdr),
                         error = function(e) NULL)
         if (!is.null(nat) && sum(nat) > .default_writable_twips()) {
           tw <- .default_writable_twips()
         }
       }
       aw <- tryCatch(
-        auto_col_widths(body, col_header = flat_hdr,
-                        table_width_twips = tw, protect_cols = 1L),
+        auto_col_widths(w_body, col_header = w_hdr,
+                        table_width_twips = tw, protect_cols = w_prot),
         error = function(e) NULL)
-      if (!is.null(aw)) user_args$column_widths_twips <- aw
+      if (!is.null(aw)) {
+        full <- integer(ncol(body))
+        full[w_keep] <- aw
+        user_args$column_widths_twips <- full
+      }
     }
 
     # An absolute total width is a table setting, not an auto-sizing one
@@ -1439,7 +1454,8 @@ as_rtftables.default <- function(x,
     grp_last <- .group_last_rows(
       body, style$border_group,
       has_groups = group_by_given || !is.null(group_col_arg),
-      group_col = group_col_arg, group_by = group_by, page_by = page_by_arg)
+      group_col = group_col_arg, group_by = group_by, page_by = page_by_arg,
+      record = listing_record)
 
     # ---- paginate (tracking original rows so per-cell styles can be sliced)
     have_styles <- !is.null(cell_styles) || any(grp_last)
@@ -1779,8 +1795,11 @@ combine_sections <- function(...) {
 # reads them; `has_groups = FALSE` (nothing said how to group), a single
 # group, and `border_group = NULL` all give all FALSE, so such a table is not
 # touched.  With `page_by`, groups are found inside each page-key partition.
+# `record` is a listing's hidden record column: a record that prints on
+# several lines opens a group only on its first line (.record_whole_groups(),
+# #1051), as the pagination reads it, so no rule is drawn inside a record.
 .group_last_rows <- function(body, border_group, has_groups, group_col,
-                             group_by, page_by = NULL) {
+                             group_by, page_by = NULL, record = NULL) {
   n   <- nrow(body)
   out <- rep(FALSE, n)
   if (is.null(border_group) || !isTRUE(has_groups) || n < 2L) return(out)
@@ -1796,8 +1815,16 @@ combine_sections <- function(...) {
     if (length(rows) < 2L) next
     sub <- body[rows, , drop = FALSE]
     rownames(sub) <- NULL
-    id  <- tryCatch(.compute_group_info(sub, gidx, group_by)$id,
-                    error = function(e) NULL)
+    info <- tryCatch(.compute_group_info(sub, gidx, group_by),
+                     error = function(e) NULL)
+    if (is.null(info)) next
+    # as .paginate_df() does: not when the group column is the record itself
+    by_rec <- length(gidx) == 1L && !is.na(gidx) &&
+      identical(names(sub)[gidx], record)
+    if (!is.null(record) && record %in% names(sub) && !by_rec) {
+      info <- .record_whole_groups(info, sub[[record]])
+    }
+    id <- info$id
     if (is.null(id)) next
     if (length(unique(id[!is.na(id)])) < 2L) next
     nxt <- c(id[-1L], NA_integer_)

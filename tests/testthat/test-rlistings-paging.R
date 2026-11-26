@@ -255,3 +255,77 @@ test_that("FT-TB7710 [FR-IX420]: a key that prints on two lines opens one group,
   expect_identical(pages[[2L]]$data[[1L]], c("S-002", "B", ""))
   expect_identical(pages[[2L]]$data[[2L]], c("Rash", "", "Cough"))
 })
+
+# The rows of the written RTF (a \trowd block each) that have a bottom rule.
+.t77_ruled <- function(pages) {
+  rows <- strsplit(.t77_rtf(pages), "\\\\trowd")[[1L]][-1L]
+  rows[grepl("\\\\clbrdrb\\\\brdrs", rows)]
+}
+
+test_that("FT-TB1151-1 [FR-IX420]: border_group draws no rule inside a record that prints on two lines", {
+  d <- data.frame(
+    USUBJID = rep(c("S-001", "S-002\nB", "S-003"), c(2L, 2L, 2L)),
+    AEDECOD = c("Headache", "Nausea", "Rash", "Cough", "Fatigue", "Pyrexia"),
+    stringsAsFactors = FALSE
+  )
+  l <- .t77_listing(d)
+  # one page: group_safe on USUBJID, a group opened by a filled key
+  pages <- as_rtftables(l, max_rows = 10,
+                        style = rtf_table_style(border_group = rtf_border(bottom = TRUE)))
+  expect_length(pages, 1L)
+  expect_identical(pages[[1L]]$data[[1L]],
+                   c("S-001", "", "S-002", "B", "", "S-003", ""))
+  ruled <- .t77_ruled(pages)
+  # the rule under each subject's last line: Nausea, Cough, Pyrexia -- not
+  # under Rash, the line "S-002" whose record goes on with "B"
+  expect_length(ruled, 3L)
+  expect_true(any(grepl("Nausea", ruled, fixed = TRUE)))
+  expect_true(any(grepl("Cough", ruled, fixed = TRUE)))
+  expect_true(any(grepl("Pyrexia", ruled, fixed = TRUE)))
+  expect_false(any(grepl("Rash", ruled, fixed = TRUE)))
+  # the rows the rule goes under, as the body reads them
+  grp <- rtfreporter:::.group_last_rows(
+    data.frame(k = c("S-001", "", "S-002", "B", "", "S-003", ""),
+               r = c(1L, 2L, 3L, 3L, 4L, 5L, 6L), stringsAsFactors = FALSE),
+    rtf_border(bottom = TRUE), has_groups = TRUE, group_col = 1L,
+    group_by = "filled", record = "r")
+  expect_identical(which(grp), c(2L, 5L, 7L))
+})
+
+test_that("FT-TB1151-2 [FR-TB163]: auto_width sizes an rlistings listing on the printed columns: the hidden record column takes no width", {
+  wide <- as.data.frame(stats::setNames(
+    lapply(1:8, function(j) rep(strrep(LETTERS[j], 60), 3L)),
+    paste0("V", 1:8)), stringsAsFactors = FALSE)
+  wide$USUBJID <- c("S-001", "S-001", "S-002")
+  l <- .t77_listing(wide[c("USUBJID", paste0("V", 1:8))])
+  pg <- as_rtftables(l, auto_width = TRUE)[[1L]]
+  expect_identical(ncol(pg$data), 9L)
+  expect_false(".rtf_record" %in% names(pg$data))
+  expect_length(pg$column_widths_twips, 9L)
+  # the writable width, all of it, as an over-wide table is scaled to
+  expect_equal(sum(pg$column_widths_twips), rtfreporter:::.default_writable_twips())
+  # a width of the page's: table_width_twips is the printed total too
+  p2 <- as_rtftables(l, auto_width = TRUE, table_width_twips = 12000L)[[1L]]
+  expect_equal(sum(p2$column_widths_twips), 12000)
+})
+
+test_that("FT-TB1151-3 [FR-IX420]: a record longer than a page is cut over pages, within max_rows, no line lost", {
+  d <- data.frame(USUBJID = c("S-001", "S-001", "S-002"),
+                  AEDECOD = c("Headache", "a\nb\nc\nd", "Cough"),
+                  stringsAsFactors = FALSE)
+  l <- .t77_listing(d)
+  # the record of four lines, on one page when there is room
+  one <- as_rtftables(l)
+  expect_identical(one[[1L]]$data[[2L]],
+                   c("Headache", "a", "b", "c", "d", "Cough"))
+  pages <- as_rtftables(l, max_rows = 3)
+  expect_gt(length(pages), 2L)
+  expect_true(all(.t77_rows(pages) <= 3L))
+  # every line printed once, in order, a continuation row apart
+  terms <- unlist(lapply(pages, function(p) p$data[[2L]]), use.names = FALSE)
+  expect_identical(terms[nzchar(terms)], c("Headache", "a", "b", "c", "d", "Cough"))
+  # the record is cut: its first and last lines on different pages
+  pg_of <- function(t) which(vapply(pages, function(p) t %in% p$data[[2L]], NA))
+  expect_false(identical(pg_of("a"), pg_of("d")))
+  expect_false(any(grepl(".rtf_record", .t77_rtf(pages), fixed = TRUE)))
+})

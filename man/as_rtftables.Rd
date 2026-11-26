@@ -540,7 +540,9 @@ columns groups on column 1.  These are \strong{defaults} too: \code{split},
 \code{max_rows} the listing is one page.  A record that prints on
 several lines (a cell holding a line break) is kept whole as a
 \code{listing} record is, by a hidden record column: a page break does
-not fall between its lines unless it is longer than a page.}
+not fall between its lines unless it is longer than a page.
+Not with \code{page_by}: there the lines of a record are paged as
+rows, and a break can fall between them.}
 }}
 
 \item{stub}{Row-stub settings, as a \code{\link[=stub_spec]{stub_spec()}} object -- or, as a

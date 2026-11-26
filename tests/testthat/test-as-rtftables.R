@@ -160,3 +160,30 @@ test_that("as_rtftables(auto_width=TRUE) caps an over-wide table at the default 
   q <- as_rtftables(narrow, auto_width = TRUE)[[1L]]
   expect_lt(sum(q$column_widths_twips), 13680L)   # natural, not stretched
 })
+
+test_that("FT-TB1151-4 [FR-TB163]: auto_width sizes the printed columns: a drop_cols column and a listing's hidden record column take no width", {
+  wide <- data.frame(
+    USUBJID = c("S-001", "S-001", "S-002"),
+    a = strrep("Y", 60), b = strrep("Z", 60), c = strrep("W", 60),
+    stringsAsFactors = FALSE)
+  # drop_cols: the printed columns are the whole writable width
+  p <- as_rtftables(wide, auto_width = TRUE, drop_cols = "USUBJID")[[1L]]
+  expect_identical(names(p$data), c("a", "b", "c"))
+  expect_length(p$column_widths_twips, 3L)
+  expect_equal(sum(p$column_widths_twips), 13680L)
+  p2 <- as_rtftables(wide, auto_width = TRUE, drop_cols = 2L,
+                     table_width_twips = 12000L)[[1L]]
+  expect_equal(sum(p2$column_widths_twips), 12000L)
+  # no drop_cols: as before, column 1 kept at its natural width
+  p3 <- as_rtftables(wide, auto_width = TRUE)[[1L]]
+  expect_equal(sum(p3$column_widths_twips), 13680L)
+  expect_equal(p3$column_widths_twips[1L], auto_col_widths(wide)[1L])
+  # listing = : the record column is hidden, and takes no width
+  spec <- listing_spec(list(listing_col("USUBJID", collapse_repeats = TRUE),
+                            listing_col("a"), listing_col("b"), listing_col("c")))
+  l <- as_rtftables(wide, listing = spec, auto_width = TRUE)
+  if (inherits(l, "rtftable")) l <- list(l)
+  expect_false(".rtf_record" %in% names(l[[1L]]$data))
+  expect_length(l[[1L]]$column_widths_twips, 4L)
+  expect_equal(sum(l[[1L]]$column_widths_twips), 13680L)
+})
