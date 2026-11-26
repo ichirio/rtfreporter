@@ -436,6 +436,7 @@ test_that("plan_cell_style(header = TRUE) styles the header a plan prints from i
 })
 
 test_that("FT-TB6301 [FR-TB405]: an unknown background colour warns and is not drawn; an unknown text colour is refused (#999)", {
+  skip_on_cran()
   tb <- rtftable(data.frame(Item = c("Age", "Sex"), A = c("1", "2"),
                             stringsAsFactors = FALSE))
   rtf_of <- function(t) {

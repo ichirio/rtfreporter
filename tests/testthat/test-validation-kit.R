@@ -30,6 +30,7 @@ test_that("rtfreporter_validation_kit() refuses a folder with files unless overw
 })
 
 test_that("requirements.csv and traceability_matrix.csv are strict CSV, every row whole", {
+  skip_on_cran()
   # what any CSV reader takes them as (RFC 4180): a field quoted or not,
   # a quote inside a quoted field doubled -- a backslash does not escape
   # it, which R's reader forgives and Python's does not; every record as
@@ -52,6 +53,7 @@ test_that("requirements.csv and traceability_matrix.csv are strict CSV, every ro
 })
 
 test_that("every FR id the URS and the UAT cases name is an active FR of requirements.csv", {
+  skip_on_cran()
   d <- .kit_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   rtfreporter_validation_kit(d)
@@ -86,6 +88,7 @@ test_that("every FR id the URS and the UAT cases name is an active FR of require
 })
 
 test_that("build_user_matrix.R writes the URS -> FR -> UAT matrix from the copied kit", {
+  skip_on_cran()
   skip_if_not_installed("writexl")
   d <- .kit_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)

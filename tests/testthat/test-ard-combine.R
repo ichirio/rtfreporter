@@ -2,6 +2,7 @@
 # table dimension.  The data is the fictional ADLB of helper-lab-shift.R.
 
 test_that("FT-AR8001 [FR-AR255]: normalize_ard(combine = ) renames the variables and folds their key columns into one at the first one's place, its levels and the bookkeeping kept", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   ard <- .shift_ard()
   nd0 <- normalize_ard(ard)
@@ -41,6 +42,7 @@ test_that("FT-AR8001 [FR-AR255]: normalize_ard(combine = ) renames the variables
 })
 
 test_that("FT-AR8002 [FR-AR255]: a lab shift table by direction from ADaM's names and combine, with its Total row, Total column and corner, is the reference table and RTF", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   x <- .shift_data()
   nd <- normalize_ard(.shift_ard(x), combine = .shift_combine)
@@ -68,6 +70,7 @@ test_that("FT-AR8002 [FR-AR255]: a lab shift table by direction from ADaM's name
 })
 
 test_that("FT-AR8003 [FR-AR255 FR-AR124]: a stacked key may name a combined one", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   nd <- normalize_ard(.shift_ard(), combine = .shift_combine,
                       stack = list(s = list("tox_dir", c("tox_dir", "base_gr"))))
@@ -79,6 +82,7 @@ test_that("FT-AR8003 [FR-AR255 FR-AR124]: a stacked key may name a combined one"
 })
 
 test_that("FT-AR8004 [FR-AR256 FR-AR257 FR-AR258 FR-AR259 FR-AR260 FR-AR261 FR-AR262]: normalize_ard(combine = ) stops on what it cannot read", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   ard <- .shift_ard()
   # what it refuses

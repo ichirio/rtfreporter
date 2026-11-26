@@ -85,6 +85,7 @@ test_that("plan_stub(before = TRUE) survives a later plan_stub() that leaves it 
 })
 
 test_that("plan_stub() left out reads before = FALSE; one call writes what it did", {
+  skip_on_cran()
   p <- nd_plan()
   expect_identical(nd_pages(p |> plan_stub(name = "C") |> plan_style()),
                    nd_pages(p |> plan_stub(name = "C", before = FALSE) |> plan_style()))

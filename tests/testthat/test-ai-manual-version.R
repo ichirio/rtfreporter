@@ -39,6 +39,7 @@ test_that("rtfreporter_ai_manual() returns the installed path", {
 })
 
 test_that("rtfreporter_ai_manual(dir = ) writes the kit, or the dev manual", {
+  skip_on_cran()
   d <- file.path(tempdir(), "ai-kit"); unlink(d, recursive = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   out <- rtfreporter_ai_manual(d)
@@ -68,6 +69,7 @@ test_that("rtfreporter_ai_manual(dir = ) writes the kit, or the dev manual", {
 })
 
 test_that("rtfreporter_ai_manual(dir, ard = ): the ARD's rows and its shape", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$ALL <- "All"
@@ -92,6 +94,7 @@ test_that("rtfreporter_ai_manual(dir, ard = ): the ARD's rows and its shape", {
 })
 
 test_that("the kit's examples are the three-step layout and use only exported functions", {
+  skip_on_cran()
   kit <- system.file("ai", "kit", package = "rtfreporter")
   skip_if(!nzchar(kit), "the kit is not installed")
   ex <- names(asNamespace("rtfreporter")$.__NAMESPACE__.$exports)

@@ -89,6 +89,7 @@ test_that("rtf_figures takes one figure as it is, and refuses what draws nothing
 })
 
 test_that("rtf_figures(doc, plot): one plot object without list() (#589)", {
+  skip_on_cran()
   skip_if_not_installed("ggplot2")
   p <- ggplot2::ggplot(data.frame(x = 1:3, y = 1:3), ggplot2::aes(x, y)) +
     ggplot2::geom_point()

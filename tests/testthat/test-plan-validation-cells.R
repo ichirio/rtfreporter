@@ -227,6 +227,7 @@ test_that("FT-PL135 [FR-PL208 FR-PL209]: plan_apply() refuses what is not a plan
 # ---- plan_layers() ---------------------------------------------------------
 
 test_that("FT-PL136 [FR-PL210 FR-PL211 FR-PL212 FR-PL213 FR-PL214]: plan_layers() reads the plan from the outside", {
+  skip_on_cran()
   p <- vc_plan() |>
     plan_levels(TRT = c("B", "A")) |> plan_levels(PARAM = c("AST", "ALT")) |>
     plan_columns(widths = c(param = 2, row = 2, .values = 1)) |>
@@ -312,6 +313,7 @@ test_that("FT-PL139 [FR-PL216 FR-PL219]: plan_header_tokens() lists {col} (and {
 })
 
 test_that("FT-PL140 [FR-PL217 FR-PL218]: {n}, {n:sum}, {n:<column>} from plan_col_header(values = ); the unresolved say why", {
+  skip_on_cran()
   tk <- plan_header_tokens(vc_plan() |> plan_col_header(values = c(A = 20, B = 18)))
   expect_identical(tk$token, c("{col}", "{n}", "{n:sum}", "{n:A}", "{n:B}"))
   expect_identical(tk$kind, c("column", "population", "sum", "one", "one"))
@@ -335,6 +337,7 @@ test_that("FT-PL140 [FR-PL217 FR-PL218]: {n}, {n:sum}, {n:<column>} from plan_co
 })
 
 test_that("FT-PL141 [FR-PL220 FR-PL222 FR-PL266]: a key's own tabulation states the populations; Total is the study total; a comparison column is no {col}", {
+  skip_on_cran()
   p <- table_plan(vc_own(total = TRUE), cols = "TRT", rows = c(param = "PARAM"), label = c(visit = "VISIT")) |>
     plan_cells("{n:.0f}", notes = FALSE)
   cand <- plan_n_candidates(p)
@@ -369,6 +372,7 @@ test_that("FT-PL142 [FR-PL221 FR-PL224 FR-PL225]: nothing to read is no row; not
 # ---- plan_cells() ----------------------------------------------------------
 
 test_that("FT-PL143 [FR-PL226 FR-PL227 FR-PL228]: a template per cell, keyed by specificity; rows, chains and cell_rows()", {
+  skip_on_cran()
   t <- vc_tab(vc_vbase() |> plan_cells("{mean:.1f}", notes = FALSE))
   expect_identical(t$A[t$row == "mean"], c("31.2", "28.7"))
   expect_true(all(is.na(t$A[t$row != "mean"])))
@@ -404,6 +408,7 @@ test_that("FT-PL144 [FR-PL229 FR-PL233]: a later plan_cells() replaces its key a
 })
 
 test_that("FT-PL145 [FR-PL230 FR-PL231 FR-IX201]: stats = \"rows\" and value = ; na = fills what no template could", {
+  skip_on_cran()
   r <- vc_tab(vc_base() |> plan_cells(stats = "rows", notes = FALSE))
   expect_identical(r$row, rep(c("n", "mean", "sd"), 2))
   expect_identical(r$A, c(20, 31.245, 4.1, 20, 28.7, 3.92))
@@ -542,6 +547,7 @@ vc_lab <- function(context = TRUE) {
 }
 
 test_that("FT-PL912 [FR-PL908 FR-PL909 FR-PL911]: digits keyed by a row key's value: after the variable's, before the rest (#751)", {
+  skip_on_cran()
   for (ctx in c(TRUE, FALSE)) {
     p <- vc_lab(ctx) |> plan_digits(continuous = c(mean = 2, sd = 3))
     # one number a value, or the value's digits by statistic; a value the
@@ -591,6 +597,7 @@ test_that("FT-PL151 [FR-PL248 FR-PL250]: plan_digits() refuses two defaults, a k
 # ---- plan_levels() / plan_labels() -----------------------------------------
 
 test_that("FT-PL152 [FR-PL251 FR-PL252 FR-PL253]: plan_levels() orders a column key, a row key, the label rows, the variables; names are text", {
+  skip_on_cran()
   expect_identical(names(vc_tab(vc_plan() |> plan_levels(TRT = c("B", "A")))), c("param", "row", "B", "A"))
   ch <- function(x) as.character(x)
   expect_identical(ch(vc_tab(vc_plan() |> plan_levels(PARAM = c("AST", "ALT")))$param), c("AST", "AST", "ALT", "ALT"))
@@ -609,6 +616,7 @@ test_that("FT-PL152 [FR-PL251 FR-PL252 FR-PL253]: plan_levels() orders a column 
 })
 
 test_that("FT-PL153 [FR-PL254 FR-PL257 FR-PL258 FR-IX200]: levels and labels merge a key at a time; labels name without ordering and win over levels' text", {
+  skip_on_cran()
   a <- plan_apply(vc_plan() |> plan_levels(TRT = c("B", "A")) |> plan_levels(PARAM = c("AST", "ALT")), "args")$widen$levels
   expect_identical(a, list(TRT = c("B", "A"), PARAM = c("AST", "ALT")))
   b <- plan_apply(vc_plan() |> plan_levels(TRT = c("B", "A")) |> plan_levels(TRT = c("A", "B")), "args")$widen$levels
@@ -664,6 +672,7 @@ test_that("FT-PL155 [FR-PL261 FR-PL262 FR-PL263]: plan_levels() / plan_labels() 
 # ---- plan_total() ----------------------------------------------------------
 
 test_that("FT-PL156 [FR-PL264 FR-PL265 FR-PL270 FR-PL271]: the overall rows become the Total column, where asked", {
+  skip_on_cran()
   t <- vc_tab(vc_plan(vc_total()) |> plan_total())
   expect_identical(names(t), c("param", "row", "A", "B", "Total"))
   expect_identical(t$Total, c("200", "312.45 (41.00)", "200", "287.00 (39.20)"))
@@ -719,6 +728,7 @@ test_that("FT-PL157 [FR-PL272 FR-PL273 FR-PL274 FR-PL275 FR-PL276 FR-PL277]: pla
 # ---- plan_stat_groups() ----------------------------------------------------
 
 test_that("FT-PL158 [FR-PL278 FR-PL279 FR-PL280]: the groups across or down, templates by group, the last call's groups", {
+  skip_on_cran()
   sg <- function(d = vc_lbl(vc_long())) {
     table_plan(d, cols = c("TRT", ".stat_group"), rows = c(param = "PARAM"), label = c(row = "LBL"))
   }
@@ -757,6 +767,7 @@ test_that("FT-PL158 [FR-PL278 FR-PL279 FR-PL280]: the groups across or down, tem
 })
 
 test_that("FT-PL159 [FR-PL281]: plan_stat_groups(.variables = , .others = ) scopes the split", {
+  skip_on_cran()
   vl <- vc_lbl(vc_long())
   vl$variable <- vl$PARAM
   pv <- table_plan(vl, cols = c("TRT", ".stat_group"), rows = c(group = "variable"), label = c(row = "LBL"))
@@ -798,6 +809,7 @@ test_that("FT-PL160 [FR-PL285 FR-PL286 FR-PL287 FR-PL288]: plan_stat_groups() sa
 # ---- plan_compare() --------------------------------------------------------
 
 test_that("FT-PL161 [FR-PL289 FR-PL290 FR-PL291 FR-PL292 FR-PL295]: comparison columns, placed on the block, as the templates say", {
+  skip_on_cran()
   t <- vc_tab(vc_cp() |> plan_compare(p = "{p.value:.3f}"))
   expect_identical(names(t), c("param", "row", "A", "B", "p"))
   expect_identical(t$p, c("0.000", NA, "0.123", NA))        # the block's first row
@@ -856,6 +868,7 @@ test_that("FT-PL163 [FR-PL298 FR-PL299 FR-PL300 FR-PL301 FR-PL303]: plan_compare
 # ---- plan_sort() -----------------------------------------------------------
 
 test_that("FT-PL164 [FR-PL304 FR-PL305 FR-PL306 FR-PL308 FR-PL309]: the sort keys on an ARD plan", {
+  skip_on_cran()
   p <- vc_cplan()
   expect_identical(plan_apply(p |> plan_sort("param", "-n"), "args")$widen$sort, c("param", "-n"))
   expect_null(rtfreporter:::.plan_rtf_args(p |> plan_sort("param", "-n"))$sort_by)
@@ -878,6 +891,7 @@ test_that("FT-PL164 [FR-PL304 FR-PL305 FR-PL306 FR-PL308 FR-PL309]: the sort key
 })
 
 test_that("FT-PL165 [FR-PL310 FR-PL311 FR-PL312 FR-PL313]: stat = adds .sort_stat; keep = FALSE hides a key; TRUE / FALSE; last wins", {
+  skip_on_cran()
   p <- vc_cplan()
   a <- plan_apply(p |> plan_sort("-n", stat = "n"), "args")$widen
   expect_identical(a$sort_stat, "n")
@@ -926,6 +940,7 @@ test_that("FT-PL167 [FR-PL314 FR-PL315 FR-PL317]: plan_sort() says what key it c
 # ---- plan_nest() -----------------------------------------------------------
 
 test_that("FT-PL168 [FR-PL318 FR-PL319 FR-PL320 FR-PL321 FR-PL322]: a variable's rows under one level of another", {
+  skip_on_cran()
   plain <- vc_tab(vc_np())
   t <- vc_tab(vc_np() |> plan_nest(RSUB = c(RACE = "Black")))
   expect_identical(as.character(t$group), rep("RACE", 4L))
@@ -974,6 +989,7 @@ test_that("FT-PL169 [FR-PL323 FR-PL324 FR-PL326]: plan_nest() says what is wrong
 # ---- plan_empty() ----------------------------------------------------------
 
 test_that("FT-PL170 [FR-PL327 FR-PL328 FR-PL329 FR-PL331]: an empty table says so, when and where asked", {
+  skip_on_cran()
   none <- vc_ep(vc_empty(0, body = FALSE))
   t <- vc_tab(none |> plan_empty())
   expect_identical(t$label, c("Any TEAE", "No subjects met the criteria."))
@@ -1000,6 +1016,7 @@ test_that("FT-PL170 [FR-PL327 FR-PL328 FR-PL329 FR-PL331]: an empty table says s
 })
 
 test_that("FT-PL171 [FR-PL330 FR-PL332]: text = NULL, the footnote, a filtered-out table, label = NA", {
+  skip_on_cran()
   none <- vc_ep(vc_empty(0, body = FALSE))
   e <- vc_page1(none |> plan_empty(footnote = "No events."))
   expect_identical(unlist(attr(e, "rtf_footnotes")), "No events.")
@@ -1045,6 +1062,7 @@ vc_listing_rtf <- function(d, ...) {
 }
 
 test_that("FT-PL6802 [FR-PL991 FR-PL992]: plan_empty() on a listing of no records prints its sentence and footnote", {
+  skip_on_cran()
   none <- data.frame(USUBJID = character(), AETERM = character())
   txt <- vc_listing_rtf(none, function(p) plan_empty(p, "No records were reported."))
   expect_true(grepl("No records were reported.", txt, fixed = TRUE))

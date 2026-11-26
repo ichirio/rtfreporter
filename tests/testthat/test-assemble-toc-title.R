@@ -37,6 +37,7 @@ test_that("FT-AS4003 [FR-AS115]: a table with a label for every row uses those l
 })
 
 test_that("FT-AS4004 [FR-AS258 FR-AS115]: a table with no label column takes every label from its file's title, as 'auto' does", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   f <- .tt_inputs(d, c(t_14_1_1 = "Table 14.1.1 Demographics",
                        t_14_2_1 = "Table 14.2.1 Adverse Events"))
@@ -198,6 +199,7 @@ test_that("FT-AS4016 [FR-AS254]: a newline in toc_title is a line break (\\line)
 })
 
 test_that("FT-AS4017 [FR-AS254]: two newlines are two line breaks, a trailing newline one before the paragraph ends, a lone newline one", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B"))
   title <- function(t) .tt_paras(.tt_asm(f, toc = "auto", toc_title = t))[1L]
@@ -260,6 +262,7 @@ test_that("FT-AS4021 [FR-AS255]: {DATETIME} and a viewer's page token are filled
 })
 
 test_that("FT-AS4022 [FR-AS256]: toc_title named l, r or c (or unnamed) is aligned left, right or centre", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B"))
   title <- function(t) .tt_paras(.tt_asm(f, toc = "auto", toc_title = t))[1L]
@@ -303,6 +306,7 @@ test_that("FT-AS4024 [FR-AS257]: tokens are filled in a heading (the table's hea
 # -- the title's lines in the height estimate ---------------------------------
 
 test_that("FT-AS4025 [FR-AS259]: the TOC height estimate counts the title's line breaks, so a taller title can push entries to a second TOC page", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B"))
   n <- 35L   # fills a one-line-title page exactly: 35 entries at 10 pt
@@ -327,6 +331,7 @@ test_that("FT-AS4025 [FR-AS259]: the TOC height estimate counts the title's line
 # -- toc_style -----------------------------------------------------------------
 
 test_that("FT-AS4026 [FR-AS260]: toc_style sets the size and boldness of the title, a heading, an entry and the blank line", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B"))
   st <- list(title = list(size = 16, bold = FALSE),
@@ -346,6 +351,7 @@ test_that("FT-AS4026 [FR-AS260]: toc_style sets the size and boldness of the tit
 })
 
 test_that("FT-AS4027 [FR-AS260]: toc_style is read from options(rtfreporter.toc_style) when not given, and the argument wins", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B"))
   old <- options(rtfreporter.toc_style = list(title = list(size = 20)))
@@ -360,6 +366,7 @@ test_that("FT-AS4027 [FR-AS260]: toc_style is read from options(rtfreporter.toc_
 })
 
 test_that("FT-AS4028 [FR-AS260]: a partial toc_style is merged over the built-in values key by key", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B"))
   tab <- data.frame(file = f, label = c("a", "b"), heading = c("H", NA))
@@ -389,6 +396,7 @@ test_that("FT-AS4029 [FR-AS260 FR-AS259]: the height estimate uses the sizes of 
 })
 
 test_that("FT-AS4030 [FR-AS261]: a toc_style with an unknown key, a bad size or a bad bold stops with a message naming it", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B"))
   out <- file.path(d, "assembled.rtf")
@@ -427,6 +435,7 @@ test_that("FT-AS4031 [FR-AS260]: the TOC writes no font of its own: it follows t
 })
 
 test_that("FT-AS4032 [FR-AS262]: with the default toc_title and toc_style the TOC is written byte for byte as before they existed", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   out <- .tt_case_baseline(d)
   expect_identical(.tt_bytes(out),
@@ -447,6 +456,7 @@ test_that("FT-AS4032 [FR-AS262]: with the default toc_title and toc_style the TO
 # -- where a file is named -----------------------------------------------------
 
 test_that("FT-AS4033 [FR-AS268]: the file column may hold absolute paths, or paths relative to the working directory", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f <- .tt_inputs(d, c(t_14_1_1 = "Table 14.1.1 A", t_14_2_1 = "Table 14.2.1 B"))
   abs <- .tt_asm(f, toc = data.frame(file = f))
@@ -479,6 +489,7 @@ test_that("FT-AS4034 [FR-AS268]: a file given as a number (an index) is not acce
 # -- layout: digits, long labels, several pages, a cover ------------------------
 
 test_that("FT-AS4035 [FR-AS264 FR-AS125]: page numbers crossing 9 -> 10 and 99 -> 100 keep the same tab stop, leader and fields on every entry", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   out <- .tt_case_digits(d)
   x <- readLines(out, warn = FALSE)
@@ -583,6 +594,7 @@ test_that("FT-AS4040 [FR-AS266 FR-AS109]: with a cover the sections run cover, T
 # -- the pending-human fixtures ---------------------------------------------------
 
 test_that("FT-AS4041 [FR-AS264]: the digit-boundary TOC is rebuilt byte for byte (fixtures/toc-digits.rtf)", {
+  skip_on_cran()
   fx <- test_path("fixtures", "toc-digits.rtf")
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   expect_identical(.tt_bytes(.tt_case_digits(d)), .tt_bytes(fx))
@@ -615,6 +627,7 @@ test_that("FT-AS4044 [FR-AS266]: the cover and TOC deliverable is rebuilt byte f
 }
 
 test_that("FT-AS4045 [FR-AS269]: by default an entry paragraph carries no \\fi (no hanging indent) and the defaults are written as before", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE))
   f <- .tt_inputs(d, c(t_14_1_1 = "A", t_14_2_1 = "B", t_14_3_1 = "C"))
   x <- .tt_asm(f, toc = .tt_hang_toc(f))

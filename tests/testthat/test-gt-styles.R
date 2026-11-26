@@ -177,6 +177,7 @@ test_that("transparent gt borders are invisible and therefore not carried", {
 })
 
 test_that("a plain tfrmt render carries no borders (its transparent overlay)", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   skip_if_not_installed("tfrmt")
   dat <- expand.grid(grp = "Age", lbl = c("n", "Mean"),
@@ -207,6 +208,7 @@ test_that("a plain tfrmt render carries no borders (its transparent overlay)", {
 # ── gtsummary round-trip ──────────────────────────────────────────────────────
 
 test_that("gtsummary bold_labels() is carried through as_gt()", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   skip_if_not_installed("gtsummary")
   tb <- gtsummary::tbl_summary(gtsummary::trial, include = grade) |>

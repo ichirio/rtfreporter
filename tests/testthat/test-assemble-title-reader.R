@@ -86,6 +86,7 @@ test_that("FT-AS7002 [FR-AS250 FR-AS112]: toc = \"auto\" joins every title row o
 })
 
 test_that("FT-AS7003 [FR-AS149 FR-AS250]: a figure and a listing are labelled by their titles, as a table is, by assemble_folder() and toc = \"auto\"", {
+  skip_on_cran()
   d <- .tr_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   .tr_doc(d, "t_dm", c("Table 1", "Demographics"))
@@ -101,6 +102,7 @@ test_that("FT-AS7003 [FR-AS149 FR-AS250]: a figure and a listing are labelled by
 })
 
 test_that("FT-AS7004 [FR-AS250 FR-AS112 FR-AS149 FR-AS258]: a file with no title is labelled by its file name, one with a \"Table N\" line in its running header only by that line, by every route", {
+  skip_on_cran()
   d <- .tr_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   a <- .tr_doc(d, "t_14_1_1", c("Table 14.1.1", "Demographics"))
@@ -117,6 +119,7 @@ test_that("FT-AS7004 [FR-AS250 FR-AS112 FR-AS149 FR-AS258]: a file with no title
 })
 
 test_that("FT-AS7005 [FR-AS250 FR-AS258]: toc = \"auto\", a table with no label and assemble_folder() give the same text for the same files: line breaks, markup, non-ASCII text", {
+  skip_on_cran()
   d <- .tr_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   files <- c(
@@ -143,6 +146,7 @@ test_that("FT-AS7005 [FR-AS250 FR-AS258]: toc = \"auto\", a table with no label 
 })
 
 test_that("FT-AS7006 [FR-AS250 FR-AS112]: one level-1 entry per file, read the same way by toc = \"auto\" and assemble_folder(): title rows joined, a blank row passed over, a line break joined, table / figure / listing by title, the header's \"Table N\" line, then the file name; tokens filled, markup without its formatting; the outline entry the same; one entry a file, titles that change by page read from the first page", {
+  skip_on_cran()
   d <- .tr_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   # a table: a line break in a row, a blank row, own / run / static / dynamic
@@ -221,6 +225,7 @@ test_that("FT-AS7006 [FR-AS250 FR-AS112]: one level-1 entry per file, read the s
 }
 
 test_that("FT-AS7101 [FR-AS150]: the title from a running header: the rest of a \"Table N\" line that carries it, over the centred lines below it (a population, \"Draft\"), for toc = \"auto\", a table with no label and assemble_folder(); else the longest centred cell that is not a <...> subtitle; \\uN? read back", {
+  skip_on_cran()
   d <- .tr_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   a <- .tr_hdr(d, "t_14_1_1", c("Table 14.1.1 Demographic Characteristics",
@@ -258,6 +263,7 @@ test_that("FT-AS7101 [FR-AS150]: the title from a running header: the rest of a 
 })
 
 test_that("FT-AS7102 [FR-AS150]: a \"Table N\" line with the number only takes the longest other centred line, as before", {
+  skip_on_cran()
   d <- .tr_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   a <- .tr_hdr(d, "t_14_2_1", c("Table 14.2.1", "Vital Signs Summary by Visit",
@@ -285,6 +291,7 @@ test_that("FT-AS7103 [FR-AS150]: a <...> subtitle is never the title, with the n
 })
 
 test_that("FT-AS7104 [FR-AS250]: a file whose titles change by page ({PARAM} with page_by) gets one entry, named from its first page's title, from its title rows or its running header", {
+  skip_on_cran()
   d <- .tr_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   pv <- data.frame(PARAM = rep(c("ALT", "AST", "BILI"), each = 2),

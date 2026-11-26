@@ -53,6 +53,7 @@
 }
 
 test_that("every exported argument and rtfreporter.* option has an FR (known gaps only shrink)", {
+  skip_on_cran()
   known <- utils::read.csv(test_path("validation-coverage-gaps.csv"),
                            colClasses = "character")
   gaps <- .cov_gaps()
@@ -67,6 +68,7 @@ test_that("every exported argument and rtfreporter.* option has an FR (known gap
 })
 
 test_that("the coverage check sees a name, a glob, and a missing name", {
+  skip_on_cran()
   s <- c("rtftable(cell_padding_*_twips = ) pads the cells.",
          "options(rtfreporter.page.*) set the page.",
          "font = is the face.")

@@ -36,6 +36,7 @@ test_that("FT-TB7401 [FR-TB635]: a gt spanner over numeric (right-aligned) colum
 })
 
 test_that("FT-TB7402 [FR-TB635 FR-TB578]: a tab_style() alignment on a gt spanner is followed; without one, or without the \"styles\" token, it is centred", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   base <- gt::gt(.t74_df) |>
     gt::tab_spanner("Left L", columns = "subj", id = "l") |>
@@ -64,6 +65,7 @@ test_that("FT-TB7402 [FR-TB635 FR-TB578]: a tab_style() alignment on a gt spanne
 })
 
 test_that("FT-TB7403 [FR-TB635]: a gtsummary spanning header is centred, over right-aligned columns too", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   skip_if_not_installed("gtsummary")
   d <- data.frame(trt = rep(c("A", "B"), 5), age = c(41, 52, 38, 60, 47, 55, 33, 49, 58, 44))
@@ -77,6 +79,7 @@ test_that("FT-TB7403 [FR-TB635]: a gtsummary spanning header is centred, over ri
 })
 
 test_that("FT-TB7404 [FR-TB635]: a tfrmt spanner is centred, with or without the \"styles\" token", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   skip_if_not_installed("tfrmt")
   dd <- data.frame(group = "G", label = rep(c("n", "Mean"), 2), span = "Arms Q",
@@ -93,6 +96,7 @@ test_that("FT-TB7404 [FR-TB635]: a tfrmt spanner is centred, with or without the
 })
 
 test_that("FT-TB7405 [FR-TB636]: an rtables spanner is centred, as rtables prints it, over right-aligned columns too", {
+  skip_on_cran()
   skip_if_not_installed("rtables")
   skip_if_not_installed("formatters")
   d <- data.frame(grp = rep(c("X", "Y"), each = 4), trt = rep(c("A", "B"), 4),
@@ -113,6 +117,7 @@ test_that("FT-TB7405 [FR-TB636]: an rtables spanner is centred, as rtables print
 })
 
 test_that("FT-TB7406 [FR-TB637]: a flextable spanner takes its first header cell's alignment", {
+  skip_on_cran()
   skip_if_not_installed("flextable")
   ft <- flextable::flextable(.t74_df) |>
     flextable::add_header_row(values = c("", "Demo D"), colwidths = c(1, 2))
@@ -128,6 +133,7 @@ test_that("FT-TB7406 [FR-TB637]: a flextable spanner takes its first header cell
 })
 
 test_that("FT-TB7407 [FR-TB638]: a huxtable spanner takes its first cell's align(), \".\" as right", {
+  skip_on_cran()
   skip_if_not_installed("huxtable")
   hx <- huxtable::hux(.t74_df, add_colnames = TRUE)
   hx <- huxtable::insert_row(hx, "", "Demo H", "", after = 0)

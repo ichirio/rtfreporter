@@ -209,6 +209,7 @@ test_that("rtf_titles() keeps the page's heading under the titles it sets (#748)
 }
 
 test_that("{PAGE_HEADING} via rtf_titles() puts the heading at the marker's place, with its align", {
+  skip_on_cran()
   doc <- rtf_document() |>
     rtf_tables(.named(), auto_title = TRUE) |>
     rtf_titles(list(.shell()))
@@ -282,6 +283,7 @@ test_that("a second rtf_titles() moves the heading to its marker, or puts it las
 })
 
 test_that("a page with no heading loses the {PAGE_HEADING} row, on every path", {
+  skip_on_cran()
   chk <- function(doc, n_rows) {
     for (i in seq_along(doc$contents)) {
       expect_length(doc$contents[[i]]$title, n_rows)

@@ -279,6 +279,7 @@ test_that("header rows keep the un-split column geometry", {
 })
 
 test_that("every row of a page ends at that page's right edge", {
+  skip_on_cran()
   pages <- .pk_pages()
   for (p in pages) {
     n     <- ncol(p$data)
@@ -328,6 +329,7 @@ test_that("data-raw/gen_pk_conc.R is present and self-consistent", {
 # ──────── the running header ───────────────────────────────────────────────
 
 test_that("the running header numbers every page of the document", {
+  skip_on_cran()
   pages <- .pk_pages()
   hdr <- rtf_header(rows = list(
     c(l = "Drug Co., Ltd.",    r = "CONFIDENTIAL"),

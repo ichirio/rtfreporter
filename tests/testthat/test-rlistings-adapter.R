@@ -30,6 +30,7 @@ library(testthat)
 # -- detection ----------------------------------------------------------------
 
 test_that(".is_rlistings_tbl recognises listing_df and rejects others", {
+  skip_on_cran()
   lst <- .make_listing()
   expect_true(rtfreporter:::.is_rlistings_tbl(lst))
   expect_false(rtfreporter:::.is_rlistings_tbl(data.frame(a = 1)))
@@ -132,6 +133,7 @@ test_that("the typed wrapper rejects a non-listing", {
 # -- end to end ---------------------------------------------------------------
 
 test_that("as_rtftables() paginates a listing and renders RTF", {
+  skip_on_cran()
   lst   <- .make_listing(disp_cols = c("AGE", "AETERM"))
   pages <- as_rtftables(lst, split = "group_force", max_rows = 3)
   expect_gt(length(pages), 1L)

@@ -3,6 +3,7 @@
 # when a row key is a sort key (#695)
 
 test_that("three levels: the overall rows, then each SOC's own rows, then its PTs'", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
   adsl <- cards::ADSL
@@ -49,6 +50,7 @@ test_that("three levels: the overall rows, then each SOC's own rows, then its PT
 })
 
 test_that("plan_total() with two column keys folds the inner one: each arm's 'Any grade' column (#695)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
   adsl <- cards::ADSL
@@ -82,6 +84,7 @@ test_that("plan_total() with two column keys folds the inner one: each arm's 'An
 })
 
 test_that("levels(<key>): plan_levels' values first, the others by the next keys (#695)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   ae <- .cran_adae()  # on CRAN five SOCs (helper-rtfreporter.R)
@@ -109,6 +112,7 @@ test_that("levels(<key>): plan_levels' values first, the others by the next keys
 })
 
 test_that("levels(<key>): the pinned block first even when another has its count (a tie)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   # every subject with an AE has one in this SOC: its count is the overall count

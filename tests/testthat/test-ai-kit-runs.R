@@ -185,6 +185,7 @@ test_that("every code block of the ai-plan-code articles runs, in order", {
 }
 
 test_that("the kit's files are UTF-8, Japanese labels kept", {
+  skip_on_cran()
   d <- tempfile("kit-jp")
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   rtfreporter_ai_manual(d, ard = .jp_ard())
@@ -192,6 +193,7 @@ test_that("the kit's files are UTF-8, Japanese labels kept", {
 })
 
 test_that("the kit's files are UTF-8 in a non-UTF-8 locale too", {
+  skip_on_cran()
   old <- Sys.getlocale("LC_CTYPE")
   on.exit(Sys.setlocale("LC_CTYPE", old), add = TRUE)
   ok <- suppressWarnings(Sys.setlocale("LC_CTYPE", "C"))

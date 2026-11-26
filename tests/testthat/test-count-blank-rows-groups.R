@@ -26,6 +26,7 @@ test_that("group_safe keeps groups whole with count_blank_rows (#330)", {
 })
 
 test_that("... across a range of shapes and budgets", {
+  skip_on_cran()
   for (sizes in list(c(3, 3, 3), c(4, 4, 4), c(2, 5, 3), c(3, 4, 2, 3),
                      c(5, 2, 5))) {
     for (mr in c(6L, 7L, 8L, 9L)) {

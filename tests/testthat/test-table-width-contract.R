@@ -104,6 +104,7 @@ test_that("as_rtftables() honours an absolute total width", {
 })
 
 test_that("as_rtftables() matches rtftable() on every spelling", {
+  skip_on_cran()
   same <- function(...) {
     expect_identical(.rendered_widths(.one(...)),
                      .rendered_widths(rtftable(.wdf(), ...)))

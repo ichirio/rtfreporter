@@ -99,6 +99,7 @@ test_that("the argument names removed in 0.9.0 are gone (#788)", {
 })
 
 test_that("fmt_count_paren(bare = TRUE) is the built-in \"count_paren_bare\", byte for byte (#594)", {
+  skip_on_cran()
   xs <- list(c("1 (1.2%)", "0", "11 (3.6%)", "108 (35.3%)"),
              c("5 (33.3)", "0", "12 (100.0)", NA, ""),
              c("86", "5 (5.8)", "10 (11.6)", "0"),
@@ -217,6 +218,7 @@ test_that("generate_rtfreport(doc = ); report = still works, by name or with the
 })
 
 test_that("rtf_document(file = ): generate_rtfreport(doc) writes there; a file_path given wins", {
+  skip_on_cran()
   d <- tempfile("doc-file")
   dir.create(d)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)

@@ -132,6 +132,7 @@ test_that("FT-DC235 [FR-DC311]: title_format, footnote_format, title_width and f
 })
 
 test_that("FT-DC236 [FR-DC315 FR-DC316]: the module's argument > the section > the shared level > the option", {
+  skip_on_cran()
   old <- options(rtfreporter.row_height_twips = 290L,
                  rtfreporter.cell_padding_left_twips = 10L)
   on.exit(options(old), add = TRUE)

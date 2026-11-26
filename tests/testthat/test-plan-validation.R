@@ -314,6 +314,7 @@ test_that("FT-PL077 [FR-PL195]: plan_blanks(<not a table_plan>) stops", {
 })
 
 test_that("FT-PL915 [FR-PL914]: every plan verb stops when `.plan` is not a table_plan", {
+  skip_on_cran()
   # each verb gets the least it needs to reach the check of its plan
   others <- list(
     plan_cell_style  = list(bold = TRUE),

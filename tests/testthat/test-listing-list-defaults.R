@@ -49,6 +49,7 @@ library(testthat)
 }
 
 test_that("FT-TB7801 [FR-IX318]: a list of data frames with listing = and max_rows pages each element as that data frame alone, the record column dropped and a record kept whole", {
+  skip_on_cran()
   lst <- .t78_same_as_alone(.t78_spec(), max_rows = 5)
   # a record is its row and a blank row: 2 records to a page, never cut at 5
   expect_identical(.t78_rows(lst), c(4L, 4L, 4L, 4L, 4L, 2L))
@@ -75,6 +76,7 @@ test_that("FT-TB7801 [FR-IX318]: a list of data frames with listing = and max_ro
 })
 
 test_that("FT-TB7802 [FR-IX318]: in a list of data frames the caller's split, group_col, group_by and drop_cols still win over the listing's defaults", {
+  skip_on_cran()
   # split = "none": one page per element, max_rows or not
   none <- .t78_same_as_alone(.t78_spec(), max_rows = 5, split = "none")
   expect_identical(.t78_rows(none), c(12L, 10L))
@@ -103,6 +105,7 @@ test_that("FT-TB7803 [FR-IX318]: a list of data frames with listing = and no max
 })
 
 test_that("FT-TB7804 [FR-IX318]: every listing = default and every override, at once, on each data frame of a list", {
+  skip_on_cran()
   spec <- listing_spec(list(
     listing_col("S", width = 6, label = "Subject", collapse_repeats = TRUE),
     listing_col("A", width = 6, label = "Term"),
@@ -153,6 +156,7 @@ test_that("FT-TB7804 [FR-IX318]: every listing = default and every override, at 
 })
 
 test_that("FT-TB7805 [FR-IX318]: a list of bodies built by build_listing(), passed without listing =, pages each element as that body alone", {
+  skip_on_cran()
   b1 <- build_listing(.t78_d1(), .t78_spec())
   b2 <- build_listing(.t78_d1(), .t78_spec(blank_row_first = TRUE))
   lst   <- as_rtftables(list(b1, b2), max_rows = 5)

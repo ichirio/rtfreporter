@@ -1,6 +1,7 @@
 # `variable` as a column key: each arm's N over its variables' columns
 
 test_that("cols = c(arm, variable): the arm's N from its own count", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   ard <- cards::bind_ard(

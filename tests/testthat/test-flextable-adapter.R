@@ -52,6 +52,7 @@ test_that("as_rtftables(flextable) returns a length-1 list of rtftable", {
 })
 
 test_that("as_rtftables(flextable) reads the DISPLAYED body text", {
+  skip_on_cran()
   rt <- as_rtftables(.make_flextable())[[1L]]
   # Stub column carries the row labels.
   expect_identical(rt$data[[1L]], c("Mean", "SD"))
@@ -61,6 +62,7 @@ test_that("as_rtftables(flextable) reads the DISPLAYED body text", {
 })
 
 test_that("as_rtftables(flextable) reads relabelled leaf headers + spanning", {
+  skip_on_cran()
   rt <- as_rtftables(.make_flextable())[[1L]]
   # 2 header levels -> multi-row col_header (spanner row + leaf-label row).
   expect_true(is.list(rt$col_header))
@@ -76,6 +78,7 @@ test_that("as_rtftables(flextable) reads relabelled leaf headers + spanning", {
 })
 
 test_that("as_rtftables(flextable) reads per-column alignment", {
+  skip_on_cran()
   rt <- as_rtftables(.make_flextable())[[1L]]
   aligns <- vapply(rt$col_spec, function(s) s$align, character(1))
   expect_identical(aligns[[1L]], "left")    # stub
@@ -84,6 +87,7 @@ test_that("as_rtftables(flextable) reads per-column alignment", {
 })
 
 test_that("as_rtftables(flextable) carries caption + footer as attributes", {
+  skip_on_cran()
   rt <- as_rtftables(.make_flextable())[[1L]]
   expect_identical(attr(rt, "rtf_titles"), "Table 14.1: Demographics")
   fn <- attr(rt, "rtf_footnotes")
@@ -92,6 +96,7 @@ test_that("as_rtftables(flextable) carries caption + footer as attributes", {
 })
 
 test_that("as_rtftables(flextable, read_meta = FALSE) gives body only", {
+  skip_on_cran()
   rt <- as_rtftables(.make_flextable(), read_meta = FALSE)[[1L]]
   # No source metadata is read (rtftable() still supplies a default col_spec).
   expect_null(rt$col_header)
@@ -102,6 +107,7 @@ test_that("as_rtftables(flextable, read_meta = FALSE) gives body only", {
 })
 
 test_that("as_rtftables(flextable) honours a token subset", {
+  skip_on_cran()
   rt   <- as_rtftables(.make_flextable(), read_meta = c("col_header", "titles"))[[1L]]
   full <- as_rtftables(.make_flextable())[[1L]]
   expect_false(is.null(rt$col_header))
@@ -128,6 +134,7 @@ test_that("as_rtftables(flextable) paginates the body", {
 })
 
 test_that("as_rtftables(flextable) end-to-end render succeeds", {
+  skip_on_cran()
   ft  <- .make_flextable()
   doc <- rtf_document() |>
     rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
@@ -139,6 +146,7 @@ test_that("as_rtftables(flextable) end-to-end render succeeds", {
 })
 
 test_that("as_rtftable() accepts a flextable (single page)", {
+  skip_on_cran()
   rt <- as_rtftable(.make_flextable())
   expect_s3_class(rt, "rtftable")
   expect_identical(rt$data[[1L]], c("Mean", "SD"))

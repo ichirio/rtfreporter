@@ -54,6 +54,7 @@ test_that("the manual's Imports list matches DESCRIPTION", {
 })
 
 test_that("the S3-only invariant still holds in R/", {
+  skip_on_cran()
   r_dir <- test_path("..", "..", "R")
   skip_if_not(dir.exists(r_dir), "source tree not available")
   files <- list.files(r_dir, pattern = "[.]R$", full.names = TRUE)

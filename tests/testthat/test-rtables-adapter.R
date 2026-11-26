@@ -50,6 +50,7 @@ test_that(".is_rtables_tbl recognises VTableTree and rejects others", {
 # ── as_rtftables() on an rtables object ────────────────────────────────────────
 
 test_that("as_rtftables(rtables) returns a list of rtftable objects", {
+  skip_on_cran()
   tbl <- .make_rtables()
   res <- as_rtftables(tbl)
   expect_type(res, "list")
@@ -80,6 +81,7 @@ test_that("as_rtftables(rtables) renders row-label indentation into the stub", {
 })
 
 test_that("as_rtftables(rtables) builds spanning header for nested col splits", {
+  skip_on_cran()
   tbl <- .make_rtables(nested = TRUE)
   rt  <- as_rtftables(tbl)[[1L]]
   # 2 header levels -> multi-row col_header (spanner row + leaf-label row).
@@ -99,6 +101,7 @@ test_that("as_rtftables(rtables) carries titles + footers as attributes", {
 })
 
 test_that("as_rtftables(rtables) converts in-cell {N} marks to ^{N}", {
+  skip_on_cran()
   tbl <- .make_rtables(footnote = TRUE)
   rt  <- as_rtftables(tbl)[[1L]]
   data_cell <- rt$data[[2L]][trimws(rt$data[[1L]]) == "Mean"][1L]
@@ -119,6 +122,7 @@ test_that("as_rtftables(rtables, read_meta = FALSE) gives body only, no metadata
 })
 
 test_that("as_rtftables(rtables) end-to-end render succeeds", {
+  skip_on_cran()
   tbl <- .make_rtables(nested = TRUE, footnote = TRUE)
   doc <- rtf_document() |>
     rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>

@@ -42,6 +42,7 @@ ard_pipe <- function(ard, ...) {
 
 
 test_that("normalize_ard() keys the group pairs by name and flattens list-cols", {
+  skip_on_cran()
   skip_if_no_cards()
   d <- normalize_ard(make_ard())
 
@@ -74,6 +75,7 @@ test_that("normalize_ard() reads nothing from the object's attributes", {
 })
 
 test_that("normalize_ard() folds a hierarchy and records the depth", {
+  skip_on_cran()
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -96,6 +98,7 @@ test_that("normalize_ard() folds a hierarchy and records the depth", {
 })
 
 test_that("normalize_ard() labels the hierarchical overall rows on request", {
+  skip_on_cran()
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -119,6 +122,7 @@ test_that("normalize_ard() labels the hierarchical overall rows on request", {
 
 
 test_that("the pipe builds the demographics shape", {
+  skip_on_cran()
   skip_if_no_cards()
   tbl <- ard_pipe(
     make_ard(),
@@ -146,6 +150,7 @@ test_that("the pipe builds the demographics shape", {
 })
 
 test_that("several column keys make one spanning-ready column name", {
+  skip_on_cran()
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -167,6 +172,7 @@ test_that("several column keys make one spanning-ready column name", {
 })
 
 test_that("levels may name the analysis variables, not the label column", {
+  skip_on_cran()
   skip_if_no_cards()
   cells <- list(
     continuous  = c("n"         = "{N:.0f}",
@@ -198,6 +204,7 @@ test_that("levels may name the analysis variables, not the label column", {
 })
 
 test_that("labels set the text, never the order: levels (or the ARD) do", {
+  skip_on_cran()
   skip_if_no_cards()
   cells <- list(continuous = c("n" = "{N:.0f}"), categorical = "{n:.0f}")
   run <- function(...) {
@@ -226,6 +233,7 @@ test_that("labels set the text, never the order: levels (or the ARD) do", {
 })
 
 test_that("an unnamed labels / levels element is refused, not ignored", {
+  skip_on_cran()
   skip_if_no_cards()
   ard <- make_ard()
   run <- function(...) {
@@ -260,6 +268,7 @@ test_that("a fallback chain picks the first template that resolves", {
 })
 
 test_that("cells match whichever cards verb generation built the ARD", {
+  skip_on_cran()
   skip_if_no_cards()
   skip_if_not(all(c("ard_summary", "ard_tabulate") %in%
                     getNamespaceExports("cards")))
@@ -297,6 +306,7 @@ test_that("cells match whichever cards verb generation built the ARD", {
 })
 
 test_that("cells match an ARD whose context cards has never used", {
+  skip_on_cran()
   skip_if_no_cards()
   ard <- make_ard()
   # stand-in for a future cards rename: same rows, a context string that
@@ -360,6 +370,7 @@ test_that("a `cells` list that matches nothing says what the ARD holds", {
 
 
 test_that("a positional key warns when that position holds several variables", {
+  skip_on_cran()
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT    <- as.character(adsl$ARM)
@@ -399,6 +410,7 @@ test_that("a positional key warns when that position holds several variables", {
 })
 
 test_that("reading a position deliberately, with its name column, is quiet", {
+  skip_on_cran()
   skip_if_no_cards()
   # A subgroup table's rows ARE "which variable" by "which level of it", so
   # group2 holding many variables is the table rather than a mistake.  Only
@@ -455,6 +467,7 @@ test_that("pull_ard() reads the header denominators, keyed like the columns", {
 })
 
 test_that("pull_ard() keys a crossed header exactly like the spread columns", {
+  skip_on_cran()
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT   <- as.character(adsl$ARM)
@@ -484,6 +497,7 @@ test_that("pull_ard() says what to do when the statistic is not there", {
 
 
 test_that("statistics no template names are simply not read", {
+  skip_on_cran()
   skip_if_no_cards()
   skip_if_not_installed("cardx")
   # cardx::ard_categorical_ci() needs broom, which is not declared here
@@ -514,6 +528,7 @@ test_that("statistics no template names are simply not read", {
 
 
 test_that("`rows` defaults to the analysis variable for a flat ARD", {
+  skip_on_cran()
   skip_if_no_cards()
   cells <- list(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
                 categorical = "{n:.0f} ({p:.1f%})")
@@ -586,6 +601,7 @@ test_that("`sort` can be declared instead of arranged afterwards", {
 })
 
 test_that("`sort` names a column, a statistic, or the computed keys", {
+  skip_on_cran()
   skip_if_no_cards()
   run <- function(sort) {
     ard_pipe(make_ard(), cols = "TRT", rows = c(group = "variable"),
@@ -634,6 +650,7 @@ test_that("a factor level keeps its label, not its integer code", {
 })
 
 test_that("a factor's declared level order becomes the row order", {
+  skip_on_cran()
   skip_if_no_cards()
   tbl <- ard_pipe(make_factor_ard(), cols = "TRT",
                    cells = list(continuous  = c("Mean" = "{mean:.1f}"),
@@ -653,6 +670,7 @@ test_that("a factor's declared level order becomes the row order", {
 })
 
 test_that("the keyed columns are plain factors, not ordered ones", {
+  skip_on_cran()
   skip_if_no_cards()
   tbl <- ard_pipe(make_factor_ard(), cols = "TRT",
                    cells = list(continuous  = c("Mean" = "{mean:.1f}"),
@@ -678,6 +696,7 @@ test_that("the keyed columns are plain factors, not ordered ones", {
 
 
 test_that("stats = 'rows' can carry either of the ARD's two values", {
+  skip_on_cran()
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -699,6 +718,7 @@ test_that("stats = 'rows' can carry either of the ARD's two values", {
 })
 
 test_that("{x:stat_fmt} and {x:stat} name the ARD's own columns", {
+  skip_on_cran()
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -721,6 +741,7 @@ test_that("{x:stat_fmt} and {x:stat} name the ARD's own columns", {
 })
 
 test_that("a bare token falls back to stat, but stat_fmt demanded is an error", {
+  skip_on_cran()
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -760,6 +781,7 @@ make_bound_ae <- function() {
 
 
 test_that("an overall block built by binding is found when named", {
+  skip_on_cran()
   skip_if_no_cards()
   ard <- make_bound_ae()
   # no cards sentinel in an ARD built this way
@@ -815,6 +837,7 @@ test_that("overall_row() refuses a missing label", {
 
 
 test_that("what was not used is reported, and not attached by default", {
+  skip_on_cran()
   skip_if_no_cards()
   args <- list(make_ard(), cols = "TRT",
                cells = list(continuous  = c("Mean" = "{mean:.1f}"),
@@ -850,6 +873,7 @@ test_that("what was not used is reported, and not attached by default", {
 })
 
 test_that("the middle stage survives being rebuilt", {
+  skip_on_cran()
   skip_if_no_cards()
   skip_if_not_installed("dplyr")
   ard <- make_ard()
@@ -930,6 +954,7 @@ test_that("passing the raw ARD says so", {
 })
 
 test_that("a template naming a missing statistic yields NA, not an error", {
+  skip_on_cran()
   skip_if_no_cards()
   tbl <- ard_pipe(make_ard(), cols = "TRT", rows = c(group = "variable"),
                    cells = "{nope}")
@@ -937,6 +962,7 @@ test_that("a template naming a missing statistic yields NA, not an error", {
 })
 
 test_that("stats = 'rows' gives one numeric row per statistic", {
+  skip_on_cran()
   skip_if_no_cards()
   # the shape this mode is for: continuous variables, one row per statistic
   adsl <- cards::ADSL
@@ -950,6 +976,7 @@ test_that("stats = 'rows' gives one numeric row per statistic", {
 })
 
 test_that("stats = 'rows' on a variable with levels needs the level as a key", {
+  skip_on_cran()
   skip_if_no_cards()
   # every level of AGEGR carries an `n`, so labelling rows by the statistic
   # alone cannot separate them -- previously the last level silently won
@@ -996,6 +1023,7 @@ test_that("the pipe refuses an input that is not an ARD", {
 })
 
 test_that("naming the analysed variable says where its levels went", {
+  skip_on_cran()
   skip_if_no_cards()
   # `levels` keys on the analysis variable, `label` cannot -- so the error has
   # to explain the asymmetry rather than just listing the columns.
@@ -1021,6 +1049,7 @@ test_that("naming the analysed variable says where its levels went", {
 
 
 test_that("notes = 'applied' names the template and its guard", {
+  skip_on_cran()
   skip_if_no_cards()
   d <- normalize_ard(make_ard())
   d$stat[d$stat_name == "n" & d$variable == "SEX"] <- 0
@@ -1058,6 +1087,7 @@ test_that("notes = 'applied' stays quiet for stats = 'rows'", {
 })
 
 test_that("a named rounding is passed on and leaves the spec alone", {
+  skip_on_cran()
   skip_if_no_cards()
   a <- make_ard()
   cell <- function(...) {
@@ -1076,6 +1106,7 @@ test_that("a named rounding is passed on and leaves the spec alone", {
 })
 
 test_that("a variable the hierarchy does not cover keeps its own level", {
+  skip_on_cran()
   skip_if_no_cards()
   skip_if_not_installed("dplyr")
   adsl <- cards::ADSL
@@ -1101,6 +1132,7 @@ test_that("a variable the hierarchy does not cover keeps its own level", {
 })
 
 test_that("plan_template(form = 'spread') puts keys outside `cols` into `rows`", {
+  skip_on_cran()
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -1144,6 +1176,7 @@ test_that("plan_template(form = 'spread') spells the hierarchical case so that i
 })
 
 test_that("plan_template(form = 'spread') takes its decimal places from the ARD", {
+  skip_on_cran()
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -1161,6 +1194,7 @@ test_that("plan_template(form = 'spread') takes its decimal places from the ARD"
 })
 
 test_that("plan_template(form = 'spread') offers the full row set and trims what is absent", {
+  skip_on_cran()
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -1180,6 +1214,7 @@ test_that("plan_template(form = 'spread') offers the full row set and trims what
 })
 
 test_that("plan_template(form = 'spread') writes a script that reaches rtftables", {
+  skip_on_cran()
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -1257,6 +1292,7 @@ test_that("a label template indents by rule instead of by paste0()", {
 })
 
 test_that("a rows template writes a constant heading without a mutate", {
+  skip_on_cran()
   skip_if_no_cards()
   d <- normalize_ard(make_ard())
   z <- widen_ard(d, cols = "TRT",
@@ -1272,6 +1308,7 @@ test_that("a rows template writes a constant heading without a mutate", {
 })
 
 test_that("`labels` can be scoped to one column, like `levels`", {
+  skip_on_cran()
   skip_if_no_cards()
   # the same value means two things on the two axes: a shift table's "0"
   # is "Grade 0" down the side and "Baseline 0" across the top
@@ -1432,6 +1469,7 @@ fct_order <- c("Xanomeline Low Dose", "Placebo", "Xanomeline High Dose")
 
 
 test_that("a factor key keeps the order it declared, however the rows move", {
+  skip_on_cran()
   skip_if_no_cards()
   skip_if_not_installed("dplyr")
   d <- normalize_ard(make_fct_ard())
@@ -1479,6 +1517,7 @@ test_that("a character key stays character", {
 })
 
 test_that("a key variable's own rows are kept, marked, and left out of the body", {
+  skip_on_cran()
   skip_if_no_cards()
   d <- normalize_ard(make_fct_ard())
   expect_true(any(d$.key_own))
@@ -1501,6 +1540,7 @@ test_that("a key variable's own rows are kept, marked, and left out of the body"
 })
 
 test_that(".kind is decided per summary, not per variable", {
+  skip_on_cran()
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -1520,6 +1560,7 @@ test_that(".kind is decided per summary, not per variable", {
 # ------------------------------------------------ the report half
 
 test_that("normalize_ard() keeps `stat` numeric when a statistic is text", {
+  skip_on_cran()
   skip_if_no_cards()
   skip_if_not_installed("dplyr")
   ard <- make_ard()
@@ -1549,6 +1590,7 @@ test_that("normalize_ard() keeps `stat` numeric when a statistic is text", {
 })
 
 test_that("a guard compares numbers, not text, when the ARD has a text statistic", {
+  skip_on_cran()
   skip_if_no_cards()
   ard <- make_ard()
   tt <- ard[ard$stat_name == "mean", , drop = FALSE][rep(1L, 2L), ]
@@ -1573,6 +1615,7 @@ test_that("a guard compares numbers, not text, when the ARD has a text statistic
 })
 
 test_that("FT-AR114 [FR-AR254]: normalize_ard() prints a text statistic as it is, with no coercion warning, when its format is a decimal count", {
+  skip_on_cran()
   skip_if_no_cards()
   ard <- make_ard()
   tt <- ard[ard$stat_name == "mean", , drop = FALSE][rep(1L, 3L), ]
@@ -1593,6 +1636,7 @@ test_that("FT-AR114 [FR-AR254]: normalize_ard() prints a text statistic as it is
 })
 
 test_that("a label two variables share keeps each variable's own order", {
+  skip_on_cran()
   skip_if_no_cards()
   d <- data.frame(
     ARM  = rep(c("A", "B"), each = 12),
@@ -1647,6 +1691,7 @@ test_that("a label two variables share keeps each variable's own order", {
 })
 
 test_that("a label column that names a key is recoded like a row key", {
+  skip_on_cran()
   skip_if_no_cards()
   d <- data.frame(
     TRTA   = rep(c("Drug", "Control"), each = 24),
@@ -1707,6 +1752,7 @@ test_that("a label column that names a key is recoded like a row key", {
 })
 
 test_that("a hierarchy's label with a Total column: a term's text is on all its cells, one row", {
+  skip_on_cran()
   skip_if_no_cards()
   adae <- cards::ADAE[cards::ADAE$AESOC %in% unique(cards::ADAE$AESOC)[1:2], ]
   ard <- cards::ard_stack_hierarchical(adae, variables = c(AESOC, AEDECOD, AESEV),
@@ -1737,6 +1783,7 @@ test_that("a hierarchy's label with a Total column: a term's text is on all its 
 })
 
 test_that("FT-AR5901 [FR-AR220]: pull_ard(levels = ) puts the values the levels do not name in the order widen_ard() does (#992)", {
+  skip_on_cran()
   tri <- data.frame(group1 = "TRT", group1_level = c("B", "A", "C"), variable = "AGE",
                     variable_level = NA_character_, context = "continuous",
                     stat_name = "N", stat_label = "N", stat = c(4, 2, 7),

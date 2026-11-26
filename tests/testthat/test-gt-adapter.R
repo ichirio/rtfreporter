@@ -33,6 +33,7 @@ test_that(".gt_to_rtftable_kwargs() body keeps only visible columns", {
 })
 
 test_that(".gt_to_rtftable_kwargs() body has no stray newlines", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   skip_if_not_installed("tfrmt")
   dat <- data.frame(group = c("Age", "Age"), label = c("Mean", "SD"),
@@ -180,6 +181,7 @@ test_that("explicit args win over gt-extracted values", {
 }
 
 test_that("a two-stub gt actually breaks gt::extract_body() (the bug we handle)", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   skip_if_not_installed("tfrmt")
   g <- .mk_two_stub_gt()
@@ -188,6 +190,7 @@ test_that("a two-stub gt actually breaks gt::extract_body() (the bug we handle)"
 })
 
 test_that(".gt_extract_body_safe() reads a two-stub body via the _data fallback", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   skip_if_not_installed("tfrmt")
   g  <- .mk_two_stub_gt()
@@ -202,6 +205,7 @@ test_that(".gt_extract_body_safe() reads a two-stub body via the _data fallback"
 })
 
 test_that("as_rtftable() reads a label_loc='column' tfrmt gt (was an error)", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   skip_if_not_installed("tfrmt")
   g  <- .mk_two_stub_gt()
@@ -273,6 +277,7 @@ test_that("make.unique() still separates a stub from a real `rowname` column", {
 })
 
 test_that("gt row groups are heading rows, their rows indented under them (#650)", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   ae <- data.frame(SOC = c("Nervous", "Nervous", "GI"), PT = c("Headache", "Dizziness", "Nausea"),
                    Placebo = c("1", "2", "3"), Active = c("4", "5", "6"), stringsAsFactors = FALSE)
@@ -307,6 +312,7 @@ test_that("gt row groups are heading rows, their rows indented under them (#650)
 }
 
 test_that("FT-TB7101 [FR-TB577]: gt's footnote marks on a column label, a spanner and a body cell, and the footnote lines starting with their marks in gt's order", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   df <- data.frame(subj = sprintf("S%02d", 1:4), age = c(34, 45, 40, 51),
                    sex = c("F", "M", "F", "M"), stringsAsFactors = FALSE)
@@ -344,6 +350,7 @@ test_that("FT-TB7101 [FR-TB577]: gt's footnote marks on a column label, a spanne
 })
 
 test_that("FT-TB7102 [FR-TB577]: a gtsummary tbl_summary(by = ) header carries its footnote mark after N = n, and the note line starts with it", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   skip_if_not_installed("gtsummary")
   ts <- gtsummary::tbl_summary(gtsummary::trial[c("trt", "age", "grade")],
@@ -358,6 +365,7 @@ test_that("FT-TB7102 [FR-TB577]: a gtsummary tbl_summary(by = ) header carries i
 })
 
 test_that("FT-TB7104 [FR-TB577]: gt's footnote marks on the title, the subtitle and a row-group label match their footnote lines", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   df <- data.frame(grp = c("A", "A", "B", "B"), subj = sprintf("S%02d", 1:4),
                    age = c(34, 45, 40, 51), stringsAsFactors = FALSE)
@@ -395,6 +403,7 @@ test_that("FT-TB7104 [FR-TB577]: gt's footnote marks on the title, the subtitle 
 })
 
 test_that("FT-TB7103 [FR-TB577 FR-TB118]: read_meta without \"footnote_marks\" writes neither the label marks nor the line marks", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   df <- data.frame(subj = sprintf("S%02d", 1:4), age = c(34, 45, 40, 51),
                    stringsAsFactors = FALSE)
@@ -453,6 +462,7 @@ test_that("FT-TB7301 [FR-TB577]: a gt tab_caption() caption is the page title", 
 })
 
 test_that("FT-TB7302 [FR-TB577]: a gtsummary modify_caption() caption is the title, its markdown ** markers dropped", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   skip_if_not_installed("gtsummary")
   ts <- gtsummary::tbl_summary(gtsummary::trial[c("trt", "age")], by = "trt") |>
@@ -465,6 +475,7 @@ test_that("FT-TB7302 [FR-TB577]: a gtsummary modify_caption() caption is the tit
 })
 
 test_that("FT-TB7303 [FR-TB577]: a caption with a tab_header() title and subtitle: the caption first, then the title, then the subtitle, as gt prints them", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   g <- gt::gt(data.frame(A = 1:2)) |>
     gt::tab_header("Title T", "Sub S") |>
@@ -484,6 +495,7 @@ test_that("FT-TB7303 [FR-TB577]: a caption with a tab_header() title and subtitl
 })
 
 test_that("FT-TB7304 [FR-TB577 FR-TB174]: titles the user gives win, and the caption is not written, as for the gt title", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   g <- gt::gt(data.frame(A = 1:2)) |>
     gt::tab_header("Title T") |>
@@ -506,6 +518,7 @@ test_that("FT-TB7304 [FR-TB577 FR-TB174]: titles the user gives win, and the cap
 })
 
 test_that("FT-TB7305 [FR-TB577 FR-TB115]: each member of a gt_split carries the caption, read the same way", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   g <- gt::gt(data.frame(A = 1:4)) |>
     gt::tab_header("Title T") |>
@@ -558,6 +571,7 @@ test_that("FT-TB7305 [FR-TB577 FR-TB115]: each member of a gt_split carries the 
 }
 
 test_that("FT-TB7501 [FR-TB582]: a tfrmt label_loc = \"column\" table with no stubhead: both stub columns are headed empty, as gt prints them, not by the variable name", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   skip_if_not_installed("tfrmt")
   g <- .t75_gt()
@@ -576,6 +590,7 @@ test_that("FT-TB7501 [FR-TB582]: a tfrmt label_loc = \"column\" table with no st
 })
 
 test_that("FT-TB7502 [FR-TB582]: a tfrmt label_loc = \"column\" table is read from _data / _boxhead, its stub columns as ordinary columns headed by the stubhead as gt prints it", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   skip_if_not_installed("tfrmt")
   g <- .t75_gt()
@@ -617,6 +632,7 @@ test_that("FT-TB7502 [FR-TB582]: a tfrmt label_loc = \"column\" table is read fr
 })
 
 test_that("FT-TB7503 [FR-TB577]: a gt row_group_as_column table: the stub column is headed by tab_stubhead(), or empty, not by the variable name", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   df <- data.frame(arm = c("A", "A", "B", "B"), stat = c("n", "Mean", "n", "Mean"),
                    v = c("10", "2.5", "12", "3.1"), stringsAsFactors = FALSE)

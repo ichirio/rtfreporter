@@ -11,6 +11,7 @@ kit_dir <- function(env = parent.frame()) {
 heads_of <- function(f) sub("^##### ", "", grep("^##### ", readLines(f, encoding = "UTF-8"), value = TRUE))
 
 test_that("PASTE.md: every file of the kit in its order; the numbers only with values = TRUE", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   ard <- cards::ard_stack(cards::ADSL, .by = ARM, cards::ard_tabulate(variables = c(SEX, AGEGR1)))
   d <- kit_dir()
@@ -29,6 +30,7 @@ test_that("PASTE.md: every file of the kit in its order; the numbers only with v
 })
 
 test_that("size = \"short\": the rules, the plan sections, the exports and the closest example", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   dm <- cards::ard_stack(cards::ADSL, .by = ARM, cards::ard_tabulate(variables = c(SEX, AGEGR1)),
                          cards::ard_summary(variables = AGE))
@@ -53,6 +55,7 @@ test_that("size = \"short\": the rules, the plan sections, the exports and the c
 })
 
 test_that("the closest example: AE for a hierarchical ARD, ORR for a confidence interval, else DM", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   ae <- cards::ard_stack_hierarchical(cards::ADAE, variables = c(AESOC, AEDECOD), by = TRTA,
                                       denominator = cards::ADSL, id = USUBJID)
@@ -69,6 +72,7 @@ test_that("the closest example: AE for a hierarchical ARD, ORR for a confidence 
 })
 
 test_that("shell = : its text or its file, as 07_shell.md and at the end of PASTE.md, in UTF-8", {
+  skip_on_cran()
   d <- kit_dir()
   sh <- c("Table 14.1.1  Demographics", "                Placebo   Drug X", "性別  n (%)")
   rtfreporter_ai_manual(d, shell = sh, overwrite = TRUE)
@@ -86,6 +90,7 @@ test_that("shell = : its text or its file, as 07_shell.md and at the end of PAST
 })
 
 test_that("shell = a sheet copied from Excel into Notepad: tabs, CRLF, a BOM; Shift-JIS stops (#692)", {
+  skip_on_cran()
   d <- kit_dir()
   # Excel's copy: a tab between cells, empty cells as trailing tabs, CRLF
   txt <- paste0("Table 14.1.1  Demographics (背景因子)\t\t\r\n",
