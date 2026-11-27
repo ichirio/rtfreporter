@@ -148,9 +148,9 @@ test_that(".toc_label_from_title() reads the label from the file's title", {
   d <- tempfile("cova")
   dir.create(d)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
-  f <- .cov_titled_input(d, "t1.rtf", "Table 1 Demographics (µg)")
+  f <- .cov_titled_input(d, "t1.rtf", "Table 1 Demographics (\u00b5g)")
   expect_identical(rtfreporter:::.toc_label_from_title(f),
-                   "Table 1 Demographics (µg)")
+                   "Table 1 Demographics (\u00b5g)")
   b <- .cov_bare_inputs(d)[1L]
   expect_identical(rtfreporter:::.toc_label_from_title(b), "bare1")
 })

@@ -260,7 +260,8 @@ test_that("plan_style() with a preset and a zone that is no rtf_border stops", {
 
 test_that("a row_title position past the printed columns names the hidden ones", {
   skip_on_cran()
-  p <- table_plan(cov_tp_wide()) |> plan_hide("Active") |>
+  p <- table_plan(cov_tp_wide()) |>
+    plan_hide("Active") |>
     plan_columns(row_title = 5)
   expect_error(plan_apply(p), paste0(
     "plan_columns(row_title = 5): the table prints 2 columns (Parameter, ",
@@ -431,7 +432,8 @@ test_that("plan_header_tokens() of a plan that does not build still shows its n"
   skip_if_not_installed("cards")
   # `{p:%}` with no digits stops the table; the populations are read anyway,
   # keyed by column but with no columns to keep them to
-  p <- cov_tp_plan() |> plan_cells(categorical = "{n} ({p:%})") |>
+  p <- cov_tp_plan() |>
+    plan_cells(categorical = "{n} ({p:%})") |>
     plan_col_header(values = list(n = TRUE), header = c("", "", "{col} N={n}"))
   expect_error(plan_apply(p, "table"), "asks the plan for its digits")
   tk <- plan_header_tokens(p)
@@ -445,7 +447,8 @@ test_that("plan_header_tokens() says which columns' n a Total could not read", {
   skip_if_not_installed("cards")
   # no arm count of its own: the arms' n is not stated, the Total's is
   d <- cov_tp_ard()
-  p <- cov_tp_plan(d[d$variable != "TRT", ]) |> plan_total() |>
+  p <- cov_tp_plan(d[d$variable != "TRT", ]) |>
+    plan_total() |>
     plan_col_header(values = list(n = TRUE), header = c("", "", "{col} N={n}"))
   tk <- plan_header_tokens(p)
   bad <- tk[tk$token == "{n} NOT resolved", ]
@@ -461,7 +464,8 @@ test_that("plan_header_tokens() says the Total column has no study total to read
   d <- d[d$variable != "TRT", ]
   d$.total_n <- NULL
   attr(d, "ard_total_n") <- NULL
-  p <- cov_tp_plan(d) |> plan_total() |>
+  p <- cov_tp_plan(d) |>
+    plan_total() |>
     plan_col_header(values = list(n = TRUE), header = c("", "", "{col} N={n}"))
   tk <- plan_header_tokens(p)
   # the token row shows the first reason, an arm's
@@ -479,7 +483,8 @@ test_that("the header's n follows the order plan_levels() gives the columns", {
   skip_on_cran()
   skip_if_not_installed("cards")
   lv <- c("Xanomeline Low Dose", "Placebo", "Xanomeline High Dose")
-  p <- cov_tp_plan() |> plan_levels(TRT = lv) |>
+  p <- cov_tp_plan() |>
+    plan_levels(TRT = lv) |>
     plan_col_header(values = list(n = TRUE), header = c("", "", "{col} N={n}"))
   tk <- plan_header_tokens(p)
   expect_identical(names(tk$values[[which(tk$token == "{n}")]]), lv)

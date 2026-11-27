@@ -149,7 +149,7 @@ test_that("a records plan stops on two list-column values in one cell", {
   p <- table_plan(rec, cols = "VIS", rows = c(subject = "USUBJID"), value = "AVAL") |>
     plan_cells("{value}")
   err <- expect_error(plan_apply(p, "table"), "Two rows reach one cell")
-  expect_match(conditionMessage(err), "values: '1', '2'|values: ‘1’, ‘2’")
+  expect_match(conditionMessage(err), "values: '1', '2'|values: \u20181\u2019, \u20182\u2019")
 })
 
 test_that("plan_sort() orders the rows by a named comparison's statistic", {
