@@ -66,8 +66,10 @@ table object, how to get the section names where `auto_section` can see them.
 `rtf_tables(auto_section = TRUE)` reads the **names of the list elements** it is
 given:
 
-- a **non-empty** name starts a **new section** and is appended to the running
-  header (the base header defined once by `rtf_section()` without a `page`);
+- a **non-empty** name that differs from the one before it starts a **new
+  section** and is appended to the running header (the base header defined once
+  by `rtf_section()` without a `page`); pages that repeat the same name stay in
+  one section;
 - an **empty / unnamed** element **falls through** into the current section.
 
 So the whole question is: *how do the per-page `rtftable`s in the list get their

@@ -113,7 +113,8 @@ file.exists(pkg)
 
 For sections and explicit labels, pass the table of contents as a table: one
 row per file, its `label`, and a `heading` printed above the entry whenever it
-changes (`level` sets the indent). Each entry creates an RTF
+changes (`level` sets the entry's level; the levels are indented only with
+`toc_style = list(indent = )`). Each entry creates an RTF
 **bookmark**, so the TOC is navigable in the word processor and the entries jump
 to the right table:
 

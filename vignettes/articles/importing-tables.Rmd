@@ -502,7 +502,7 @@ column, leaving blanks and non-numbers as they are:
 ```{r cellfmt-custom}
 # Right-align a numeric column and append a unit (e.g. "mg"), padding on the
 # left with non-breaking spaces so the values line up in a monospaced font.
-fmt_with_unit <- function(x, unit = "mg", nbsp = " ") {
+fmt_with_unit <- function(x, unit = "mg", nbsp = "\u00a0") {
   x <- as.character(x)
   is_num <- grepl("^[0-9]+(\\.[0-9]+)?$", trimws(x))   # which cells to touch
   labelled <- x
@@ -710,8 +710,9 @@ pages <- as_rtftables(tbl, split = "group_force", max_rows = 20,
 ```
 
 With more than two `vars` each level indents one step further; a run of the
-same parent value gets one label row, so **sort the input first** (or use
-`sort_by`) if the hierarchy is scattered.
+same parent value gets one label row, so **sort the input first** if the
+hierarchy is scattered (`as_rtftables(sort_by = )` sorts after the stub is
+built, so it cannot regroup it).
 
 ### Column `label` attributes as header labels
 

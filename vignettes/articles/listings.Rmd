@@ -311,7 +311,8 @@ for `listing =` the rest of the time.
 
 ## Keeping a subject whole across a page break
 
-Give it a row budget and it paginates, **never splitting a subject's block**:
+Give it a row budget and it paginates, **never splitting a subject's block**
+(unless one block alone is longer than the page; then it is cut at the page's end):
 
 ```{r paginate}
 pages <- as_rtftables(adsl, listing = spec, max_rows = 8)
@@ -339,8 +340,8 @@ as_rtftables(body, max_rows = 8,
 
 `drop_cols` columns are hidden **after** pagination, which is why a column can
 decide the page breaks and still never appear. Every one of those is a
-*default*: pass `split`, `group_col` or `drop_cols` yourself and `listing =`
-leaves your choice alone.
+*default*: pass `split` or `group_col` yourself and `listing =` leaves your
+choice alone; a `drop_cols` of your own is kept, with `.rtf_record` added to it.
 
 ## The whole report
 

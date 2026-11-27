@@ -113,11 +113,11 @@ The verbs in three groups, by how often a clinical table uses them.
 
 | Job | Verb |
 |---|---|
-| The roles: what goes across, what goes down | `table_plan(x, cols, rows, label, stat, show_keys)` |
+| The roles: what goes across, what goes down | `table_plan(x, cols, rows, label, stat, show_keys, value)` |
 | How a cell is made | `plan_cells(..., stats, value, na, notes)` |
 | The digits | `plan_digits(..., rounding)` |
 | The text and order of values | `plan_labels()`, `plan_levels()` |
-| The column header | `plan_col_header(header, values)` |
+| The column header | `plan_col_header(header, values, header_sep, col_header_align, lines, span)` |
 | Run it, look inside | `plan_apply(plan, stage)`, `plan_layers()`, `print()` |
 
 The study's house style is in every table too, but written once for the
@@ -125,9 +125,9 @@ study and rarely changed for one table:
 
 | Job | Verb |
 |---|---|
-| The row headings | `plan_stub(vars, name, indent, group_summary, before)` |
+| The row headings | `plan_stub(vars, name, indent, group_summary, before, heading)` |
 | Blank rows | `plan_blanks(where, first, last, counted)` |
-| How many rows on a page, BY pages | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading)` |
+| How many rows on a page, BY pages | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at, na_label)` |
 | The columns: widths, decimal alignment | `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)` |
 | The whole table's look | `plan_style(border, align_count_pct, font, ..., border_header, ...)` |
 
@@ -140,10 +140,10 @@ study and rarely changed for one table:
 | The row order (adverse events by frequency) | `plan_sort(..., stat, keep)` |
 | Which rows stay (common terms only) | `plan_filter(..., any, parents, by)` |
 | A column from a group of statistics | `plan_stat_groups(..., .variables, .others)` |
-| A page per value (a lab parameter) | `plan_paginate_group(col, keep, heading)` |
+| A page per value (a lab parameter) | `plan_paginate_group(col, keep, heading, heading_at)` |
 | Titles and footnotes, when the plan carries them | `plan_titles()`, `plan_footnotes()` |
 | A table with no events | `plan_empty(text, when, position, footnote)` |
-| A listing | `plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap)` |
+| A listing | `plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap, align, record)` |
 
 ### Rarely: there when a table needs it
 
@@ -152,8 +152,8 @@ study and rarely changed for one table:
 | Columns not printed | `plan_hide(...)` |
 | One variable's rows under a level of another | `plan_nest(...)` |
 | A listing and its summary in one table | `plan_append(part, name, absent)` ([article](plan-append.html)) |
-| Groups down the body | `plan_row_group(mode, collapse)` |
-| Some cells' look | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border)` |
+| Groups down the body | `plan_row_group(mode, collapse, group_col)` |
+| Some cells' look | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips, row)` |
 | A table too wide for the page | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
 | Anything else | `plan_after(...)` |
 
@@ -283,9 +283,10 @@ of variables and of columns is always `plan_levels()`'s or the data's.
 stays.  An ARD made after a code list's full set of levels was applied counts
 an unused value as 0, which a table shows by default.
 
-The text of a **category level** (`F`, `M`) is the data's. Recode it where the
-ARD is made, for example as a factor's labels, and the table prints what the
-ARD holds.
+The text of a **category level** (`F`, `M`) is the data's unless a plan
+renames it: `plan_labels(SEX = c(F = "Female", M = "Male"))`, or a named
+`plan_levels()`. Otherwise recode it where the ARD is made, for example as a
+factor's labels, and the table prints what the ARD holds.
 
 ### `plan_sort()`: the row order
 

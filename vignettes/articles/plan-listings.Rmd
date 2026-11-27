@@ -86,8 +86,9 @@ nrow(sae)
 
 `table_plan()` is handed the records as they are. `plan_listing()` says it is a
 listing: its arguments are the printed columns, each a `listing_col()`, plus
-`listing_spec()`'s own settings. A column can combine several source
-variables, joined by `/` and wrapped to its width:
+`listing_spec()`'s own settings (its blank rows are `plan_blanks()`'s). A
+column can combine several source variables, joined by `/` and wrapped to its
+width:
 
 ```{r plan}
 p_body <- table_plan(sae) |>
@@ -119,7 +120,8 @@ p <- p_body |>
   the `"multiline"` type's default, written out here. The type also puts one
   at the top of every page; `first = FALSE` takes it away.
 * `plan_paginate_rows(max_rows = )` counts **physical** rows, including the
-  extra lines of wrapped cells, and never splits a record across pages.
+  extra lines of wrapped cells, and never splits a record across pages
+  unless the record alone is longer than a page.
 * `plan_titles()` and `plan_footnotes()` put the same block on every page.
 
 ```{r rtf}
@@ -165,7 +167,8 @@ advantages:
 ## Checking the widths first
 
 The widths above were picked by hand. `fit_listing_widths()` works them out
-from the paper, the font and the longest values. Pass it the records and the
+from the paper, the font and the widths of the values (the 90th percentile
+of each column's cells, not the longest). Pass it the records and the
 same columns without widths, and paste the widths it suggests into
 `listing_col(width = )`. See
 [Listings end to end](listings.html#letting-the-page-choose-the-widths).
