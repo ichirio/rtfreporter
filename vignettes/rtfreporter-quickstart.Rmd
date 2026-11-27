@@ -618,8 +618,10 @@ doc <- rtf_document() |>
 ```
 
 Titles render as centred bold paragraphs; footnotes render as a
-left-aligned single-column table the width of the content, with a rule above
-its first row. Both use the document font size (9 pt by default).
+left-aligned single-column table the width of the content, with no rule by
+default. For a separator rule above the footnotes, pass
+`rtf_footnotes(..., border = rtf_border(top = TRUE))`. Both use the document
+font size (9 pt by default).
 
 ---
 
@@ -673,7 +675,7 @@ How the S3 objects fit together: [Internal class design](https://ichirio.github.
 | Parameter | Type | Purpose |
 |---|---|---|
 | `titles` | list of chr | One entry per page; each char vector = one paragraph per line (`""` = blank) |
-| `footnotes` | list of chr | Same shape as `titles`; first line carries the top divider |
+| `footnotes` | list of chr | Same shape as `titles`; no rule by default (`rtf_footnotes(border = )` adds one) |
 
 
 ### rtfplot parameters

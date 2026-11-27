@@ -59,8 +59,8 @@ if (!.ok)
 ## The last mile for Pharmaverse Example tables
 
 The [pharmaverse](https://pharmaverse.org) already produces beautiful clinical
-tables -- [tern](https://insightsengineering.github.io/tern/) /
-[rtables](https://insightsengineering.github.io/rtables/),
+tables -- [tern](https://CRAN.R-project.org/package=tern) /
+[rtables](https://CRAN.R-project.org/package=rtables),
 [gtsummary](https://www.danieldsjoberg.com/gtsummary/) and
 [tfrmt](https://gsk-biostatistics.github.io/tfrmt/) compute the statistics and
 format the numbers, and the official

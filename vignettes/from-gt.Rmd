@@ -64,8 +64,9 @@ knitr::opts_chunk$set(eval = gt_ok)
 library(rtfreporter)
 ```
 
-```{r, include = FALSE, eval = !gt_ok}
-cat("This vignette renders only when the `gt` package is installed.\n")
+```{r, echo = FALSE, results = "asis", eval = !gt_ok}
+cat("> The chunks on this page run only when the gt package is installed;",
+    "without it their code is shown but not run.\n")
 ```
 
 > **The second path.** This article is about bringing a table you already

@@ -35,7 +35,7 @@ Copilot のエージェントを設定します。先に
 
 出典：<https://code.visualstudio.com/docs/sourcecontrol/overview>、
 <https://code.visualstudio.com/docs/sourcecontrol/branches-worktrees>、
-<https://code.visualstudio.com/docs/copilot/agents/agent-tools>
+<https://code.visualstudio.com/docs/agents/run/tools>
 
 ## 環境
 
@@ -92,8 +92,8 @@ VS Code のユーザープロファイルに保存されます。どちらも、
 * 新しいチャットを始め、回答の **References** セクションを見ます（表示される場合）。
 * 変更内容とツールの動きを読んで、ルールが守られたかを確認します。
 
-出典：<https://code.visualstudio.com/docs/copilot/customization/custom-instructions>、
-<https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions>
+出典：<https://code.visualstudio.com/docs/agent-customization/custom-instructions>、
+<https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions>
 
 ## 承認
 
@@ -163,7 +163,7 @@ Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:`.
 lintr）の代わりにはなりません。完全なセットは CI が実行し、リリース前にはメンテナー
 も実行します。
 
-出典：<https://code.visualstudio.com/docs/copilot/customization/prompt-files>
+出典：<https://code.visualstudio.com/docs/agent-customization/prompt-files>
 
 ## 編集ごとのチェック
 
@@ -205,7 +205,7 @@ VS Code のフックのページには、Local ハーネスはマッチャーの
 [Claude アプリのページ](ai-agents-claude-app-ja.html#checks-on-each-edit) を参照して
 ください。
 
-出典：<https://code.visualstudio.com/docs/copilot/customization/hooks>
+出典：<https://code.visualstudio.com/docs/agent-customization/hooks>
 
 ## その後
 
@@ -217,4 +217,4 @@ VS Code のフックのページには、Local ハーネスはマッチャーの
 作業の一部を別のエージェントに任せるには、VS Code のサブエージェントを使います。
 サブエージェントは、自分のコンテキストで作業し、絞った結果だけを返します。会話は
 引き継がないので、目的、対象のファイル、期待する結果を伝えてください。
-出典：<https://code.visualstudio.com/docs/copilot/agents/subagents>
+出典：<https://code.visualstudio.com/docs/agents/run/subagents>
