@@ -171,8 +171,9 @@ ae_footer <- rtf_footer(rows = list(
   c(l = "Source: ADSL, ADAE", r = "CONFIDENTIAL")))
 
 # fmt_ae(): cell formatter used by EVERY framework (tern included). Expand a bare
-# zero "0" to "0 (0.0%)" so it lines up with the count/percent cells -- a bare "0"
-# is otherwise left ragged by the aligner -- then align the column. tern's
+# zero "0" to "0 (0.0%)" so it lines up with the count/percent cells -- bare = TRUE
+# alone would pad a bare "0" into the count field, with no percent -- then align
+# the column. tern's
 # count_occurrences() emits bare zeros; gtsummary / tfrmt / Tplyr already emit
 # "0 (0.0%)", so for them the expansion is a no-op.
 fmt_ae <- function(x, nbsp = " ") {
@@ -549,7 +550,7 @@ library(gtsummary); library(flextable); library(huxtable)
 # bake_indent(): used ONLY here. as_flex_table() / as_hux_table() turn
 # gtsummary's indent into cell padding that the flextable / huxtable adapters do
 # not read as a row-label indent, so we bake the PT indent into the label TEXT
-# (NBSP) before converting.
+# (leading spaces) before converting.
 bake_indent <- function(tbl, n = 4L) {
   tb <- tbl$table_body
   pt <- tb$variable == "AEDECOD"

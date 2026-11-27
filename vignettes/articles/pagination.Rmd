@@ -409,10 +409,11 @@ names(pages[[1]]$data)       # the carrier column is gone: "Term", "N"
 
 The column is present while the split runs -- so `group_col`,
 `collapse_repeats`, and `blank_rows_by_change()` can all reference it -- and only
-then dropped. All position-indexed metadata (column headers, including spanning
-headers; `col_spec`; column widths; `col_header_align`; `row_title`; per-cell
-`cell_styles`) is reindexed automatically to the columns that remain, so explicit
-headers/widths you pass for the full table still line up after the hide.
+then dropped. All position-indexed metadata (`col_spec`; column widths;
+`col_header_align`; `row_title`; per-cell `cell_styles`) is reindexed
+automatically to the columns that remain, so explicit widths you pass for the
+full table still line up after the hide. A `col_header` you supply is the
+exception: it is written for the final printed columns (see `set_col_header()`).
 
 A few interactions worth knowing:
 
@@ -463,7 +464,7 @@ add, use `add_cont_label()`:
 by_four_cont <- function(df, cont_label = " (Cont.)", ...) {
   parts <- split(df, (seq_len(nrow(df)) - 1L) %/% 4L)
   for (i in seq_along(parts)) {
-    if (i > 1L) parts[[i]] <- add_cont_label(parts[[i]], "…continued",
+    if (i > 1L) parts[[i]] <- add_cont_label(parts[[i]], "...continued",
                                              cont_label = cont_label)
   }
   parts
@@ -489,7 +490,7 @@ as_rtftables(
   max_rows  = 20,
   drop_cols = "period"       # page_by does not imply dropping the column
 )
-#>  "Period 1"  "Period 1"  "Period 2"  "Period 2"  "Period 3"
+#>  "Period 1...1"  "Period 1...2"  "Period 2...1"  "Period 2...2"  "Period 3"
 ```
 
 The body is partitioned on runs of the `page_by` value first; **every other
@@ -546,7 +547,7 @@ carries the group's name:
 ```{r pageby_byvalue, eval = FALSE}
 as_rtftables(ae, split = "by_value", group_col = "cohort", page_by = "period",
              drop_cols = c("cohort", "period"))
-#>  "Cohort A"  "Cohort A"  "Cohort B"  "Cohort B"
+#>  "Cohort A...1"  "Cohort A...2"  "Cohort B...1"  "Cohort B...2"
 ```
 
 The two values are never joined into one name: the name is the section
@@ -644,8 +645,9 @@ vapply(pages2, function(p) nrow(p$data) + length(p$blank_rows), integer(1))
 ```
 
 Every page now fits within six rows. (`blank_row_first` / `blank_row_end` below
-are page furniture added *after* the split and are never counted, so they may
-still push a page past `max_rows`.)
+are page furniture added *after* the split; they too are counted under
+`count_blank_rows = TRUE`, and not counted otherwise, when they may push a page
+up to two rows past `max_rows`.)
 
 ### Adding blank rows while paginating
 
@@ -693,7 +695,7 @@ are documented in `?rtftable` and `?set_blank_rows`.
 
 Two render-time clean-ups are applied to blank rows by default, controlled by
 the single `blank_row_normalize` argument (on `rtftable()`, and forwarded by
-`as_rtftables()` / `rtf_tables()`):
+`as_rtftables()`):
 
 | token | effect |
 |-------|--------|
@@ -739,15 +741,15 @@ the blocks outright. Positions refer to the **final printed columns** -- after
 `drop_cols`, `stub` and any `col_header` you supplied -- the same
 convention `set_col_header()` follows.
 
-Row splitting happens first and the column split is applied to its result, so
-by default the **row page is the outer level**: a row band sweeps every column
-block before the next band starts, so the reader goes across the table first
-and then down it. Two row pages by three column blocks come out as
+Row splitting happens first and the column split is applied to its result,
+but by default the **column block is the outer level**: every row page of one
+column block comes before the next block starts. Two row pages by three column
+blocks come out as
 
 ```
-page 1  row 1 / cols 1    page 4  row 2 / cols 1
-page 2  row 1 / cols 2    page 5  row 2 / cols 2
-page 3  row 1 / cols 3    page 6  row 2 / cols 3
+page 1  row 1 / cols 1    page 4  row 2 / cols 2
+page 2  row 2 / cols 1    page 5  row 1 / cols 3
+page 3  row 1 / cols 2    page 6  row 2 / cols 3
 ```
 
 ### Which axis is the outer one -- `order`
@@ -828,12 +830,8 @@ keyed by the page:
 ```{r hdr_values, eval = FALSE}
 hdr <- rtf_col_header(
   list(col_cell(1L, ""),
-       col_cell(c( 2L,  9L), "Placebo
-(N={n_pbo})
-n(%)"),
-       col_cell(c(10L, 17L), "TAK-003
-(N={n_trt})
-n(%)")),
+       col_cell(c( 2L,  9L), "Placebo\n(N={n_pbo})\nn(%)"),
+       col_cell(c(10L, 17L), "HOGE-001\n(N={n_trt})\nn(%)")),
   c("Parameter", rep(VISITS, 2))
 )
 
@@ -861,12 +859,8 @@ missing. `header_map()` shows what every page ended up with:
 ```{r hdr_map, eval = FALSE}
 header_map(pages)
 #>  page name          group    rows row cell from to text
-#>  1    Period 1...1  Period 1 1    1   2    2    9  "Placebo
-(N=120)
-n(%)"
-#>  1    Period 1...1  Period 1 1    1   3    10   17 "TAK-003
-(N=115)
-n(%)"
+#>  1    Period 1...1  Period 1 1    1   2    2    9  "Placebo\n(N=120)\nn(%)"
+#>  1    Period 1...1  Period 1 1    1   3    10   17 "HOGE-001\n(N=115)\nn(%)"
 ```
 
 ### Where to cut, and what the header says -- `cut_by` / `col_header`

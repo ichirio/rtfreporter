@@ -310,7 +310,8 @@ the percent needs `frmt("xx.x")`: it right-pads the integer part, so a one-digit
 percent prints with a leading space inside the parentheses -- `( 8.3%)` under
 `(16.3%)` -- and the digits line up. If `rtfreporter` aligns, tfrmt should give
 clean strings (`frmt("x.x")`, `(8.3%)`) and let `align_count_pct` do the padding.
-Zero counts keep tfrmt's own `0 ( 0.0%)`.
+Zero counts keep tfrmt's own `0 ( 0.0%)` in the first; `align_count_pct`
+prints a zero count as a bare `0`.
 
 **Way 1 -- tfrmt formats and aligns.** The count is padded to `xx` and the
 percent to `xx.x`. `rtfreporter` reads the strings and renders them *as-is*

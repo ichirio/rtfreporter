@@ -51,7 +51,7 @@ library(rtfreporter)
 
 | 引数 | 関数 | 働き |
 |---|---|---|
-| `page_break` | `rtf_tables()`, `rtf_figures()` | `TRUE`（既定）: コンテンツは新しいページから始まる。`FALSE`: 前のコンテンツの下に続く。 |
+| `page_break` | `rtf_tables()`, `rtf_figures()` | `TRUE`（デフォルト）: コンテンツは新しいページから始まる。`FALSE`: 前のコンテンツの下に続く。 |
 | `space_before` | 両方 | `page_break = FALSE` の時、2 つの間の空行の数。 |
 | `titles`, `footnotes` | 両方 | そのコンテンツのタイトル（上）と脚注（下）。 |
 | `first_rows` | `rtf_tables()` | `page_break = FALSE` の時、共有するページに載せる表の行数。残りは表のページ分け（plan の `plan_paginate_rows()`）のとおりに分かれ、各ページにタイトル・列見出し・脚注が付く。 |

@@ -119,8 +119,9 @@ trick produces a large-print copy
 client-specific font (`rtf_config(font_table = list(list(name = "Arial")))`)
 from one composed report.
 
-Both functions take the same parameters: `page`, `font_table`,
-`color_table`, `watermark`, `font_lang` and `style`. This page covers `page`,
+Both functions take `page`, `font_table`, `color_table`, `watermark`,
+`font_lang` and `style` (`rtf_document()` also takes `program`,
+`program_fallback`, `tokens` and `file`). This page covers `page`,
 `font_table`, `color_table` and `style`.
 
 
@@ -446,7 +447,8 @@ doc <- rtf_document() |>
 **Other colours:** cell backgrounds and column-header text are coloured with
 `style_cols(background = , header_color = )` and `style_body(background = )`;
 page header and footer text with `rtf_header(color = )` / `rtf_footer(color = )`.
-Titles and footnotes have no colour argument and render in black. The `color_table` argument on `rtf_document()` only
+A title row given as `list(text = , color = )` takes its own colour;
+footnotes have no colour argument and render in black. The `color_table` argument on `rtf_document()` only
 pre-declares colours in the table; it does not style anything by itself.
 
 

@@ -43,7 +43,7 @@ Claude デスクトップアプリ（Code タブ）と、VS Code の GitHub Copi
 
 近い内容を扱うページはすでにあります。この記事では繰り返しません。
 
-* `CONTRIBUTING.md` と[アーキテクチャの記事](architecture.html)には、ブランチ、ラベル、レビュー、
+* `CONTRIBUTING.md` と[アーキテクチャの記事](architecture-ja.html)には、ブランチ、ラベル、レビュー、
   バージョン管理のルールがあります。
 * [AI アシスタントを使った開発](ai-development-ja.html)は、AI 開発者マニュアルを渡すチャット
   アシスタント向けです。

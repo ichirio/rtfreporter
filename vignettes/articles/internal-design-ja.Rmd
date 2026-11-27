@@ -178,7 +178,7 @@ describe(42)         #> 不明なオブジェクト
 `class` 属性は**文字列ベクトル**にできます。これが S3 の「継承」です。
 
 ```r
-# celsius 型は temperature 型でもある、という階層
+# room 型は temperature 型でもある、という階層
 grade_a <- structure(list(celsius = 21), class = c("room", "temperature"))
 
 describe(grade_a)
@@ -308,14 +308,15 @@ rtf_document（公開・パイプで構築）
 ### `rtf_document`（公開）
 
 パイプ API（`rtf_document()` ＋ `rtf_tables()` / `rtf_figures()` / `rtf_section()` …）
-で構築します。スロットは `document`（font / color / page / format）、`contents`
-（ページ単位のコンテンツ列）、`titles`、`footnotes`、`sections`。利用中はイミュータブル
+で構築します。スロットは `document`（font / color / page / style / watermark …）、`contents`
+（`rtf_block` の並びである `rtf_contents`。各ブロックが 1 つのコンテンツと
+そのタイトル・脚注を持つ）、`sections`。利用中はイミュータブル
 で、各パイプ動詞はコピーを返します。
 
 ### `rtfreport`（内部）
 
 `.pipe_doc_to_rtfreport()` が `rtf_document` から生成する、レンダリング用の形です。
-解決済みの `document` 既定値、`rtf_page` のリスト、`rtf_sect` のリストを保持します。
+解決済みの `document` のデフォルト値、`rtf_page` のリスト、`rtf_sect` のリストを保持します。
 構築時検証は `.rtfreport_validate()` にあります。
 
 ### `rtf_page`（内部・S3 タグ付きリスト）
@@ -331,7 +332,7 @@ rtf_document（公開・パイプで構築）
 
 ### `rtf_sect`（内部・S3 タグ付きリスト）
 
-`structure(list(header, footer, from_page), class = "rtf_sect")`。
+`structure(list(header, footer, from_page, watermark, has_watermark), class = "rtf_sect")`。
 
 * `header` / `footer` ― ヘッダー／フッター記述、または前セクションを継承する `NULL`
 * `from_page` ― このセクションが適用される最初のページ
@@ -353,12 +354,12 @@ rtf_document（公開・パイプで構築）
 
 ### `rtfplot`（公開）
 
-`structure(list(path, width_twips, height_twips, align), class = "rtfplot")`。
+`structure(list(path, width_twips, height_twips, align, img_width, img_height, img_type, dpi_x, dpi_y), class = "rtfplot")`。
 
 ### スタイル・ボーダーのオブジェクト
 
 `rtf_border`（辺ごとの線指定）、`rtf_table_border`（テーブルのゾーンボーダー）、
-`rtf_table_style`（再利用可能な既定値の束）は、いずれも素の S3 リストです。
+`rtf_table_style`（再利用可能なデフォルト値の束）は、いずれも素の S3 リストです。
 `rtf_table_style` は**スナップショット**方式で、テーブルは構築時のスタイル状態を
 取り込み、`rtf_table_style_with()` は元を変更せずに修正コピーを派生します。
 
@@ -387,7 +388,7 @@ rtf_document（公開・パイプで構築）
 | `rtf_blank_rows_by_change`, `rtf_blank_rows_by_rule` | `inherits()`（空行リゾルバの分岐） |
 | `rtf_toc_heading`, `rtf_toc_entry` | `inherits()`（TOC 正規化） |
 | `rtf_block`, `rtf_contents`, `rtf_pages` | ディスパッチ（`print`。`rtf_contents` は `[` と `length` も） |
-| `rtfreport` | `inherits()`（内部） |
+| `rtfreport` | ディスパッチ（`print`）＋ `inherits()`（内部） |
 | `rtf_page`, `rtf_sect` | 内部構造マーカー（ディスパッチ無し） |
 
 ## 3.5 拡張時に従う規約

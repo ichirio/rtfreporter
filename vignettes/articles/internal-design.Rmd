@@ -76,8 +76,9 @@ render-ready, and the product never has to support incremental edits.
 ### `rtf_document` (public)
 
 Built by the pipe API (`rtf_document()` + `rtf_tables()` / `rtf_figures()` /
-`rtf_section()` / …). Slots: `document` (font/color/page/format), `contents`
-(the per-page content list), `titles`, `footnotes`, and `sections`. Immutable in
+`rtf_section()` / …). Slots: `document` (font/color/page/style/watermark/…),
+`contents` (an `rtf_contents` list of `rtf_block`s, each holding one content
+with its title and footnote), and `sections`. Immutable in
 use -- each pipe verb returns a copy.
 
 ### `rtfreport` (internal)
@@ -100,7 +101,7 @@ validation lives in `.rtfreport_validate()`.
 
 ### `rtf_sect` (internal, S3 tagged list)
 
-`structure(list(header, footer, from_page), class = "rtf_sect")`:
+`structure(list(header, footer, from_page, watermark, has_watermark), class = "rtf_sect")`:
 
 * `header` / `footer` — a header/footer description, or `NULL` to inherit from
   the previous section;
@@ -123,7 +124,7 @@ attaches page-level `rtf_titles` / `rtf_footnotes` as attributes for
 
 ### `rtfplot` (public)
 
-`structure(list(path, width_twips, height_twips, align), class = "rtfplot")`.
+`structure(list(path, width_twips, height_twips, align, img_width, img_height, img_type, dpi_x, dpi_y), class = "rtfplot")`.
 
 ### Style and border objects
 
@@ -191,7 +192,7 @@ S3 class plays one of three roles:
 | `rtf_blank_rows_by_change`, `rtf_blank_rows_by_rule` | `inherits()` (blank-row resolver dispatch) |
 | `rtf_toc_heading`, `rtf_toc_entry` | `inherits()` (TOC normalisation) |
 | `rtf_block`, `rtf_contents`, `rtf_pages` | dispatch (`print`; `[` and `length` for `rtf_contents`) |
-| `rtfreport` | `inherits()` (internal) |
+| `rtfreport` | dispatch (`print`) + `inherits()` (internal) |
 | `rtf_page`, `rtf_sect` | internal structural marker (no dispatch) |
 
 ### Conventions to follow when extending

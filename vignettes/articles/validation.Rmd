@@ -106,8 +106,8 @@ How the approach works, and a map of all the documents, are in [How rtfreporter 
 
     Or from a shell, in the folder that holds the kit:
     `Rscript rtfreporter-validation/build_user_matrix.R rtfreporter-validation`.
-    It writes `user_traceability_matrix.csv` and `user_traceability_matrix.xlsx` into the
-    kit folder.
+    It writes `user_traceability_matrix.csv` and, when writexl is installed,
+    `user_traceability_matrix.xlsx` into the kit folder.
 
 6. **Fill the Validation Summary Report**, and attach the package's Quality
    Report of the release for the same version (not a DRAFT). Check that your

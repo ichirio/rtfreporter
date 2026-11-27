@@ -148,7 +148,7 @@ setting. Every layer has been merged, so what you see is what runs.
 | `as_rtftables()` | Plan |
 |---|---|
 | `group_by`, `collapse_repeats` | `plan_row_group(mode, collapse)` |
-| `group_col` | the outermost row key of `table_plan(rows = )`; `plan_paginate_group(col = )` for a page split |
+| `group_col` | `plan_row_group(group_col = )` on a table already built; from an ARD, the outermost row key of `table_plan(rows = )`; `plan_paginate_group(col = )` for a page split |
 | `sort_by`, `sort_desc` | `plan_sort("KEY", "-OTHER")`: a minus sign for descending |
 | `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows` | `plan_blanks(where, first, last, counted)` |
 | `drop_cols` | `plan_hide(...)`; also `keep = FALSE` on `plan_sort()` / `plan_paginate_group()` |
@@ -170,7 +170,7 @@ setting. Every layer has been merged, so what you see is what runs.
 | `as_rtftables()` / other | Plan |
 |---|---|
 | `border`, `align_count_pct`, and `rtftable()`'s `font`, `font_size_half_points`, `row_height_twips`, `cell_valign`, `markup`, ... | `plan_style()`, same names |
-| `style = rtf_table_style(header = , body = , ...)` | `plan_style(border_header = , border_body = , ...)` |
+| `style = rtf_table_style(border_header = , border_body = , ...)` | `plan_style(border_header = , border_body = , ...)` |
 | `style_header()`, `style_cols()` | `plan_cell_style(header = TRUE, ...)`, `plan_cell_style(cols = , ...)` |
 | `style_zone()` | `plan_style(border_* = )` |
 | `rtftable(cell_styles = )`, `style_body()` by condition | `plan_cell_style(where = ~ ..., ...)`, or a formula value |

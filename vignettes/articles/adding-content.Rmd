@@ -161,14 +161,13 @@ doc$contents[[2]]$content$row_height_twips   # 200 -- t2 keeps its own
 ## Titles and footnotes
 
 Each page can carry a title block and a footnote block. One block element becomes
-one line. Title lines default to centred + bold; footnote lines default to left,
-and the footnote's first line carries a top rule as the separator. Use `NULL` for
-a page with none.
+one line. Title lines default to centred + bold; footnote lines default to left
+and draw no rule (`rtf_footnotes(border = )` puts one on the first line). Use
+`NULL` for a page with none.
 
 By default the **title** renders as plain **text paragraphs** spanning the
 writable page width (so it is centred over the page), while the **footnote**
-renders as a content-width single-column **table** (which carries the separator
-rule). You can switch either form with the document defaults
+renders as a content-width single-column **table**. You can switch either form with the document defaults
 `title_format` / `footnote_format` (`"text"` or `"table"`):
 
 ```{r title-format}

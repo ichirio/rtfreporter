@@ -118,8 +118,8 @@ adsl$TRT01A <- factor(adsl$TRT01A, levels = arms)
 ```
 
 A demographics ARD: age summarised, three characteristics tabulated, all by
-arm. `continuous_summary_fns()` adds the quartiles, which cards leaves out by
-default.
+arm. `continuous_summary_fns()` names the statistics to compute, the
+quartiles among them.
 
 ```{r ard-dm}
 ard_dm <- ard_stack(

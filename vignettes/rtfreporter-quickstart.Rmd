@@ -618,8 +618,9 @@ doc <- rtf_document() |>
 ```
 
 Titles render as centred bold paragraphs; footnotes render as a
-left-aligned single-column table the width of the content, with a rule above
-its first row. Both use the document font size (9 pt by default).
+left-aligned single-column table the width of the content, with no rule
+(`rtf_footnotes(border = )` puts one on the first row). Both use the document
+font size (9 pt by default).
 
 ---
 
@@ -664,7 +665,7 @@ How the S3 objects fit together: [Internal class design](https://ichirio.github.
 | `col_rel_width` | numeric vector | Proportional column widths |
 | `column_widths_twips` | integer vector | Absolute column widths |
 | `table_width_twips` | integer | Table total width (twips) |
-| `table_width_pct` | numeric 0-100 | Table width as % of page |
+| `table_width_pct` | numeric 0-100 | Table width as % of the writable page width |
 | `table_align` | `"left"` / `"center"` / `"right"` | Table position on page |
 | `row_height_twips` | integer / NULL | Data row height; NULL = font-aware default |
 
@@ -673,7 +674,7 @@ How the S3 objects fit together: [Internal class design](https://ichirio.github.
 | Parameter | Type | Purpose |
 |---|---|---|
 | `titles` | list of chr | One entry per page; each char vector = one paragraph per line (`""` = blank) |
-| `footnotes` | list of chr | Same shape as `titles`; first line carries the top divider |
+| `footnotes` | list of chr | Same shape as `titles`; no rule by default (`rtf_footnotes(border = )` adds one) |
 
 
 ### rtfplot parameters

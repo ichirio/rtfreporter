@@ -42,7 +42,7 @@ documents are linked below (each opens in English with a Japanese toggle).
   framework. Objects are therefore `dput()`-able and serialise cleanly with
   `saveRDS()`.
 * **Zero third-party runtime dependencies.** `Imports:` holds only packages
-  that ship with R (`grDevices`, `grid`, `methods`, `stats`, `utils`). Every optional
+  that ship with R (`graphics`, `grDevices`, `grid`, `methods`, `stats`, `tools`, `utils`). Every optional
   integration (gt, gtsummary, rtables/tern, flextable, huxtable, ggplot2, ...)
   lives in `Suggests:` and is reached through `.need_pkg()`, which errors
   helpfully when the package is absent and warns when it is too old.
@@ -74,7 +74,7 @@ rtfreporter/
 │   ├── as_rtftable.R        # single-page convenience wrapper
 │   ├── gt_adapter.R         # gt / gtsummary metadata extraction
 │   ├── rtables_adapter.R    # rtables / tern metadata extraction
-│   ├── paginate.R           # pagination generic + internal core
+│   ├── paginate.R           # pagination core (.paginate_df())
 │   ├── blank_rows.R         # blank-row specifications + attribute reader
 │   └── ...
 ├── inst/resources/          # admin-tunable RTF command templates & defaults
@@ -102,7 +102,7 @@ rtftable              one table (single- or multi-data.frame)
   ├── border              rtf_table_border (zones)
   └── width / height / padding / valign fields
 
-rtfplot               one embedded PNG/JPEG figure
+rtfplot               one embedded PNG/JPEG/EMF figure
 ```
 
 `rtf_document` is the public, pipe-friendly surface. Internally it is
@@ -176,8 +176,9 @@ touching code.
 
 [`as_rtftables()`](../reference/as_rtftables.html) is the single entry
 point that turns an external *table object* into a list of `rtftable`
-pages. It supports `gt_tbl`, **gtsummary** tables, **rtables/tern**
-(`VTableTree`), and plain `data.frame`/tibble (or a list of any of these).
+pages. It supports `gt_tbl` / `gt_group`, **gtsummary** tables, **rtables/tern**
+(`VTableTree`), **rlistings**, **flextable**, **huxtable**, and plain
+`data.frame`/tibble (or a list of any of these).
 
 Every source is reduced to one common intermediate — a **kwargs list** —
 which the rest of the pipeline consumes identically:

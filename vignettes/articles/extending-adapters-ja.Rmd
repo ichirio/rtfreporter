@@ -186,7 +186,7 @@ rlistings がそうです）は、この分岐を `is.data.frame(x)` の分岐�
 
 **4. `R/content.R` の `.is_table_source()`。** `rtf_tables(doc, x)` は、これで
 `x` がテーブルソースかを判断します。あなたの判定関数がなければ `x` は認識されず、
-`.rtf_content()` は既定のメソッドに落ちて、`x` を図として `rtfplot()` に渡し、
+`.rtf_content()` はデフォルトのメソッドに落ちて、`x` を図として `rtfplot()` に渡し、
 プリントします。クラスに `data.frame` も含む場合は、代わりに単なる表になり、
 アダプタのメタデータは使われません。`as_rtftables(x)` を自分で呼べばどちらでも
 動くので、アダプタだけのテストでは抜けに気づけません。`rtf_tables(doc, x)` も
@@ -236,7 +236,7 @@ as_rtftables.my_report <- function(x, ...) {
 ```
 
 NAMESPACE には `importFrom(rtfreporter, as_rtftables)` と
-`S3method(as_rtftables, my_report)` が書かれます。メソッドは既定メソッドと同じもの、
+`S3method(as_rtftables, my_report)` が書かれます。メソッドはデフォルトのメソッドと同じもの、
 つまり `rtftable` ページのリストを返してください。すると `rtf_tables(doc, x)` が
 あなたのオブジェクトをそのまま受け取り、`gt_tbl` と同じように最初に変換します。
 依存の向きは正しく、あなたのパッケージが rtfreporter に依存し、その逆はありません。

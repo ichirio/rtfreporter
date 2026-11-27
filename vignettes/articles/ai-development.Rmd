@@ -89,7 +89,7 @@ write access"* — so the branch and PR commands come out right the first time.
 
 The manual already knows the lifecycle, so a useful opening prompt is short:
 
-> Issue #123 asks for X. Read the manual's section 5, propose the change, and
+> Issue #123 asks for X. Read the manual's section 10, propose the change, and
 > stop before writing any code.
 
 Then, once you agree on the approach:
