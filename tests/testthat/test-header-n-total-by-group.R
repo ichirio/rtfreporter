@@ -33,12 +33,14 @@
 }
 
 test_that("a stack alone keeps its own denominator in the header", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   h <- .tn_header(.tn_ae(.tn_data()))
   expect_true(all(c("Drug X (N=4)", "Placebo (N=5)") %in% h$header))
 })
 
 test_that("a total stated by group wins over the stack's denominator", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
   x <- .tn_data()
@@ -51,6 +53,7 @@ test_that("a total stated by group wins over the stack's denominator", {
 })
 
 test_that("the overall total_n gives the Total column, the by-group one each arm", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
   x <- .tn_data()

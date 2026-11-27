@@ -99,6 +99,7 @@ test_that("a filled value is not read again: a label with a brace group stays as
 })
 
 test_that("drop_empty_rows leaves out a band row whose tokens are all empty", {
+  skip_on_cran()
   band <- function(drop) rtf_header(list(
     c(l = "{COMPANY}", r = "Page {PAGE}"),
     c(c = "{LABEL}"),

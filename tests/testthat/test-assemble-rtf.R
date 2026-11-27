@@ -657,6 +657,7 @@ test_that(".count_rtf_pages counts one page per section break", {
 }
 
 test_that(".count_rtf_pages counts in-section page breaks too (#401)", {
+  skip_on_cran()
   # A section is emitted per `rtf_section`, not per page, so counting
   # `\sbkpage` alone reported 1 for every one of these.
   for (cuts in list(NULL, 20L, c(20L, 40L), c(10L, 20L, 30L, 40L, 50L))) {

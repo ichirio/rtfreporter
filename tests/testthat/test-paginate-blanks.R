@@ -159,6 +159,7 @@ test_that("rtftable(read_attributes = TRUE) picks up blank_row_first + between_g
 }
 
 test_that("FT-TB7201 [FR-TB139]: blank_rows = c(3, 12) over 10-row pages puts one blank after body row 3 and one after body row 12, and none on a page no position falls on", {
+  skip_on_cran()
   d <- .t72_body()
   want <- list(.t72_seq(1, 10, 3), .t72_seq(11, 20, 12), .t72_seq(21, 25))
   for (sp in c("group_force", "group_safe")) {
@@ -199,6 +200,7 @@ test_that("FT-TB7202 [FR-TB139]: blank_rows 0 is before the body's first row and
 })
 
 test_that("FT-TB7203 [FR-TB139]: a blank after the row that ends a page stays at that page's foot and is not carried to the next page's top", {
+  skip_on_cran()
   d <- .t72_body()
   p <- as_rtftables(d, blank_rows = 10, max_rows = 10, split = "group_force")
   expect_identical(lapply(p, `[[`, "blank_rows"), list(10L, NULL, NULL))
@@ -215,6 +217,7 @@ test_that("FT-TB7203 [FR-TB139]: a blank after the row that ends a page stays at
 })
 
 test_that("FT-TB7204 [FR-TB139]: a set_blank_rows() attribute on the whole data frame names rows of the whole body", {
+  skip_on_cran()
   d <- set_blank_rows(.t72_body(), blank_rows = c(3, 12))
   expect_identical(attr(d, "rtf_blank_rows"), c(3L, 12L))
   p <- as_rtftables(d, max_rows = 10, split = "group_force")

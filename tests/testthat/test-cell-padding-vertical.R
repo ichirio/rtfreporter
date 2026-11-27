@@ -23,6 +23,7 @@
 }
 
 test_that("FT-DC226 [FR-DC298 FR-DC299]: the document's top / bottom padding goes into every cell definition; 0 or NULL writes nothing", {
+  skip_on_cran()
   txt <- .render_to_string(.vpad_doc(rtf_style(
     title_format = "table", cell_padding_top_twips = 30L,
     cell_padding_bottom_twips = 45L)))
@@ -168,6 +169,7 @@ test_that("FT-DC230 [FR-DC305 FR-DC306]: a footnote row given as list(columns = 
 })
 
 test_that("FT-TB695 [FR-TB544 FR-TB545 FR-TB546 FR-PL427]: rtf_table_style(), rtftable() and plan_style() pad the table's header and data cells", {
+  skip_on_cran()
   st <- rtf_table_style(cell_padding_top_twips = 20L, cell_padding_bottom_twips = 25L)
   expect_identical(st$cell_padding_top_twips, 20L)
   expect_output(print(st), "cell_padding : T=20 B=25")

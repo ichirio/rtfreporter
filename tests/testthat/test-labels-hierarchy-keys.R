@@ -41,6 +41,7 @@ mgl_tab <- function(p) {
 }
 
 test_that("a SOC, the overall row, a grade and a PT each relabel by their variable", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
   p <- mgl_plan()
@@ -87,6 +88,7 @@ test_that("a SOC, the overall row, a grade and a PT each relabel by their variab
 })
 
 test_that("an entry that matches no value of any key changes nothing and does not stop", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
   p <- mgl_plan()
@@ -96,6 +98,7 @@ test_that("an entry that matches no value of any key changes nothing and does no
 })
 
 test_that("an entry aimed at the wrong key names the key that holds the value", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
   p <- mgl_plan()

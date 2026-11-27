@@ -52,6 +52,7 @@ vp_rtf_lines <- function(pages) {
 # ---- plan_template() -------------------------------------------------------
 
 test_that("FT-PL270 [FR-PL353 FR-PL356]: plan_template() guesses cols with a NOTE, names the keys left over, and writes the file", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -78,6 +79,7 @@ test_that("FT-PL270 [FR-PL353 FR-PL356]: plan_template() guesses cols with a NOT
 })
 
 test_that("FT-PL271 [FR-PL354]: plan_template(hierarchy = ) writes the hierarchy, the overall label and the label role", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -104,6 +106,7 @@ test_that("FT-PL272 [FR-PL359]: plan_template(form = ) takes plan or widen only"
 # ---- plan_stub() -----------------------------------------------------------
 
 test_that("FT-PL273 [FR-PL360 FR-PL362 FR-PL363 FR-PL364 FR-PL365 FR-PL366]: plan_stub() is stub_spec() inside as_rtftables(), or stub_cols() first", {
+  skip_on_cran()
   d <- vp_wide()
   # inside: as_rtftables(stub = stub_spec())
   a <- vp_pages(table_plan(d) |> plan_style() |>
@@ -135,6 +138,7 @@ test_that("FT-PL273 [FR-PL360 FR-PL362 FR-PL363 FR-PL364 FR-PL365 FR-PL366]: pla
 })
 
 test_that("FT-PL274 [FR-PL361 FR-PL367 FR-PL369]: plan_stub() derives its columns; one column is renamed; alone it stops at the table", {
+  skip_on_cran()
   d <- vp_wide()
   # no roles: the row key would be `group` (absent), the label column `label`
   s <- vp_pages(table_plan(d) |> plan_style() |> plan_stub(name = "row_label"))
@@ -155,6 +159,7 @@ test_that("FT-PL274 [FR-PL361 FR-PL367 FR-PL369]: plan_stub() derives its column
 })
 
 test_that("FT-PL914 [FR-PL912 FR-PL913]: plan_stub(heading = ) is the stub's header cell, not its name (tflspec#538)", {
+  skip_on_cran()
   d <- vp_wide()
   # the header the page prints: its own, else the columns' names
   hdr <- function(p) {
@@ -288,6 +293,7 @@ test_that("FT-PL281 [FR-PL402]: plan_hide() of a column that is not there is nam
 # ---- plan_cell_style() -----------------------------------------------------
 
 test_that("FT-PL282 [FR-PL405 FR-PL409 FR-PL410]: plan_cell_style() by column name, .values, and a condition over named columns", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   d <- vp_wide()
   # a formula scoped to one column by name, on a finished table
@@ -315,6 +321,7 @@ test_that("FT-PL282 [FR-PL405 FR-PL409 FR-PL410]: plan_cell_style() by column na
 
 
 test_that("FT-PL989 [FR-PL972 FR-PL973]: plan_cell_style(align = , background = ) align and fill whole columns, the header, or the rows a condition chooses", {
+  skip_on_cran()
   d <- vp_wide()
   pg <- function(p) vp_first(vp_pages(p))
   # whole columns: that column alone, as style_cols() sets them
@@ -383,6 +390,7 @@ test_that("FT-PL283 [FR-PL422 FR-PL427 FR-PL428]: plan_style()'s whole-table set
 # ---- plan_paginate_rows() --------------------------------------------------
 
 test_that("FT-PL284 [FR-PL433 FR-PL434 FR-PL435 FR-PL436 FR-IX262]: every split, with its own arguments, is the direct call's", {
+  skip_on_cran()
   d <- vp_wide()
   same <- function(p, ...) expect_equal(vp_pages(p), vp_direct(d, ...))
   same(table_plan(d) |> plan_paginate_rows(max_rows = 4, split = "group_safe"),
@@ -447,6 +455,7 @@ test_that("FT-PL286 [FR-PL444 FR-PL445 FR-PL446 FR-PL447 FR-IX262]: plan_paginat
 # ---- plan_paginate_group() -------------------------------------------------
 
 test_that("FT-PL287 [FR-PL451 FR-PL452 FR-PL453 FR-PL454 FR-PL456]: plan_paginate_group() on a finished table: the default key, keep, heading, heading_at, two calls", {
+  skip_on_cran()
   d <- vp_wide()
   names(d)[1L] <- "group"            # the default row key's name
   a <- plan_apply(table_plan(d) |> plan_paginate_group(), "args")$rtf
@@ -477,6 +486,7 @@ test_that("FT-PL287 [FR-PL451 FR-PL452 FR-PL453 FR-PL454 FR-PL456]: plan_paginat
 # ---- plan_paginate_cols() --------------------------------------------------
 
 test_that("FT-PL288 [FR-PL461 FR-PL462 FR-PL463 FR-PL465 FR-PL466 FR-PL467]: plan_paginate_cols() is paginate_cols() with its own arguments", {
+  skip_on_cran()
   d <- vp_wide()
   base <- vp_direct(d)
   # at, keep, fit = FALSE
@@ -545,6 +555,7 @@ test_that("FT-PL290 [FR-PL473 FR-PL474]: plan_row_group(mode, collapse) are as_r
 # ---- plan_listing() --------------------------------------------------------
 
 test_that("FT-PL291 [FR-PL483 FR-PL484]: plan_listing()'s layout arguments are listing_spec()'s, and zero records make an empty page", {
+  skip_on_cran()
   d <- data.frame(ID = sprintf("S%02d", 1:5), ARM = c("A", "B", "A", "B", "A"),
                   TXT = paste("word", 1:5, "and more words here"), stringsAsFactors = FALSE)
   cols <- list(listing_col("ID", width = 6), listing_col("ARM", width = 6),

@@ -268,6 +268,7 @@ test_that("a plan listing blanks the same way", {
 })
 
 test_that("FT-IX037 [FR-IX410]: a listing's pages by page_by start with their own first record, keys shown, no ghost row", {
+  skip_on_cran()
   d <- data.frame(
     TRT  = c(rep("Placebo", 5), rep("Drug", 4)),
     SUBJ = c("S1", "S1", "S2", "S2", "S2", "S3", "S3", "S4", "S4"),
@@ -341,6 +342,7 @@ test_that("FT-IX038 [FR-IX411]: a listing blanks a repeat of a value that wraps,
 })
 
 test_that("FT-IX039 [FR-IX412]: a listing cut into blocks keeps a record on one page and heads a continued block once", {
+  skip_on_cran()
   d <- data.frame(
     SEV  = rep(c("MILD", "SEVERE"), c(9, 4)),
     TERM = c(rep("Urinary tract infection", 3), "Rash", "Rash",
@@ -684,6 +686,7 @@ test_that("wrap = listing_wrap is a no-op, so it can be delegated to", {
 # ── listing_wrap_code(): the rule as source ──────────────────────────────────
 
 test_that("the emitted rule is self-contained and IS the shipped rule", {
+  skip_on_cran()
   src <- listing_wrap_code("my_wrap")
 
   # Nothing in it reaches back into the package's INTERNALS; the measurements

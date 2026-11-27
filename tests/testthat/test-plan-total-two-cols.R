@@ -49,6 +49,7 @@
 .t2c_vals <- function(tab) grep("____", names(tab), value = TRUE)
 
 test_that("FT-PL6804 [FR-PL994]: two column keys: the Total column is last or first under each outer value, as position says", {
+  skip_on_cran()
   nd <- .t2c_shift()
   last <- c("A____L", "A____N", "A____H", "A____Total",
             "B____L", "B____N", "B____H", "B____Total")
@@ -78,6 +79,7 @@ test_that("FT-PL6804 [FR-PL994]: two column keys: the Total column is last or fi
 })
 
 test_that("FT-PL6805 [FR-PL994]: each arm's Total column is its overall rows: the inner categories summed", {
+  skip_on_cran()
   nd <- .t2c_shift()
   for (pos in c("first", "last")) {
     tab <- .t2c_tab(.t2c_plan(nd, direction = "cols", position = pos))

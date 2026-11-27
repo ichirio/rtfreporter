@@ -88,6 +88,7 @@ test_that("the manual has no table of deprecated functions", {
 })
 
 test_that("every idiom the manual teaches runs", {
+  skip_on_cran()
   skip_if_not(file.exists(.manual_path()),
               "AI manual not present (installed package)")
   f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)

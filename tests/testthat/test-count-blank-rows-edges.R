@@ -106,6 +106,7 @@ test_that("a body that does NOT end in a blank pays for both edges", {
 })
 
 test_that("the group-safe budget matches the hand-written listing splitter", {
+  skip_on_cran()
   # A hand-written listing pipeline cuts pages so that
   #   1 (the page's leading blank row) + k * block <= max_rows,
   # because that blank row was part of the data.  With the edges counted this

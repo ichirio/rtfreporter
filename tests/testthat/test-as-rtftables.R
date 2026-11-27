@@ -97,6 +97,7 @@ test_that("as_rtftables(gt, read_meta = FALSE) ignores metadata", {
 # ── gtsummary input ───────────────────────────────────────────────────────────
 
 test_that("as_rtftables(gtsummary) works end to end", {
+  skip_on_cran()
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("gt")
   s <- gtsummary::tbl_summary(

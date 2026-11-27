@@ -40,6 +40,7 @@ library(testthat)
 # ── gt option matrix ──────────────────────────────────────────────────────────
 
 test_that("gt: a range of option-driven layouts read without error", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   df <- .opt_df()[1:9, ]
   cases <- list(
@@ -111,6 +112,7 @@ test_that("gtsummary: a range of tbl_* layouts read without error", {
 })
 
 test_that("gtsummary: tbl_merge spanners survive as a stacked col_header", {
+  skip_on_cran()
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("gt")
   df <- .opt_df()
@@ -124,6 +126,7 @@ test_that("gtsummary: tbl_merge spanners survive as a stacked col_header", {
 })
 
 test_that("gtsummary: hierarchical (AE-shape) tables read without error", {
+  skip_on_cran()
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("cards")
   skip_if_not_installed("gt")
@@ -137,6 +140,7 @@ test_that("gtsummary: hierarchical (AE-shape) tables read without error", {
 # ── rtables / tern option matrix ──────────────────────────────────────────────
 
 test_that("rtables/tern: a range of layouts read without error", {
+  skip_on_cran()
   skip_if_not_installed("rtables")
   skip_if_not_installed("formatters")
   df <- .opt_df()
@@ -161,6 +165,7 @@ test_that("rtables/tern: a range of layouts read without error", {
 })
 
 test_that("rtables/tern: tern analysis functions read without error", {
+  skip_on_cran()
   skip_if_not_installed("tern")
   skip_if_not_installed("rtables")
   df <- .opt_df()
@@ -187,6 +192,7 @@ test_that("rtables: multi-level column split stacks the col_header", {
 })
 
 test_that("rtables: titles and footers are read into page blocks", {
+  skip_on_cran()
   skip_if_not_installed("rtables")
   skip_if_not_installed("formatters")
   df <- .opt_df()
@@ -262,6 +268,7 @@ test_that("gt: an html() label is read as its text, <br> a line break (#193)", {
 }
 
 test_that("flextable: option-built tables read to the displayed body and header", {
+  skip_on_cran()
   skip_if_not_installed("flextable")
   ft <- flextable::flextable
   d <- .opt_ft_df()
@@ -327,6 +334,7 @@ test_that("flextable: option-built tables read to the displayed body and header"
 })
 
 test_that("flextable: caption, footer lines, and no-op styling calls", {
+  skip_on_cran()
   skip_if_not_installed("flextable")
   ft <- flextable::flextable
   d <- .opt_ft_df()
@@ -360,6 +368,7 @@ test_that("flextable: caption, footer lines, and no-op styling calls", {
 })
 
 test_that("flextable: shape edge cases read to the right number of rows and columns", {
+  skip_on_cran()
   skip_if_not_installed("flextable")
   ft <- flextable::flextable
   d <- .opt_ft_df()
@@ -412,6 +421,7 @@ test_that("flextable: shape edge cases read to the right number of rows and colu
 })
 
 test_that("flextable: an option-built table renders to RTF with header, caption and footer", {
+  skip_on_cran()
   skip_if_not_installed("flextable")
   d <- .opt_ft_df()
   x <- flextable::add_footer_lines(
@@ -442,6 +452,7 @@ test_that("flextable: an option-built table renders to RTF with header, caption 
 }
 
 test_that("huxtable: number_format variants are read as displayed", {
+  skip_on_cran()
   skip_if_not_installed("huxtable")
   hx <- .opt_hx()
   hx1 <- hx; huxtable::number_format(hx1) <- 1
@@ -466,6 +477,7 @@ test_that("huxtable: number_format variants are read as displayed", {
 })
 
 test_that("huxtable: caption forms and header-row layouts", {
+  skip_on_cran()
   skip_if_not_installed("huxtable")
   hx <- .opt_hx()
   expect_identical(attr(as_rtftable(huxtable::set_caption(hx, "Table 1: Demog")),
@@ -504,6 +516,7 @@ test_that("huxtable: caption forms and header-row layouts", {
 })
 
 test_that("huxtable: NA, na_string, and cell text that only looks like markup", {
+  skip_on_cran()
   skip_if_not_installed("huxtable")
   df <- data.frame(a = c("x", NA), b = c(NA, 2.5), stringsAsFactors = FALSE)
   hx <- huxtable::huxtable(df, add_colnames = FALSE)
@@ -528,6 +541,7 @@ test_that("huxtable: NA, na_string, and cell text that only looks like markup", 
 })
 
 test_that("huxtable: shape edge cases read to the right number of rows and columns", {
+  skip_on_cran()
   skip_if_not_installed("huxtable")
   skip_if_not_installed("tibble")
   hx <- .opt_hx()
@@ -626,6 +640,7 @@ test_that("huxtable: an option-built table renders to RTF with header and captio
 }
 
 test_that("FT-TB993 [FR-TB632]: flextable header labels reach the RTF as text, special characters escaped", {
+  skip_on_cran()
   skip_if_not_installed("flextable")
   ft <- flextable::flextable
   d <- .opt_ft_df()
@@ -659,6 +674,7 @@ test_that("FT-TB993 [FR-TB632]: flextable header labels reach the RTF as text, s
 })
 
 test_that("FT-TB994 [FR-TB632]: merged flextable cells reach the RTF once, with the values around them", {
+  skip_on_cran()
   skip_if_not_installed("flextable")
   ft <- flextable::flextable
   # merge_h(): equal neighbours in a row
@@ -703,6 +719,7 @@ test_that("FT-TB994 [FR-TB632]: merged flextable cells reach the RTF once, with 
 })
 
 test_that("FT-TB995 [FR-TB632]: flextable colformat_*() text and na_str reach the RTF as displayed", {
+  skip_on_cran()
   skip_if_not_installed("flextable")
   ft <- flextable::flextable
   dn <- data.frame(n = c(1234.5678, NA, -0.5), i = c(1L, NA, 30L),
@@ -749,6 +766,7 @@ test_that("FT-TB995 [FR-TB632]: flextable colformat_*() text and na_str reach th
 })
 
 test_that("FT-TB996 [FR-TB632]: flextable footers reach the RTF as footnote lines, a footnote() mark as text", {
+  skip_on_cran()
   skip_if_not_installed("flextable")
   ft <- flextable::flextable
   d <- .opt_ft_df()
@@ -797,6 +815,7 @@ test_that("FT-TB996 [FR-TB632]: flextable footers reach the RTF as footnote line
 })
 
 test_that("FT-TB997 [FR-TB632 FR-TB629]: a flextable tab is a tab in the cell and the caption, not <tab>", {
+  skip_on_cran()
   skip_if_not_installed("flextable")
   ft <- flextable::flextable
   d <- .opt_ft_df()
@@ -813,6 +832,7 @@ test_that("FT-TB997 [FR-TB632 FR-TB629]: a flextable tab is a tab in the cell an
 })
 
 test_that("FT-TB998 [FR-TB632]: a flextable with no rows is written as RTF with its header, caption and footer", {
+  skip_on_cran()
   skip_if_not_installed("flextable")
   ft <- flextable::flextable
   d <- .opt_ft_df()
@@ -838,6 +858,7 @@ test_that("FT-TB998 [FR-TB632]: a flextable with no rows is written as RTF with 
 })
 
 test_that("FT-TB999 [FR-TB633]: huxtable number_format reaches the RTF as displayed, a missing value empty", {
+  skip_on_cran()
   skip_if_not_installed("huxtable")
   hx <- .opt_hx()
   h1 <- hx
@@ -883,6 +904,7 @@ test_that("FT-TB999 [FR-TB633]: huxtable number_format reaches the RTF as displa
 })
 
 test_that("FT-TB1000 [FR-TB633]: huxtable captions reach the RTF as the title, special characters escaped", {
+  skip_on_cran()
   skip_if_not_installed("huxtable")
   hx <- .opt_hx()
   h <- huxtable::set_caption(hx, "Table 1: A & B <c> {d}")
@@ -913,6 +935,7 @@ test_that("FT-TB1000 [FR-TB633]: huxtable captions reach the RTF as the title, s
 })
 
 test_that("FT-TB1001 [FR-TB633]: merged huxtable cells reach the RTF once, with the values around them", {
+  skip_on_cran()
   skip_if_not_installed("huxtable")
   hx <- .opt_hx()
   # colspan() in a body row
@@ -952,6 +975,7 @@ test_that("FT-TB1001 [FR-TB633]: merged huxtable cells reach the RTF once, with 
 })
 
 test_that("FT-TB1002 [FR-TB633 FR-TB631]: only the header rows from the first row on are the huxtable column header", {
+  skip_on_cran()
   skip_if_not_installed("huxtable")
   hx <- .opt_hx()
   # a body row flagged as a header row stays in the body
@@ -986,6 +1010,7 @@ test_that("FT-TB1002 [FR-TB633 FR-TB631]: only the header rows from the first ro
 })
 
 test_that("FT-TB1003 [FR-TB633]: a huxtable with no rows is written as RTF with its header, caption and footnote", {
+  skip_on_cran()
   skip_if_not_installed("huxtable")
   d <- .opt_ft_df()
   z <- huxtable::set_caption(huxtable::as_hux(d[0, ]), "Table 0: Empty")
@@ -1010,6 +1035,7 @@ test_that("FT-TB1003 [FR-TB633]: a huxtable with no rows is written as RTF with 
 })
 
 test_that("FT-TB1004 [FR-TB630]: huxtable add_footnote() rows are the page's footnote lines, not body rows", {
+  skip_on_cran()
   skip_if_not_installed("huxtable")
   hx <- .opt_hx()
   one <- huxtable::add_footnote(hx, "Source: invented & <ok>.")

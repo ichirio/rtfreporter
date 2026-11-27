@@ -101,6 +101,7 @@ test_that("the table of contents reads back a title's non-ASCII characters", {
 })
 
 test_that("assemble_folder() without an output file gives the table of contents", {
+  skip_on_cran()
   dir <- file.path(tempdir(), "toc-table")
   dir.create(dir, showWarnings = FALSE)
   for (t in c("14.2.1", "14.1.1")) {
@@ -142,6 +143,7 @@ test_that("assemble_folder() without an output file gives the table of contents"
 })
 
 test_that("FT-AS130 [FR-AS151 FR-AS148 FR-AS149]: assemble_folder() orders numbered files by number, then the others by file name, the same in every locale (#827)", {
+  skip_on_cran()
   d <- tempfile("asm-ord"); dir.create(d)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
   mk_unnumbered <- function(file, title) {
@@ -215,6 +217,7 @@ test_that("a title's markup group keeps its text in the contents label", {
 })
 
 test_that("an .xlsx spec file is written by assemble_folder() and read back by assemble_rtf()", {
+  skip_on_cran()
   skip_if_not_installed("writexl")
   skip_if_not_installed("readxl")
   d <- .demo_dir()

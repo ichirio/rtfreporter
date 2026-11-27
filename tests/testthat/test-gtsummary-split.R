@@ -22,6 +22,7 @@ library(testthat)
 # ── detection & expansion ─────────────────────────────────────────────────────
 
 test_that(".is_gtsummary_split() detects tbl_split containers only", {
+  skip_on_cran()
   skip_if_not_installed("gtsummary")
   ts <- .make_tbl_split()
   expect_true(rtfreporter:::.is_gtsummary_split(ts))
@@ -30,6 +31,7 @@ test_that(".is_gtsummary_split() detects tbl_split containers only", {
 })
 
 test_that(".gtsummary_split_tables() returns the plain member list", {
+  skip_on_cran()
   skip_if_not_installed("gtsummary")
   ts   <- .make_tbl_split()
   tbls <- rtfreporter:::.gtsummary_split_tables(ts)
@@ -41,6 +43,7 @@ test_that(".gtsummary_split_tables() returns the plain member list", {
 # ── as_rtftables() ────────────────────────────────────────────────────────────
 
 test_that("as_rtftables() expands a tbl_split into one page per member", {
+  skip_on_cran()
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("gt")
   ts    <- .make_tbl_split()
@@ -56,6 +59,7 @@ test_that("as_rtftables() expands a tbl_split into one page per member", {
 # ── as_rtftable() ─────────────────────────────────────────────────────────────
 
 test_that("as_rtftable() unwraps a single-member tbl_split", {
+  skip_on_cran()
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("gt")
   ts     <- .make_tbl_split()
@@ -65,6 +69,7 @@ test_that("as_rtftable() unwraps a single-member tbl_split", {
 })
 
 test_that("as_rtftable() rejects a multi-member tbl_split informatively", {
+  skip_on_cran()
   skip_if_not_installed("gtsummary")
   ts <- .make_tbl_split()
   expect_error(as_rtftable(ts), "holding 2 tables.*as_rtftables")

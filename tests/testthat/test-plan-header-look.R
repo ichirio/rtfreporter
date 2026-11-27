@@ -146,6 +146,7 @@ test_that("plan_cell_style(header = TRUE, color = , background = ) is style_cols
 # ---- G5: plan_style(border = , border_* = ) --------------------------------
 
 test_that("plan_style(border = \"tfl\", border_last_row = ) is the preset with that zone merged on, as style_zone()", {
+  skip_on_cran()
   z <- rtf_border(bottom = TRUE)
   got <- .hl_pages(table_plan(.hl_df()) |>
                      plan_style(border = "tfl", border_last_row = z))
@@ -176,6 +177,7 @@ test_that("plan_style(border = \"tfl\", border_last_row = ) is the preset with t
 })
 
 test_that("plan_style(border = <whole-table rtf_border()>, border_spanning = ) on a spanning header is style_zone() after the expansion", {
+  skip_on_cran()
   box <- rtf_border(all = TRUE)
   sp <- rtf_border(bottom = "double", inside_h = FALSE, inside_v = FALSE)
   base <- table_plan(.hl_df()) |> plan_col_header(.hl_hdr())

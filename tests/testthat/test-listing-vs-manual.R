@@ -80,6 +80,7 @@ test_that("the two agree on how tall each record is", {
 })
 
 test_that("the wrapping itself agrees, cell by cell, on every joined column", {
+  skip_on_cran()
   adae <- .listing_ae()
   cols <- .listing_cols_ae()
   wrap <- .listing_widths_ae()

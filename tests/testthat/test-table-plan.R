@@ -446,6 +446,7 @@ test_that("the display verbs are last-wins too", {
 })
 
 test_that("how far a plan goes is read off what it declares", {
+  skip_on_cran()
   skip_if_no_cards2()
   # nothing about the display: the answer is the table data.frame
   expect_identical(.plan_reach(disp_plan()), "table")
@@ -592,6 +593,7 @@ test_that("folding the stub inside as_rtftables() is refused with a reason", {
 })
 
 test_that("plan_cell_style() says where as well as how", {
+  skip_on_cran()
   skip_if_no_cards2()
   base <- disp_plan() |>
     plan_stub(vars = c("group", "label"), name = "row_label", before = TRUE)
@@ -624,6 +626,7 @@ test_that("plan_cell_style() says where as well as how", {
 
 
 test_that("plan_template() writes a plan that runs to the pages", {
+  skip_on_cran()
   skip_if_no_cards2()
   ard <- plan_ard()
   code <- plan_template(ard, cols = "TRT", pipe = "|>")
@@ -698,6 +701,7 @@ test_that("plan_template() invents no header when the N is ambiguous", {
 
 
 test_that("print() names the columns of every stage it has", {
+  skip_on_cran()
   skip_if_no_cards2()
   p <- disp_plan() |>
     plan_stub(vars = c("group", "label"), name = "row_label") |>
@@ -745,6 +749,7 @@ test_that("a derived plan does not inherit its parent's column cache", {
 
 
 test_that("plan_titles() / plan_footnotes() ride on every page", {
+  skip_on_cran()
   pg <- suppressMessages(plan_apply(
     .pages_plan() |>
       plan_titles("Table 14.1.1", "Demographics") |>
@@ -1313,6 +1318,7 @@ test_that("a short widths vector repeats its last value", {
 })
 
 test_that("a row budget that the split ignores is refused, not dropped", {
+  skip_on_cran()
   skip_if_no_cards2()
   # raising max_rows and watching nothing change is how an afternoon goes
   p <- disp_plan() |> plan_paginate_group() |>
@@ -1322,6 +1328,7 @@ test_that("a row budget that the split ignores is refused, not dropped", {
 })
 
 test_that("a row budget that the split ignores is refused, not dropped", {
+  skip_on_cran()
   skip_if_no_cards2()
   # raising max_rows and watching nothing change is how an afternoon goes
   p <- disp_plan() |> plan_paginate_group() |>
@@ -1480,6 +1487,7 @@ test_that("a sentinel with only n gives no header number", {
 })
 
 test_that("an AE table's header N is the analysis set, not the Any row", {
+  skip_on_cran()
   skip_if_no_cards2()
   adsl <- cards::ADSL
   adae <- cards::ADAE[cards::ADAE$TRTEMFL == "Y", ]
@@ -1634,6 +1642,7 @@ test_that("plan_col_header(values = TRUE) reads the key's own tabulation", {
 })
 
 test_that("a key tabulation that is not the population split is not taken", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -1670,6 +1679,7 @@ test_that("a Total column the key cannot speak for gets no number", {
 })
 
 test_that("a variable summarised and tabulated gets both recipes in a plan", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -1763,6 +1773,7 @@ test_that("two variables that agree everywhere are read", {
 })
 
 test_that("an N per visit is not a column's number", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adlb <- cards::ADLB[cards::ADLB$PARAMCD == "ALT", ]
   adlb$TRT <- as.character(adlb$TRTA)
@@ -1774,6 +1785,7 @@ test_that("an N per visit is not a column's number", {
 })
 
 test_that("two column keys: the arm and the arm x sex cell are both read", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- adsl_trt()
   d <- normalize_ard(cards::ard_stack(
@@ -1808,6 +1820,7 @@ test_that("two column keys: the arm and the arm x sex cell are both read", {
 })
 
 test_that("three keys: a depth the ARD does not state is NA, with a warning", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- adsl_trt()
   mk <- function(extra = NULL) {
@@ -1836,6 +1849,7 @@ test_that("three keys: a depth the ARD does not state is NA, with a warning", {
 })
 
 test_that("a hierarchical ARD by two keys states both levels", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- adsl_trt()
   adae <- cards::ADAE[cards::ADAE$TRTEMFL == "Y", ]
@@ -1876,6 +1890,7 @@ test_that("the key tabulated on its own states the table's total", {
 })
 
 test_that("pages split by a group value each read their own N from the ARD", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   set.seed(1)
   lb <- expand.grid(USUBJID = cards::ADSL$USUBJID,
@@ -1937,6 +1952,7 @@ spanner <- function(pg) vapply(pg, function(p)
 
 
 test_that("n = \"page\" / \"table\" choose the population", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   x <- two_pop()
   pg <- suppressMessages(plan_apply(two_pop_plan(x$d, "page"), "pages"))
@@ -1950,6 +1966,7 @@ test_that("n = \"page\" / \"table\" choose the population", {
 })
 
 test_that("two populations and no choice: the page's, with a warning", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   x <- two_pop()
   expect_warning(pg <- suppressMessages(plan_apply(
@@ -1959,6 +1976,7 @@ test_that("two populations and no choice: the page's, with a warning", {
 })
 
 test_that("plan_n_candidates(): each population {n} can say, as {n} prints it", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   x <- two_pop()
   cand <- plan_n_candidates(two_pop_plan(x$d, "page"))
@@ -2029,6 +2047,7 @@ test_that("plan_columns() declares the stub column, auto width and the key separ
 })
 
 test_that("plan_columns(sep = ) also drives the ARD plan's own spanning header (#520)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- adsl_trt()
   d <- normalize_ard(cards::ard_stack(
@@ -2155,6 +2174,7 @@ test_that("plan_paginate_cols() cuts by a block list or a separator", {
 })
 
 test_that("a conditional style follows its rows onto every page", {
+  skip_on_cran()
   skip_if_no_cards2()
   # the styles are computed for the whole table; the page split cuts them
   # with the rows, instead of handing each page all of them
@@ -2185,6 +2205,7 @@ test_that("a missing declaration is not blamed on unrelated verbs (#507)", {
 })
 
 test_that("plan_labels() scoped by an analysis variable relabels its levels (#514)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -2233,6 +2254,7 @@ test_that("plan_labels() scoped by an analysis variable relabels its levels (#51
 })
 
 test_that("plan_paginate_rows(page_by = ) is as_rtftables(page_by = ): BY pages, rows paged inside", {
+  skip_on_cran()
   tbl <- data.frame(
     period = rep(c("Period 1", "Period 2"), each = 8),
     param  = rep(rep(c("ALT", "AST"), each = 4), 2),
@@ -2266,6 +2288,7 @@ test_that("plan_paginate_rows(page_by = ) is as_rtftables(page_by = ): BY pages,
 })
 
 test_that("every as_rtftables() setting has a plan verb, with the direct call's RTF", {
+  skip_on_cran()
   tbl <- data.frame(
     param = rep(c("ALT", "AST"), each = 3),
     stat  = rep(c("n", "Mean", "SD"), 2),
@@ -2431,6 +2454,7 @@ test_that("plan_levels(.drop_empty = ) leaves out the levels no record has", {
 })
 
 test_that("a group count stated twice is one count; two different ones say why", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   groupn <- cards::ard_tabulate(adsl, variables = ARM)
@@ -2463,6 +2487,7 @@ test_that("a group count stated twice is one count; two different ones say why",
 })
 
 test_that("plan_col_header(lines = ): the header a row at a time, the cells' data frame written another way", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -2527,6 +2552,7 @@ nest_ard <- function() {
 }
 
 test_that("plan_nest() puts a variable's rows under one level of another", {
+  skip_on_cran()
   skip_if_no_cards2()
   p <- table_plan(nz(nest_ard()), cols = "TRT", rows = c(group = "variable")) |>
     plan_labels(variable = c(RACE = "Race, n (%)", RSUB = "Black sub")) |>
@@ -2546,6 +2572,7 @@ test_that("plan_nest() puts a variable's rows under one level of another", {
 })
 
 test_that("plan_nest() says what is wrong", {
+  skip_on_cran()
   skip_if_no_cards2()
   p <- table_plan(nz(nest_ard()), cols = "TRT", rows = c(group = "variable")) |>
     plan_cells(categorical = "{n} ({p:.1f%})", notes = FALSE)
@@ -2562,6 +2589,7 @@ test_that("plan_nest() says what is wrong", {
 })
 
 test_that("plan_layers() shows the nestings, a later one for a variable winning", {
+  skip_on_cran()
   skip_if_no_cards2()
   p <- table_plan(nz(nest_ard()), cols = "TRT", rows = c(group = "variable")) |>
     plan_cells(categorical = "{n} ({p:.1f%})", notes = FALSE) |>
@@ -2576,6 +2604,7 @@ test_that("plan_layers() shows the nestings, a later one for a variable winning"
 })
 
 test_that("plan_nest() finds a variable by any form of its heading", {
+  skip_on_cran()
   skip_if_no_cards2()
   base <- table_plan(nz(nest_ard()), cols = "TRT", rows = c(group = "variable")) |>
     plan_cells(categorical = "{n} ({p:.1f%})", notes = FALSE)
@@ -2604,6 +2633,7 @@ total_ard <- function(factor_trt = FALSE) {
 }
 
 test_that("plan_total() makes the overall rows a Total column, its N the study total", {
+  skip_on_cran()
   skip_if_no_cards2()
   for (f in c(FALSE, TRUE)) {
     p <- table_plan(nz(total_ard(f)), cols = "TRT", rows = c(group = "variable")) |>
@@ -2628,6 +2658,7 @@ test_that("plan_total() makes the overall rows a Total column, its N the study t
 })
 
 test_that("{n:sum} leaves the Total column out: it is the sum, not a part", {
+  skip_on_cran()
   skip_if_no_cards2()
   p <- table_plan(nz(total_ard()), cols = "TRT", rows = c(group = "variable")) |>
     plan_cells(categorical = "{n}", notes = FALSE) |>
@@ -2647,6 +2678,7 @@ test_that("{n:sum} leaves the Total column out: it is the sum, not a part", {
 })
 
 test_that("FT-PL998 [FR-PL976]: a <outer>____Total column's {n} is its outer group's N", {
+  skip_on_cran()
   skip_if_no_cards2()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -2688,6 +2720,7 @@ test_that("FT-PL998 [FR-PL976]: a <outer>____Total column's {n} is its outer gro
 })
 
 test_that("plan_total() says what is wrong", {
+  skip_on_cran()
   skip_if_no_cards2()
   adsl <- cards::ADSL
   no_overall <- cards::ard_tabulate(adsl, by = ARM, variables = SEX)
@@ -2718,6 +2751,7 @@ test_that("plan_total() says what is wrong", {
 })
 
 test_that("plan_stat_groups(): one record's N in one column, its rate and CI in the next, no mutate() (#619)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("cardx")
   skip_if_not_installed("broom", minimum_version = "1.0.8")
@@ -2771,6 +2805,7 @@ test_that("plan_stat_groups(): one record's N in one column, its rate and CI in 
 })
 
 test_that("plan_stat_groups() columns: the header reads each arm's N over its columns (#709)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("cardx")
   skip_if_not_installed("broom", minimum_version = "1.0.8")
@@ -2808,6 +2843,7 @@ test_that("plan_stat_groups() columns: the header reads each arm's N over its co
 })
 
 test_that("plan_stat_groups() x cell_rows(): n rows x m columns of one record, on cols or rows (#619)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("cardx")
   skip_if_not_installed("broom", minimum_version = "1.0.8")
@@ -2852,6 +2888,7 @@ test_that("plan_stat_groups() x cell_rows(): n rows x m columns of one record, o
 })
 
 test_that("plan_paginate_group(heading = ): a section per arm named with the arm and its N from the ARD (#619)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -2884,6 +2921,7 @@ test_that("plan_paginate_group(heading = ): a section per arm named with the arm
 })
 
 test_that("normalize_ard(stack = ): parallel subgroups as one pair of keys, whatever slot each came in (#619)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("cardx")
   skip_if_not_installed("broom", minimum_version = "1.0.8")
@@ -2925,6 +2963,7 @@ test_that("normalize_ard(stack = ): parallel subgroups as one pair of keys, what
 })
 
 test_that("plan_paginate_rows(page_by = , heading = ): BY pages with a row budget, named with the arm and its N (#619)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -2950,6 +2989,7 @@ test_that("plan_paginate_rows(page_by = , heading = ): BY pages with a row budge
 })
 
 test_that("plan_paginate_group(heading_at = ): where the page name prints, rtf_tables()'s default; its own argument wins", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -2995,6 +3035,7 @@ test_that("plan_paginate_group(heading_at = ): where the page name prints, rtf_t
 })
 
 test_that("plan_paginate_group(heading = ): a label with a brace group is printed as written, not filled again (#921)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$PARAMCD <- ifelse(adsl$AGE > 75, "CMAX", "CN")
@@ -3022,6 +3063,7 @@ test_that("plan_paginate_group(heading = ): a label with a brace group is printe
 })
 
 test_that("normalize_ard(stack = list(x = \"group2\")): a slot stands for its variables, refused where ambiguous (#619)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -3046,6 +3088,7 @@ test_that("normalize_ard(stack = list(x = \"group2\")): a slot stands for its va
 })
 
 test_that("normalize_ard(stack = ): crossed layers, three-way too, and the slots finding them (#619)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -3083,6 +3126,7 @@ test_that("normalize_ard(stack = ): crossed layers, three-way too, and the slots
 })
 
 test_that("normalize_ard(stack = ): the arm in a later slot than the subgroup, crossed too (#619)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -3098,6 +3142,7 @@ test_that("normalize_ard(stack = ): the arm in a later slot than the subgroup, c
 })
 
 test_that("sort keys -n@<key> and -n[<col>]: a group's own count carried to its rows, one column's count (#619)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   # four SOCs; on CRAN the five small ones of helper-rtfreporter.R
   adae <- if (.on_cran()) .cran_adae() else cards::ADAE[cards::ADAE$AESOC %in% unique(cards::ADAE$AESOC)[1:4], ]
@@ -3155,6 +3200,7 @@ test_that("sort keys -n@<key> and -n[<col>]: a group's own count carried to its 
 })
 
 test_that("plan_compare(): a test's p-value and a difference with its CI as columns, placed not computed (#625)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("cardx")
   skip_if_not_installed("broom", minimum_version = "1.0.8")   # cardx's t-test / prop test
@@ -3221,6 +3267,7 @@ test_that("plan_compare(): a test's p-value and a difference with its CI as colu
 })
 
 test_that("plan_total() reads the body's analyses only: a test is no Total and leaves no empty row (#625)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("cardx")
   skip_if_not_installed("broom", minimum_version = "1.0.8")   # cardx's tests
@@ -3238,6 +3285,7 @@ test_that("plan_total() reads the body's analyses only: a test is no Total and l
 })
 
 test_that("plan_compare(): what a table does not use -- other statistics, a second test, overall rows (#625)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("cardx")
   skip_if_not_installed("broom", minimum_version = "1.0.8")   # cardx's t-test / prop test
@@ -3276,6 +3324,7 @@ test_that("plan_compare(): what a table does not use -- other statistics, a seco
 })
 
 test_that("plan_compare() with cell_rows(): a difference on line 1 and its CI on line 2, beside the body's two lines (#625)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("cardx")
   skip_if_not_installed("broom", minimum_version = "1.0.8")
@@ -3316,6 +3365,7 @@ test_that("plan_compare() with cell_rows(): a difference on line 1 and its CI on
 })
 
 test_that("normalize_ard(stack_nest = TRUE): a crossed layer's outer level as a heading row, single layers as they were (#623)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -3348,6 +3398,7 @@ test_that("normalize_ard(stack_nest = TRUE): a crossed layer's outer level as a 
 })
 
 test_that("plan_col_header(values = list(n = TRUE)) reads stacked keys on the columns: each layer's own tabulation (#622)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   ard <- cards::bind_ard(cards::ard_tabulate(adsl, variables = c(SEX, AGEGR1)),
@@ -3370,6 +3421,7 @@ test_that("plan_col_header(values = list(n = TRUE)) reads stacked keys on the co
 })
 
 test_that("table_plan(show_keys = ) and plan_stat_groups(.variables, .others): SEX's own n (%) beside the SEX subgroups' ORR (#621)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("cardx")
   skip_if_not_installed("broom", minimum_version = "1.0.8")
@@ -3412,6 +3464,7 @@ test_that("table_plan(show_keys = ) and plan_stat_groups(.variables, .others): S
 })
 
 test_that("plan_stat_groups(): a split record takes its group's cells, an .others record its context's, with a plan-wide categorical", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("cardx")
   adsl <- cards::ADSL
@@ -3447,6 +3500,7 @@ test_that("plan_stat_groups(): a split record takes its group's cells, an .other
 })
 
 test_that("plan_filter(): PTs with p >= 5% in any arm, a SOC with its PTs; the RTF a hand-filtered ARD gives (#620)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   # on CRAN five SOCs (helper-rtfreporter.R)
   ard <- cards::ard_stack_hierarchical(.cran_adae(), variables = c(AESOC, AEDECOD), by = TRTA,
@@ -3491,6 +3545,7 @@ test_that("plan_filter(): PTs with p >= 5% in any arm, a SOC with its PTs; the R
 })
 
 test_that("plan_compare(): the column header's {col} / {n} sit over their columns, the comparison column gets its cell (#631)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   skip_if_not_installed("cardx")
   skip_if_not_installed("broom", minimum_version = "1.0.8")
@@ -3532,6 +3587,7 @@ test_that("plan_compare(): the column header's {col} / {n} sit over their column
 })
 
 test_that("a plan's column positions count the printed columns, with a hidden key and BY pages (#635)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -3573,6 +3629,7 @@ test_that("a plan's column positions count the printed columns, with a hidden ke
 })
 
 test_that("row_title and collapse also take column names: a row key's name, .values (#635)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -3608,6 +3665,7 @@ test_that("row_title and collapse also take column names: a row key's name, .val
 })
 
 test_that("a page key is never a row group: blanks, collapse, row_title, sort and stub start at the first printed key (#635)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -3684,6 +3742,7 @@ test_that("a verb's first argument is .plan: a name such as p in ... is not take
 })
 
 test_that("a value plan_levels() names that the ARD does not have is said (it makes no row), whatever notes says", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- factor(adsl$ARM)
@@ -3703,6 +3762,7 @@ test_that("a value plan_levels() names that the ARD does not have is said (it ma
 })
 
 test_that("plan_levels() with names: a value and its text at once (factor(levels, labels)); plan_labels() wins value by value", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -3748,6 +3808,7 @@ test_that("plan_levels() with names: a value and its text at once (factor(levels
 })
 
 test_that("plan_sort() by a plan_compare() statistic: the rows by the arms' difference, either call order (#684)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   skip_if_not("diff_ard_hierarchical" %in% getNamespaceExports("cards"),
@@ -3792,6 +3853,7 @@ test_that("plan_sort() by a plan_compare() statistic: the rows by the arms' diff
 })
 
 test_that("plan_empty(): a table of no events says so, only when it is empty (#691)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   # an ARD of no events: the overall row 0 (as tflspec makes it for no records)
@@ -3845,6 +3907,7 @@ test_that("plan_empty(): a table of no events says so, only when it is empty (#6
 })
 
 test_that("no cols: one column, All, when the ARD has no group; its N the ARD's total (#689)", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL[cards::ADSL$ARM == "Placebo", ]
   adae <- cards::ADAE[cards::ADAE$TRTA == "Placebo" &
@@ -3918,6 +3981,7 @@ shift_plan <- function(nd, cols = "BTOXGR", ...) {
 }
 
 test_that("plan_total(direction = \"both\"): a shift table's Total row and corner from cards' plain margins", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   nd <- normalize_ard(shift_ard())
   # the workaround it replaces: the margins rewritten as the body's variable
@@ -3959,6 +4023,7 @@ test_that("plan_total(direction = \"both\"): a shift table's Total row and corne
 })
 
 test_that("plan_total(direction = ): two column keys; one analysis variable; margins needed", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   nd <- normalize_ard(shift_ard(two_cols = TRUE))
   t <- as.data.frame(plan_apply(shift_plan(nd, cols = c("TRTA", "BTOXGR"), direction = "both"), "table"))
@@ -3981,6 +4046,7 @@ test_that("plan_total(direction = ): two column keys; one analysis variable; mar
 })
 
 test_that("table_plan(label = c(label = c(...))): c() numbered the formulas, said", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   nd <- normalize_ard(shift_ard())
   expect_error(table_plan(nd, cols = "BTOXGR", rows = c(LAB = ~ "{PARAM} - {ATOXDIR}"),
@@ -3989,6 +4055,7 @@ test_that("table_plan(label = c(label = c(...))): c() numbered the formulas, sai
 })
 
 test_that("the study total survives a mutate() between normalize_ard() and table_plan()", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   nd <- normalize_ard(cards::bind_ard(

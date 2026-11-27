@@ -84,6 +84,7 @@ test_that("as_rtftables(gt): multi-group table paginates across pages (group_saf
 }
 
 test_that("as_rtftables(gtsummary): multi-variable summary paginates across pages", {
+  skip_on_cran()
   .expect_multipage_roundtrip(.make_gtsummary_grouped(),
                               group_col = 1L, group_by = "indent", max_rows = 5L)
 })
@@ -110,6 +111,7 @@ test_that("as_rtftables(gtsummary): multi-variable summary paginates across page
 }
 
 test_that("as_rtftables(rtables): row-group table paginates across pages", {
+  skip_on_cran()
   .expect_multipage_roundtrip(.make_rtables_grouped(),
                               group_col = 1L, group_by = "indent", max_rows = 4L)
 })
@@ -159,6 +161,7 @@ test_that("as_rtftables(huxtable): multi-group table paginates across pages", {
 # pagination still splits on the original values.
 
 test_that("collapse_repeats + blank_rows run through value-style adapters across pages", {
+  skip_on_cran()
   fixtures <- list(
     flextable = function() .make_flextable_grouped(),
     huxtable  = function() .make_huxtable_grouped()

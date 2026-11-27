@@ -318,6 +318,7 @@ test_that("render_dpi changes the sharpness, not the size", {
 })
 
 test_that("the kinds of object that draw are all accepted", {
+  skip_on_cran()
   skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
   expect_s3_class(rtfplot(grid::circleGrob()), "rtfplot")          # grob
   expect_s3_class(rtfplot(function() plot(1:3)), "rtfplot")        # function
@@ -352,6 +353,7 @@ test_that("a figure is one path or one object", {
 })
 
 test_that("rtf_figures() takes plot objects and renders them", {
+  skip_on_cran()
   skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
   doc <- rtf_document() |>
     rtf_figures(list(function() plot(1:10), grid::circleGrob()),
@@ -394,6 +396,7 @@ test_that("png_device is refused for a file", {
 })
 
 test_that("a ragg figure takes the same inches as a png() one", {
+  skip_on_cran()
   skip_if_not_installed("ragg")
   skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
   draw <- function() plot(1:10)
@@ -439,6 +442,7 @@ test_that("the option draws a plot object with ragg", {
 .png_bytes <- function(fig) readBin(fig$path, "raw", file.size(fig$path))
 
 test_that("rtf_figures() without the drawing arguments writes what it wrote before", {
+  skip_on_cran()
   skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
   old <- options(rtfreporter.png_device = "png"); on.exit(options(old))
   draw <- function() plot(1:10)
@@ -523,6 +527,7 @@ test_that("rtf_figures(render_*) leave an rtfplot() and a file path as they are"
 })
 
 test_that("FT-AS124 [FR-AS233 FR-AS214]: an EMF file is embedded as it is, at its frame's size (#739)", {
+  skip_on_cran()
   emf <- test_path("fixtures", "figure.emf")
   fig <- rtfplot(emf)
   expect_identical(fig$img_type, "emf")
@@ -570,6 +575,7 @@ test_that("FT-AS125 [FR-AS234 FR-AS211]: a file that is not an EMF, or another e
 # ──────── drawing a plot object as EMF with devEMF (#739) ────────
 
 test_that("FT-AS149 [FR-AS251 FR-AS214 FR-AS248]: render_format = \"emf\" draws a plot object as an EMF at render_width x render_height (#739)", {
+  skip_on_cran()
   skip_if_not_installed("devEMF")
   draw <- function() plot(1:10)
   fig <- rtfplot(draw, render_width = 3, render_height = 2, render_format = "emf")

@@ -304,16 +304,11 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
 
 ## Citation
 
-If rtfreporter helps your work, please cite it:
+If rtfreporter is useful in your work, you are welcome to cite it:
 
 ```r
 citation("rtfreporter")
 ```
-
-If the numbers in your tables come from a [cards](https://pharmaverse.github.io/cards/) /
-[cardx](https://insightsengineering.github.io/cardx/) ARD, please cite those
-packages too (`citation("cards")`, `citation("cardx")`): they compute the
-statistics; rtfreporter only lays them out.
 
 ## Acknowledgements
 

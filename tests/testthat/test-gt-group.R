@@ -100,6 +100,7 @@ test_that("as_rtftable() rejects a multi-member gt_group informatively", {
 # ── tfrmt page_plan round-trip ────────────────────────────────────────────────
 
 test_that("a tfrmt page_plan render (gt_group) converts page by page", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   skip_if_not_installed("tfrmt")
   dat <- expand.grid(group  = c("g1", "g2"),
@@ -126,6 +127,7 @@ test_that("a tfrmt page_plan render (gt_group) converts page by page", {
 # ── row-split members (#1005) ─────────────────────────────────────────────────
 
 test_that("FT-TB6601 [FR-TB115]: a row-split gt_group member gives its own rows", {
+  skip_on_cran()
   # gt < 1.4.0 stops on a cell style in a row-split member (its reorder_styles)
   skip_if_not_installed("gt", "1.4.0")
   d4 <- data.frame(a = as.character(1:4), b = letters[1:4],
@@ -173,6 +175,7 @@ test_that("FT-TB6601 [FR-TB115]: a row-split gt_group member gives its own rows"
 }
 
 test_that("FT-TB6901 [FR-TB115]: a row-split member of a grouped gt keeps its group rows", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   df <- data.frame(grp  = rep(c("Arm A", "Arm B"), each = 3),
                    subj = sprintf("S%02d", 1:6),
@@ -221,6 +224,7 @@ test_that("FT-TB6901 [FR-TB115]: a row-split member of a grouped gt keeps its gr
 }
 
 test_that("FT-TB7001 [FR-TB115]: a row-split member applies text_transform() to its own rows", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   df <- data.frame(subj = sprintf("S%02d", 1:10),
                    age  = c(34, 45, 40, 51, 29, 60, 41, 38, 47, 55),

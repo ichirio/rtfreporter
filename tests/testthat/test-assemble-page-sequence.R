@@ -86,6 +86,7 @@
 .ps_cover <- list(title = "Study EX-1", subtitle = "Tables")
 
 test_that("FT-AS7201 [FR-AS130]: a cover, a one-page table of contents and 7 body pages are numbered 1 of 9 .. 9 of 9: no restart word, every NUMPAGES cache 9, the first table's entry caches page 3", {
+  skip_on_cran()
   d <- tempfile("ps")
   dir.create(d)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -115,6 +116,7 @@ test_that("FT-AS7201 [FR-AS130]: a cover, a one-page table of contents and 7 bod
 })
 
 test_that("FT-AS7202 [FR-AS272 FR-AS138]: the same book with book_page: the filled slots read Book 3 of 9 on the first table's page .. Book 9 of 9 on the last", {
+  skip_on_cran()
   d <- tempfile("ps")
   dir.create(d)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
@@ -137,6 +139,7 @@ test_that("FT-AS7202 [FR-AS272 FR-AS138]: the same book with book_page: the fill
 })
 
 test_that("FT-AS7203 [FR-AS270]: without a cover the table of contents is page 1 of 8, the first table 2 of 8 and the last 8 of 8, through assemble_rtf() and assemble_folder() alike", {
+  skip_on_cran()
   d <- tempfile("ps")
   o <- tempfile("ps-out")
   dir.create(d)
@@ -185,6 +188,7 @@ test_that("FT-AS7204 [FR-AS271]: toc_page_numbering, whatever its value, is an u
 })
 
 test_that("FT-AS7205 [FR-AS158]: assemble_folder() refuses an argument assemble_rtf() does not take before anything is read or written, as R does (unused argument), with or without an output_file", {
+  skip_on_cran()
   d <- tempfile("ps")
   o <- tempfile("ps-out")
   dir.create(d)

@@ -36,8 +36,10 @@
 #   * a loop over a set calls .cran_cut(i) first: its first .cran_keep rows
 #     run everywhere; past them the test stops on CRAN (skip_on_cran()), so
 #     the rows after them and the rest of the block are CI only;
-#   * a slow scenario (a test of the tm-thicken / tm-gaps / validation
-#     files that takes more than about 0.4 s) starts with skip_on_cran().
+#   * a slow test, in any file, starts with skip_on_cran(): one that takes
+#     more than about 0.15 s under the CRAN settings (measured on Windows,
+#     R 4.6.1; CRAN asks for a check under 10 minutes in all, tests
+#     included).  A new test that slow starts with it too.
 # The checks of the set itself (every pair covered) run before the loop, on
 # CRAN too.  Nothing is dropped: NOT_CRAN=true runs every row.
 .cran_keep <- 3L

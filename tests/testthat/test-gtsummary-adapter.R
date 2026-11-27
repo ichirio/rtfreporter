@@ -42,6 +42,7 @@ library(testthat)
 
 
 test_that(".is_gtsummary_tbl() returns TRUE for gtsummary objects", {
+  skip_on_cran()
   skip_if_not_installed("gtsummary")
   s <- .make_tbl_summary()
   expect_true(rtfreporter:::.is_gtsummary_tbl(s))
@@ -57,6 +58,7 @@ test_that(".is_gtsummary_tbl() returns FALSE for non-gtsummary objects", {
 # ── .gtsummary_to_gt() ────────────────────────────────────────────────────────
 
 test_that(".gtsummary_to_gt() returns a gt_tbl", {
+  skip_on_cran()
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("gt")
   s      <- .make_tbl_summary()
@@ -75,6 +77,7 @@ test_that(".gtsummary_to_gt() errors without gtsummary installed", {
 # ── as_rtftable() with gtsummary input ────────────────────────────────────────
 
 test_that("as_rtftable() accepts a tbl_summary and returns an rtftable", {
+  skip_on_cran()
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("gt")
   s   <- .make_tbl_summary()
@@ -83,6 +86,7 @@ test_that("as_rtftable() accepts a tbl_summary and returns an rtftable", {
 })
 
 test_that("as_rtftable() column count matches the rendered (visible) body", {
+  skip_on_cran()
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("gt")
   s      <- .make_tbl_summary()
@@ -94,6 +98,7 @@ test_that("as_rtftable() column count matches the rendered (visible) body", {
 })
 
 test_that("as_rtftable() reads col_header from gtsummary when read = TRUE", {
+  skip_on_cran()
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("gt")
   s   <- .make_tbl_summary()
@@ -105,6 +110,7 @@ test_that("as_rtftable() reads col_header from gtsummary when read = TRUE", {
 })
 
 test_that("as_rtftable() accepts tbl_regression", {
+  skip_on_cran()
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("gt")
   r   <- .make_tbl_regression()
@@ -128,6 +134,7 @@ test_that("as_rtftable() still errors for inputs that are not a table object", {
 # ── rtf_tables() with gtsummary input ─────────────────────────────────────────
 
 test_that("rtf_tables() accepts a gtsummary object in the contents list", {
+  skip_on_cran()
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("gt")
   s   <- .make_tbl_summary()
@@ -145,6 +152,7 @@ test_that("rtf_tables() rejects items that are not valid content types", {
 })
 
 test_that("rtf_tables() handles mix of gtsummary and data.frame", {
+  skip_on_cran()
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("gt")
   s   <- .make_tbl_summary()

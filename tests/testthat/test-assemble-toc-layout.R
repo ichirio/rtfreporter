@@ -7,6 +7,7 @@
 .tl_props <- function(p) sub("^\\{\\\\pard((?:\\\\[a-z]+-?[0-9]*)*) .*$", "\\1", p)
 
 test_that("FT-AS7301 [FR-AS265]: every TOC entry paragraph has a right indent before the page-number column and \\keep, at every level and with the hanging style; the right tab stays at the text width; headings have neither; a long label stays in one paragraph and the estimate counts its lines", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE), add = TRUE)
   # a long label at levels 2 and 3
   x <- readLines(.tt_case_longlabel(d), warn = FALSE)
@@ -67,6 +68,7 @@ test_that("FT-AS7301 [FR-AS265]: every TOC entry paragraph has a right indent be
 })
 
 test_that("FT-AS7302 [FR-AS269]: with hanging = TRUE an entry is <number>\\tab <title> with one left tab stop, at the hang (none after it, so a wrapped tab goes to the page number), \\li<indent + hang>\\fi-<hang>; the hang is the widest number in the TOC and 1 em; a label that does not split is written whole; toc = \"auto\" and assemble_folder() lay out the same; a whole number of twips writes every label whole; the estimate counts the title's lines", {
+  skip_on_cran()
   d <- .tt_dir(); on.exit(unlink(d, recursive = TRUE), add = TRUE)
   f <- .tt_inputs(d, c(t_14_3_2_1 = "A", t_9_1 = "B", app_1 = "C", f_14_1 = "D"))
   toc <- data.frame(file = f, heading = c("Safety", NA, NA, NA),
@@ -159,6 +161,7 @@ test_that("FT-AS7302 [FR-AS269]: with hanging = TRUE an entry is <number>\\tab <
 })
 
 test_that("FT-AS7303 [FR-AS265 FR-AS125 FR-AS130]: the two Word-check books (data-raw/gen_toc_word_check.R) have a PAGEREF and a HYPERLINK to an existing bookmark on every entry, \\ri720\\keep on every entry, cached pages that rise from 4 to 121 with 1, 2 and 3 digits, and no page-number command", {
+  skip_on_cran()
   for (b in c("default", "hanging")) {
     x <- readLines(test_path("fixtures", paste0("toc-word-check-", b, ".rtf")), warn = FALSE)
     e <- .tt_entries(x)
@@ -208,6 +211,7 @@ test_that("FT-AS7303 [FR-AS265 FR-AS125 FR-AS130]: the two Word-check books (dat
 }
 
 test_that("FT-AS7304 [FR-AS273 FR-AS238 FR-AS261]: toc_style indent is 0 by default (no \\li on any heading or entry, at levels 1, 2 and 3); a whole number n indents level k (k - 1) x n twips, headings and entries alike, the hang added to it, the estimate at that width; the option sets it and the argument wins; it merges with the other keys; anything but one whole number >= 0 stops", {
+  skip_on_cran()
   ent <- "\\ri720\\keep\\fs20\\tqr\\tldot\\tx13680"
   # the default: every heading and entry at the same left position, no \li
   expect_identical(.tl_levels(NULL), rep(c("\\b\\fs22", ent), 3L))
@@ -300,6 +304,7 @@ test_that("FT-AS7304 [FR-AS273 FR-AS238 FR-AS261]: toc_style indent is 0 by defa
 # -- a page number in the right-hand column, however the label ends (#1068) ----
 
 test_that("FT-AS7305 [FR-AS265 FR-AS269]: the borderline TOCs (labels stepping across the wrap point at levels 2 and 3, default and hanging) are rebuilt byte for byte; no entry has a left tab stop right of where its wrapped lines start, so a tab that wraps goes to the page number's right tab; the right indent and right tab are as intended", {
+  skip_on_cran()
   for (hg in c(FALSE, TRUE)) {
     fx <- test_path("fixtures", if (hg) "toc-borderline-hanging.rtf" else "toc-borderline.rtf")
     d <- .tt_dir()

@@ -48,6 +48,7 @@ library(testthat)
 .t77_meta <- function(p) attr(p$data, "rtf_paginate_meta", exact = TRUE)
 
 test_that("FT-TB7701 [FR-IX418]: max_rows alone pages an rlistings listing by subject, each subject whole when it fits", {
+  skip_on_cran()
   l <- .t77_listing()
   pages <- as_rtftables(l, max_rows = 5)
   # S-002 (2 rows) does not fit under S-001 (4): it opens the next page
@@ -65,6 +66,7 @@ test_that("FT-TB7701 [FR-IX418]: max_rows alone pages an rlistings listing by su
 })
 
 test_that("FT-TB7702 [FR-IX418]: a split the caller passes wins over the rlistings default", {
+  skip_on_cran()
   l <- .t77_listing()
   rows <- as_rtftables(l, max_rows = 5, split = "rows", split_rows = 3L)
   expect_identical(.t77_rows(rows), c(2L, 7L))
@@ -78,6 +80,7 @@ test_that("FT-TB7702 [FR-IX418]: a split the caller passes wins over the rlistin
 })
 
 test_that("FT-TB7703 [FR-IX418]: a group_col or group_by the caller passes wins over the first key column", {
+  skip_on_cran()
   l2 <- .t77_listing(key_cols = c("USUBJID", "AESEV"))
   # default: the first key, USUBJID; S-001 (4 rows) is cut, S-002 kept whole
   def <- as_rtftables(l2, max_rows = 3)
@@ -112,6 +115,7 @@ test_that("FT-TB7704 [FR-IX418]: the first key column is found by name when the 
 })
 
 test_that("FT-TB7705 [FR-IX418]: without max_rows an rlistings listing is one page, as before", {
+  skip_on_cran()
   l <- .t77_listing()
   pages <- as_rtftables(l)
   expect_length(pages, 1L)
@@ -145,6 +149,7 @@ test_that("FT-TB7707 [FR-IX418]: an rlistings listing with no key columns groups
 })
 
 test_that("FT-TB7708 [FR-IX418]: every rlistings default and every override, at once", {
+  skip_on_cran()
   l <- .t77_listing()
   meta1 <- function(pages) .t77_meta(pages[[1L]])
   # max_rows, split left out: group_safe on the first key, whole subjects

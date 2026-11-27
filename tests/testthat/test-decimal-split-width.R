@@ -75,6 +75,7 @@ test_that("pad, floor and cap are configurable", {
 })
 
 test_that("the ratio stays inside (0, 1)", {
+  skip_on_cran()
   for (wl in 1:14) for (wr in 1:14) {
     r <- ratio(wl, wr)
     expect_gt(r, 0)

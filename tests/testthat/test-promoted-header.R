@@ -44,6 +44,7 @@ library(testthat)
 }
 
 test_that("FT-TB7601 [FR-TB197]: stub_cols(label = ) names the stub column; through stub_spec(label = ) it heads the stub on a gt labels row promoted to cells", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   d <- data.frame(soc = c("Cardiac", "Cardiac"), pt = c("AF", "MI"),
                   n = c("1", "2"))
@@ -76,6 +77,7 @@ test_that("FT-TB7601 [FR-TB197]: stub_cols(label = ) names the stub column; thro
 })
 
 test_that("FT-TB7602 [FR-TB425]: style_header() patches the targeted cells of the targeted rows, a gt labels row promoted to cells and a spanning promoted cell included", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   pages <- as_rtftables(.t76_gt(), border = "none")
   before <- pages
@@ -121,6 +123,7 @@ test_that("FT-TB7602 [FR-TB425]: style_header() patches the targeted cells of th
 })
 
 test_that("FT-TB7603 [FR-TB215]: a named set_col_header() row is a patch; on a gt labels row promoted to cells it renames only the named columns' cells", {
+  skip_on_cran()
   skip_if_not_installed("gt")
   tbl <- rtftable(data.frame(row_label = "A", g1 = 1, g2 = 2, Total = 3))
   # all named: each to its column, shorter than the table, the rest their names

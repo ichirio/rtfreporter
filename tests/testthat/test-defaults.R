@@ -79,6 +79,7 @@ test_that("a header/footer distance option is honoured, and the page key wins (#
 })
 
 test_that("FT-DC6804 [FR-DC388]: the factory baseline names every rtfreporter.* option the package reads and every one its help names", {
+  skip_on_cran()
   nms <- names(rtfreporter:::.rtfreporter_factory_defaults())
   opt_re <- "rtfreporter[.][a-z][a-z_.]*[a-z_]"
   # read: each "rtfreporter.<name>" string in the package's functions

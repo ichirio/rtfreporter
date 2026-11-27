@@ -52,6 +52,7 @@
 }
 
 test_that("FT-IX6601 [FR-IX407]: plan_style(): the rules, look, widths, heights, paddings, font, placement and other settings reach as_rtftables() by name as the direct call; a value outside its limits stops when the plan is applied", {
+  skip_on_cran()
   d <- .ix66_df()
   zone <- list(header = .ix66_zone())
 
@@ -122,6 +123,7 @@ test_that("FT-IX6601 [FR-IX407]: plan_style(): the rules, look, widths, heights,
 })
 
 test_that("FT-IX6602 [FR-IX408]: plan_cell_style(): columns, the header and a condition take their attributes, a formula computes them row by row, styles reach only the named cells, and a later call on the same place gives the final value of what it names", {
+  skip_on_cran()
   d <- .ix66_df()
   vals <- list(bold = TRUE, italic = TRUE, underline = TRUE, align = "right",
                color = "#CC0000", background = "#EEEEEE", indent_twips = 200)

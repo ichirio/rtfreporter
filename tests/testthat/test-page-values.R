@@ -132,6 +132,7 @@ test_that("on a page of several tables each title takes its own; the band the fi
 })
 
 test_that("rtables and tfrmt pages carry the values they were cut on", {
+  skip_on_cran()
   skip_if_not_installed("rtables")
   adsl <- data.frame(ARM = rep(c("A", "B"), 4), SEX = rep(c("F", "M"), each = 4),
                      AGE = c(30, 41, 52, 33, 44, 25, 36, 47))

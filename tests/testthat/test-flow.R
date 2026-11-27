@@ -47,6 +47,7 @@ test_that("page_break = FALSE: the table goes on under the one before, whole; no
 })
 
 test_that("first_rows: those rows on the shared page, the rest by the table's own max_rows", {
+  skip_on_cran()
   skip_if_not_installed("cards")
   ard <- cards::bind_ard(
     cards::ard_tabulate(cards::ADSL, variables = ARM),

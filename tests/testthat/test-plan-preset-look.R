@@ -45,6 +45,7 @@ library(testthat)
 .pl_header_row <- function(rtf) unlist(strsplit(rtf, "\\\\trowd"))[2L]
 
 test_that("plan_style(border = \"tfl\", <look field> = ) keeps the preset's rules", {
+  skip_on_cran()
   # header_bold
   got <- .pl_pages(table_plan(.pl_df()) |> plan_style(border = "tfl", header_bold = TRUE))
   want <- .pl_direct(border = "tfl") |> style_cols(header_bold = TRUE)
@@ -96,6 +97,7 @@ test_that("border = \"none\" with a look field stays without rules, and other pl
 })
 
 test_that("no border said: the default preset keeps its rules with a look field", {
+  skip_on_cran()
   # header_bold, a font field, another look field
   got <- .pl_pages(table_plan(.pl_df()) |> plan_style(header_bold = TRUE))
   want <- .pl_direct() |> style_cols(header_bold = TRUE)
@@ -121,6 +123,7 @@ test_that("no border said: the default preset keeps its rules with a look field"
 })
 
 test_that("no border said: the default preset keeps its rules with border_group", {
+  skip_on_cran()
   df <- data.frame(Item = c("Age", " Mean", " SD", "Sex", " Female", " Male"),
                    Value = as.character(1:6), stringsAsFactors = FALSE)
   rule <- rtf_border(bottom = TRUE)

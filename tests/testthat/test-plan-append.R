@@ -45,6 +45,7 @@ pl_by_group <- function(d, cols, levels) {
 }
 
 test_that("FT-PL901 [FR-PL901]: a listing above its summary, the time points across two column blocks: the same bytes as by hand", {
+  skip_on_cran()
   pl_skip()
   adpc <- read.csv(pl_fx("adpc.csv"), encoding = "UTF-8")
   adpc <- adpc[adpc$RENALGR %in% c("Normal", "Moderate"), ]
@@ -102,6 +103,7 @@ test_that("FT-PL901 [FR-PL901]: a listing above its summary, the time points acr
 })
 
 test_that("FT-PL902 [FR-PL901]: the PK parameters across, a page an analyte and group: the same bytes as by hand", {
+  skip_on_cran()
   pl_skip()
   adpp <- read.csv(pl_fx("adpp.csv"), encoding = "UTF-8")
   params <- c("C_{max} (ng/mL)", "T_{max} (hr)", "AUC_{last} (ng·hr/mL)",
@@ -134,6 +136,7 @@ test_that("FT-PL902 [FR-PL901]: the PK parameters across, a page an analyte and 
 })
 
 test_that("FT-PL903 [FR-PL901]: the analytes across, a page a group and time point: the same bytes as by hand", {
+  skip_on_cran()
   pl_skip()
   adpc <- read.csv(pl_fx("adpc.csv"), encoding = "UTF-8")
   adpc <- adpc[adpc$ATPT %in% c("1 hr", "12 hr"), ]
@@ -195,6 +198,7 @@ test_that("FT-PL904 [FR-PL902]: a records plan (value = ): one row a key, the va
 })
 
 test_that("FT-PL905 [FR-PL903]: a part's rows under the parent's; a column a part lacks prints its na; the part's own na", {
+  skip_on_cran()
   rec <- pl_rec()
   rec$GRP <- NULL
   parent <- table_plan(rec, cols = "T", rows = "ID", value = "V") |> plan_cells("{value:.1f}", na = "BLQ")
@@ -228,6 +232,7 @@ test_that("FT-PL905 [FR-PL903]: a part's rows under the parent's; a column a par
 })
 
 test_that("FT-PL906 [FR-PL904]: page groups are matched by value; a group a part lacks stops, or is skipped", {
+  skip_on_cran()
   rec <- pl_rec()
   parent <- table_plan(rec, cols = "T", rows = "ID", value = "V") |> plan_cells("{value:.1f}") |>
     plan_paginate_rows(page_by = "GRP")
@@ -262,6 +267,7 @@ test_that("FT-PL906 [FR-PL904]: page groups are matched by value; a group a part
 })
 
 test_that("FT-PL907 [FR-PL905]: blank rows between the parts, and a part's own first / last", {
+  skip_on_cran()
   rec <- pl_rec()
   parent <- table_plan(rec, cols = "T", rows = "ID", value = "V") |> plan_cells("{value:.1f}") |>
     plan_paginate_rows(page_by = "GRP")
@@ -283,6 +289,7 @@ test_that("FT-PL907 [FR-PL905]: blank rows between the parts, and a part's own f
 })
 
 test_that("FT-PL908 [FR-PL906]: a part may not carry the whole table's settings; its column key is the table's", {
+  skip_on_cran()
   rec <- pl_rec()
   parent <- table_plan(rec, cols = "T", rows = "ID", value = "V") |> plan_cells("{value:.1f}")
   child <- table_plan(pl_long()[pl_long()$GRP == "x", ], cols = "T", rows = c(block = ~ "Summary")) |>
