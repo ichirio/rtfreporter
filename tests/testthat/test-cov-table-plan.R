@@ -117,6 +117,16 @@ test_that("plan_cell_style() with `cols` and a formula attribute styles only tho
   expect_true(all(is.na(st[[3L]]$bold[1:2])))
 })
 
+test_that("plan_cell_style() with `cols` keeps a per-column map of formulas as given", {
+  skip_on_cran()
+  p <- table_plan(cov_tp_wide()) |>
+    plan_cell_style(cols = "Active", color = list(
+      Active = ~ ifelse(Parameter == "Female, n (%)", "#CC0000", NA)))
+  st <- plan_apply(p)[[1L]]$cell_styles
+  expect_null(st[[1L]])
+  expect_identical(st[[3L]]$color, c(NA, NA, "#CC0000"))
+})
+
 # -- plan_cells(): what is refused ---------------------------------------------
 
 test_that("plan_cells() names a cell_rows() inside a chain as such", {
@@ -258,6 +268,15 @@ test_that("a row_title position past the printed columns names the hidden ones",
     fixed = TRUE)
 })
 
+test_that("a row_title position past the columns, none hidden, lists the printed ones", {
+  skip_on_cran()
+  p <- table_plan(cov_tp_wide()) |> plan_columns(row_title = 9)
+  expect_error(plan_apply(p), paste0(
+    "plan_columns(row_title = 9): the table prints 3 columns (Parameter, ",
+    "Placebo, Active); positions count those, or name the columns."),
+    fixed = TRUE)
+})
+
 test_that(".plan_heading_at() sets heading_at on a single rtftable", {
   skip_on_cran()
   # internal: a plan that sets heading_at always pages, so its pages come
@@ -321,15 +340,16 @@ test_that("a header sheet with a stub of no name heads the page's first column",
                      "Xanomeline Low Dose"))
 })
 
-test_that("a header function of one argument gets the resolved n", {
+test_that("a header function of two arguments gets the n and the finished table", {
   skip_on_cran()
   skip_if_not_installed("cards")
-  p <- cov_tp_plan() |> plan_stub(name = "row_label") |>
-    plan_col_header(values = list(n = TRUE), header = function(n)
-      list(c("Characteristic", paste0(names(n), " N=", n))))
+  p <- cov_tp_plan() |>
+    plan_col_header(values = list(n = TRUE), header = function(n, tbl)
+      list(c(names(tbl)[1:2], paste0(names(n), " (", nrow(tbl), " rows)"))))
   expect_identical(plan_apply(p)[[1L]]$col_header[[1L]],
-                   c("Characteristic", "Placebo N=86",
-                     "Xanomeline High Dose N=84", "Xanomeline Low Dose N=84"))
+                   c("group", "label", "Placebo (4 rows)",
+                     "Xanomeline High Dose (4 rows)",
+                     "Xanomeline Low Dose (4 rows)"))
 })
 
 test_that("a header function that returns a row of NULL is refused by set_col_header()", {
