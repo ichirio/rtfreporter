@@ -134,7 +134,7 @@ kwargs リストを返します。最初に `.need_pkg()`（`R/need_pkg.R`）を
   `italic`, `underline`, `indent_twips`, `color`, `align`, `border`）です。
   `NA` は「`col_spec` から継承」を意味します（`?rtftable` の `cell_styles`
   を参照）。`cell_styles` を設定するのは gt アダプタだけです。rtables は行ラベルの
-  インデントをスタブ（stub）のテキストに含めます。
+  インデントを行ラベルのテキストに含めます。
 * **テキストに埋め込み済みの脚注マーク。** ソースがマークをインラインで
   描画する場合（gt はマークを、`<sup>N</sup>` を含む `gt_footnote_marks` の span に入れ、
   rtables は `{N}` と書きます）、rtfreporter の
@@ -244,7 +244,7 @@ NAMESPACE には `importFrom(rtfreporter, as_rtftables)` と
 ## 参考になる実装
 
 rtables アダプタ（`R/rtables_adapter.R`）はコンパクトな実例です。多段スパニング
-ヘッダー、列ごとの整列、行ラベルのインデント（スタブのテキストに含める）、
+ヘッダー、列ごとの整列、行ラベルのインデント（行ラベルのテキストに含める）、
 インラインの `{N}` -> `^{N}` マーク変換、タイトルと脚注を、たった 1 回の
 `formatters::matrix_form()` 呼び出しから読みます。rlistings アダプタも同じ
 読み取りを使います。`cell_styles` は設定しないので、それを見たいときは gt
