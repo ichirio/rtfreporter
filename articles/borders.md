@@ -1,0 +1,425 @@
+# Borders and rules
+
+``` r
+
+library(rtfreporter)
+```
+
+Clinical tables live and die by their rules: a top and bottom line
+around the column header, a group underline beneath a spanning label, an
+occasional rule under the last data row. rtfreporter gives you five
+levels of control, from a one-word preset down to a single cell and the
+restyling of a finished table. This article walks through all five, with
+runnable code.
+
+The border objects are plain S3 records (no reference semantics), so a
+border you build can be reused across tables safely. The vocabulary is
+small:
+
+``` r
+
+rtf_border(all, top, bottom, left, right, inside_h, inside_v)
+```
+
+`top`/`bottom`/`left`/`right` are the selection’s outer edges and `all`
+is the four of them at once; `inside_h` and `inside_v` are the rules
+*between* its rows and *between* its cells. Each takes `TRUE` for a
+rule, `FALSE` or `"none"` for none, a style name such as `"double"`, or
+an `rtf_border_line(style, width, color)` for a line of its own weight
+or colour. The `style_*()` verbs layer a border onto an existing one,
+side by side.
+
+That is the whole vocabulary – **one function** (and
+[`rtf_border_line()`](https://ichirio.github.io/rtfreporter/reference/rtf_border_line.md)
+for a line’s look). There is no separate table-border type and no
+per-edge constructor: what a border applies to is decided by where you
+attach it, the same way Word’s border dialog acts on whatever is
+selected.
+
+| Attach it to | The selection is |
+|----|----|
+| `rtftable(border = )` | the whole table |
+| `style_zone(header = , body = , ...)` | that kind of row |
+| `col_cell(border = )`, `cell_styles` | one cell |
+| `rtf_header(border = )` / `rtf_footer(border = )` | that band, all its rows |
+| a band or footnote row’s `list(columns = , border = )` | that row |
+| `rtf_titles(border = )` / `rtf_footnotes(border = )` | that block, all its rows |
+| `plan_titles(border = )` / `plan_footnotes(border = )` | that table’s block |
+
+An edge always means the outer edge of the selection, and an absent
+`inside_h` / `inside_v` always means “no rule there” – the reading never
+depends on which other arguments are present.
+
+## Level 1 – a preset
+
+The `border` argument of
+[`rtftable()`](https://ichirio.github.io/rtfreporter/reference/rtftable.md)
+(and
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md))
+accepts a shorthand string:
+
+``` r
+
+df <- data.frame(Parameter = c("Age (years)", "  Mean", "  SD"),
+                 Value     = c("", "75.1", "8.2"), stringsAsFactors = FALSE)
+
+tbl <- rtftable(df, border = "tfl")   # clinical TFL preset
+```
+
+![](figures/articles/bd_preset.png)
+
+- `"tfl"` – the clinical preset: a rule on **top of the first** header
+  row and **below the last** header row, a multi-column spanning cell
+  gets an automatic group underline where the grouping changes below it
+  (the next row subdivides the span), and the data area has **no**
+  borders. This is the default.
+- `"none"` (or `NULL`) – no borders anywhere.
+
+The same rules are available as a reusable value from
+[`rtf_table_style_tfl()`](https://ichirio.github.io/rtfreporter/reference/rtf_table_style_tfl.md),
+which is what `"tfl"` resolves to:
+
+``` r
+
+rtf_table_style_tfl()
+#> <rtf_table_style>
+#>   borders:
+#>     header    : <rtf_border>
+#>     spanning  : none
+#>     body      : none
+#>     first_row : none
+#>     last_row  : none
+#>   header_align : (inherit align)
+#>   header_bold  : FALSE
+#>   align        : (per column)
+#>   bold         : FALSE
+#>   cell_padding : L=(default) R=(default)
+```
+
+## Level 2 – the whole table
+
+Attach an
+[`rtf_border()`](https://ichirio.github.io/rtfreporter/reference/rtf_border.md)
+to `rtftable(border = )` and it describes the table:
+
+Show code
+
+``` r
+
+line <- TRUE        # single, 15 twips (~0.5pt), black
+
+# The listing look: a frame plus a rule under every row, no vertical rules.
+tbl <- rtftable(df,
+  border = rtf_border(top = line, bottom = line, left = line, right = line,
+                      inside_h = line))
+```
+
+![](figures/articles/bd_whole.png)
+
+Add `inside_v = line` for a full grid; leave both out for a bare frame.
+
+## Level 3 – one kind of row
+
+[`style_zone()`](https://ichirio.github.io/rtfreporter/reference/style_header.md)
+aims a border at one of the five row kinds:
+
+| Zone        | Applies to                                                |
+|-------------|-----------------------------------------------------------|
+| `header`    | column-header label rows (top on first, bottom on last)   |
+| `spanning`  | spanning-header rows (falls back to `header` when `NULL`) |
+| `body`      | every data row                                            |
+| `first_row` | the first data row (merged **on top of** `body`)          |
+| `last_row`  | the last data row (merged on top of `body`)               |
+
+Each zone takes an
+[`rtf_border()`](https://ichirio.github.io/rtfreporter/reference/rtf_border.md),
+read against that zone as the selection. A header boxed top and bottom
+plus a thin rule under the **last data row** (a common “close the table”
+look):
+
+Show code
+
+``` r
+
+tbl <- rtftable(df, border = "none") |>
+  style_zone(
+    header   = rtf_border(top = line, bottom = line),
+    last_row = rtf_border(bottom = line)
+  )
+```
+
+![](figures/articles/bd_zones.png)
+
+`rtf_border_line(style, width, color)` gives a side its own line:
+
+``` r
+
+rtf_border(top = rtf_border_line("double", 30L, "#003366"))
+#> <rtf_border>
+#>   top     : double, 30 twips, color=#003366
+#>   bottom  : none
+#>   left    : none
+#>   right   : none
+```
+
+`TRUE` and a bare style name are shorthands for the same value, so
+`rtf_border(top = "double")` and
+`rtf_border(top = rtf_border_line("double"))` agree. `style` is one of
+`"single"`, `"double"`, `"thick"`, `"dash"`, `"dot"` – and `"none"`,
+which we meet below. Because each side holds its own line, sides that
+differ still fit in one call:
+
+``` r
+
+rtf_border(top    = rtf_border_line("double", 30L),
+           bottom = rtf_border_line(color = "#C9372C"))
+#> <rtf_border>
+#>   top     : double, 30 twips
+#>   bottom  : single, 15 twips, color=#C9372C
+#>   left    : none
+#>   right   : none
+```
+
+### Body (data-area) borders
+
+`body` selects every data row, so its `top`/`bottom` are the top and
+bottom of the **block** and `inside_h` is the rule between its rows.
+Likewise `left` and `right` are the outer columns and `inside_v` the
+rules between the cells. A grid around every data cell therefore needs
+all six:
+
+Show code
+
+``` r
+
+tbl <- rtftable(
+  data.frame(A = c("1", "2"), B = c("x", "y"), stringsAsFactors = FALSE),
+  border = "none"
+) |>
+  style_zone(body = rtf_border(top = line, bottom = line,
+                               left = line, right = line,
+                               inside_h = line, inside_v = line))
+```
+
+![](figures/articles/bd_grid.png)
+
+An edge on a zone is the zone’s outer edge, so `rtf_border(all = TRUE)`
+alone does not draw this grid; the rules inside are named with
+`inside_h` / `inside_v`. See *Common cases* at the end of this article.
+
+## Level 4 – single columns and single cells
+
+The header is where fine control matters most. Two mechanisms reach
+inside it.
+
+### A whole column, with `col_spec`
+
+A per-column `border` in `col_spec` is merged on top of the header zone
+for the header cell(s) **in that column** – e.g. a thicker rule under
+just column 2:
+
+Show code
+
+``` r
+
+tbl <- rtftable(
+  df,
+  border   = "tfl",
+  col_spec = list(
+    list(col = "Value",
+         border = rtf_border(bottom = "thick"))
+  )
+)
+```
+
+![](figures/articles/bd_colspec.png)
+
+### A single header cell, with `col_cell(border = )`
+
+For a multi-row header, the unit of control is one cell. Build the
+header with
+[`rtf_col_header()`](https://ichirio.github.io/rtfreporter/reference/rtf_col_header.md)
+/
+[`col_cell()`](https://ichirio.github.io/rtfreporter/reference/col_cell.md)
+and give the cell its own `border`. Because a per-cell border overrides
+**everything** – the zone border *and* the automatic group underline –
+this is how you add or **remove** an individual rule.
+
+Take a 5-column header with two treatment groups. By default each
+spanning cell (“Drug A”, “Drug B”) is underlined:
+
+Show code
+
+``` r
+
+df5 <- data.frame(Item = "Age", A_N = 30L, A_Mean = 45.2,
+                  B_N = 30L, B_Mean = 46.1, stringsAsFactors = FALSE)
+
+hdr <- rtf_col_header(
+  list(col_cell(1, ""),
+       col_cell(c(2, 3), "Drug A"),
+       col_cell(c(4, 5), "Drug B")),
+  c("Item", "N", "Mean", "N", "Mean")
+)
+tbl <- rtftable(df5, col_header = hdr, border = "tfl")
+```
+
+![](figures/articles/bd_header.png)
+
+To **remove** the underline beneath “Drug A” only, give that one cell a
+`"none"` bottom. Unlike `NULL` (which just leaves a side unset and so
+inherits the automatic rule), a `"none"` side is an explicit “no line”
+that wins on merge:
+
+Show code
+
+``` r
+
+hdr <- rtf_col_header(
+  list(col_cell(1, ""),
+       col_cell(c(2, 3), "Drug A",
+                border = rtf_border(bottom = "none")),
+       col_cell(c(4, 5), "Drug B")),
+  c("Item", "N", "Mean", "N", "Mean")
+)
+tbl <- rtftable(df5, col_header = hdr, border = "tfl")
+```
+
+![](figures/articles/bd_header_suppress.png)
+
+The same field can **add** a rule to a single cell (e.g. a thick bottom
+under “Drug B” only) – pass an
+[`rtf_border()`](https://ichirio.github.io/rtfreporter/reference/rtf_border.md)
+with the sides you want instead of `"none"`.
+
+### How a cell’s final border is decided
+
+For a header cell the renderer merges, in order of increasing
+precedence:
+
+1.  the **zone** border (`header` / `spanning`, reduced to top-on-first
+    / bottom-on-last by the outer frame);
+2.  the automatic **group underline** (a multi-column spanning cell,
+    drawn only where the column grouping changes below it – i.e. the
+    next header row subdivides the span);
+3.  `col_spec[[col]]$border` for the cell’s leftmost column;
+4.  `col_cell(border = )` on the cell itself.
+
+Later steps override earlier ones side-by-side, so a `"none"` side at
+step 3 or 4 erases a line drawn by step 1 or 2, and a real line at step
+4 replaces one from step 3. That single rule – *last writer wins, per
+side* – is all you need to reason about any combination.
+
+## Level 5 – restyling an existing table: the styling verbs
+
+Everything above configures a table you are *building*. When the table
+already exists – typically because `as_rtftables(x, read_meta = TRUE)`
+extracted the labels, alignment and spanning from a gt / gtsummary /
+rtables object and only one rule needs to change – reach for the
+**post-hoc styling verbs** instead of rebuilding the header:
+
+Show code
+
+``` r
+
+df <- data.frame(Item = c("Age", "Sex"), A = c("1", "2"),
+                 B = c("3", "4"), C = c("5", "6"))
+hdr <- rtf_col_header(
+  list(col_cell(1, ""), col_cell(c(2, 4), "Treatment Group")),
+  list(col_cell(1, ""), col_cell(c(2, 4), "(N = 254)")),
+  c("Item", "Placebo", "Drug A", "Drug B")
+)
+tbl <- rtftable(df, col_header = hdr, border = "tfl")
+
+tbl <- tbl |>
+  # solid rule above -- and no rule below -- the "(N = 254)" span only
+  style_header(row = 2, cols = 2:4,
+               border = rtf_border(top    = TRUE,
+                                   bottom = "none")) |>
+  # rule under one BODY row (a summary/total row, selected by predicate)
+  style_body(rows = ~ Item == "Sex",
+             border = rtf_border(bottom = TRUE)) |>
+  # double rule under the whole table
+  style_zone(last_row = rtf_border(bottom = "double"))
+```
+
+![](figures/articles/bd_verbs.png)
+
+Body borders follow the same two-step chain as everything else: the
+row’s zone border (`body`, crossed with `first_row` / `last_row`) first,
+then the per-cell override from `style_body(border = )` – last writer
+wins, per side. Restrict `cols` to rule only part of a row, or pass an
+`"none"` side to erase a zone rule on selected cells.
+
+`style_header(row =, cols =)` addresses header cells by header-row index
+and data-column position;
+[`style_cols()`](https://ichirio.github.io/rtfreporter/reference/style_header.md),
+[`style_body()`](https://ichirio.github.io/rtfreporter/reference/style_header.md)
+and
+[`style_zone()`](https://ichirio.github.io/rtfreporter/reference/style_header.md)
+cover the column, body-cell and zone layers the same way, and
+[`add_header_row()`](https://ichirio.github.io/rtfreporter/reference/style_header.md)
+inserts a header row after the fact. Every verb also accepts the **page
+list** returned by
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+(the edit is applied to every page), so a converted multi-page table can
+be restyled in one pipe:
+
+``` r
+
+pages <- as_rtftables(gt_obj, read_meta = TRUE) |>
+  style_header(row = 2, cols = 2:4,
+               border = rtf_border(top    = TRUE,
+                                   bottom = "none"))
+```
+
+The merge semantics are the ones this article already taught: last
+writer wins, per side. See
+[`?style_header`](https://ichirio.github.io/rtfreporter/reference/style_header.md)
+for the full family, including how a character label row is promoted to
+cells when it needs a per-cell border.
+
+## Common cases
+
+`s` is `TRUE` throughout. An edge always means the **outer** edge of the
+selection, so the rules *inside* it are asked for by name – `inside_h`
+between the rows, `inside_v` between the cells. A border is aimed with
+`rtftable(border = )` for the whole table, or
+[`style_zone()`](https://ichirio.github.io/rtfreporter/reference/style_header.md)
+for one kind of row.
+
+| What you want | Write |
+|----|----|
+| Rules above and below the column header | `style_zone(header = rtf_border(top = s, bottom = s))` |
+| A rule under the last data row | `style_zone(last_row = rtf_border(bottom = s))` |
+| A rule under **every** data row | `style_zone(body = rtf_border(inside_h = s))` |
+| A vertical rule at every column boundary | `style_zone(body = rtf_border(left = s, right = s, inside_v = s))` |
+| A grid around every data cell | `style_zone(body = rtf_border(top = s, bottom = s, left = s, right = s, inside_h = s, inside_v = s))` |
+| An outer frame only | `rtftable(border = rtf_border(top = s, bottom = s, left = s, right = s))` |
+| Frame plus a rule under every row | `rtftable(border = rtf_border(top = s, bottom = s, left = s, right = s, inside_h = s))` |
+| The clinical TFL preset | `border = "tfl"` |
+| A border on one cell | `col_cell(border = rtf_border(bottom = s))` – a cell has no inside |
+
+Show code
+
+``` r
+
+s <- TRUE
+
+tbl <- rtftable(df, border = "none") |>
+  style_zone(body = rtf_border(inside_h = s))
+
+tbl <- rtftable(df, border = "none") |>
+  style_zone(body = rtf_border(top = s, bottom = s, left = s, right = s,
+                               inside_h = s, inside_v = s))
+```
+
+## Where next
+
+- [Output
+  options](https://ichirio.github.io/rtfreporter/articles/output.md) —
+  what the rendered file contains
+
+The four recipes (`?rtfreporter-recipes`) are the same ground covered as
+runnable help-page examples: demographics, adverse events, PK and
+laboratory, each data-in to RTF-out.
