@@ -2178,8 +2178,9 @@
 #
 #   title:    default centre + bold, no border.  NULL -> one blank row (a small
 #             gap between the page header and the content).  character(0) -> none.
-#   footnote: default left, normal weight; the FIRST row carries a top rule
-#             (separator) unless that row sets its own `border`.  NULL /
+#   footnote: default left, normal weight; no rule by default (the rendered
+#             footnote goes through footnote_band.R; a rule is drawn only when
+#             `border` asks for one, see ?rtf_footnotes).  NULL /
 #             character(0) -> suppress entirely.
 
 # Normalize a title/footnote block to a list of resolved row records:
