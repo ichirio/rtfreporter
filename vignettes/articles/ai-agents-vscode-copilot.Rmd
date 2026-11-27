@@ -36,7 +36,7 @@ does not match what you see, read the linked page again.
 
 Sources: <https://code.visualstudio.com/docs/sourcecontrol/overview>,
 <https://code.visualstudio.com/docs/sourcecontrol/branches-worktrees>,
-<https://code.visualstudio.com/docs/copilot/agents/agent-tools>
+<https://code.visualstudio.com/docs/agents/run/tools>
 
 ## The environment
 
@@ -97,8 +97,8 @@ To confirm that the file was read:
 * Read the changes and the tool activity to see whether the rules were
   followed.
 
-Sources: <https://code.visualstudio.com/docs/copilot/customization/custom-instructions>,
-<https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions>
+Sources: <https://code.visualstudio.com/docs/agent-customization/custom-instructions>,
+<https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions>
 
 ## Permissions
 
@@ -169,7 +169,7 @@ This is a faster subset for each change, not the four pre-push checks of
 `pkgdown::check_pkgdown()` and lintr). CI runs the full set, and so does a
 maintainer before a release.
 
-Source: <https://code.visualstudio.com/docs/copilot/customization/prompt-files>
+Source: <https://code.visualstudio.com/docs/agent-customization/prompt-files>
 
 ## Checks on each edit
 
@@ -210,7 +210,7 @@ The example hooks in `.claude/` in the repository are written for Claude Code
 and tested only with it. See
 [the Claude app page](ai-agents-claude-app.html#checks-on-each-edit).
 
-Source: <https://code.visualstudio.com/docs/copilot/customization/hooks>
+Source: <https://code.visualstudio.com/docs/agent-customization/hooks>
 
 ## Then
 
@@ -223,4 +223,4 @@ a pull request.
 To hand a piece of work to a helper, VS Code has subagents: helpers that work
 in their own context and return a focused result. A subagent does not inherit the
 conversation, so state the goal, the files and the result you expect.
-Source: <https://code.visualstudio.com/docs/copilot/agents/subagents>
+Source: <https://code.visualstudio.com/docs/agents/run/subagents>

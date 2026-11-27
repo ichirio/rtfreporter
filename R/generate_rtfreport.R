@@ -2588,7 +2588,7 @@
 #' @param file_path Output RTF file path.  `NULL` (default): the document's
 #'   own, `rtf_document(file = )`; one given here wins.
 #' @param overwrite Logical; whether to write over an existing file.  `TRUE`
-#'   (the default since 0.8.2.9039): a report program is run again and again,
+#'   (the default): a report program is run again and again,
 #'   as `write.csv()` and `ggsave()` write over theirs.  `FALSE` stops when the
 #'   file is there.  Anything but `TRUE` or `FALSE` is an error.
 #' @param program Overrides, for this one file, the program the document

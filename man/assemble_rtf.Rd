@@ -151,8 +151,7 @@ Any field that is \code{NULL}, \code{NA} or empty is skipped, as is an \code{NA}
 \code{toc} can take any of these shapes:
 
 \describe{
-\item{\code{NULL} (default)}{no TOC, no bookmarks.  Byte-for-byte the
-pre-v0.0.29 behaviour.}
+\item{\code{NULL} (default)}{no TOC, no bookmarks.}
 \item{\code{"auto"}}{each input file's title as a level-1 TOC entry.  The
 title is the file's title rows (the centred bold rows \code{\link[=rtf_titles]{rtf_titles()}}
 writes at the top of the body), read as the file shows them and

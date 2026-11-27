@@ -37,10 +37,6 @@ remotes::install_github("ichirio/rtfreporter@v0.9.0")   # the latest release, 0.
 remotes::install_github("ichirio/rtfreporter@next")     # the development version (next)
 ```
 
-0.9.0 removes the functions and arguments 0.8.x deprecated (each 0.8.x
-one warns and names its replacement); code that runs without those
-warnings on 0.8.2 runs on 0.9.0.
-
 ## From an ARD to an RTF table in 30 seconds
 
 The ARD is the input, made with

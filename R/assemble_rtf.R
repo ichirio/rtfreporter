@@ -899,8 +899,7 @@
 #' `toc` can take any of these shapes:
 #'
 #' \describe{
-#'   \item{`NULL` (default)}{no TOC, no bookmarks.  Byte-for-byte the
-#'     pre-v0.0.29 behaviour.}
+#'   \item{`NULL` (default)}{no TOC, no bookmarks.}
 #'   \item{`"auto"`}{each input file's title as a level-1 TOC entry.  The
 #'     title is the file's title rows (the centred bold rows [rtf_titles()]
 #'     writes at the top of the body), read as the file shows them and

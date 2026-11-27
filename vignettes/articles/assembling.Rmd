@@ -224,7 +224,7 @@ both use tools outside rtfreporter:
   properties.
 - **Fast Web View** (a linearized PDF). LibreOffice and Word's plain export
   do not linearize; Acrobat can, and so can the free command-line tool
-  [qpdf](https://qpdf.readthedocs.io/):
+  [qpdf](https://qpdf.readthedocs.io/en/stable/):
 
 ```sh
 qpdf --linearize xyz-001-tables.pdf xyz-001-tables-fwv.pdf
