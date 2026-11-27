@@ -82,9 +82,9 @@
         current_page = p_idx, total_pages = ctx$total_pages)
     })
     out <- c(out, .render_content(ct, ctx))
-    # -- Footnote (default left; the table form's first row carries the
-    # separator rule).  The table form is the default so the rule is drawn;
-    # footnote_format = "text" switches to plain paragraphs.
+    # -- Footnote (default left; no rule unless `border` -- the block's or a
+    # row's own -- asks for one, see ?rtf_footnotes).  The table form is the
+    # default; footnote_format = "text" switches to plain paragraphs.
     footnote_st <- .segment_block_style(doc$footnote_style, b[["footnote_border"]])
     out <- c(out, if (identical(ctx$doc_footnote_format, "text")) {
       .render_text_block_text(
