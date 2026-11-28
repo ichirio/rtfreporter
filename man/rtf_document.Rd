@@ -129,8 +129,8 @@ content.
 Every \verb{font =} (a table, a header/footer band, titles, footnotes, a
 watermark, \code{plan_style()}, the \code{font_table} entries and
 \code{options(rtfreporter.font =)}) takes either one family name -- which keeps
-its old meaning and writes exactly the same RTF -- or a named character
-vector with a family per script slot:
+its old meaning -- or a named character vector with a family per script
+slot:
 \itemize{
 \item \code{latin}: ASCII and the high-ANSI range (Latin, Greek, Cyrillic);
 RTF \verb{\\loch\\f} / \verb{\\hich\\af}.  Required.
@@ -140,9 +140,11 @@ RTF \verb{\\loch\\f} / \verb{\\hich\\af}.  Required.
 }
 
 A slot an element leaves out takes the document default's family for that
-slot, else the element's \code{latin}.  A slotted document default also writes
-the document-level defaults Word uses for new text (\verb{\\adeff},
-\verb{\\stshfdbch}, \verb{\\stshfloch}, \verb{\\stshfhich}, \verb{\\stshfbi}).  Use
+slot, else the element's \code{latin}.  The document default also gives the
+document-level defaults Word uses for text that names no font (\verb{\\adeff},
+\verb{\\stshfdbch}, \verb{\\stshfloch}, \verb{\\stshfhich}, \verb{\\stshfbi}): each is the
+default's family for that class, so a default of one family names itself
+in all five, and Word does not put its own East Asian default in.  Use
 \code{font_lang} to tag a slot with its language, e.g.
 \code{rtf_document(font_table = list(list(name = c(latin = "Times New Roman", east_asian = "MS Mincho"))), font_lang = c(east_asian = "ja"))}.
 }

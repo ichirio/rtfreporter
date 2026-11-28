@@ -96,10 +96,11 @@ test_that("FT-DC5605 [FR-DC103]: a font_table name that is a vector per script s
   expect_true(grepl("\\adeff0\\stshfdbch2\\stshfloch0\\stshfhich1\\stshfbi0", txt, fixed = TRUE))
   cell <- .t6_lines(txt, "1\\cell")
   expect_true(grepl("\\rtlch\\af0\\ltrch\\hich\\af1\\dbch\\af2\\loch\\f0 1\\cell", cell, fixed = TRUE))
-  # a single string keeps its meaning: no slot controls, the same table
+  # a single string keeps its meaning: no slot controls in the runs, the same
+  # table; the header's document defaults all name it (#1110)
   one <- .t6_render(rtf_tables(rtf_document(font_table = list(list(name = "Arial"))), .t6_tb()))
   expect_true(grepl("{\\fonttbl{\\f0\\fnil\\fcharset0 Arial;}}", one, fixed = TRUE))
-  expect_false(grepl("\\adeff", one, fixed = TRUE))
+  expect_true(grepl("\\adeff0\\stshfdbch0\\stshfloch0\\stshfhich0\\stshfbi0\\uc1", one, fixed = TRUE))
   expect_false(grepl("\\dbch", one, fixed = TRUE))
   expect_true(grepl("\\ql\\li0\\ri0 1\\cell", one, fixed = TRUE))
   # latin alone is the same as the single string in the font table
