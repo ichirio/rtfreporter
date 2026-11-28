@@ -882,11 +882,9 @@ rtf_tables <- function(doc, tables,
 #'
 #' # one figure, as it is: a path, or a plot object
 #' doc <- rtf_document() |> rtf_figures(png_path)
-#' \donttest{
 #' if (requireNamespace("ggplot2", quietly = TRUE)) {
 #'   p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
 #'   doc <- rtf_document() |> rtf_figures(p)
-#' }
 #' }
 #'
 #' @export
