@@ -44,9 +44,11 @@ The package has no compiled code, so it was not run on R-hub.
 
 ## Notes for the reviewers
 
-* The examples write only to `tempdir()`; the two that open a plot window
-  run only in an interactive session.  Examples that use a suggested
-  package (cards, gt, gtsummary) run only when it is installed.
+* The examples write files only to `tempdir()`.  Three `plot()` examples
+  (of a border, a border line and a table's border zones) draw on the
+  current graphics device, in a check the examples' PDF; the two that open
+  a preview window run only in an interactive session.  Examples that use a
+  suggested package (cards, gt, gtsummary) run only when it is installed.
 * Tests and vignettes that use a suggested package skip without it:
   suggested packages are used only behind `requireNamespace()` or
   `skip_if_not_installed()`.  That includes ragg (a plot is drawn with it
